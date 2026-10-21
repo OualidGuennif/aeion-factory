@@ -17,6 +17,8 @@ sources:
 
 # Build and test
 
+CI action revisions are pinned to upstream commit SHAs; review upstream changes before updating them.
+
 The standalone efficiency bundle includes the CRAFTED principles as well as the seven chapters.
 Rebuild it with `tools/efficiency/bundle` after editing those sources.
 

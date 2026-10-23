@@ -1,5 +1,19 @@
 # Æion Factory
 
+**The minimal, independently usable starting point for coding with agents.**
+
+Start here if you want clear instructions, linked knowledge and checks in your own repository.
+Git and Python run the local checks; no model account is needed to explore the scaffold.
+You do not need OPS, CROA, Observability or a running SpaceShip service.
+
+Part of the modular [Æion SpaceShip framework](https://github.com/OualidGuennif/aeion-spaceship).
+[Factory](https://github.com/OualidGuennif/aeion-factory) ·
+[OPS](https://github.com/OualidGuennif/aeion-ops) ·
+[CROA](https://github.com/OualidGuennif/aeion-croa) ·
+[Observability](https://github.com/OualidGuennif/aeion-observability) ·
+[SpaceShip](https://github.com/OualidGuennif/aeion-spaceship).
+See the [module comparison and examples](https://github.com/OualidGuennif/aeion-spaceship/blob/main/docs/modules.md).
+
 A repository prepared for agentic development, before there is any product code in it: the rules
 an agent reads first, a knowledge base bound to the code, skills, hooks, three loops (inner,
 middle, outer) and a technical watch — all checked, all small, all optional beyond the first phase.
@@ -35,6 +49,13 @@ add your build/test commands, and follow phase 1. Install only the plugins you n
 
 Optional loops and integrations stay off by default. The public export contains no environment
 files, including templates; configure optional services yourself only after reviewing their docs.
+
+## Add only what you need
+
+Factory supplies the development method. Add OPS for security directives, CROA for evidence-led
+assessment, or Observability for telemetry and outcome design. SpaceShip documents how to compose
+them with deterministic authority; its integrated cockpit is still planned. None of these is a
+required installation dependency, and Factory does not grant a runtime sandbox or production access.
 
 ## What is inside
 

@@ -43,8 +43,8 @@ paths and reports an unavailable link check once. `repo-health --json` exposes i
 set and selected file count; its caps are not language-aware lint or security coverage.
 
 Policy hooks require Claude Code 2.1.295+ for `onFailure: block`; their command timeout is three
-seconds. The after-edit hook limits each checker to two seconds to leave feedback overhead within
-that budget. Nonzero exits, missing executables and timeouts produce exit 2 and at most 15 lines
+seconds. Independently, the after-edit hook limits each checker to two seconds for fast feedback.
+Nonzero exits, missing executables and timeouts produce exit 2 and at most 15 lines
 of diagnostics. Direct script tests do not qualify live harness dispatch or runtime isolation.
 After-edit checks require macOS, Linux or WSL: a timed-out check's process group is terminated
 before capture pipes are drained, so ordinary descendants do not keep working after the timeout.

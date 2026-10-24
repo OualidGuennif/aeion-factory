@@ -1,77 +1,55 @@
 # Æion Factory
 
-**The minimal, independently usable starting point for coding with agents.**
+**A GitHub template for working with coding agents: clear instructions, linked documentation
+and automatic checks.**
 
-Start here if you want clear instructions, linked knowledge and checks in your own repository.
-Git and Python run the local checks; no model account is needed to explore the scaffold.
-You do not need OPS, CROA, Observability or a running SpaceShip service.
+Use it to start a project or improve an existing repository. Factory gives you a repeatable
+workflow: **plan → change → test → review**. Keep only the parts you need.
 
-Part of the modular [Æion SpaceShip framework](https://github.com/OualidGuennif/aeion-spaceship).
-[Factory](https://github.com/OualidGuennif/aeion-factory) ·
-[OPS](https://github.com/OualidGuennif/aeion-ops) ·
-[CROA](https://github.com/OualidGuennif/aeion-croa) ·
-[Observability](https://github.com/OualidGuennif/aeion-observability) ·
-[SpaceShip](https://github.com/OualidGuennif/aeion-spaceship).
-See the [module comparison and examples](https://github.com/OualidGuennif/aeion-spaceship/blob/main/docs/modules.md).
+- **Instructions:** tell the agent how your project works in [AGENTS.md](AGENTS.md).
+- **Context:** keep decisions and component docs in `knowledge/`, linked to the files they describe.
+- **Checks:** catch broken links, missing doc updates and repository-size limits with Git and Python.
+- **Procedures:** reuse skills and hooks for common tasks instead of repeating instructions.
 
-A repository prepared for agentic development, before there is any product code in it: the rules
-an agent reads first, a knowledge base bound to the code, skills, hooks, three loops (inner,
-middle, outer) and a technical watch — all checked, all small, all optional beyond the first phase.
+The method is language-independent. Your project's compiler, linter and tests validate its code.
+Hooks and plugins target Claude Code; other agents can follow `AGENTS.md` and the workflow.
 
-Built for Claude Code (CLI or desktop) with its plugins; other agents can follow the files as
-documents. Start with one phase and keep the parts that solve a real problem.
+## Try it
 
-## Start here
-
-| You want to | Read |
-| --- | --- |
-| Understand the approach in seven phases | [`efficiency/00-EFFICIENCY.md`](efficiency/00-EFFICIENCY.md) |
-| Remember the seven principles | [CRAFTED](efficiency/CRAFTED.md) |
-| Use this as a new project | the steps below |
-| Apply it to an existing repository | give your agent `efficiency/00-EFFICIENCY.md` and one chapter at a time (skill `adopt`) |
-| Every command | [`command.md`](command.md) |
-| How an agent works here | [`Workflow_Agent.md`](Workflow_Agent.md) |
-| The same, for humans, as slides | [HTML slides](docs/slides/workflow-human.html) |
-
-## A new project from the Factory
+Requires **Git and Python 3**. These checks run locally without a model account.
 
 ```bash
-git clone https://github.com/OualidGuennif/aeion-factory.git my-project
-cd my-project
+git clone https://github.com/OualidGuennif/aeion-factory.git
+cd aeion-factory
 tools/knowledge/knowledge-check
 tools/knowledge/doc-links
 tools/repo-health/repo-health
 ```
 
-Git and Python 3 run these checks; shell tools target macOS, Linux or WSL. This is a checkout of
-Factory: use GitHub's **Use this template** to create your own repository. Then adapt `AGENTS.md`,
-add your build/test commands, and follow phase 1. Install only the plugins you need.
+All three commands should exit successfully; the knowledge and link checks print `PASS`.
+Shell integrations target macOS, Linux and WSL.
 
-Optional loops and integrations stay off by default. The public export contains no environment
-files, including templates; configure optional services yourself only after reviewing their docs.
+## Use it in your project
 
-## Add only what you need
+**New project:** [use this template](https://github.com/OualidGuennif/aeion-factory/generate),
+then put your project description and build/test commands in `AGENTS.md`.
 
-Factory supplies the development method. Add OPS for security directives, CROA for evidence-led
-assessment, or Observability for telemetry and outcome design. SpaceShip documents how to compose
-them with deterministic authority; its integrated cockpit is still planned. None of these is a
-required installation dependency, and Factory does not grant a runtime sandbox or production access.
+**Existing repository:** follow the [adoption guide](efficiency/00-EFFICIENCY.md), one phase at
+a time. Your existing instructions and tools take precedence. Scheduled loops and external
+services stay off until you choose to configure them.
 
-## What is inside
+**AI agents:** read [AGENTS.md](AGENTS.md) first. It points to the policies, commands and task state.
 
-```
-AGENTS.md / CLAUDE.md   the router an agent reads first (CLAUDE.md links to it)
-command.md              every command: skills, tools, loops, plugins, git flow
-Workflow_Agent.md       the order of work for an agent
-docs/slides/            the human workflow as HTML slides
-efficiency/             the seven-phase guide: quarks → atoms → molecules → cells → organisms → constellations → galaxy
-knowledge/              policies, components, decisions, operations, references (OKF format)
-work/current.md         open tasks only
-tech-watch/             the technical watch method and its dated packages
-loops/                  the orchestrator, prompts, model routing, schedules, issue protocol, Decisions API client
-tools/                  knowledge-check, doc-links, repo-health, local language-server plugins
-.claude/                hooks, skills, path-scoped rules, hookify examples
-.github/workflows/      CI (docs gates and security scans); optional PR review and outer loop
-```
+## Documentation
+
+| Read | For |
+| --- | --- |
+| [Getting started](efficiency/00-EFFICIENCY.md) | Adopt the method step by step |
+| [Agent workflow](Workflow_Agent.md) | Follow a task from plan to review |
+| [Commands](command.md) | Run checks, skills and optional loops |
+| [Build and test](knowledge/operations/build-and-test.md) | Verification commands and hook requirements |
+
+Factory works on its own. The optional [Æion modules](https://github.com/OualidGuennif/aeion-spaceship/blob/main/docs/modules.md)
+cover security, audit, observability and integration when you need them.
 
 License: [MIT](LICENSE). Credits: [CREDITS.md](CREDITS.md). Security: [SECURITY.md](SECURITY.md).

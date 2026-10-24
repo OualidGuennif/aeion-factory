@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Run the real health check in disposable repositories, including its Git error path."""
 import shutil
+import json
 import subprocess
 import sys
 import tempfile
@@ -34,6 +35,18 @@ class RepoHealthTests(unittest.TestCase):
         result = self.check_health()
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("repo-health:", result.stdout)
+
+    def test_accented_source_is_checked_against_the_size_cap(self):
+        subprocess.run(["git", "init", "-q", str(self.root)], check=True)
+        source = self.root / "café.py"
+        source.write_text("value = 1\n" * 1501)
+        subprocess.run(["git", "add", "café.py"], cwd=self.root, check=True)
+        result = self.check_health("--json")
+        self.assertEqual(result.returncode, 1)
+        card = json.loads(result.stdout)
+        self.assertEqual(card["files_over_1500_lines"], ["café.py"])
+        self.assertEqual(card["source_files_checked"], 1)
+        self.assertIn(".py", card["source_suffixes"])
 
 
 if __name__ == "__main__":

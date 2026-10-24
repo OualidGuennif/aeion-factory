@@ -45,3 +45,11 @@ before its code is written, has these sections in this order:
 - A link is a pointer, never copied content.
 - Git enumeration, history and diff failures return nonzero with a short diagnostic. An unreadable
   repository or missing comparison base is not an empty change set and never produces PASS.
+- Paths are read from Git verbatim, including spaces and Unicode. Explicit relative `sources`
+  work for any file format; only a path beginning with `./` or `../` may contain whitespace.
+- Header discovery reads at most 8 KiB of leading comments/docstrings in tracked regular UTF-8
+  text files, regardless of suffix. It excludes Markdown, `knowledge/`, vendored/dependency/cache
+  folders and known secret paths. It never follows file symlinks. Use explicit sources for other
+  formats or metadata after executable code; directory sources remain existence-only.
+- A documentation-only exemption accepts standalone comment `Spec:` lines and blanks, never
+  executable code that happens to contain a pointer.

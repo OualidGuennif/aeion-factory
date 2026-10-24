@@ -37,6 +37,11 @@ them and the security scans.
 The link and health checks fail when Git cannot enumerate the repository or read the comparison
 base. A valid empty change set remains successful; an unavailable check is never reported as clean.
 
+Header traceability is extension-independent and bounded; see the discovery scope in
+[specs-first](../policies/specs-first.md). The Stop reminder preserves spaces/Unicode in edited
+paths and reports an unavailable link check once. `repo-health --json` exposes its source suffix
+set and selected file count; its caps are not language-aware lint or security coverage.
+
 ## Language servers
 
 `tools/claude-plugins/` is a local marketplace with `native-lsp`: TypeScript 7 (`tsc --lsp

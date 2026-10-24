@@ -20,14 +20,15 @@ COMMENT = re.compile(r"^\s*(//|#|\*|/\*|--)")
 
 def tracked():
     try:
-        result = subprocess.run(["git", "ls-files"], cwd=ROOT, capture_output=True, text=True, check=False)
+        result = subprocess.run(["git", "ls-files", "-z"], cwd=ROOT, capture_output=True, text=True,
+                                errors="surrogateescape", check=False)
     except OSError as error:
         print(f"FAIL Git enumeration could not run: {error.strerror}", file=sys.stderr)
         sys.exit(1)
     if result.returncode:
         print(f"FAIL Git enumeration failed (exit {result.returncode}); check the repository.", file=sys.stderr)
         sys.exit(1)
-    return [ROOT / p for p in result.stdout.splitlines() if (ROOT / p).is_file()]
+    return [ROOT / p for p in result.stdout.split("\0") if p and (ROOT / p).is_file()]
 
 
 def longest_comment_block(text):
@@ -51,6 +52,7 @@ def main(argv):
     lines = lambda rel: (ROOT / rel).read_text(encoding="utf-8").count("\n") if (ROOT / rel).exists() else 0
     top = sorted({p.relative_to(ROOT).parts[0] for p in files if len(p.relative_to(ROOT).parts) > 1 and not p.relative_to(ROOT).parts[0].startswith(".")})
     card = {"agents_md_lines": lines("AGENTS.md"), "work_current_lines": lines("work/current.md"),
+            "source_files_checked": len(sources), "source_suffixes": sorted(SOURCE),
             "files_over_1500_lines": big, "comment_blocks_over_20_lines": blocks, "top_level_folders": top}
     if "--json" in argv:
         print(json.dumps(card, indent=2))

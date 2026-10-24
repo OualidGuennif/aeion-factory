@@ -23,14 +23,20 @@ FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---\n", re.DOTALL)
 SPEC_RE = re.compile(r"\bSpec:\s*(knowledge/[\w./-]+\.md)")
 CHECKED_RE = re.compile(r"^Docs-Checked:\s*(knowledge/[\w./-]+\.md)", re.MULTILINE)
 NOT_A_PATH = ("http://", "https://", "git-history:", "owner-", "mailto:")
-CODE_SUFFIXES = {".java", ".ts", ".tsx", ".js", ".mjs", ".py", ".sh", ".mq5", ".mqh", ".sql", ".yml", ".yaml",
-                 ".json", ".css", ".service", ".timer", ".conf", ".xml", ".toml"}
+HEADER_RE = re.compile(r'\A(?:\s+|\#[^\n]*|//[^\n]*|--[^\n]*|;[^\n]*|/\*.*?\*/|<!--.*?-->|""".*?"""|'
+                       r"'''.*?''')*", re.DOTALL)
+SPEC_LINE_RE = re.compile(r"^\s*(?:\#|//|/\*|\*|--|;|<!--)\s*Spec:\s*knowledge/[\w./-]+\.md\s*(?:\*/|-->)?\s*$")
+HEADER_BYTES = 8192
+EXCLUDED_PARTS = {"vendor", "node_modules", ".factory", ".venv", "__pycache__", ".git", ".aws", ".ssh"}
+TEMPLATES = {".env.example", ".env.sample", ".env.template", ".env.dist", "env.example.local"}
+SECRET_NAMES = {"auth.json", "credentials", "credentials.json", "id_rsa", "id_ed25519", "env.local"}
 SKIP_PREFIXES = ()
 
 
 def git(*args):
     try:
-        result = subprocess.run(["git", *args], cwd=ROOT, capture_output=True, text=True, check=False)
+        result = subprocess.run(["git", *args], cwd=ROOT, capture_output=True, text=True,
+                                errors="surrogateescape", check=False)
     except OSError as error:
         print(f"FAIL Git {args[0]} could not run: {error.strerror}", file=sys.stderr)
         sys.exit(1)
@@ -51,21 +57,42 @@ def doc_sources(doc: Path):
     for m in RESOURCE_RE.finditer(block.group(1)):
         res = m.group(1).strip()
         # Free text, a bare file name outside the repo, a URL or an absolute host path is not a repo link.
-        if res.startswith(NOT_A_PATH) or res.startswith("/") or ":" in res.split("/")[0] \
-                or any(c.isspace() for c in res) or "/" not in res:
+        if res.startswith(NOT_A_PATH) or res.startswith("/") or ":" in res.split("/")[0] or "/" not in res \
+                or (any(c.isspace() for c in res) and not res.startswith(("./", "../"))):
             continue
         target = (doc.parent / res.split("#")[0]).resolve()
         try:
             rel = target.relative_to(ROOT).as_posix()
         except ValueError:
             continue
-        out.append((text[:m.start()].count("\n") + 1, rel))
+        out.append((text[:block.start(1) + m.start()].count("\n") + 1, rel))
     return out
 
 
-def tracked_code():
-    return [p for p in git("ls-files").splitlines()
-            if Path(p).suffix in CODE_SUFFIXES and not p.startswith("knowledge/")]
+def tracked_headers():
+    """Yield bounded leading metadata, without reading known secrets or following file symlinks."""
+    for rel in git("ls-files", "-z").split("\0"):
+        path = ROOT / rel
+        parts = Path(rel).parts
+        if not rel or parts[0] == "knowledge" or path.suffix.lower() == ".md" or EXCLUDED_PARTS.intersection(parts):
+            continue
+        if any(part not in TEMPLATES and (part in SECRET_NAMES or re.fullmatch(r"\.env(\..+)?", part)
+                                         or part.endswith((".pem", ".key"))) for part in parts):
+            continue
+        if path.is_symlink() or not path.is_file() or path.resolve() != path:
+            continue
+        with path.open("rb") as stream:
+            data = stream.read(HEADER_BYTES)
+        # Do not decode a partially read UTF-8 line or interpret binary bytes as metadata.
+        if len(data) == HEADER_BYTES:
+            data = data.rsplit(b"\n", 1)[0] if b"\n" in data else b""
+        if b"\0" in data:
+            continue
+        try:
+            text = data.decode("utf-8-sig")
+        except UnicodeDecodeError:
+            continue
+        yield rel, HEADER_RE.match(text).group()
 
 
 def collect():
@@ -81,11 +108,7 @@ def collect():
                 problems.append(f"RULE L2 {rel_doc}:{line} source {rel} does not exist; fix the path or drop the source.")
             elif target.is_file() and not rel.startswith("knowledge/"):
                 coverage.setdefault(rel, set()).add(rel_doc)
-    for path in tracked_code():
-        try:
-            text = (ROOT / path).read_text(encoding="utf-8", errors="replace")
-        except OSError:
-            continue
+    for path, text in tracked_headers():
         for m in SPEC_RE.finditer(text):
             line = text[:m.start()].count("\n") + 1
             if not (ROOT / m.group(1)).is_file():
@@ -96,10 +119,10 @@ def collect():
 
 
 def changed_since(base: str, worktree: bool):
-    files = set(git("diff", "--name-only", f"{base}...HEAD").splitlines())
+    files = set(git("diff", "--name-only", "-z", f"{base}...HEAD").split("\0")) - {""}
     if worktree:
-        files |= set(git("diff", "--name-only", "HEAD").splitlines())
-        files |= set(git("ls-files", "--others", "--exclude-standard").splitlines())
+        files |= set(git("diff", "--name-only", "-z", "HEAD").split("\0")) - {""}
+        files |= set(git("ls-files", "--others", "--exclude-standard", "-z").split("\0")) - {""}
     messages = git("log", "--format=%B", f"{base}..HEAD")
     return files, set(CHECKED_RE.findall(messages))
 
@@ -110,7 +133,7 @@ def only_link_lines(path: str, base: str, worktree: bool) -> bool:
     if worktree:
         diff += git("diff", "-U0", "HEAD", "--", path)
     changed = [l[1:] for l in diff.splitlines() if l[:1] in "+-" and not l.startswith(("+++", "---"))]
-    return bool(changed) and all(not l.strip() or SPEC_RE.search(l) for l in changed)
+    return bool(changed) and all(not l.strip() or SPEC_LINE_RE.fullmatch(l) for l in changed)
 
 
 def main(argv):

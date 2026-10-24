@@ -6,7 +6,7 @@ Status: ACTIVE, WAITING-OWNER, MEASURING, BLOCKED, BACKLOG.
 
 ## Reliable verification and portable file discovery — ACTIVE
 - Owner decision: 2026-10-24, approved the three core research-plan corrections in chat.
-- State: implementing explicit failures, portable traceability and hook error handling.
+- State: Git failures are explicit; portable traceability and path-preserving reminders are implemented.
 - Next: add regression fixtures, implement the narrow fixes, run checks and a fresh local review (agent).
 - Blocker: no remote publication authorized; local verification uses the inspected baseline.
 - Evidence: tools/knowledge/tests/test_doc_links.py; tools/repo-health/tests/test_repo_health.py; .claude/hooks/test_hooks.py.

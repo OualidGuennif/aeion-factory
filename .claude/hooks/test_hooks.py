@@ -114,6 +114,19 @@ expect("sign-off: names the doc", first, 0, "knowledge/components/x.md")
 if '"block"' in stop("busy").stdout:
     failures.append("sign-off blocked twice on the same findings")
 
+# A filename with spaces and accents must survive both Git and the edited-file log.
+special = "src/café file.py"
+(tmp / special).write_text("# Spec: knowledge/components/x.md\nvalue = 1\n")
+subprocess.run(git + ["add", special], cwd=tmp, capture_output=True, check=True)
+subprocess.run(git + ["commit", "-qm", "special path"], cwd=tmp, capture_output=True, check=True)
+(tmp / special).write_text("# Spec: knowledge/components/x.md\nvalue = 2\n")
+with (Path(tempfile.gettempdir()) / f"claude-edited-special-{RUN}").open("a") as f:
+    f.write(special + "\n")
+special_result = stop("special")
+expect("sign-off: a spaced accented path is checked", special_result, 0, '"decision": "block"')
+if special not in json.loads(special_result.stdout or "{}").get("reason", ""):
+    failures.append("sign-off lost a spaced accented path")
+
 # session-start: at most 25 lines.
 result = subprocess.run([sys.executable, str(HOOKS / "session-start.py")], capture_output=True, text=True, cwd=ROOT)
 expect("session-start runs", result, 0, "git status")

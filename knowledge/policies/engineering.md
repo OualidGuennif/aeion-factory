@@ -43,6 +43,10 @@ one implementation; a "Manager", "Factory" or "Helper" without two real users; a
 Never in a comment: dates, ticket numbers, the story of a bug, or a list of what is not done. The
 story goes in the commit message.
 
+`repo-health` applies source-size/comment heuristics to its documented suffix set, excluding
+`test_*` files. Its JSON scorecard reports that set and how many files were checked. This is a
+structural scorecard; each project's build, linter and tests provide language-specific validation.
+
 ## Branch, pull request, review
 
 - One branch per task, `task/<slug>`, from an up-to-date default branch; small commits.

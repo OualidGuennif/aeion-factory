@@ -29,7 +29,16 @@ SKIP_PREFIXES = ()
 
 
 def git(*args):
-    return subprocess.run(["git", *args], cwd=ROOT, capture_output=True, text=True, check=False).stdout
+    try:
+        result = subprocess.run(["git", *args], cwd=ROOT, capture_output=True, text=True, check=False)
+    except OSError as error:
+        print(f"FAIL Git {args[0]} could not run: {error.strerror}", file=sys.stderr)
+        sys.exit(1)
+    if result.returncode:
+        print(f"FAIL Git {args[0]} failed (exit {result.returncode}); check the repository and refs.",
+              file=sys.stderr)
+        sys.exit(1)
+    return result.stdout
 
 
 def doc_sources(doc: Path):

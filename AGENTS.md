@@ -28,6 +28,7 @@ tools/        knowledge-check, doc-links, repo-health, local language-server plu
 ```bash
 tools/knowledge/knowledge-check && tools/knowledge/doc-links && tools/repo-health/repo-health
 python3 tools/knowledge/tests/test_doc_links.py && python3 .claude/hooks/test_hooks.py
+python3 tools/repo-health/tests/test_repo_health.py
 loops/orchestrator.sh outer --dry-run        # shows the command a loop would run, runs nothing
 ```
 

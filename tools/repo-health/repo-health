@@ -19,8 +19,15 @@ COMMENT = re.compile(r"^\s*(//|#|\*|/\*|--)")
 
 
 def tracked():
-    out = subprocess.run(["git", "ls-files"], cwd=ROOT, capture_output=True, text=True, check=False).stdout
-    return [ROOT / p for p in out.splitlines() if (ROOT / p).is_file()]
+    try:
+        result = subprocess.run(["git", "ls-files"], cwd=ROOT, capture_output=True, text=True, check=False)
+    except OSError as error:
+        print(f"FAIL Git enumeration could not run: {error.strerror}", file=sys.stderr)
+        sys.exit(1)
+    if result.returncode:
+        print(f"FAIL Git enumeration failed (exit {result.returncode}); check the repository.", file=sys.stderr)
+        sys.exit(1)
+    return [ROOT / p for p in result.stdout.splitlines() if (ROOT / p).is_file()]
 
 
 def longest_comment_block(text):

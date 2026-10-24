@@ -28,10 +28,14 @@ Rebuild it with `tools/efficiency/bundle` after editing those sources.
 | Docs and code links | `tools/knowledge/doc-links` (`--diff origin/main` on a branch) | the root |
 | Comments, file size, caps | `tools/repo-health/repo-health` | the root |
 | Hooks and tools | `python3 .claude/hooks/test_hooks.py`, `python3 tools/knowledge/tests/test_doc_links.py` | the root |
+| Health regressions | `python3 tools/repo-health/tests/test_repo_health.py` | the root |
 | Your code | add your build, lint and test commands here, copied from CI | |
 
 The pre-commit (`git config core.hooksPath tools/git-hooks`) runs the first three; CI runs all of
 them and the security scans.
+
+The link and health checks fail when Git cannot enumerate the repository or read the comparison
+base. A valid empty change set remains successful; an unavailable check is never reported as clean.
 
 ## Language servers
 

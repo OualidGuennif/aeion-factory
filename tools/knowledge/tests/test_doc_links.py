@@ -96,6 +96,13 @@ check("a Spec pointer to a missing doc", t, [], 1, "RULE L1 src/app.ts:1")
 (t / "src/app.ts").unlink()
 check("a source that disappeared", t, [], 1, "RULE L2 knowledge/components/example.md")
 
+t = repo()
+check("a valid empty diff passes", t, ["--diff", "HEAD"], 0, "PASS")
+check("a missing diff base fails", t, ["--diff", "missing-test-ref"], 1)
+outside = Path(tempfile.mkdtemp())
+check("an invalid repository fails", outside, ["--diff", "HEAD"], 1)
+check("enumeration outside a repository fails", outside, [], 1)
+
 for f in failures:
     print("FAIL:", f)
 print(f"{passes} passed, {len(failures)} failed")

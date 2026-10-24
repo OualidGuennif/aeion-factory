@@ -43,3 +43,5 @@ before its code is written, has these sections in this order:
   `--diff origin/main` when a file changed while a doc covering it did not. Updating the doc, or a
   commit trailer `Docs-Checked: knowledge/<doc>.md -- <why no documented fact changed>`, passes.
 - A link is a pointer, never copied content.
+- Git enumeration, history and diff failures return nonzero with a short diagnostic. An unreadable
+  repository or missing comparison base is not an empty change set and never produces PASS.

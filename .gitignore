@@ -5,6 +5,7 @@ env.local
 !.env.example
 # Generated and local state.
 .factory/
+/state_of_the_art research/
 CLAUDE-SECURITY-*/
 __pycache__/
 *.pyc

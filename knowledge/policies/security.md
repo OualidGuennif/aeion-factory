@@ -23,6 +23,9 @@ Requirements for a change, not claims about what production already satisfies.
 - No secret in a prompt, a log, an issue, a commit or a test fixture; tests use fake values.
 - A leaked secret is compromised: rotate it, update its consumers, verify. Deleting the file or
   rewriting history revokes nothing. Keep redacted evidence.
+- A guard that cannot parse its event or validate its path returns exit 2 without logging the
+  input. Policy PreToolUse hooks block on command failure or timeout (Claude Code 2.1.295+).
+  Basename guards are an accidental-read safeguard, not resolved-path or runtime isolation.
 
 ## Untrusted input
 

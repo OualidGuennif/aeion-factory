@@ -372,6 +372,10 @@ deleted — the commit message and the knowledge base keep what matters.
 - **Doc to code:** the doc's `sources` lists the files it describes
   (`resource: ../../src/billing/invoice.ts`). A directory source is checked for existence only.
 - **Code to doc:** a file a doc describes carries one header line `Spec: knowledge/<doc>.md`.
+- Explicit file paths work independently of language or extension, including spaces and Unicode.
+  Header discovery scans the first 8 KiB of leading comments/docstrings in tracked regular text
+  files; Markdown, vendored/dependency/cache content, known secrets and symlinks are excluded.
+  For formats without comments, use `sources`. This does not install language tools or validate syntax.
 - **`tools/knowledge/doc-links`** (shipped with the Factory, Python standard library only):
   - **L1** a `Spec:` pointer resolves; **L2** every `sources` path exists;
   - **L3** with `--diff origin/main`: a file changed while a doc covering it did not. Updating the

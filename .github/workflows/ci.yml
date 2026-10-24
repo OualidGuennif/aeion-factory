@@ -25,6 +25,7 @@ jobs:
           if [[ -n "$BASE_REF" ]]; then ./tools/knowledge/doc-links --diff "origin/$BASE_REF"; else ./tools/knowledge/doc-links; fi
       - run: ./tools/repo-health/repo-health
       - run: python3 tools/knowledge/tests/test_doc_links.py && python3 .claude/hooks/test_hooks.py
+      - run: python3 tools/repo-health/tests/test_repo_health.py
 
   # Add your build and test job here.
 

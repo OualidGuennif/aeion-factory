@@ -96,6 +96,74 @@ check("a Spec pointer to a missing doc", t, [], 1, "RULE L1 src/app.ts:1")
 (t / "src/app.ts").unlink()
 check("a source that disappeared", t, [], 1, "RULE L2 knowledge/components/example.md")
 
+t = repo()
+check("a valid empty diff passes", t, ["--diff", "HEAD"], 0, "PASS")
+check("a missing diff base fails", t, ["--diff", "missing-test-ref"], 1)
+outside = Path(tempfile.mkdtemp())
+check("an invalid repository fails", outside, ["--diff", "HEAD"], 1)
+check("enumeration outside a repository fails", outside, [], 1)
+
+# Metadata discovery is independent of source language and Git's human-readable path quoting.
+t = repo()
+paths = ["src/header" + suffix for suffix in (".py", ".ts", ".tsx", ".jsx", ".mts", ".go", ".rs", ".vue", ".svelte")]
+paths += ["tools/check", "Dockerfile", "src/café.py", "src/a file.py"]
+for name in paths:
+    path = t / name
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(f"# {TAG} knowledge/components/example.md\nvalue = 1\n")
+sh(t, "git", "add", ".")
+commit(t, "header fixtures")
+for name in paths:
+    check(f"header covers {name}", t, ["--for", name], 0, "knowledge/components/example.md")
+(t / "src/café.py").write_text(f"# {TAG} knowledge/components/example.md\nvalue = 2\n")
+check("an accented changed path requires its doc", t, ["--diff", "HEAD", "--worktree"], 1, "RULE L3 src/café.py")
+
+t = repo()
+for name, header in [("src/block.cpp", f"/* {TAG} knowledge/components/example.md */"),
+                     ("src/page.html", f"<!-- {TAG} knowledge/components/example.md -->"),
+                     ("src/module.py", f'"""Module.\n{TAG} knowledge/components/example.md\n"""'),
+                     ("src/bom.rs", f"\ufeff// {TAG} knowledge/components/example.md")]:
+    (t / name).write_text(header + "\n")
+sh(t, "git", "add", ".")
+commit(t, "leading comment forms")
+for name in ("src/block.cpp", "src/page.html", "src/module.py", "src/bom.rs"):
+    check(f"leading metadata covers {name}", t, ["--for", name], 0, "knowledge/components/example.md")
+
+t = repo()
+(t / "src/a file.json").write_text("{}\n")
+(t / "knowledge/components/example.md").write_text(DOC.replace("../../src/app.ts", "../../src/a file.json"))
+sh(t, "git", "add", ".")
+commit(t, "explicit source with spaces")
+check("a spaced explicit source needs no header", t, ["--for", "src/a file.json"], 0, "knowledge/components/example.md")
+(t / "src/a file.json").write_text('{"changed":true}\n')
+check("a spaced declared file requires its doc", t, ["--diff", "HEAD", "--worktree"], 1, "RULE L3 src/a file.json")
+
+t = repo()
+for name, content in [
+    ("docs/example.md", f"# {TAG} knowledge/missing.md\n"),
+    ("vendor/example.py", f"# {TAG} knowledge/missing.md\n"),
+    ("node_modules/example.js", f"// {TAG} knowledge/missing.md\n"),
+    (".factory/generated.py", f"# {TAG} knowledge/missing.md\n"),
+    ("auth.json", f"# {TAG} knowledge/missing.md\n"),
+    ("src/string.py", f'VALUE = "{TAG} knowledge/missing.md"\n'),
+]:
+    path = t / name
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content)
+(t / "src/binary.bin").write_bytes(f"# {TAG} knowledge/missing.md\n".encode() + b"\0")
+(t / "src/late.py").write_text("# header\n" * 1200 + f"# {TAG} knowledge/missing.md\n")
+(t / "src/alias.py").symlink_to(t / "auth.json")
+sh(t, "git", "add", ".")
+commit(t, "excluded metadata fixtures")
+check("examples, dependencies, secrets, binary data and symlinks are not headers", t, [], 0, "PASS")
+
+t = repo()
+(t / "src/app.ts").write_text(f'export const a = 1; // {TAG} knowledge/components/example.md\n')
+commit(t, "inline pointer baseline")
+(t / "src/app.ts").write_text(f'export const a = 2; // {TAG} knowledge/components/example.md\n')
+commit(t, "behavior change with an inline pointer")
+check("an inline pointer cannot exempt executable changes", t, ["--diff", "HEAD~1"], 1, "RULE L3 src/app.ts")
+
 for f in failures:
     print("FAIL:", f)
 print(f"{passes} passed, {len(failures)} failed")

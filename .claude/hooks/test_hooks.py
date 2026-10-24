@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 HOOKS = Path(__file__).resolve().parent
@@ -81,6 +82,77 @@ for path in ["/repo/.env", "/repo/env.local", "/x/server.pem", "/h/auth.json"]:
 for path in ["/repo/.env.example", "/repo/env.example.local", str(ROOT / "AGENTS.md")]:
     expect(f"path allow: {path}", run_hook("guard-path.py", {"file_path": path}), 0)
 
+# Unreadable policy input is an explicit denial, never a traceback or an implicit allow.
+for raw in ["{", "null", "[]", "{}", '{"tool_input": []}', '{"tool_input": {"path": 123}}',
+            '{"tool_input": {"file_path": null}}', '{"tool_input": {"file_path": ""}}']:
+    result = subprocess.run([sys.executable, str(HOOKS / "guard-path.py")], input=raw,
+                            capture_output=True, text=True, cwd=ROOT)
+    expect(f"path deny malformed: {raw}", result, 2)
+    if "Traceback" in result.stderr:
+        failures.append("guard-path exposed a traceback instead of a denial")
+expect("path allow: Grep can use its implicit root", run_hook("guard-path.py", {"pattern": "fixture"}, tool_name="Grep"), 0)
+expect("path allow: Grep can use an empty default path", run_hook("guard-path.py", {"path": "", "pattern": "fixture"}, tool_name="Grep"), 0)
+
+# Run after-edit against real child processes with controlled outcomes.
+after = Path(tempfile.mkdtemp())
+for folder in (".claude/hooks", "tools/knowledge", "knowledge"):
+    (after / folder).mkdir(parents=True, exist_ok=True)
+shutil.copy(HOOKS / "after-edit.py", after / ".claude/hooks/after-edit.py")
+document = after / "knowledge/fixture.md"
+document.write_text("Synthetic document.\n")
+checker = after / "tools/knowledge/knowledge-check"
+
+
+def fake_check(path, body):
+    path.write_text("#!/usr/bin/env python3\n" + body)
+    path.chmod(0o755)
+
+
+after_session = f"after-edit-{RUN}"
+for label, body, code, diagnostic in [
+    ("success", "raise SystemExit(0)\n", 0, ""),
+    ("stderr failure", "import sys\nprint('synthetic failure', file=sys.stderr)\nraise SystemExit(1)\n", 2, "synthetic failure"),
+    ("timeout", "import time\ntime.sleep(3)\n", 2, "timed out"),
+]:
+    fake_check(checker, body)
+    result = run_hook("after-edit.py", {"file_path": str(document)}, cwd=after, session_id=after_session)
+    expect(f"after-edit: {label}", result, code)
+    if diagnostic and diagnostic not in result.stderr:
+        failures.append(f"after-edit {label}: missing diagnostic")
+    if len(result.stderr.splitlines()) > 15:
+        failures.append(f"after-edit {label}: diagnostic exceeds 15 lines")
+heartbeat = after / "heartbeat"
+child = (f"from pathlib import Path\nimport time\npath = Path({str(heartbeat)!r})\n"
+         "for number in range(200):\n    path.write_text(str(number))\n    time.sleep(0.05)\n")
+fake_check(checker, "import subprocess, sys, time\n"
+           f"subprocess.Popen([sys.executable, '-c', {child!r}])\n"
+           "time.sleep(10)\n")
+started = time.monotonic()
+expect("after-edit: a timed-out checker terminates its descendants", run_hook("after-edit.py",
+       {"file_path": str(document)}, cwd=after, session_id=after_session), 2)
+if time.monotonic() - started > 5:
+    failures.append("after-edit waited for a descendant after its checker timed out")
+last_heartbeat = heartbeat.read_text() if heartbeat.exists() else None
+time.sleep(0.2)
+if heartbeat.exists() and heartbeat.read_text() != last_heartbeat:
+    failures.append("after-edit left a descendant running after the timeout")
+checker.unlink()
+expect("after-edit: missing checker fails", run_hook("after-edit.py", {"file_path": str(document)},
+       cwd=after, session_id=after_session), 2)
+
+source = after / "source.py"
+source.write_text("value = 1\n")
+linker = after / "tools/knowledge/doc-links"
+fake_check(linker, "import sys\nprint('synthetic link failure', file=sys.stderr)\nraise SystemExit(1)\n")
+expect("after-edit: failed doc hint is visible", run_hook("after-edit.py", {"file_path": str(source)},
+       cwd=after, session_id=after_session), 2)
+fake_check(linker, "print('knowledge/a doc.md')\n")
+hint = run_hook("after-edit.py", {"file_path": str(source)}, cwd=after, session_id=after_session)
+expect("after-edit: a spaced doc is one hint", hint, 0, "covered by knowledge/a doc.md")
+for prefix in ("claude-edited-", "claude-doc-hint-"):
+    (Path(tempfile.gettempdir()) / f"{prefix}{after_session}").unlink(missing_ok=True)
+shutil.rmtree(after)
+
 # sign-off: in a throwaway repo, a code change without its doc blocks once, then passes.
 tmp = Path(tempfile.mkdtemp())
 for rel in (".claude/hooks/sign-off.py", "tools/knowledge/doc-links"):
@@ -113,6 +185,19 @@ expect("sign-off: code without its doc blocks", first, 0, '"decision": "block"')
 expect("sign-off: names the doc", first, 0, "knowledge/components/x.md")
 if '"block"' in stop("busy").stdout:
     failures.append("sign-off blocked twice on the same findings")
+
+# A filename with spaces and accents must survive both Git and the edited-file log.
+special = "src/café file.py"
+(tmp / special).write_text("# Spec: knowledge/components/x.md\nvalue = 1\n")
+subprocess.run(git + ["add", special], cwd=tmp, capture_output=True, check=True)
+subprocess.run(git + ["commit", "-qm", "special path"], cwd=tmp, capture_output=True, check=True)
+(tmp / special).write_text("# Spec: knowledge/components/x.md\nvalue = 2\n")
+with (Path(tempfile.gettempdir()) / f"claude-edited-special-{RUN}").open("a") as f:
+    f.write(special + "\n")
+special_result = stop("special")
+expect("sign-off: a spaced accented path is checked", special_result, 0, '"decision": "block"')
+if special not in json.loads(special_result.stdout or "{}").get("reason", ""):
+    failures.append("sign-off lost a spaced accented path")
 
 # session-start: at most 25 lines.
 result = subprocess.run([sys.executable, str(HOOKS / "session-start.py")], capture_output=True, text=True, cwd=ROOT)

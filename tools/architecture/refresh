@@ -137,8 +137,10 @@ def toolchain(root, config):
     probe = ("import importlib.metadata,json; d=importlib.metadata.distribution('graphifyy'); "
              "print(json.dumps({'version':d.version,'source':json.loads(d.read_text('direct_url.json') or '{}')}))")
     metadata = json.loads(subprocess.run([str(python), "-c", probe], check=True, capture_output=True, text=True).stdout)
-    if metadata["version"] != config["graphify"]["version"] or metadata["source"].get("vcs_info", {}).get("commit_id") != config["graphify"]["revision"]:
-        raise ValueError("Graphify installation is not the pinned Git revision; rerun setup")
+    archive_hash = metadata["source"].get("archive_info", {}).get("hashes", {}).get("sha256")
+    if (metadata["version"] != config["graphify"]["version"] or metadata["source"].get("url") != config["graphify"]["archive_url"]
+            or archive_hash != config["graphify"]["archive_sha256"]):
+        raise ValueError("Graphify installation is not the pinned revision/archive hash; rerun setup")
     return python, archify / "archify/bin/archify.mjs"
 
 

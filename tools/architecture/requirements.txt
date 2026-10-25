@@ -1,5 +1,5 @@
 # Reviewed Graphify source and the dependency versions used by the baseline.
-graphifyy @ git+https://github.com/Graphify-Labs/graphify.git@92741d162b2094ffc2fed58cfbd8ee823e9da62c
+graphifyy @ https://codeload.github.com/Graphify-Labs/graphify/tar.gz/92741d162b2094ffc2fed58cfbd8ee823e9da62c#sha256=b4bc34d33b48ca6e9b981809d104eaffcf4e53c9dfffc34bb317294863e4f2ec
 networkx==3.7
 numpy==2.5.4
 PyYAML==6.0.3

@@ -102,11 +102,12 @@ class RefreshTests(unittest.TestCase):
         folder = self.root / "analysis"
         artifacts = {}
         required = ["graph/graph.json", "graph/coverage.json", "source-manifest.json"]
-        required += [f"{name}.{suffix}" for name in ("architecture", "workflow", "lifecycle") for suffix in ("html", "json", "finalize-summary.json")]
+        required += [f"{name}.{suffix}" for name in ("architecture", "workflow", "lifecycle") for suffix in ("html", "json", "finalize-summary.json", "delivery.json")]
         for rel in required:
-            self.write(f"analysis/{rel}", "{}\n")
+            payload = {"status": "pass", "gates": dict.fromkeys(("validate", "deliver", "check", "browser-check"), "pass")} if rel.endswith("finalize-summary.json") else {}
+            self.write(f"analysis/{rel}", json.dumps(payload) + "\n")
             artifacts[rel] = refresh.digest(folder / rel)
-        self.write("analysis/receipt.json", json.dumps({"status": "PASS", "target": self.base,
+        self.write("analysis/receipt.json", json.dumps({"schema_version": 2, "status": "PASS", "target": self.base,
                    "integrations": self.config, "artifacts": artifacts}))
         self.assertTrue(refresh.valid_receipt(folder, self.base, self.config))
         self.write("analysis/graph/graph.json", "tampered\n")

@@ -10,7 +10,6 @@ import json
 import os
 from pathlib import Path
 import re
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -90,16 +89,21 @@ def logged(command, cwd, path):
 def valid_receipt(folder, target, config):
     try:
         receipt = json.loads((folder / "receipt.json").read_text())
-        if receipt["status"] != "PASS" or receipt["target"] != target or receipt["integrations"] != config:
+        if receipt.get("schema_version") != 2 or receipt["status"] != "PASS" or receipt["target"] != target or receipt["integrations"] != config:
             return False
         artifacts = receipt["artifacts"]
         required = {"graph/graph.json", "graph/coverage.json", "source-manifest.json"}
         required |= {f"{name}.{suffix}" for name in ("architecture", "workflow", "lifecycle") for suffix in ("html", "json", "finalize-summary.json")}
+        required |= {f"{name}.delivery.json" for name in ("architecture", "workflow", "lifecycle")}
         if not required.issubset(artifacts):
             return False
         for rel, expected in artifacts.items():
             path = folder / rel
             if Path(rel).is_absolute() or ".." in Path(rel).parts or path.is_symlink() or not path.is_file() or digest(path) != expected:
+                return False
+        for name in ("architecture", "workflow", "lifecycle"):
+            summary = json.loads((folder / f"{name}.finalize-summary.json").read_text())
+            if summary.get("status") != "pass" or summary.get("gates") != dict.fromkeys(("validate", "deliver", "check", "browser-check"), "pass"):
                 return False
         return True
     except (OSError, ValueError, KeyError, TypeError):
@@ -163,7 +167,11 @@ def refresh(root, target, base=None, check=False):
         manifest, excluded = scope(root, target, config)
         with tempfile.TemporaryDirectory(prefix="build-", dir=analysis) as temporary:
             work = Path(temporary)
-            source, output = work / "source", work / "output"
+            source, output = work / "source", destination
+            if destination.is_symlink():
+                raise ValueError("analysis destination must not be a symlink")
+            if destination.exists():
+                os.replace(destination, analysis / f"incomplete-{target}-{work.name}")
             output.mkdir()
             subprocess.run(["git", "clone", "-q", "--shared", "--no-checkout", str(root), str(source)], check=True, timeout=60)
             subprocess.run(["git", "-C", str(source), "checkout", "-q", "--detach", target], check=True, timeout=60)
@@ -192,13 +200,12 @@ def refresh(root, target, base=None, check=False):
                 '<h1>Factory architecture</h1><p>Immutable source snapshot; structural graph and reviewed architecture views.</p>'
                 + ''.join(f'<p><a href="{view["diagram_type"]}.html">{html.escape(view["meta"]["title"])}</a></p>' for view in views))
             artifacts = {path.relative_to(output).as_posix(): digest(path) for path in output.rglob("*") if path.is_file()}
-            receipt = {"schema_version": 1, "status": "PASS", "target": target, "base": base, "changed_paths": changed,
+            receipt = {"schema_version": 2, "status": "PASS", "target": target, "base": base, "changed_paths": changed,
                        "excluded_paths": excluded, "integrations": config, "artifacts": artifacts,
                        "coverage": "structural code/docs/config; reviewed architecture; no LLM completeness claim"}
-            (output / "receipt.json").write_text(json.dumps(receipt, indent=2) + "\n")
-            if destination.exists():
-                shutil.rmtree(destination)
-            os.replace(output, destination)
+            temporary_receipt = output / ".receipt.tmp"
+            temporary_receipt.write_text(json.dumps(receipt, indent=2) + "\n")
+            os.replace(temporary_receipt, output / "receipt.json")
     print(f"Architecture baseline: PASS {target} ({destination})")
     return destination
 

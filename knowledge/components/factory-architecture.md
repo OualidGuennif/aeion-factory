@@ -147,6 +147,8 @@ Pre-commit/CI retain Knowledge, doc-link, health and security gates. Architectur
 and every main push, including docs-only and multi-commit pushes, records changed/removed paths,
 and uploads immutable outputs. It cannot undo a merge: a failed round prevents release and
 completed-work claims until corrected. Adoption requires a baseline before managed execution.
+Rendering uses its permanent SHA directory; an atomic final receipt publishes success only
+after every gate passes. Moving Archify HTML would invalidate its native path provenance.
 
 Rollback is a reviewed normal Git revert, followed by checks and a fresh analysis for that
 revert SHA. Never force-push main or reuse an older graph as if it describes the reverted tree.

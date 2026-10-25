@@ -59,11 +59,15 @@ and runs Archify `finalize` for every view, including browser checks. A browser/
 is not success. Automated gates cannot prove semantic correctness or visual quality.
 
 Outputs live in `.factory/analysis/<sha>/`: graph, report, coverage/source manifest, diagrams,
-Archify receipts, and a Factory `receipt.json`. Publication uses a lock and atomic directory
-rename; a same-SHA successful rerun verifies artifact hashes before reuse. Failed temporary
-output never replaces an earlier baseline. There is no shared writable cross-job graph cache.
+Archify receipts, and a Factory `receipt.json`. Publication uses a lock and atomic final receipt.
+Archify renders at its permanent target path because moving its HTML invalidates native path
+provenance. Incomplete attempts have no PASS receipt; invalid prior attempts are retained aside.
+A same-SHA successful rerun verifies artifact hashes and all gate summaries before reuse.
+There is no shared writable cross-job graph cache.
 `tools/architecture/refresh --check --target HEAD` verifies all artifact hashes before launch.
 No mutable latest pointer can be moved backward by an older finishing job.
+Downloaded CI artifacts preserve the original run's evidence and portable hashes. To revalidate
+Archify path provenance in a different location, run a new local baseline for that SHA.
 
 Use `--base <sha>` to record the complete changed/removed path set and validate spec coverage.
 Missing refs fail. With no base this is a full initial baseline, not an implicit empty diff.

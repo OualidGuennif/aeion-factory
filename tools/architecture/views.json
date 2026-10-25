@@ -407,7 +407,7 @@
         "sources": [
           {
             "path": "tools/architecture/refresh",
-            "anchor": "os.replace(output, destination)"
+            "anchor": "os.replace(temporary_receipt, output / \"receipt.json\")"
           }
         ]
       },

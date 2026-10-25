@@ -27,7 +27,8 @@ sources:
 # Context safety
 
 The default Claude profile enables native auto-compaction at 250,000 tokens and a budget hook
-on session start, prompts, tools, compaction and stop. The hook reads only the current session's
+on session start, prompts, tools, compaction and stop. SubagentStop also checks a child's final
+observation, including pure-text child responses. The hook reads only the current session's
 bounded transcript tail and retains native token counts, never transcript text. Cached input
 counts once. Missing, malformed or zero usage is unavailable, not an empty context.
 
@@ -35,6 +36,10 @@ At the first observed 250k crossing, the hook alerts both agent and user. Only c
 (docs/task/handover edits and fixed verification commands) remains available. At an observed
 300k it returns `continue: false`; a Stop reminder cannot override this decision. The session
 state and active handover survive restart. Each session has its own file lock and atomic state.
+Tool events carrying `agent_id` use a separate parent/agent key and that child's transcript,
+including the documented nested `subagents/agent-<id>.jsonl` layout. Missing child usage refuses
+the child; it never reads the parent's counters or changes the parent's stop state. Child
+handover/checkpoint commands use the separate key printed by the guard.
 
 Before any compaction, fill `work/handovers/<session-id>.md`, update `work/current.md` and affected
 docs, and run `python3 tools/context/budget.py checkpoint --session <id> --base <git-ref> --verify`.

@@ -69,6 +69,15 @@ class RefreshTests(unittest.TestCase):
         with self.assertRaises(subprocess.CalledProcessError):
             refresh.changed_paths(self.root, "missing", self.base)
 
+    def test_pr_analysis_uses_merge_base_when_main_advanced_independently(self):
+        self.git("checkout", "-qb", "feature")
+        self.write("feature.md", "# Feature\n")
+        head = self.commit()
+        self.git("checkout", "--detach", self.base)
+        self.write("main-only.md", "# Main change\n")
+        advanced_main = self.commit()
+        self.assertEqual(refresh.changed_paths(self.root, advanced_main, head), ["feature.md"])
+
     def test_runtime_change_requires_updated_architecture(self):
         self.write("src/app.py", "def run():\n    return 2\n")
         target = self.commit()

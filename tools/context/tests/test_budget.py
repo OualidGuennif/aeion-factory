@@ -124,6 +124,27 @@ class BudgetTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0)
         self.assertFalse(json.loads(result.stdout)["continue"])
 
+    def test_child_uses_own_usage_and_cannot_stop_or_inherit_parent_budget(self):
+        self.observe(250000)
+        self.call()
+        child = self.root / "test-session/subagents/agent-child1.jsonl"
+        child.parent.mkdir(parents=True)
+        usage = {**dict.fromkeys(budget.FIELDS, 0), "input_tokens": 100}
+        child.write_text(json.dumps({"type": "assistant", "message": {"usage": usage}}) + "\n")
+        event = {"agent_id": "child1", "agent_transcript_path": str(child)}
+        self.assertEqual(self.call(**event), {})
+        usage["input_tokens"] = 300000
+        child.write_text(json.dumps({"type": "assistant", "message": {"usage": usage}}) + "\n")
+        self.assertFalse(self.call(**event)["continue"])
+        self.assertFalse(self.call(agent_id="agent-child1", agent_transcript_path=str(child), hook_event_name="SubagentStop")["continue"])
+        self.assertEqual(len(list((self.root / ".factory/context").glob("*.json"))), 2)
+        parent = json.loads((self.root / ".factory/context/test-session.json").read_text())
+        self.assertEqual(parent["state"], "HANDOVER_REQUIRED")
+
+    def test_missing_child_transcript_refuses_child_without_stopping_parent(self):
+        self.assertFalse(self.call(agent_id="missing-child")["continue"])
+        self.assertEqual(self.call(), {})
+
 
 if __name__ == "__main__":
     unittest.main()

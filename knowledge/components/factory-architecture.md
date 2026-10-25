@@ -67,9 +67,13 @@ their documented accidental-read/command patterns; they are not complete sandbox
 Context events have a validated session ID, event kind, tool input where applicable and that
 session's transcript path. Counts are nonnegative native integers; cache categories count once.
 The bootstrap admits one first prompt; unavailable subsequent usage refuses further work.
+Subagent tool events key state by parent plus `agent_id` and read the child's own transcript.
+Unavailable child usage stops that child's profile without contaminating the parent's state.
 
-Analysis takes an explicit target commit, optional ancestor base and reviewed integration/view
-manifests. Only allowed tracked text enters extraction. Secret paths refuse analysis, symlinks
+Analysis takes an explicit target commit, optional comparison base and reviewed integration/view
+manifests. A diverged PR uses the effective merge base while preserving its exact requested
+base and target SHAs in the receipt. Main pushes retain their ordinary ancestor comparison.
+Only allowed tracked text enters extraction. Secret paths refuse analysis, symlinks
 are excluded, and unsupported formats remain explicitly inventory-only. Tool versions are pinned.
 The graph includes code and native Markdown structure/frontmatter/links; semantic inference by
 an LLM is outside the mandatory baseline. This keeps the default independent of model credentials.

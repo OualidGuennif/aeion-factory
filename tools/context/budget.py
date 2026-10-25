@@ -41,6 +41,22 @@ def session_id(value):
     return value
 
 
+def identity(event):
+    parent = session_id(event.get("session_id"))
+    agent = event.get("agent_id")
+    if agent is None:
+        return parent, event.get("transcript_path"), parent
+    agent = session_id(session_id(agent).removeprefix("agent-"))
+    key = "agent-" + hashlib.sha256(f"{parent}/{agent}".encode()).hexdigest()[:40]
+    transcript = Path(event.get("agent_transcript_path") or event["transcript_path"])
+    stem = "agent-" + agent.removeprefix("agent-")
+    if transcript.stem == parent:
+        transcript = transcript.parent / parent / "subagents" / f"{stem}.jsonl"
+    if transcript.stem not in {agent, stem}:
+        raise ValueError("subagent usage must not reuse its parent's transcript")
+    return key, str(transcript), transcript.stem
+
+
 @contextmanager
 def locked(root, session):
     folder = root / ".factory/context"
@@ -158,12 +174,14 @@ def handle(root, event):
     root = root.resolve()
     if not isinstance(event, dict):
         raise ValueError("hook input must be an object")
-    session = session_id(event.get("session_id"))
+    session, transcript, transcript_id = identity(event)
     name = event.get("hook_event_name")
-    if name not in {"SessionStart", "UserPromptSubmit", "PreToolUse", "PostToolUse", "PreCompact", "Stop"}:
+    if name not in {"SessionStart", "UserPromptSubmit", "PreToolUse", "PostToolUse", "PreCompact", "Stop", "SubagentStop"}:
         raise ValueError("unsupported control event")
     with locked(root, session) as file:
         state = json.loads(file.read_text()) if file.exists() else {"epoch": 0, "state": "RUNNING"}
+        state["owner_session"] = event["session_id"]
+        state["agent_id"] = event.get("agent_id")
         handover = handover_path(root, session)
         if not handover.exists():
             atomic(handover, f"# Handover {session}\n\n## Scope\nTODO\n\n## Completed\nTODO\n\n"
@@ -178,7 +196,7 @@ def handle(root, event):
                       f"Factory checkpoint profile: 250k handover/compact, 300k observed stop; not a strict ceiling. Recovery: {handover.relative_to(root)}"}}
         else:
             try:
-                usage = native_usage(event["transcript_path"], session)
+                usage = native_usage(transcript, transcript_id)
             except (ValueError, OSError, TypeError, AttributeError):
                 state["state"] = "STOPPED"
                 atomic(file, json.dumps(state, sort_keys=True) + "\n")
@@ -199,9 +217,9 @@ def handle(root, event):
                 first = state["state"] != "HANDOVER_REQUIRED"
                 state["state"] = "HANDOVER_REQUIRED"
                 message = f"Factory 250k alert: finish closure only, update {handover.relative_to(root)}, work/current.md and affected docs; verify the checkpoint before compaction."
-                if name == "PreToolUse" and not closure_tool(root, event):
+                if name == "PreToolUse" and not closure_tool(root, {**event, "session_id": session}):
                     result = {"hookSpecificOutput": {"hookEventName": name, "permissionDecision": "deny", "permissionDecisionReason": message}}
-                elif name == "Stop":
+                elif name in {"Stop", "SubagentStop"}:
                     result = stop(name, message + " Task has not been signed off.")
                 elif first and name in {"PreToolUse", "PostToolUse", "UserPromptSubmit"}:
                     result = {"systemMessage": message, "hookSpecificOutput": {"hookEventName": name, "additionalContext": message}}

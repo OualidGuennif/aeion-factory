@@ -55,11 +55,17 @@ def scope(root, target, config):
     return manifest, excluded
 
 
-def changed_paths(root, base, target):
+def comparison_base(root, base, target):
     if not base or base == "0" * 40:
-        return []
+        return None
     base = revision(root, base)
-    subprocess.run(["git", "merge-base", "--is-ancestor", base, target], cwd=root, check=True, capture_output=True)
+    return git(root, "merge-base", base, target).decode().strip()
+
+
+def changed_paths(root, base, target):
+    base = comparison_base(root, base, target)
+    if base is None:
+        return []
     return [os.fsdecode(path) for path in git(root, "diff", "--name-only", "--no-renames", "-z", base, target).split(b"\0") if path]
 
 
@@ -154,6 +160,8 @@ def refresh(root, target, base=None, check=False):
     analysis = root / ".factory/analysis"
     analysis.mkdir(parents=True, exist_ok=True)
     destination = analysis / target
+    requested_base = revision(root, base) if base and base != "0" * 40 else None
+    base = comparison_base(root, base, target)
     changed = changed_paths(root, base, target)
     spec_coverage(root, base, target, changed, config)
     with (analysis / f"{target}.lock").open("a") as lock:
@@ -200,7 +208,7 @@ def refresh(root, target, base=None, check=False):
                 '<h1>Factory architecture</h1><p>Immutable source snapshot; structural graph and reviewed architecture views.</p>'
                 + ''.join(f'<p><a href="{view["diagram_type"]}.html">{html.escape(view["meta"]["title"])}</a></p>' for view in views))
             artifacts = {path.relative_to(output).as_posix(): digest(path) for path in output.rglob("*") if path.is_file()}
-            receipt = {"schema_version": 2, "status": "PASS", "target": target, "base": base, "changed_paths": changed,
+            receipt = {"schema_version": 2, "status": "PASS", "target": target, "base": base, "requested_base": requested_base, "changed_paths": changed,
                        "excluded_paths": excluded, "integrations": config, "artifacts": artifacts,
                        "coverage": "structural code/docs/config; reviewed architecture; no LLM completeness claim"}
             temporary_receipt = output / ".receipt.tmp"

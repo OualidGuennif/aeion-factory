@@ -119,6 +119,18 @@
           }
         ]
       }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/context-budget.py\"",
+            "timeout": 5,
+            "onFailure": "block"
+          }
+        ]
+      }
     ]
   },
   "autoCompactEnabled": true,

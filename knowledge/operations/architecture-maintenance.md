@@ -70,6 +70,8 @@ Downloaded CI artifacts preserve the original run's evidence and portable hashes
 Archify path provenance in a different location, run a new local baseline for that SHA.
 
 Use `--base <sha>` to record the complete changed/removed path set and validate spec coverage.
+PR diffs use the merge base of the supplied base/head, so independently advancing main does
+not reject a valid branch; the receipt records both requested base SHA and effective merge base.
 Missing refs fail. With no base this is a full initial baseline, not an implicit empty diff.
 The workflow supplies the PR base or push's previous SHA; an all-zero initial-push base means
 a full baseline. Paths outside the declared scope are listed, never silently marked extracted.

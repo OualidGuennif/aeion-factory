@@ -46,8 +46,9 @@ a short name: CRAFTED (principles below).
 
 ## Assumptions
 
-- The agent is Claude Code (CLI or desktop) with plugins available. Other agents can follow the
-  files as documents; only the hooks, skills and plugins are Claude Code specific.
+- Claude Code, local Codex and OpenCode share instructions, Knowledge and maintained skills.
+  Native hooks/configuration differ; follow each setup in the Factory README and compatibility
+  runbook. Claude plugins remain Claude-specific; token guarantees are not assumed portable.
 - A git repository on a forge with pull requests (GitHub examples; others work the same way).
 - Nothing in this guide needs a paid service beyond the agent itself; optional integrations
   (a Decisions API, a memory service) stay **off** until someone turns them on.
@@ -536,8 +537,8 @@ few lines of context instead of a failed CI run and a second pull request.
 | Reflex | Event | What it does |
 | --- | --- | --- |
 | **Orientation** | `SessionStart` (startup, resume, compact) | prints at most 25 lines: `git status`, the last commits, the open tasks of `work/current.md`, the health scorecard |
-| **Guard** | `PreToolUse` on `Bash` and on `Read/Edit/Write/Grep` | refuses reading secret files, environment dumps, force-pushes and `--no-verify` (exit 2 with the reason); asks a human before guard-overriding deploy flags |
-| **Check after edit** | `PostToolUse` on `Edit/Write` | runs only the checks that apply to the edited file (knowledge check, a linter, comment and size rules); silent when fine, at most 15 lines when not; names the doc that covers the file, once |
+| **Guard** | `PreToolUse` on `Bash` and on `Read/Edit/Write/Grep` | refuses reading secret files, environment dumps, force-pushes and `--no-verify` (exit 2 with the reason) |
+| **Check after edit** | `PostToolUse` on `Edit/Write` | runs only the checks that apply to the edited file (knowledge checks and documentation hints; add project lint/size checks explicitly); silent when fine, at most 15 lines when not; names the doc that covers the file, once |
 | **Sign-off** | `Stop` | if the branch changed code without its covering docs, the task state or the map, blocks **once** with the list; the same findings never block twice, and a second stop always passes |
 | **Pre-commit** | git `pre-commit` (`git config core.hooksPath tools/git-hooks`) | the same checks for every committer, human or agent |
 | **Context checkpoint** | session, prompt, tool, compact and stop events | 250k alert and closure-only work; current handover/docs required before compaction; entire-run stop at observed 300k or unavailable usage |
@@ -547,7 +548,9 @@ its fix on failure; never a hook that loops (the sign-off uses `stop_hook_active
 per-session memory of what it already said); tested (`.claude/hooks/test_hooks.py`).
 The context adapter has a five-second hook deadline and separate tests
 (`tools/context/tests/test_budget.py`). Its strict pre-request ceiling is unqualified; see
-`knowledge/operations/context-safety.md`. Native auto-compaction is enabled at 250k by default.
+`knowledge/operations/context-safety.md`. Claude and Codex configure native compaction at 250k. OpenCode uses its native model window.
+The adapters share guards/checkpoints, with the exact supported events and limits documented in
+`knowledge/operations/agent-compatibility.md`; they do not copy Claude settings blindly.
 
 ## Rules from corrections: `hookify`
 
@@ -671,7 +674,7 @@ baseline and inherits the same context checkpoints as interactive managed runs.
   issue, one branch, one pull request, the normal middle loop. Nothing reaches the default branch
   without a review comment and a green CI.
 - **Safety by construction:** the outer jobs run with a read-only tool allowlist, no secrets in
-  their context, a turn budget, and a kill switch (`LOOPS_ENABLED=false`). They never deploy,
+  their context, a default 30-turn / 900-second budget, and a kill switch (`LOOPS_ENABLED=false`). They never deploy,
   restart, migrate data or change a setting.
 
 ### Model routing: `auto`
@@ -820,7 +823,7 @@ service that was turned on has its cost, its data scope and its off switch writt
 
 - **Jesse Vincent / obra, Superpowers** (MIT) — investigation, evidence before completion,
   precise plans and verified review feedback inspired the focused Factory skill updates.
-  https://github.com/obra/superpowers · [license notice](docs/licenses/superpowers-MIT.txt).
+  https://github.com/obra/superpowers · license notice reproduced below.
 - **Mert Koseoğlu, context-mode** (Elastic-2.0) — bounded output and pre-compaction recovery
   informed the context design. No context-mode code or MCP runtime is bundled.
   https://github.com/mksglu/context-mode
@@ -840,3 +843,27 @@ service that was turned on has its cost, its data scope and its off switch writt
 - GitHub docs: security policies, CODEOWNERS.
 
 Mistakes in how these ideas are combined here are ours, not theirs.
+
+## Superpowers license notice
+
+MIT License
+
+Copyright (c) 2025 Jesse Vincent
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

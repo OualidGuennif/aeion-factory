@@ -1,0 +1,31 @@
+#!/usr/bin/env python3
+# Spec: knowledge/operations/agent-compatibility.md
+"""Launch one native agent from this project after checking its architecture baseline."""
+import os
+from pathlib import Path
+import subprocess
+import sys
+
+root = Path(__file__).resolve().parents[2]
+if len(sys.argv) < 2 or sys.argv[1] not in {'claude', 'codex', 'opencode'}:
+    sys.exit('usage: tools/agents/run <claude|codex|opencode> [native arguments]')
+provider, arguments = sys.argv[1], sys.argv[2:]
+if '--strict' in arguments:
+    sys.exit('UNSUPPORTED: strict pre-request 300k admission is not qualified for any Factory adapter.')
+os.chdir(root)
+if provider == 'claude':
+    os.execv(str(root / 'tools/context/run'), [str(root / 'tools/context/run'), *arguments])
+if subprocess.run([str(root / 'tools/architecture/refresh'), '--check', '--target', 'HEAD'], cwd=root).returncode:
+    sys.exit('A valid exact-HEAD architecture baseline is required; see README.md.')
+if provider == 'codex':
+    for value in arguments:
+        if any(key in value for key in ('model_auto_compact_token_limit', 'features.hooks', 'disableAllHooks')):
+            sys.exit('Factory owns native compaction/hook settings in managed launches.')
+    arguments = ['-C', str(root), '-c', 'model_auto_compact_token_limit=250000', '-c', 'features.hooks=true', *arguments]
+if provider == 'opencode' and '--isolated' in arguments:
+    arguments.remove('--isolated')
+    for kind in ('DATA', 'CONFIG', 'STATE', 'CACHE'):
+        path = root / '.factory/opencode' / kind.lower()
+        path.mkdir(parents=True, exist_ok=True)
+        os.environ[f'XDG_{kind}_HOME'] = str(path)
+os.execvp(provider, [provider, *arguments])

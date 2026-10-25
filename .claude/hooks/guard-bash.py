@@ -7,6 +7,7 @@ reason on stderr blocks it; a JSON "ask" decision asks a human; exit 0 lets it r
 not a guarantee: the rules are in knowledge/policies/security.md.
 """
 import json
+import os
 import re
 import shlex
 import sys
@@ -311,6 +312,22 @@ except Exception:
     deny("the hook input could not be read; refusing rather than guessing.")
 tokens = [t for t in re.split(r"[\s'\"=;&|<>()`]+", command) if t]
 secrets = sorted({PurePosixPath(t).name for t in tokens if is_secret(PurePosixPath(t).name)})
+
+if os.environ.get("FACTORY_LOOP_READ_ONLY") == "1":
+    fixed = {"git log -5 --oneline", "git diff --stat", "git diff --check", "git status --short",
+             "tools/knowledge/knowledge-check", "tools/knowledge/doc-links", "tools/repo-health/repo-health"}
+    try:
+        words = shlex.split(command)
+    except ValueError:
+        deny("the read-only loop command could not be parsed.")
+    forge = (len(words) >= 3 and words[0] == "gh" and ((words[1] == "issue" and words[2] in {"list", "view", "create", "comment"})
+             or (words[1] == "pr" and words[2] in {"list", "view", "checks", "diff", "comment"})
+             or words[1:3] == ["run", "list"]))
+    production = os.environ.get("FACTORY_PROD_READ_COMMAND")
+    if command.strip() not in fixed and not (forge or production and command.strip() == production):
+        deny("this loop permits fixed read-only checks and finding/review comments only.")
+    if any(char in command for char in ";|&<>`$\n"):
+        deny("read-only loops do not accept shell composition; use a body file for finding text.")
 
 # Secret files: reading one is refused; any other mention is a human's call.
 if secrets:

@@ -93,6 +93,18 @@ class RefreshTests(unittest.TestCase):
         target = self.commit()
         refresh.spec_coverage(self.root, self.base, target, refresh.changed_paths(self.root, self.base, target), self.config)
 
+    def test_comparison_provenance_is_current_without_rewriting_the_sha_baseline(self):
+        folder = self.root / "analysis" / self.base
+        folder.mkdir(parents=True)
+        original = {"target": self.base, "base": "original"}
+        (folder / "receipt.json").write_text(json.dumps(original))
+        path = refresh.comparison_receipt(folder, self.base, self.base, self.base, [])
+        comparison = json.loads(path.read_text())
+        self.assertEqual(comparison["base"], self.base)
+        self.assertEqual(comparison["changed_paths"], [])
+        self.assertEqual(comparison["baseline_receipt_sha256"], refresh.digest(folder / "receipt.json"))
+        self.assertEqual(json.loads((folder / "receipt.json").read_text()), original)
+
     def test_evidence_anchors_resolve_against_exact_source_and_missing_is_refused(self):
         view = {"meta": {}, "components": [{"id": "app", "sources": [{"path": "src/app.py", "anchor": "def run():"}]}]}
         result = refresh.candidate(view, self.root, self.base, "https://github.com/example/example")

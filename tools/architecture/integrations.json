@@ -12,6 +12,9 @@
     "revision": "81c6be8d87090670c45d08a8f97f9d29c5af0bec"
   },
   "scope": [
+    ".agents/**",
+    ".codex/**",
+    ".opencode/**",
     ".claude/**",
     ".github/**",
     "AGENTS.md",
@@ -27,7 +30,8 @@
     "loops/**",
     "tech-watch/**",
     "tools/**",
-    "work/current.md"
+    "work/current.md",
+    "opencode.json"
   ],
   "architecture_spec": "knowledge/components/factory-architecture.md"
 }

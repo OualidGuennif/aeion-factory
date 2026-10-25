@@ -43,3 +43,23 @@ Schedulers: `loops/schedules/crontab.example`, the launchd plist, or
 `.github/workflows/outer-loop.yml` (off until the repository variable `OUTER_LOOP_ENABLED` is
 `true`). Issues follow `loops/issue-protocol.md`. The Decisions API client
 (`loops/decisions-api/client.sh`) refuses to run until `DECISION_API_ENABLED=true`.
+
+## Bounds and read-only jobs
+
+Defaults: `LOOP_MAX_TURNS=30`, `LOOP_TIMEOUT_SECONDS=900`; both must be positive integers.
+The deadline terminates the invocation's ordinary process group. `LOOP_MAX_BUDGET_USD` is an
+additional optional API-billing cap, not a replacement for these limits on subscriptions.
+
+Read-only jobs set `FACTORY_LOOP_READ_ONLY=1`. The shared Bash guard permits fixed checker/Git
+read commands plus issue/review operations, and refuses writer-capable tools, shell composition
+and arbitrary Git flags. A configured production reader must be an exact, single trusted command;
+put complex reads in the approved read-only script rather than interpolating shell pipelines.
+Native sandbox/credentials remain separate boundaries; this is not a universal shell sandbox.
+
+An enabled inner job reads exact issue labels before launching: absent `agent-ready` refuses;
+`severity:high` selects opus/high unless an explicit model/thinking override wins. A dry run never
+fetches issue metadata and therefore cannot resolve issue severity.
+
+Optional GitHub agent workflows prepare a real architecture baseline before invoking the agent,
+use an explicit turn cap and a job deadline. They remain disabled until the owner configures them;
+their live dispatch/account/plugin behavior is a separate qualification from local loop fixtures.

@@ -13,6 +13,10 @@ cd "$(dirname "${BASH_SOURCE[0]}")/../../efficiency"
         echo "---"
     done
     echo
-    cat ../CREDITS.md
+    sed 's#\[license notice\](docs/licenses/superpowers-MIT.txt)#license notice reproduced below#g' ../CREDITS.md
+    echo
+    echo "## Superpowers license notice"
+    echo
+    cat ../docs/licenses/superpowers-MIT.txt
 } > efficiency-bundle.md
 echo "efficiency-bundle.md: $(wc -l < efficiency-bundle.md) lines"

@@ -5,7 +5,12 @@ set -euo pipefail
 ROOT="${CLAUDE_PROJECT_DIR:?CLAUDE_PROJECT_DIR is not set}"
 JDTLS_HOME="${JDTLS_HOME:-$HOME/.local/share/jdtls/current}"
 # The JDK: JDTLS_JAVA, else one vendored under .tools/, else JAVA_HOME (JDT LS needs Java 21+).
-JAVA="${JDTLS_JAVA:-$(ls -d "$ROOT"/.tools/jdk-*/Contents/Home/bin/java "$ROOT"/.tools/jdk-*/bin/java 2>/dev/null | head -1 || true)}"
+JAVA="${JDTLS_JAVA:-}"
+if [[ -z "$JAVA" ]]; then
+    for candidate in "$ROOT"/.tools/jdk-*/Contents/Home/bin/java "$ROOT"/.tools/jdk-*/bin/java; do
+        if [[ -x "$candidate" ]]; then JAVA="$candidate"; break; fi
+    done
+fi
 [[ -n "$JAVA" ]] || JAVA="${JAVA_HOME:+$JAVA_HOME/bin/java}"
 [[ -x "$JAVA" ]] || { echo "jdtls-launch: no JDK (set JDTLS_JAVA or JAVA_HOME)" >&2; exit 1; }
 [[ -f "$JDTLS_HOME/bin/jdtls" ]] || { echo "jdtls-launch: no JDT LS at $JDTLS_HOME (set JDTLS_HOME)" >&2; exit 1; }

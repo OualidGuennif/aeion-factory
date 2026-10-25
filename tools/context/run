@@ -18,4 +18,5 @@ result = subprocess.run([str(root / "tools/architecture/refresh"), "--check", "-
 if result.returncode:
     sys.exit("A verified Graphify/Archify baseline is required before a managed run. See command.md.")
 os.environ["CLAUDE_CODE_AUTO_COMPACT_WINDOW"] = "250000"
+os.chdir(root)
 os.execvp("claude", ["claude", "--autocompact", "250000", *arguments])

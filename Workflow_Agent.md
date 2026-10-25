@@ -9,7 +9,7 @@ knowledge base.
   git status, recent commits, open tasks.
 - Instructions that existed before the Factory, and the owner's words, win.
 - Before the first managed run, prepare and verify the mandatory Graphify/Archify baseline
-  (`knowledge/operations/architecture-maintenance.md`). Start through `tools/context/run`.
+  (`knowledge/operations/architecture-maintenance.md`). Start through `tools/agents/run <claude|codex|opencode>`; Claude also retains `tools/context/run`.
 
 ## 1. Plan (skill `plan`)
 
@@ -30,9 +30,11 @@ invariants and their tests, acceptance checks). The spec is the source of truth.
 
 Change a little, then let the feedback speak: language-server diagnostics and the edit hook after
 every edit, the tests after every slice. Commit each green slice. Never weaken a test to pass it.
-Context checkpoints run automatically: at observed 250k finish closure, update the active handover,
+Claude context checkpoints run automatically: at observed 250k finish closure, update the active handover,
 current task and affected docs, then verify a checkpoint before compaction. Observed 300k or lost
-usage stops work; this is not a strict pre-request ceiling. See `knowledge/operations/context-safety.md`.
+usage blocks work; transient usage can recover. This is not a strict pre-request ceiling.
+Codex/OpenCode have their own native pre-compaction checkpoint adapters; see
+`knowledge/operations/agent-compatibility.md` and `knowledge/operations/context-safety.md`.
 
 ## 5. Sign off (skill `sign-off`)
 

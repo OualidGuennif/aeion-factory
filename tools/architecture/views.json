@@ -4,7 +4,8 @@
     "diagram_type": "architecture",
     "meta": {
       "title": "Factory authority and execution",
-      "quality_profile": "showcase"
+      "quality_profile": "showcase",
+      "output": "architecture.html"
     },
     "components": [
       {
@@ -299,7 +300,8 @@
     "diagram_type": "workflow",
     "meta": {
       "title": "Reviewed delivery and mandatory analysis",
-      "quality_profile": "showcase"
+      "quality_profile": "showcase",
+      "output": "workflow.html"
     },
     "lanes": [
       {
@@ -489,7 +491,8 @@
     "diagram_type": "lifecycle",
     "meta": {
       "title": "Context handover and recovery",
-      "quality_profile": "showcase"
+      "quality_profile": "showcase",
+      "output": "lifecycle.html"
     },
     "mainPath": [
       "running",

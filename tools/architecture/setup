@@ -17,6 +17,9 @@ if not python.exists():
     venv.EnvBuilder(with_pip=True).create(python.parent.parent)
 run([str(python), "-m", "pip", "install", "--disable-pip-version-check", "-r",
      str(root / "tools/architecture/requirements.txt")], timeout=600)
+# Pip may keep a same-version wheel from another source; stamp the reviewed commit explicitly.
+reference = f"graphifyy @ git+{config['graphify']['repository']}@{config['graphify']['revision']}"
+run([str(python), "-m", "pip", "install", "--disable-pip-version-check", "--force-reinstall", "--no-deps", reference], timeout=300)
 archify = folder / "archify"
 if not archify.exists():
     run(["git", "clone", "--no-checkout", "--filter=blob:none", config["archify"]["repository"], str(archify)])

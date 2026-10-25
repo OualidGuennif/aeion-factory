@@ -36,6 +36,8 @@ Run `tools/architecture/setup`, then `tools/architecture/refresh --target HEAD` 
 managed task. Setup installs the reviewed Graphify revision into `.factory/integrations/` and
 checks out the pinned Archify package there. Git, Python 3.10+, Node 18+ and Chrome/Chromium are
 required. Dependencies and browser execution are explicit; there is no global plugin install.
+Setup reinstalls the Graphify source pin even if the same package version was installed from a
+different source; the refresh verifies its recorded VCS commit before importing it.
 
 The same refresh command runs on every push to main, including docs-only and multi-commit
 updates. A PR also runs it before merge. No branch-wide concurrency key drops older jobs.

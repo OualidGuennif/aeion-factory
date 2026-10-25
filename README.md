@@ -13,6 +13,9 @@ workflow: **plan → change → test → review**. Keep only the parts you need.
 
 The method is language-independent. Your project's compiler, linter and tests validate its code.
 Hooks and plugins target Claude Code; other agents can follow `AGENTS.md` and the workflow.
+Managed Claude runs enable a 250k compaction/checkpoint profile. Graphify/Archify analysis is
+mandatory at adoption and after main updates; its isolated setup also requires Node and Chrome.
+The observed 300k stop is not a qualified strict pre-request ceiling.
 
 ## Try it
 
@@ -48,6 +51,8 @@ services stay off until you choose to configure them.
 | [Agent workflow](Workflow_Agent.md) | Follow a task from plan to review |
 | [Commands](command.md) | Run checks, skills and optional loops |
 | [Build and test](knowledge/operations/build-and-test.md) | Verification commands and hook requirements |
+| [Context safety](knowledge/operations/context-safety.md) | Handover, native compaction and the runtime guarantee boundary |
+| [Architecture maintenance](knowledge/operations/architecture-maintenance.md) | Mandatory Graphify/Archify baseline and main refresh |
 
 Factory works on its own. The optional [Æion modules](https://github.com/OualidGuennif/aeion-spaceship/blob/main/docs/modules.md)
 cover security, audit, observability and integration when you need them.

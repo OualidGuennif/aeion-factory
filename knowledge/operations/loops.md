@@ -24,6 +24,10 @@ sources:
 (`loops/prompts/`), model and thinking level (`loops/model-routing.md`), tool allowlist and
 permission mode. It reads only the loop settings of `env.local` (never the Decisions API secret)
 and runs nothing while `LOOPS_ENABLED` is not `true`; `--dry-run` prints the settings.
+Enabled jobs launch through `tools/context/run`: a verified Graphify/Archify baseline is required,
+native compaction is fixed at 250k and the checkpoint profile applies. Strict pre-request 300k
+admission remains unqualified. See [context safety](context-safety.md) and
+[architecture maintenance](architecture-maintenance.md). Dry-run still launches nothing.
 
 | Job | Schedule | Writes |
 | --- | --- | --- |

@@ -531,7 +531,7 @@ Instructions are context; hooks are enforcement (Claude Code docs: to block an a
 hook). Feedback within three seconds of a mistake is the cheapest correction there is — it costs a
 few lines of context instead of a failed CI run and a second pull request.
 
-## The five reflexes
+## The reflexes
 
 | Reflex | Event | What it does |
 | --- | --- | --- |
@@ -540,10 +540,14 @@ few lines of context instead of a failed CI run and a second pull request.
 | **Check after edit** | `PostToolUse` on `Edit/Write` | runs only the checks that apply to the edited file (knowledge check, a linter, comment and size rules); silent when fine, at most 15 lines when not; names the doc that covers the file, once |
 | **Sign-off** | `Stop` | if the branch changed code without its covering docs, the task state or the map, blocks **once** with the list; the same findings never block twice, and a second stop always passes |
 | **Pre-commit** | git `pre-commit` (`git config core.hooksPath tools/git-hooks`) | the same checks for every committer, human or agent |
+| **Context checkpoint** | session, prompt, tool, compact and stop events | 250k alert and closure-only work; current handover/docs required before compaction; entire-run stop at observed 300k or unavailable usage |
 
 Rules for every hook: under three seconds; exit 0 and silent on success; exit 2 with the rule and
 its fix on failure; never a hook that loops (the sign-off uses `stop_hook_active` and a
 per-session memory of what it already said); tested (`.claude/hooks/test_hooks.py`).
+The context adapter has a five-second hook deadline and separate tests
+(`tools/context/tests/test_budget.py`). Its strict pre-request ceiling is unqualified; see
+`knowledge/operations/context-safety.md`. Native auto-compaction is enabled at 250k by default.
 
 ## Rules from corrections: `hookify`
 
@@ -641,11 +645,16 @@ local edit-build-test cycle, the outer loop the integration, review and release 
   one line and a source each; a checkable one becomes a `hookify` rule. The next review applies
   them, so the owner never has to say it twice.
 - The same comment becomes the input of the next review: corrections compound.
+- Every main update runs the mandatory Graphify/Archify round, including docs-only merges.
+  Keep the complete architecture spec current and wait for the exact merged SHA's passing
+  analysis before closing work or releasing (`knowledge/operations/architecture-maintenance.md`).
 
 ### Outer loop (scheduled, read-only)
 
 A scheduler — **mandatory**, whichever kind you have — runs `loops/orchestrator.sh <job>` headless
 (`claude -p`), each job with its own prompt, model, tool allowlist and budget:
+The orchestrator uses `tools/context/run`; the project needs a verified initial architecture
+baseline and inherits the same context checkpoints as interactive managed runs.
 
 | Job | Default schedule | Reads | Writes |
 | --- | --- | --- | --- |
@@ -808,6 +817,17 @@ service that was turned on has its cost, its data scope and its off switch writt
   Eclipse JDT Language Server.
 
 ## Research and practice
+
+- **Jesse Vincent / obra, Superpowers** (MIT) — investigation, evidence before completion,
+  precise plans and verified review feedback inspired the focused Factory skill updates.
+  https://github.com/obra/superpowers · [license notice](docs/licenses/superpowers-MIT.txt).
+- **Mert Koseoğlu, context-mode** (Elastic-2.0) — bounded output and pre-compaction recovery
+  informed the context design. No context-mode code or MCP runtime is bundled.
+  https://github.com/mksglu/context-mode
+- **Graphify Labs, Graphify** (Apache-2.0 with upstream notices) — pinned native code and Markdown
+  structural extraction. https://github.com/Graphify-Labs/graphify
+- **tt-a1i, Archify** (upstream Apache-2.0 / MIT notices) — pinned source-backed diagrams,
+  schema/provenance/browser checks. https://github.com/tt-a1i/archify
 
 - Chroma, *Context Rot* (2025) — long inputs degrade every model measured.
 - Gloaguen et al., context files and agent success (arXiv 2602.11988, 2026).

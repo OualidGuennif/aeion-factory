@@ -52,11 +52,16 @@ local edit-build-test cycle, the outer loop the integration, review and release 
   one line and a source each; a checkable one becomes a `hookify` rule. The next review applies
   them, so the owner never has to say it twice.
 - The same comment becomes the input of the next review: corrections compound.
+- Every main update runs the mandatory Graphify/Archify round, including docs-only merges.
+  Keep the complete architecture spec current and wait for the exact merged SHA's passing
+  analysis before closing work or releasing (`knowledge/operations/architecture-maintenance.md`).
 
 ### Outer loop (scheduled, read-only)
 
 A scheduler — **mandatory**, whichever kind you have — runs `loops/orchestrator.sh <job>` headless
 (`claude -p`), each job with its own prompt, model, tool allowlist and budget:
+The orchestrator uses `tools/context/run`; the project needs a verified initial architecture
+baseline and inherits the same context checkpoints as interactive managed runs.
 
 | Job | Default schedule | Reads | Writes |
 | --- | --- | --- | --- |

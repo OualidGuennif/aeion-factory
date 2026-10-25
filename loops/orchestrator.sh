@@ -64,7 +64,7 @@ PROMPT_TEXT="$(cat "$HERE/prompts/$PROMPT")"
 [[ -n "$ISSUE" ]] && PROMPT_TEXT="$PROMPT_TEXT
 
 The issue to fix: #$ISSUE."
-CMD=(claude -p "$PROMPT_TEXT" --model "$MODEL" --effort "$EFFORT" --permission-mode "$MODE"
+CMD=("$ROOT/tools/context/run" -p "$PROMPT_TEXT" --model "$MODEL" --effort "$EFFORT" --permission-mode "$MODE"
      --allowedTools "$TOOLS" --output-format text)
 # A spend cap applies to API billing; on a subscription it is ignored.
 BUDGET="$(setting LOOP_MAX_BUDGET_USD "")"

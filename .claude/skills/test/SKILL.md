@@ -17,6 +17,8 @@ Every behaviour change; every bug fix (write the failing test first); every fail
 3. For an access boundary: missing and wrong credentials, a forbidden route, hostile input.
 4. Prove the test can fail: run it against the old code, or break the code once.
 5. A failing test: find the cause; fix the code, or the test only if the test was wrong — and say why.
+6. Select tests for observable behavior and meaningful boundaries. A harmless prose edit does
+   not need a new test that merely matches its wording. Use skill `debug` for an unclear failure.
 
 ## Rationalizations
 | Excuse | Rebuttal |

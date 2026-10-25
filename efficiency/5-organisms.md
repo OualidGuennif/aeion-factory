@@ -17,7 +17,7 @@ Instructions are context; hooks are enforcement (Claude Code docs: to block an a
 hook). Feedback within three seconds of a mistake is the cheapest correction there is — it costs a
 few lines of context instead of a failed CI run and a second pull request.
 
-## The five reflexes
+## The reflexes
 
 | Reflex | Event | What it does |
 | --- | --- | --- |
@@ -26,10 +26,14 @@ few lines of context instead of a failed CI run and a second pull request.
 | **Check after edit** | `PostToolUse` on `Edit/Write` | runs only the checks that apply to the edited file (knowledge check, a linter, comment and size rules); silent when fine, at most 15 lines when not; names the doc that covers the file, once |
 | **Sign-off** | `Stop` | if the branch changed code without its covering docs, the task state or the map, blocks **once** with the list; the same findings never block twice, and a second stop always passes |
 | **Pre-commit** | git `pre-commit` (`git config core.hooksPath tools/git-hooks`) | the same checks for every committer, human or agent |
+| **Context checkpoint** | session, prompt, tool, compact and stop events | 250k alert and closure-only work; current handover/docs required before compaction; entire-run stop at observed 300k or unavailable usage |
 
 Rules for every hook: under three seconds; exit 0 and silent on success; exit 2 with the rule and
 its fix on failure; never a hook that loops (the sign-off uses `stop_hook_active` and a
 per-session memory of what it already said); tested (`.claude/hooks/test_hooks.py`).
+The context adapter has a five-second hook deadline and separate tests
+(`tools/context/tests/test_budget.py`). Its strict pre-request ceiling is unqualified; see
+`knowledge/operations/context-safety.md`. Native auto-compaction is enabled at 250k by default.
 
 ## Rules from corrections: `hookify`
 

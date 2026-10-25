@@ -11,6 +11,7 @@ Everything you can run here, grouped by loop. Skills are invoked by name in a Cl
 | `spec` | a feature or component changes: write its spec sections first |
 | `build` | implement in thin, tested slices |
 | `test` | add or fix tests; never weaken an assertion |
+| `debug` | reproduce a failure, test one hypothesis, fix its root cause and prove the regression |
 | `sign-off` | end a task: tests, docs and links, task state, security on sensitive diffs |
 | `pr-review` | a pull request is open: fresh reviewer, verified findings, one verdict comment |
 | `ship` | merge and release behind green CI and the deploy's own guards |
@@ -32,6 +33,15 @@ tools/knowledge/doc-links --for path/to/file          # the docs covering a file
 tools/repo-health/repo-health [--json]                # comment blocks, file sizes, AGENTS.md and work caps
 python3 tools/knowledge/tests/test_doc_links.py       # tool tests
 python3 .claude/hooks/test_hooks.py                   # hook tests
+python3 tools/context/tests/test_budget.py            # context boundary/recovery regressions
+python3 tools/architecture/tests/test_refresh.py       # analysis provenance/coverage regressions
+tools/architecture/setup                             # isolated pinned Graphify and Archify
+tools/architecture/refresh --target HEAD              # mandatory initial baseline, after commit
+tools/architecture/refresh --target HEAD --base origin/main  # refresh the reviewed change
+tools/architecture/refresh --check --target HEAD       # verify persisted artifact hashes
+tools/context/run                                    # managed Claude session, native compact at 250k
+tools/context/run --strict                           # refuses: strict pre-request control unqualified
+python3 tools/context/budget.py checkpoint --session <id> --base origin/main --verify
 ```
 
 ## Loops (`loops/orchestrator.sh`)
@@ -48,7 +58,9 @@ loops/orchestrator.sh <job> [--dry-run] [--issue N]
 ```
 
 Every job reads `env.local`, refuses to run while `LOOPS_ENABLED=false` (except `--dry-run`), and
-prints the exact `claude -p` command it runs. Schedules: `loops/schedules/`.
+prints the managed command it runs. Schedules: `loops/schedules/`.
+The command uses `tools/context/run` so enabled loops require the architecture baseline and the
+same native compaction profile. Dry-run still launches no agent or integration.
 
 ## Plugins (Claude Code)
 

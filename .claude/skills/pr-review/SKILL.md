@@ -13,6 +13,8 @@ A fresh context catches what the author's context hides. One comment, one verdic
 2. Start ONE fresh, read-only reviewer subagent with: the PR number, `git diff origin/main...HEAD`, `AGENTS.md`, and the docs `tools/knowledge/doc-links --for <file>` names. Ask for findings ranked by severity, each with path:line and a concrete failure scenario.
 3. A sensitive diff: also skill `security-scan` on the changes, or say it was not run.
 4. Verify every finding yourself; drop what you cannot confirm.
+   Trace suggestions against the code/spec before implementing them; disagree with an unsupported
+   fix. For context/architecture work, verify claimed guarantees and exact-SHA artifact coverage.
 5. Post with `gh pr comment <n> --body-file <file>`:
    ```
    Review: OK            (or)   Review: NOT OK

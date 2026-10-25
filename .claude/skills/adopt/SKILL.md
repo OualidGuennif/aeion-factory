@@ -9,4 +9,7 @@ description: Applies the Æion efficiency guide to an existing repository one ph
 2. Inventory the repository's own instructions, docs, hooks, CI and conventions: they win.
 3. Pick the next phase (1 to 7) and read its chapter; plan the smallest change that fits; list what you keep as is and why.
 4. Wait for a yes; implement on a branch; run the phase's "Done when" checks.
+   Before the first managed task, adapt `knowledge/components/factory-architecture.md` and
+   `tools/architecture/` scope/views to the actual project, then run setup and a real baseline.
+   Graphify/Archify are mandatory from day one; missing tooling/browser/coverage is incomplete setup.
 5. Open a PR (skill `sign-off`, then `pr-review`). One phase per PR.

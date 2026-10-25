@@ -5,6 +5,8 @@ env.local
 !.env.example
 # Generated and local state.
 .factory/
+# Active local recovery files; durable facts remain in knowledge/.
+work/handovers/
 /state_of_the_art research/
 CLAUDE-SECURITY-*/
 __pycache__/

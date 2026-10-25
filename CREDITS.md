@@ -19,6 +19,17 @@
 
 ## Research and practice
 
+- **Jesse Vincent / obra, Superpowers** (MIT) — investigation, evidence before completion,
+  precise plans and verified review feedback inspired the focused Factory skill updates.
+  https://github.com/obra/superpowers · [license notice](docs/licenses/superpowers-MIT.txt).
+- **Mert Koseoğlu, context-mode** (Elastic-2.0) — bounded output and pre-compaction recovery
+  informed the context design. No context-mode code or MCP runtime is bundled.
+  https://github.com/mksglu/context-mode
+- **Graphify Labs, Graphify** (Apache-2.0 with upstream notices) — pinned native code and Markdown
+  structural extraction. https://github.com/Graphify-Labs/graphify
+- **tt-a1i, Archify** (upstream Apache-2.0 / MIT notices) — pinned source-backed diagrams,
+  schema/provenance/browser checks. https://github.com/tt-a1i/archify
+
 - Chroma, *Context Rot* (2025) — long inputs degrade every model measured.
 - Gloaguen et al., context files and agent success (arXiv 2602.11988, 2026).
 - Lulla et al., AGENTS.md and agent runtime (arXiv 2601.20404, 2026).

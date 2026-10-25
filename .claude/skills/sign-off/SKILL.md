@@ -14,6 +14,10 @@ Done means proven and documented, not "the code is written". Reasons: `AGENTS.md
 3. `work/current.md`: update the task's entry, or delete it when done.
 4. `AGENTS.md`: when a top-level folder, a command or a rule changed.
 5. A sensitive diff (auth, infrastructure, CI, secrets): skill `security-scan` on the changes.
+   Match each completion claim to fresh relevant command output and its exit status. A model's
+   report, partial check or stale result is not verification; inspect the actual diff/artifact.
+   Update the architecture spec when its facts change. After committing, run
+   `tools/architecture/refresh --target HEAD --base origin/main` before opening the PR.
 6. `gh pr create` with what, why, the checks run and their results, the docs touched; then skill `pr-review`.
 
 ## Red flags

@@ -15,3 +15,5 @@ Start from [the template](_template.md).
 
 | Component | Status | Notes |
 | --- | --- | --- |
+| [Integration choices](context-and-architecture.md) | stable | scoped upstream adoption and runtime qualification boundaries |
+| [Factory architecture](factory-architecture.md) | stable | complete spec with maintained source-backed diagrams |

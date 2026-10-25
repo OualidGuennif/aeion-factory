@@ -1,0 +1,198 @@
+---
+type: Component
+title: "Factory architecture"
+description: "Complete source-backed specification of Factory's authority, execution, Knowledge, context checkpoints, analysis and delivery."
+status: stable
+generated:
+  by: aeion-factory/1.1
+  at: 2026-10-25
+sources:
+  - id: instructions
+    resource: ../../AGENTS.md
+    title: "Authority and task flow"
+  - id: budget
+    resource: ../../tools/context/budget.py
+    title: "Context checkpoint state machine"
+  - id: launcher
+    resource: ../../loops/orchestrator.sh
+    title: "Optional loop execution"
+  - id: refresh
+    resource: ../../tools/architecture/refresh
+    title: "Analysis snapshots and provenance"
+  - id: graph
+    resource: ../../tools/architecture/graph.py
+    title: "Native structural Graphify extraction"
+  - id: workflow
+    resource: ../../.github/workflows/architecture-refresh.yml
+    title: "PR and main maintenance rounds"
+  - id: views
+    resource: ../../tools/architecture/views.json
+    title: "Reviewed Archify views and evidence anchors"
+---
+
+# Factory architecture
+
+## Intent
+
+Factory is a Git repository template and local toolset for agent-assisted engineering. The
+owner authorizes scope and delivery. Agents plan and edit; Python/Git checks establish bounded
+structural facts; fresh review establishes the verdict; GitHub records PR/merge/CI evidence.
+There is no application server, broker, production database or deployed Factory control plane.
+Adopting projects keep their existing instructions and architecture.
+
+### Vocabulary and authority
+
+Knowledge is canonical policy/specification; OKF is the maintained concept/frontmatter/link
+discipline. Skills describe task procedures. Hooks are event-triggered feedback/control within
+the supported harness. A checkpoint preserves an unfinished task; a baseline records source
+analysis at a commit. Neither replaces owner authorization, tests or canonical documentation.
+
+## Data sources
+
+| Source | Content / owner | Freshness |
+| --- | --- | --- |
+| `AGENTS.md` and owner instruction | Precedence, boundaries, task workflow / owner | Read at task start |
+| `knowledge/` | Policies, components, ADRs, operations and references / reviewed repository | Owning fact updated with its code |
+| `work/current.md` | Open task state / current worker | Every meaningful sign-off/checkpoint |
+| Git objects and diff | Immutable source and changed/deleted paths / Git | Explicit target/base SHA |
+| Current session transcript | Latest native input/cache/output token counts / Claude Code | Bounded tail at each control event |
+| Graphify/Archify | Structural relations, rendered views and check receipts / pinned tools | Per target commit; derived, never policy |
+
+## Inputs
+
+Task input is the owner's approved scope plus relevant instructions and component specs.
+Untrusted issues/pages/model output cannot grant permissions. Existing path/Bash guards cover
+their documented accidental-read/command patterns; they are not complete sandbox isolation.
+
+Context events have a validated session ID, event kind, tool input where applicable and that
+session's transcript path. Counts are nonnegative native integers; cache categories count once.
+The bootstrap admits one first prompt; unavailable subsequent usage refuses further work.
+Subagent tool events key state by parent plus `agent_id` and read the child's own transcript.
+Unavailable child usage stops that child's profile without contaminating the parent's state.
+
+Analysis takes an explicit target commit, optional comparison base and reviewed integration/view
+manifests. A diverged PR uses the effective merge base while preserving its exact requested
+base and target SHAs in the receipt. Main pushes retain their ordinary ancestor comparison.
+Only allowed tracked text enters extraction. Secret paths refuse analysis, symlinks
+are excluded, and unsupported formats remain explicitly inventory-only. Tool versions are pinned.
+The graph includes code and native Markdown structure/frontmatter/links; semantic inference by
+an LLM is outside the mandatory baseline. This keeps the default independent of model credentials.
+Setup stamps Graphify's commit archive URL and SHA-256, including replacement of a same-version wheel
+from another source; analysis refuses mismatched package provenance or a dirty Archify checkout.
+
+## Outputs
+
+### Components and execution
+
+| Unit | Responsibility | Interfaces / persistence |
+| --- | --- | --- |
+| Instructions and seven-phase guide | Owner precedence, scope and adoption | Markdown links; `CLAUDE.md` points to `AGENTS.md` |
+| Skills | Plan/spec/build/test/review/sign-off/ship and focused procedures | `.claude/skills/*/SKILL.md`; no second task ledger |
+| Hook adapter | Read event JSON and call a bounded local check | stdin/stdout JSON; failure blocks where supported |
+| Context budget | Usage, closure-only state, checkpoint receipt, observed stop | `.factory/context/<session>.json`; per-session file lock |
+| Handover | Recovery facts for the current session | Ignored `work/handovers/<session>.md`, atomically created |
+| Knowledge/link/health checkers | Frontmatter, caps, traceability and diff coverage | Exit code + bounded diagnostics; no provider |
+| Optional loops | Select prompt/model/tools and run a managed headless task | Off unless enabled; outer loop reads production only through its configured read path |
+| Analysis wrapper | Freeze Git, Graphify, evidence validation and Archify finalization | Ignored `.factory/analysis/<sha>/` and immutable receipts |
+| GitHub workflows | PR checks and post-main analysis; artifact retention | Read-only checkout/job permissions; no generated-source push |
+| Native language servers | Editor diagnostics for their registered language | Local processes; explicit plugin enablement |
+
+Normal task: read -> approved plan -> component spec -> thin changes/tests -> docs/current task
+update -> fresh review -> authorized PR merge -> exact-merged-SHA analysis -> closure/release.
+Deployment remains the adopting project's own guarded procedure. Factory loops never deploy.
+
+### Context and recovery
+
+Native auto-compaction is enabled at 250k. The state machine starts RUNNING; observing 250k
+latches HANDOVER_REQUIRED and emits one alert to user and agent. Code/subtask tools are refused;
+closure docs and fixed check commands remain. A checkpoint validates handover sections, Knowledge,
+doc links, repository health and current task updates, then hashes source and handover bytes.
+Any later source or handover change invalidates readiness. PreCompact refuses an absent/stale
+checkpoint. A compact SessionStart begins RECOVERING and supplies the handover pointer; new
+positive native usage permits RUNNING. Resume alone does not clear STOPPED.
+
+Observed usage at 300k, or unavailable usage after bootstrap, returns an entire-run stop on a
+supported event; a PreCompact refusal uses that event's blocking decision. No extra model turn
+is requested to finish missing docs. A partial task remains incomplete. The current harness is
+qualified only as a checkpoint profile: it has no proved before-every-request bound or exact
+mid-response cutoff. Strict launch is refused, and other harnesses remain unqualified.
+
+### Knowledge, state and retention
+
+Canonical facts exist once in Knowledge with sources and `Spec:` pointers. Frontmatter/tags
+retain existing formats and limits. Generated graphs/views are navigation aids; inferred links
+retain confidence labels and cannot create canonical facts. `work/current.md` retains only open
+tasks. Completed task state is removed; durable choices go to ADRs/policies and commit history.
+Local handovers are concise, contain no transcripts/secrets, and can be removed after completed
+task recovery/closure. State deletion is a manual recovery decision, not an automatic stop bypass.
+
+Analysis output and caches stay ignored locally. CI artifacts retain the workflow's configured
+retention period (14 days); a missing/expired baseline must be rebuilt. There is no mutable
+latest pointer, graph database, shared writable cache or exactly-once delivery assumption.
+
+### Trust and failure behavior
+
+Scripts never execute model-produced commands. Only fixed closure commands and validated Git
+arguments pass to subprocesses. Tool installations are project-local and pinned; normal analysis
+requires no LLM credential. CI uses a read-only token and never sends source to a model. A local
+agent/runtime still needs its existing account. Raw CLI sessions outside the managed launcher
+and deliberately modified local hooks are outside the enforcement claim.
+
+Each analysis builds a clean immutable snapshot. File hashes, source anchors, native coverage
+and Archify's schema/provenance/browser gates must pass before publication. Missing tools,
+browser, refs, evidence anchors, extraction coverage or output fail the round. Jobs run separately
+per target; duplicates use a valid same-SHA receipt only after artifact verification. A newer
+failed round leaves older SHA artifacts intact but stale. Bounded subprocess timeouts terminate
+the invocation; no background service/retry queue continues it. CI reruns retry the same target.
+
+### Delivery and rollback
+
+Pre-commit/CI retain Knowledge, doc-link, health and security gates. Architecture runs on PRs
+and every main push, including docs-only and multi-commit pushes, records changed/removed paths,
+and uploads immutable outputs. It cannot undo a merge: a failed round prevents release and
+completed-work claims until corrected. Adoption requires a baseline before managed execution.
+Rendering uses its permanent SHA directory; an atomic final receipt publishes success only
+after every gate passes. Moving Archify HTML would invalidate its native path provenance.
+
+Rollback is a reviewed normal Git revert, followed by checks and a fresh analysis for that
+revert SHA. Never force-push main or reuse an older graph as if it describes the reverted tree.
+No production migration, rollback command or availability/SLO is applicable to this template.
+
+## Invariants
+
+1. Owner/repository instructions and canonical Knowledge remain authoritative (review and
+   existing Knowledge/link checks).
+2. 249,999/250,000 and 299,999/300,000 observations have explicit boundaries; stopped state is
+   not reset by resume; unavailable usage is refused (`tools/context/tests/test_budget.py`).
+3. Compaction readiness binds the handover and exact source state; later edits invalidate it
+   (`test_budget.py`, checkpoint/compaction tests).
+4. Source evidence belongs to the target SHA; missing/ambiguous anchors and secret paths fail
+   (`tools/architecture/tests/test_refresh.py` and real Archify gates).
+5. Required code/Markdown extraction is complete structurally; deletions cannot survive in a
+   freshly assembled current graph (coverage checks and the real baseline).
+6. A PASS receipt names its SHA and artifact hashes; tampered/missing output is never reused
+   (`test_refresh.py`, corruption and missing artifact tests).
+
+## Determinism
+
+Source enumeration, hashing, native structural extraction, state transitions and schema checks
+are deterministic within pinned tools. Rendering/browser evidence depends on the browser/runtime
+and records its receipts. Spec/diagram meaning is reviewed engineering judgment. Neither tests
+nor schema checks prove complete semantic understanding. No throughput/latency/token-saving
+measurement or live 250k/300k guarantee is asserted. No extra agents are required for execution;
+the existing fresh PR reviewer remains.
+
+## Acceptance checks
+
+Run the commands in [build and test](../operations/build-and-test.md), plus the two context and
+architecture test scripts, setup, and `tools/architecture/refresh --target HEAD --base <sha>`.
+The baseline must include code/docs coverage, source-backed overview/delivery/context views and
+passing Archify browser receipts. Inspect the initial views visually before claiming readability.
+After merge, inspect the analysis job for that exact main SHA. Native long-session qualification
+remains unavailable until a real controlled run succeeds; a weekly-limit error is not a pass.
+
+## Out of scope
+
+Production infrastructure, a hosted documentation service, LLM-generated canonical specs,
+semantic completeness guarantees, universal harness support, a strict token ceiling without
+runtime admission control, and automatically enabling additional agents or Superpowers bootstrap.

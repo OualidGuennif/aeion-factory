@@ -29,6 +29,8 @@ Rebuild it with `tools/efficiency/bundle` after editing those sources.
 | Comments, file size, caps | `tools/repo-health/repo-health` | the root |
 | Hooks and tools | `python3 .claude/hooks/test_hooks.py`, `python3 tools/knowledge/tests/test_doc_links.py` | the root |
 | Health regressions | `python3 tools/repo-health/tests/test_repo_health.py` | the root |
+| Context and analysis regressions | `python3 tools/context/tests/test_budget.py`, `python3 tools/architecture/tests/test_refresh.py` | the root |
+| Mandatory source analysis | `tools/architecture/refresh --target HEAD --base origin/main` after committing | pinned tools, Node and Chrome required |
 | Your code | add your build, lint and test commands here, copied from CI | |
 
 The pre-commit (`git config core.hooksPath tools/git-hooks`) runs the first three; CI runs all of

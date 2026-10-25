@@ -28,6 +28,11 @@ sources:
   https://github.com/vectorize-io/hindsight
 - **The language servers:** Microsoft TypeScript 7 (native `tsc --lsp`), Deno's built-in server,
   Eclipse JDT Language Server.
+- **Superpowers** informs the focused debugging, planning, test, verification and review updates;
+  **context-mode** informs bounded output and recovery without bundling its runtime.
+- **Graphify** supplies native structural code/Markdown extraction; **Archify** supplies
+  source-backed architecture views and browser/provenance gates. Reviewed revisions live in
+  `tools/architecture/integrations.json`; attribution and notices are in [CREDITS](../../CREDITS.md).
 
 ## Research and practice
 

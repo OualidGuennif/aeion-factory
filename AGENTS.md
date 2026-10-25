@@ -29,6 +29,8 @@ tools/        knowledge-check, doc-links, repo-health, local language-server plu
 tools/knowledge/knowledge-check && tools/knowledge/doc-links && tools/repo-health/repo-health
 python3 tools/knowledge/tests/test_doc_links.py && python3 .claude/hooks/test_hooks.py
 python3 tools/repo-health/tests/test_repo_health.py
+python3 tools/context/tests/test_budget.py && python3 tools/architecture/tests/test_refresh.py
+tools/architecture/refresh --target HEAD --base origin/main  # after committing
 loops/orchestrator.sh outer --dry-run        # shows the command a loop would run, runs nothing
 ```
 
@@ -44,6 +46,8 @@ Add your project's own build and test commands here, copied from CI.
 | A user interface | `knowledge/policies/ui-ux.md` |
 | The loops and schedules | `knowledge/operations/loops.md`, `command.md` |
 | Adopting the Factory in another repo | `efficiency/00-EFFICIENCY.md`; skill `adopt` |
+| Context limits and handovers | [Context safety](knowledge/operations/context-safety.md); enabled checkpoint profile, strict runtime limit unqualified |
+| Graphify, Archify and architecture changes | [Architecture maintenance](knowledge/operations/architecture-maintenance.md), [complete spec](knowledge/components/factory-architecture.md) |
 
 ## Critical rules
 
@@ -53,6 +57,10 @@ Add your project's own build and test commands here, copied from CI.
 3. The outer loop only reads. No loop deploys, restarts, migrates data or changes a setting.
 4. Uncertain, missing or failed means *no*: fail closed.
 5. English in code, comments, docs and commits.
+6. Default native compaction is 250k: handover and affected docs must be verified first. The
+   checkpoint guard stops at observed 300k; strict pre-request enforcement is unavailable.
+7. Graphify/Archify baseline is mandatory before the first managed run. Every merged main update
+   must pass its analysis round; use `tools/architecture/refresh`, including after docs-only work.
 
 ## How code is written here
 
@@ -78,6 +86,7 @@ names the rule and its fix.
 - The docs the change touches are updated, with their links (`tools/knowledge/doc-links --diff
   origin/main` passes); `work/current.md` is updated or its entry deleted (skill `sign-off`).
 - The pull request carries the `pr-review` comment, and its CI is green.
+- The exact merged main SHA has a passing Graphify/Archify round and its architecture spec is current.
 
 ## What not to do
 

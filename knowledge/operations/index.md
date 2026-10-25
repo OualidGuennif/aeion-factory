@@ -10,6 +10,9 @@ generated:
 
 # Operations
 
+- [Context safety and handover](context-safety.md)
+- [Mandatory Graphify/Archify maintenance](architecture-maintenance.md)
+
 | Concept | Status | Notes |
 | --- | --- | --- |
 | [Build and test](build-and-test.md) | stable | every gate, and the language servers |

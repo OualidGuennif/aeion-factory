@@ -8,6 +8,9 @@ description: Merges and releases a reviewed change behind a green CI and the dep
 ## Process
 1. Confirm `Review: OK` is the latest verdict and `gh pr checks` is green on the head commit.
 2. Squash-merge; the message says what changed and why (it is the history).
+   Wait for the `Architecture refresh` workflow to pass on the exact merged main SHA before
+   declaring the round complete or releasing. A failed round is retried/corrected, never skipped.
+   Fast-forward local main to the merged remote commit; do not push generated artifacts to main.
 3. Release: run the release gate (skill `security-scan` on the changes since the last tag, `tools/knowledge/doc-links`), tag, write the changelog line.
 4. Deploy only through the project's deploy procedure and its guards, with a human's go when the project requires it. Never bypass a guard.
 5. After the deploy, read the result through the read-only path and record it in `work/current.md`.

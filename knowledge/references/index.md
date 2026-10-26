@@ -13,3 +13,4 @@ generated:
 | Concept | Status | Notes |
 | --- | --- | --- |
 | [Sources behind the Factory](sources.md) | stable | the research and tools the guide rests on |
+| [OpenCode 300k admission experiment](opencode-context-qualification.md) | stable | dated paid-route evidence and remaining strict-mode limits |

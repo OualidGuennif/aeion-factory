@@ -95,7 +95,9 @@ V2 domain callbacks: legacy function exports can appear in discovery without exe
 
 Real model-driven qualification is separate: it must show actual file changes and a witnessed
 native guard denial in a disposable repository, not merely an agent's completion statement.
-No native long-context 250k/300k run or absolute admission ceiling is claimed. Local hook failures
+The [dated OpenCode experiment](../references/opencode-context-qualification.md) covers a native
+278k-input call and refusal of an over-budget tool continuation in an isolated primary-HTTP profile.
+No full 250k handover/compaction cycle or absolute Factory admission ceiling is claimed. Local hook failures
 can be advisory in some native events; retain native sandbox/permissions and check actual dispatch.
 Hosted/cloud orchestration and optional scheduled native actions require separate qualification.
 

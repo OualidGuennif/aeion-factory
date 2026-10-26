@@ -69,6 +69,12 @@ result or response may cross a threshold before another hook runs. `tools/contex
 therefore refuses execution rather than advertising unsupported strict protection. Codex/OpenCode support shared guards and verified checkpoints through their own adapters, with
 token enforcement unqualified; see [compatibility](agent-compatibility.md). A live Claude 250k/300k long-session run remains unverified.
 
+The [2026-10-26 OpenCode experiment](../references/opencode-context-qualification.md) exercised a
+real paid DeepSeek V4.1 Flash call with 278,859 input tokens and a native refusal after a tool result
+crossed the experimental reserved budget. It establishes a primary HTTP admission mechanism in
+an isolated profile; it does not enable Factory strict mode or qualify handover/compaction and
+auxiliary-call coverage.
+
 Use `tools/context/run [claude arguments]` for managed interactive/headless runs. It verifies the
 current architecture baseline, passes `--autocompact 250000`, and refuses explicit compaction
 overrides. Hooks are an accidental-behavior guard, not isolation against malicious code that can

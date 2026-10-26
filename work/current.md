@@ -5,11 +5,11 @@ Finished tasks are deleted: the commit message and knowledge/ keep what matters.
 Status: ACTIVE, WAITING-OWNER, MEASURING, BLOCKED, BACKLOG.
 
 ## Native strict context admission — BLOCKED
-- Owner decision: 2026-10-25, integrate context safety and architecture maintenance while preserving the Factory core.
-- State: checkpoint profile implemented; no absolute pre-request 300k ceiling is claimed; strict launch refuses.
-- Next: qualify a supported before-every-request admission boundary and a controlled native long-session run.
-- Blocker: no complete native pre-request admission boundary is qualified; observed-hook guards do not establish an absolute ceiling.
-- Evidence: knowledge/operations/context-safety.md; knowledge/components/factory-architecture.md
+- Owner decision: 2026-10-26, attempt native 300k qualification using paid OpenCode Go DeepSeek V4.1 Flash.
+- State: primary HTTP denial, 278k-input accounting and over-budget tool continuation exercised in isolation; strict launch still refuses.
+- Next: qualify a portable counter, auxiliary calls and the full durable handover/compaction cycle before enabling strict admission.
+- Blocker: the experimental counter/profile is not shipped; provider framing and complete native lifecycle coverage remain unqualified.
+- Evidence: knowledge/references/opencode-context-qualification.md; knowledge/operations/context-safety.md
 
 ## Adapt the Factory to this project — ACTIVE
 - Owner decision: <date>, started from Æion Factory (knowledge/decisions/ADR-001).

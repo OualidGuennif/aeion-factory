@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import tempfile
 import unittest
+import time
 
 ROOT=Path(__file__).resolve().parents[3]
 
@@ -60,6 +61,24 @@ class LoopTests(unittest.TestCase):
         result=subprocess.run(['python3',str(ROOT/'tools/loops/run'),'--timeout','1','--',
                                'python3','-c','import time; time.sleep(30)'],capture_output=True,text=True,timeout=5)
         self.assertEqual(result.returncode,124)
+
+    def test_terminating_wrapper_cancels_its_native_child(self):
+        marker=self.root/'child-completed'
+        ready=self.root/'child-ready'
+        command=f'from pathlib import Path; import time; Path({str(ready)!r}).touch(); time.sleep(1); Path({str(marker)!r}).touch()'
+        process=subprocess.Popen(['python3',str(ROOT/'tools/loops/run'),'--timeout','20','--','python3','-c',command],
+                                 stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+        try:
+            for _ in range(50):
+                if ready.exists():break
+                time.sleep(0.02)
+            self.assertTrue(ready.exists())
+            process.terminate()
+            self.assertEqual(process.wait(timeout=3),130)
+            time.sleep(1.1)
+            self.assertFalse(marker.exists())
+        finally:
+            if process.poll() is None:process.kill();process.wait()
 
 
 if __name__=='__main__':unittest.main()

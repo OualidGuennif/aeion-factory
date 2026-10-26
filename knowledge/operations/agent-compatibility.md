@@ -14,7 +14,7 @@ sources:
     title: "Codex hook registrations"
   - resource: ../../opencode.json
     title: "OpenCode native config"
-  - resource: ../../.opencode/plugins/factory.js
+  - resource: ../../.opencode/plugins/factory/index.js
     title: "OpenCode plugin callbacks"
 generated:
   by: aeion-factory/1.2
@@ -34,7 +34,7 @@ not establish loaded hooks or identical runtime guarantees.
   under `.agents/skills`; OpenCode already discovers the Claude-compatible paths.
 - Codex local trusted projects enable `.codex/config.toml` and `.codex/hooks.json`. Its native
   auto-compaction threshold is 250000. Its hook transcript format is not a stable token API.
-- OpenCode loads root `opencode.json` and `.opencode/plugins/factory.js`. Auto-compaction remains
+- OpenCode 2.1.4+ loads root `opencode.json` and `.opencode/plugins/factory/index.js`. Auto-compaction remains
   native to its selected model; no supported fixed 250k setting is invented.
 - Both adapters enforce supported Bash/path refusals, edit feedback and a verified handover
   before compaction. Native token stops and strict pre-request 300k admission are unqualified.
@@ -53,9 +53,9 @@ qualification and setup commands are recorded below.
 - https://learn.chatgpt.com/docs/hooks
 - https://learn.chatgpt.com/docs/config-file/config-reference
 - https://learn.chatgpt.com/docs/build-skills
-- https://opencode.ai/docs/plugins/
-- https://opencode.ai/docs/config/
-- https://opencode.ai/docs/skills/
+- https://opencode.ai/v2/docs/build/plugins/
+- https://opencode.ai/v2/docs/config/
+- https://opencode.ai/v2/docs/skills/
 
 ## Setup
 
@@ -72,8 +72,8 @@ qualification and setup commands are recorded below.
 The shared guards are basename/command-pattern safeguards. Codex native Bash and apply_patch
 payloads are normalized explicitly, including deleted/moved patch paths. OpenCode maps native
 camelcase file paths and tool events, appends edit feedback to tool output, and injects the exact
-verified handover pointer during compaction. Its idle event logs sign-off feedback and cannot
-force the model to continue. Shell edits and arbitrary MCP tools are not complete edit coverage.
+verified handover pointer during compaction. Use the shared sign-off skill before finishing;
+the plugin does not claim an idle hook forces continuation. Shell edits and arbitrary MCP tools are not complete edit coverage.
 
 ## Qualification and limits
 
@@ -82,18 +82,20 @@ Regression commands: `python3 tools/agents/tests/test_hooks.py`,
 These exercise real guard processes, payload normalization, patch paths, failure decisions,
 checkpoint invalidation, process deadlines, turn caps and issue severity routing.
 
-On 2026-10-25, native Codex 0.164.0-alpha.11.1 discovered all 15 shared skills. Its native
-config diagnostic correctly reported this new project layer as untrusted; no persisted user trust
-was changed. Users must complete the native trust setup above. Synthetic direct adapter calls do
-not prove project-local dispatch while that layer is disabled.
-
-OpenCode 1.19.4 discovered all 15 skills with a fresh isolated profile. Its binary archive SHA-256
-was verified against the official release digest. A normal-profile probe hit an existing database
-schema conflict; it was preserved. The diagnostic's large stdout needed file capture to avoid
-truncation; a partial skill list was not accepted as a successful discovery.
+Native qualification uses both discovery and witnessed tool dispatch. Codex needs a trusted project
+and enabled hook sources; an untrusted layer being ignored is expected. OpenCode requires 2.1.4+
+V2 domain callbacks: legacy function exports can appear in discovery without executing.
 
 Real model-driven qualification is separate: it must show actual file changes and a witnessed
 native guard denial in a disposable repository, not merely an agent's completion statement.
 No native long-context 250k/300k run or absolute admission ceiling is claimed. Local hook failures
 can be advisory in some native events; retain native sandbox/permissions and check actual dispatch.
 Hosted/cloud orchestration and optional scheduled native actions require separate qualification.
+
+OpenCode 2.1.4 is the qualified V2 target. Legacy 1.19.4 can discover skills but does not dispatch
+these V2 callbacks; do not claim its guards are working from discovery alone. The plugin is a
+directory with a default id/setup entrypoint and uses no SDK dependency.
+
+OpenCode consumes a verified receipt before each compaction attempt. A retry must verify a new
+checkpoint; it never silently reuses a receipt from an earlier compaction. The plugin imports only
+Node built-ins and does not bundle an unused SDK or its dependency graph.

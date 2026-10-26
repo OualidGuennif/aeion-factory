@@ -88,6 +88,35 @@ class BudgetTests(unittest.TestCase):
         self.assertEqual(state["state"], "HANDOVER_REQUIRED")
         self.assertIn("250k", self.call(tool_name="Read")["systemMessage"])
 
+    def test_resume_does_not_claim_an_unverified_compaction(self):
+        self.observe(250000)
+        self.call(hook_event_name="PreCompact")
+        result = self.call(hook_event_name="SessionStart", source="resume")
+        self.assertIn("closure remains required", result["systemMessage"])
+        self.assertNotIn("verified handover was retained", result["systemMessage"])
+
+    def test_untracked_code_requires_current_task_update_before_checkpoint(self):
+        (self.root / '.gitignore').write_text('.factory/\nwork/handovers/\n*.jsonl\n')
+        (self.root / 'work').mkdir(exist_ok=True)
+        current = self.root / 'work/current.md'
+        current.write_text('# Current work\n')
+        budget.git(self.root, 'add', '.gitignore', 'work/current.md')
+        budget.git(self.root, '-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', 'commit', '-qm', 'task fixture')
+        self.call()
+        handover = budget.handover_path(self.root, 'test-session')
+        handover.write_text(handover.read_text().replace('TODO', 'Fixture evidence'))
+        (self.root / 'new-feature.py').write_text('value = 1\n')
+        actual_run = subprocess.run
+
+        def run(command, **options):
+            return actual_run(command, **options) if command[0] == 'git' else subprocess.CompletedProcess(command, 0)
+
+        with patch.object(budget.subprocess, 'run', side_effect=run):
+            with self.assertRaisesRegex(ValueError, 'work/current.md'):
+                budget.checkpoint(self.root, 'test-session', 'HEAD')
+            current.write_text('# Current work\nTask updated.\n')
+            budget.checkpoint(self.root, 'test-session', 'HEAD')
+
     def test_launcher_enters_its_project_before_executing_runtime(self):
         launcher = MODULE.parent / "run"
         fake = self.root / "claude"

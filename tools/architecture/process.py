@@ -9,7 +9,7 @@ def run(command, *, cwd=None, timeout=180, **options):
     process = subprocess.Popen(command, cwd=cwd, start_new_session=True, **options)
     try:
         stdout, stderr = process.communicate(timeout=timeout)
-    except subprocess.TimeoutExpired:
+    except (subprocess.TimeoutExpired, KeyboardInterrupt):
         try:
             os.killpg(process.pid, signal.SIGKILL)
         except ProcessLookupError:

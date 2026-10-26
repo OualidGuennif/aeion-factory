@@ -209,6 +209,7 @@ def handle(root, event):
         state["owner_session"] = event["session_id"]
         state["agent_id"] = event.get("agent_id")
         handover = ensure_handover(root, session)
+        compact_verified = name == "SessionStart" and event.get("source") == "compact" and ready(root, session, state)
         if name == "SessionStart" and event.get("source") == "compact" and state.get("state") != "STOPPED":
             state = {"epoch": state["epoch"] + 1, "state": "RECOVERING", "warning_pending": state.get("warning_pending", False)}
         result = {}
@@ -218,7 +219,10 @@ def handle(root, event):
             result = {"hookSpecificOutput": {"hookEventName": name, "additionalContext":
                       f"Factory checkpoint profile: 250k handover/compact, 300k observed stop; not a strict ceiling. Recovery: {handover.relative_to(root)}"}}
             if state.pop("warning_pending", False):
-                result["systemMessage"] = "Factory 250k alert: a verified handover was retained before compaction."
+                message = ("Factory 250k alert: a verified handover was retained before compaction." if compact_verified
+                           else "Factory 250k alert: closure remains required; verify the handover/docs before compaction.")
+                result["systemMessage"] = message
+                result["hookSpecificOutput"]["additionalContext"] += "\n" + message
         else:
             try:
                 usage = observed_usage(transcript, transcript_id)
@@ -274,6 +278,8 @@ def checkpoint(root, session, base):
         for command in (*CHECKS, ("tools/knowledge/doc-links", "--diff", base, "--worktree")):
             subprocess.run(command, cwd=root, check=True, timeout=30, stdout=subprocess.DEVNULL)
         changed = set(git(root, "diff", "--name-only", "-z", base).decode().split("\0")) - {""}
+        changed |= {os.fsdecode(path) for path in git(root, "ls-files", "--others", "--exclude-standard", "-z").split(b"\0")
+                    if path and not os.fsdecode(path).startswith((".factory/", "work/handovers/"))}
         if changed and "work/current.md" not in changed:
             raise ValueError("update work/current.md before checkpointing")
         if fingerprint(root) != before:

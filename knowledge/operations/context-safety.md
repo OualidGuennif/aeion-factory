@@ -63,8 +63,7 @@ their native earlier limit. The guard does not expand a model's capacity.
 Claude Code exposes no qualified before-every-request admission callback here. A large tool
 result or response may cross a threshold before another hook runs. `tools/context/run --strict`
 therefore refuses execution rather than advertising unsupported strict protection. Codex/OpenCode support shared guards and verified checkpoints through their own adapters, with
-token enforcement unqualified; see [compatibility](agent-compatibility.md). Claude native dispatch and a live 250k/300k run remain unverified: the local
-Claude account returned a weekly-limit error during qualification on 2026-10-25.
+token enforcement unqualified; see [compatibility](agent-compatibility.md). A live Claude 250k/300k long-session run remains unverified.
 
 Use `tools/context/run [claude arguments]` for managed interactive/headless runs. It verifies the
 current architecture baseline, passes `--autocompact 250000`, and refuses explicit compaction
@@ -77,3 +76,6 @@ a once-only normal sign-off reminder, separate from the mandatory pre-compaction
 
 All three managed entry points are available through `tools/agents/run <agent>`. The original
 Claude entry point remains supported and now always enters the repository root before launch.
+
+Checkpoint task-state checks include nonignored untracked files, not only tracked diffs. A resumed
+pending warning asks for closure; only a verified actual compaction can report a retained checkpoint.

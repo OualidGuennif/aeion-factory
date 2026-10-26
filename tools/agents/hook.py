@@ -52,11 +52,13 @@ def edit_paths(event):
         patch = data.get('command', data.get('patchText'))
         if not isinstance(patch, str):
             raise ValueError('apply_patch requires its native patch string')
-        paths = re.findall(r'^\*\*\* (?:Add File|Update File|Delete File|Move to): (.+)$', patch, re.M)
+        paths = re.findall(r'^\*\*\* (?:Add File|Update File|Delete File|Move to): (.+)$', '\n'.join(patch.splitlines()), re.M)
         if not paths:
             raise ValueError('apply_patch has no recognized file paths')
         return paths
     path = data.get('file_path', data.get('filePath', data.get('path')))
+    if path is None and event.get('tool_name') in {'Read', 'Edit', 'Write'}:
+        raise ValueError('the native file tool requires its supported path field')
     return [path] if path is not None else []
 
 
@@ -81,6 +83,9 @@ def handle(root, provider, event):
             if not budget.ready(root, session, state):
                 return fail(name, 'Verify the handover/docs before compaction: '
                             f'python3 tools/context/budget.py checkpoint --session {session} --base origin/main --verify')
+            if provider == 'opencode':
+                state.pop('checkpoint', None)
+                budget.atomic(file, json.dumps(state, sort_keys=True) + '\n')
             return {'systemMessage': f'Factory verified handover: {handover.relative_to(root)}'}
     if name == 'SessionStart':
         result = script(root, 'session-start.py', normalized)
@@ -91,6 +96,9 @@ def handle(root, provider, event):
         return result
     if name == 'PreToolUse':
         if event.get('tool_name') == 'Bash':
+            data = event.get('tool_input')
+            if not isinstance(data, dict) or not isinstance(data.get('command'), str) or not data['command'].strip():
+                raise ValueError('the native Bash tool requires a nonempty command string')
             result = script(root, 'guard-bash.py', normalized)
             if result.get('hookSpecificOutput', {}).get('permissionDecision') == 'ask':
                 return fail(name, 'This command requires an explicit human decision; the adapter does not auto-approve it.')

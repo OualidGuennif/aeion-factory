@@ -2,6 +2,7 @@
 # Spec: knowledge/operations/agent-compatibility.md
 """Launch one native agent from this project after checking its architecture baseline."""
 import os
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -14,7 +15,7 @@ if '--strict' in arguments:
     sys.exit('UNSUPPORTED: strict pre-request 300k admission is not qualified for any Factory adapter.')
 os.chdir(root)
 if provider == 'claude':
-    os.execv(str(root / 'tools/context/run'), [str(root / 'tools/context/run'), *arguments])
+    sys.exit(subprocess.run([str(root / 'tools/context/run'), *arguments], cwd=root).returncode)
 if subprocess.run([str(root / 'tools/architecture/refresh'), '--check', '--target', 'HEAD'], cwd=root).returncode:
     sys.exit('A valid exact-HEAD architecture baseline is required; see README.md.')
 if provider == 'codex':
@@ -28,4 +29,13 @@ if provider == 'opencode' and '--isolated' in arguments:
         path = root / '.factory/opencode' / kind.lower()
         path.mkdir(parents=True, exist_ok=True)
         os.environ[f'XDG_{kind}_HOME'] = str(path)
-os.execvp(provider, [provider, *arguments])
+if provider == 'opencode':
+    try:
+        result = subprocess.run(['opencode', '--version'], cwd=root, capture_output=True, text=True, timeout=10)
+    except (OSError, subprocess.TimeoutExpired):
+        sys.exit('OpenCode 2.1.4+ is required; install it using the official V2 instructions.')
+    version = re.search(r'\b(\d+)\.(\d+)\.(\d+)\b', result.stdout)
+    if result.returncode or not version or tuple(map(int, version.groups())) < (2, 1, 4):
+        sys.exit('Factory requires OpenCode 2.1.4+ native V2 hooks; older skill discovery does not prove hook support.')
+command = ['codex', *arguments] if provider == 'codex' else ['opencode', *arguments]
+sys.exit(subprocess.run(command, cwd=root).returncode)

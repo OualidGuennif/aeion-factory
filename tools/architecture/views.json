@@ -71,8 +71,8 @@
             "anchor": "\"PreToolUse\": ["
           },
           {
-            "path": ".opencode/plugins/factory.js",
-            "anchor": "'tool.execute.before':"
+            "path": ".opencode/plugins/factory/index.js",
+            "anchor": "ctx.tool.hook('execute.before'"
           }
         ]
       },

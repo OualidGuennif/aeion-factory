@@ -199,10 +199,15 @@ architecture test scripts, setup, and `tools/architecture/refresh --target HEAD 
 The baseline must include code/docs coverage, source-backed overview/delivery/context views and
 passing Archify browser receipts. Inspect the initial views visually before claiming readability.
 After merge, inspect the analysis job for that exact main SHA. Native long-session qualification
-remains unavailable until a real controlled run succeeds; a weekly-limit error is not a pass.
+remains unavailable until a real controlled run succeeds; a failed or partial run is not a pass.
 
 ## Out of scope
 
 Production infrastructure, a hosted documentation service, LLM-generated canonical specs,
 semantic completeness guarantees, universal harness support, a strict token ceiling without
 runtime admission control, and automatically enabling additional agents or Superpowers bootstrap.
+
+Native adapters validate line endings and required path/command fields before guard dispatch.
+OpenCode uses the V2 directory id/setup entrypoint and native prompt/tool/compaction callbacks;
+its pre-compaction receipt is consumed per attempt. Loop cancellation terminates the ordinary
+child process group as well as enforcing deadlines. No SDK dependency is bundled for the plugin.

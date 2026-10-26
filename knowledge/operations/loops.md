@@ -47,7 +47,7 @@ Schedulers: `loops/schedules/crontab.example`, the launchd plist, or
 ## Bounds and read-only jobs
 
 Defaults: `LOOP_MAX_TURNS=30`, `LOOP_TIMEOUT_SECONDS=900`; both must be positive integers.
-The deadline terminates the invocation's ordinary process group. `LOOP_MAX_BUDGET_USD` is an
+The deadline, SIGINT and SIGTERM terminate the invocation's ordinary process group. `LOOP_MAX_BUDGET_USD` is an
 additional optional API-billing cap, not a replacement for these limits on subscriptions.
 
 Read-only jobs set `FACTORY_LOOP_READ_ONLY=1`. The shared Bash guard permits fixed checker/Git

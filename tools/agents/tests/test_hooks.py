@@ -59,6 +59,12 @@ class HookTests(unittest.TestCase):
             self.call('opencode',tool_name='Read',tool_input={'filePath':str(self.root/'.env')})
         self.assertEqual(self.call('opencode',tool_name='Read',tool_input={'filePath':'README.md'}),{})
 
+    def test_crlf_patch_secret_paths_are_normalized_before_guarding(self):
+        for kind in ('Add File', 'Update File', 'Delete File', 'Move to'):
+            patch_text=f'*** Begin Patch\r\n*** {kind}: .env\r\n*** End Patch\r\n'
+            with self.assertRaises(ValueError):
+                self.call(tool_name='apply_patch',tool_input={'command':patch_text})
+
     def test_before_compaction_refuses_missing_and_changed_checkpoint(self):
         for provider in ('codex','opencode'):
             result=self.call(provider,hook_event_name='PreCompact')
@@ -91,6 +97,11 @@ class HookTests(unittest.TestCase):
         result=subprocess.run(['python3',str(ROOT/'tools/agents/hook.py'),'codex'],input='[]',capture_output=True,text=True)
         self.assertEqual(result.returncode,0)
         self.assertFalse(json.loads(result.stdout)['continue'])
+
+    def test_missing_native_command_or_file_path_is_not_an_implicit_allow(self):
+        for tool in ('Bash', 'Read', 'Edit', 'Write'):
+            with self.assertRaises(ValueError):
+                self.call(tool_name=tool,tool_input={})
 
     def test_read_only_loop_denies_writers_and_shell_composition(self):
         for command in ('tools/efficiency/bundle','tools/architecture/setup','git diff --output=x',

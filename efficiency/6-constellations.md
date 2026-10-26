@@ -78,7 +78,7 @@ baseline and inherits the same context checkpoints as interactive managed runs.
   issue, one branch, one pull request, the normal middle loop. Nothing reaches the default branch
   without a review comment and a green CI.
 - **Safety by construction:** the outer jobs run with a read-only tool allowlist, no secrets in
-  their context, a turn budget, and a kill switch (`LOOPS_ENABLED=false`). They never deploy,
+  their context, a default 30-turn / 900-second budget, and a kill switch (`LOOPS_ENABLED=false`). They never deploy,
   restart, migrate data or change a setting.
 
 ### Model routing: `auto`

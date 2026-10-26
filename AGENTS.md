@@ -19,8 +19,10 @@ work/         current.md, the state of open tasks only
 tech-watch/   the technical watch: method, and pending dated packages
 loops/        orchestrator.sh (inner, middle, outer, docs, security, watch, retro), prompts, schedules,
               the issue protocol, the Decisions API client (off)
-tools/        knowledge-check, doc-links, repo-health, local language-server plugins
-.claude/      hooks, skills, path-scoped rules, hookify examples
+tools/        knowledge/link/health checks, agent adapters, architecture and local language servers
+.claude/      original hooks, maintained skills, path-scoped rules, hookify examples
+.codex/       Codex native config/hooks; .agents/skills links to the maintained skills
+.opencode/    OpenCode native plugin; root opencode.json selects shared skills/compaction
 ```
 
 ## Build and test
@@ -30,6 +32,8 @@ tools/knowledge/knowledge-check && tools/knowledge/doc-links && tools/repo-healt
 python3 tools/knowledge/tests/test_doc_links.py && python3 .claude/hooks/test_hooks.py
 python3 tools/repo-health/tests/test_repo_health.py
 python3 tools/context/tests/test_budget.py && python3 tools/architecture/tests/test_refresh.py
+python3 tools/agents/tests/test_hooks.py && node --test tools/agents/tests/test_opencode.mjs
+python3 tools/loops/tests/test_loops.py
 tools/architecture/refresh --target HEAD --base origin/main  # after committing
 loops/orchestrator.sh outer --dry-run        # shows the command a loop would run, runs nothing
 ```
@@ -40,6 +44,7 @@ Add your project's own build and test commands here, copied from CI.
 
 | Task | Open first |
 | --- | --- |
+| Agent setup and runtime differences | [Compatibility](knowledge/operations/agent-compatibility.md); README setup |
 | Any change | `knowledge/index.md`, then the doc of the area; skill `plan` |
 | A feature or component | `knowledge/policies/specs-first.md`; skill `spec` |
 | Security-sensitive code | `knowledge/policies/security.md`; skill `security-scan` |
@@ -57,8 +62,8 @@ Add your project's own build and test commands here, copied from CI.
 3. The outer loop only reads. No loop deploys, restarts, migrates data or changes a setting.
 4. Uncertain, missing or failed means *no*: fail closed.
 5. English in code, comments, docs and commits.
-6. Default native compaction is 250k: handover and affected docs must be verified first. The
-   checkpoint guard stops at observed 300k; strict pre-request enforcement is unavailable.
+6. Claude and Codex native compaction is 250k; OpenCode uses its model window. Verify handover/docs
+   before compaction. Only Claude has the observed 300k guard; strict admission is unqualified.
 7. Graphify/Archify baseline is mandatory before the first managed run. Every merged main update
    must pass its analysis round; use `tools/architecture/refresh`, including after docs-only work.
 

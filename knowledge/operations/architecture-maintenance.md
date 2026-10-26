@@ -34,7 +34,7 @@ sources:
 
 Run `tools/architecture/setup`, then `tools/architecture/refresh --target HEAD` before the first
 managed task. Setup installs the reviewed Graphify revision into `.factory/integrations/` and
-checks out the pinned Archify package there. Git, Python 3.10+, Node 18+ and Chrome/Chromium are
+checks out the pinned Archify package there. Git, Python 3.12+ (excluding 3.14.1), Node 18+ and Chrome/Chromium are
 required. Dependencies and browser execution are explicit; there is no global plugin install.
 Setup reinstalls the Graphify source pin even if the same package version was installed from a
 different source; refresh verifies its immutable commit archive URL and SHA-256 before importing it.
@@ -71,7 +71,10 @@ Archify path provenance in a different location, run a new local baseline for th
 
 Use `--base <sha>` to record the complete changed/removed path set and validate spec coverage.
 PR diffs use the merge base of the supplied base/head, so independently advancing main does
-not reject a valid branch; the receipt records both requested base SHA and effective merge base.
+not reject a valid branch; the immutable baseline receipt records its original requested base SHA and effective merge base.
+Every invocation also writes `.factory/analysis/comparisons/<target>/<requested-base-or-initial>.json`
+with the current comparison and baseline-receipt hash. This preserves graph reuse without reporting
+an earlier changed-path set as the current comparison.
 Missing refs fail. With no base this is a full initial baseline, not an implicit empty diff.
 The workflow supplies the PR base or push's previous SHA; an all-zero initial-push base means
 a full baseline. Paths outside the declared scope are listed, never silently marked extracted.

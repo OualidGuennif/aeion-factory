@@ -21,7 +21,7 @@ ROOT = Path(__file__).resolve().parents[2]
 RESOURCE_RE = re.compile(r"^\s*resource:\s*\"?([^\"\n]+?)\"?\s*$", re.MULTILINE)
 FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---\n", re.DOTALL)
 SPEC_RE = re.compile(r"\bSpec:\s*(knowledge/[\w./-]+\.md)")
-CHECKED_RE = re.compile(r"^Docs-Checked:\s*(knowledge/[\w./-]+\.md)", re.MULTILINE)
+CHECKED_RE = re.compile(r"^Docs-Checked:[ \t]*(knowledge/[\w./-]+\.md)[ \t]+--[ \t]+\S[^\n]*$", re.MULTILINE)
 NOT_A_PATH = ("http://", "https://", "git-history:", "owner-", "mailto:")
 HEADER_RE = re.compile(r'\A(?:\s+|\#[^\n]*|//[^\n]*|--[^\n]*|;[^\n]*|/\*.*?\*/|<!--.*?-->|""".*?"""|'
                        r"'''.*?''')*", re.DOTALL)
@@ -83,16 +83,48 @@ def tracked_headers():
             continue
         with path.open("rb") as stream:
             data = stream.read(HEADER_BYTES)
-        # Do not decode a partially read UTF-8 line or interpret binary bytes as metadata.
-        if len(data) == HEADER_BYTES:
-            data = data.rsplit(b"\n", 1)[0] if b"\n" in data else b""
-        if b"\0" in data:
+        yield rel, leading_header(data)
+
+
+def leading_header(data):
+    if len(data) == HEADER_BYTES:
+        data = data.rsplit(b"\n", 1)[0] if b"\n" in data else b""
+    if b"\0" in data:
+        return ""
+    try:
+        return HEADER_RE.match(data.decode("utf-8-sig")).group()
+    except UnicodeDecodeError:
+        return ""
+
+
+def base_coverage(base, changed):
+    """Read only bounded regular-file headers from the actual merge base."""
+    commit = git("merge-base", base, "HEAD").strip()
+    coverage = {}
+    for row in git("ls-tree", "-r", "-z", commit).split("\0"):
+        if not row:
             continue
-        try:
-            text = data.decode("utf-8-sig")
-        except UnicodeDecodeError:
+        metadata, rel = row.split("\t", 1)
+        mode, kind, object_id = metadata.split()
+        parts = Path(rel).parts
+        if rel not in changed or mode not in {"100644", "100755"} or rel.endswith(".md") or EXCLUDED_PARTS.intersection(parts):
             continue
-        yield rel, HEADER_RE.match(text).group()
+        if any(part not in TEMPLATES and (part in SECRET_NAMES or re.fullmatch(r"\.env(\..+)?", part)
+                                         or part.endswith((".pem", ".key"))) for part in parts):
+            continue
+        with subprocess.Popen(["git", "cat-file", "blob", object_id], cwd=ROOT,
+                              stdout=subprocess.PIPE, stderr=subprocess.DEVNULL) as process:
+            data = process.stdout.read(HEADER_BYTES)
+            process.stdout.close()
+            if len(data) == HEADER_BYTES and process.poll() is None:
+                process.terminate()
+            result = process.wait(timeout=5)
+        if result and len(data) < HEADER_BYTES:
+            print("FAIL Git could not read base metadata.", file=sys.stderr)
+            sys.exit(1)
+        for match in SPEC_RE.finditer(leading_header(data)):
+            coverage.setdefault(rel, set()).add(match.group(1))
+    return coverage
 
 
 def collect():
@@ -157,6 +189,8 @@ def main(argv):
     # A change whose covering doc neither changed nor was declared checked.
     if args.base:
         files, checked = changed_since(args.base, args.worktree)
+        for path, docs in base_coverage(args.base, files).items():
+            coverage.setdefault(path, set()).update(docs)
         for path in sorted(files):
             if path in coverage and only_link_lines(path, args.base, args.worktree):
                 continue

@@ -30,6 +30,7 @@ Rebuild it with `tools/efficiency/bundle` after editing those sources.
 | Hooks and tools | `python3 .claude/hooks/test_hooks.py`, `python3 tools/knowledge/tests/test_doc_links.py` | the root |
 | Health regressions | `python3 tools/repo-health/tests/test_repo_health.py` | the root |
 | Context and analysis regressions | `python3 tools/context/tests/test_budget.py`, `python3 tools/architecture/tests/test_refresh.py` | the root |
+| Agent adapters and loop boundaries | `python3 tools/agents/tests/test_hooks.py`, `node --test tools/agents/tests/test_opencode.mjs`, `python3 tools/loops/tests/test_loops.py` | root; Node 18+ |
 | Mandatory source analysis | `tools/architecture/refresh --target HEAD --base origin/main` after committing | pinned tools, Node and Chrome required |
 | Your code | add your build, lint and test commands here, copied from CI | |
 
@@ -44,8 +45,8 @@ Header traceability is extension-independent and bounded; see the discovery scop
 paths and reports an unavailable link check once. `repo-health --json` exposes its source suffix
 set and selected file count; its caps are not language-aware lint or security coverage.
 
-Policy hooks require Claude Code 2.1.295+ for `onFailure: block`; their command timeout is three
-seconds. Independently, the after-edit hook limits each checker to two seconds for fast feedback.
+Policy hooks require Claude Code 2.1.295+ for `onFailure: block`; the Bash/path guard command timeout is three
+seconds (context hooks use five; native adapter hooks use fifteen). Independently, the after-edit hook limits each checker to two seconds for fast feedback.
 Nonzero exits, missing executables and timeouts produce exit 2 and at most 15 lines
 of diagnostics. Direct script tests do not qualify live harness dispatch or runtime isolation.
 After-edit checks require macOS, Linux or WSL: a timed-out check's process group is terminated
@@ -65,3 +66,7 @@ claude plugin install native-lsp@aeion-local --scope project
 Check: an `initialize` answer, a definition and references through the `LSP` tool, a deliberate
 type error reported then cleared, and the same after a fresh session. Roll back with
 `claude plugin uninstall native-lsp@aeion-local --scope project`.
+
+Agent-specific setup and qualification: [compatibility](agent-compatibility.md). Integration pins
+require Python 3.12+ excluding 3.14.1. `knowledge-check` also validates public root/setup docs and
+the portable efficiency bundle; its bundled Superpowers notice is self-contained.

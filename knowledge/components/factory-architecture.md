@@ -40,6 +40,11 @@ structural facts; fresh review establishes the verdict; GitHub records PR/merge/
 There is no application server, broker, production database or deployed Factory control plane.
 Adopting projects keep their existing instructions and architecture.
 
+Claude Code retains its native hooks. Codex and OpenCode load the same instructions and skills,
+with narrow adapters to the existing secret guards, edit checks and handover checkpoints.
+Their native token/compaction interfaces differ; compatibility is not a claim of identical
+enforcement. See [agent compatibility](../operations/agent-compatibility.md).
+
 ### Vocabulary and authority
 
 Knowledge is canonical policy/specification; OKF is the maintained concept/frontmatter/link
@@ -67,6 +72,9 @@ their documented accidental-read/command patterns; they are not complete sandbox
 Context events have a validated session ID, event kind, tool input where applicable and that
 session's transcript path. Counts are nonnegative native integers; cache categories count once.
 The bootstrap admits one first prompt; unavailable subsequent usage refuses further work.
+An asynchronous transcript delay blocks the current action without permanently stopping the
+session; a later valid observation can recover. Invalid complete records and the observed hard
+limit remain terminal. Every event, including PreCompact, latches a warning crossing.
 Subagent tool events key state by parent plus `agent_id` and read the child's own transcript.
 Unavailable child usage stops that child's profile without contaminating the parent's state.
 
@@ -144,6 +152,8 @@ browser, refs, evidence anchors, extraction coverage or output fail the round. J
 per target; duplicates use a valid same-SHA receipt only after artifact verification. A newer
 failed round leaves older SHA artifacts intact but stale. Bounded subprocess timeouts terminate
 the invocation; no background service/retry queue continues it. CI reruns retry the same target.
+Each requested comparison has a separate receipt bound to the baseline receipt hash; reusing
+the graph never substitutes an earlier base or changed-path set for the current comparison.
 
 ### Delivery and rollback
 
@@ -189,10 +199,15 @@ architecture test scripts, setup, and `tools/architecture/refresh --target HEAD 
 The baseline must include code/docs coverage, source-backed overview/delivery/context views and
 passing Archify browser receipts. Inspect the initial views visually before claiming readability.
 After merge, inspect the analysis job for that exact main SHA. Native long-session qualification
-remains unavailable until a real controlled run succeeds; a weekly-limit error is not a pass.
+remains unavailable until a real controlled run succeeds; a failed or partial run is not a pass.
 
 ## Out of scope
 
 Production infrastructure, a hosted documentation service, LLM-generated canonical specs,
 semantic completeness guarantees, universal harness support, a strict token ceiling without
 runtime admission control, and automatically enabling additional agents or Superpowers bootstrap.
+
+Native adapters validate line endings and required path/command fields before guard dispatch.
+OpenCode uses the V2 directory id/setup entrypoint and native prompt/tool/compaction callbacks;
+its pre-compaction receipt is consumed per attempt. Loop cancellation terminates the ordinary
+child process group as well as enforcing deadlines. No SDK dependency is bundled for the plugin.

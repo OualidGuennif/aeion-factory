@@ -8,6 +8,9 @@ import sys
 import venv
 from process import run
 
+if sys.version_info < (3, 12) or sys.version_info[:3] == (3, 14, 1):
+    sys.exit("Factory analysis pins require Python 3.12+ (excluding 3.14.1); use a supported interpreter.")
+
 root = Path(__file__).resolve().parents[2]
 config = json.loads((root / "tools/architecture/integrations.json").read_text())
 folder = root / ".factory/integrations"

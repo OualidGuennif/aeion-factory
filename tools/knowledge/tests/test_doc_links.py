@@ -82,6 +82,25 @@ check("a declared check passes", t, ["--diff", "HEAD~1"], 0, "PASS")
 
 t = repo()
 (t / "src/app.ts").write_text(f"// {TAG} knowledge/components/example.md\nexport const a = 2;\n")
+commit(t, "change app\n\nDocs-Checked: knowledge/components/example.md")
+check("an exemption requires its explanation", t, ["--diff", "HEAD~1"], 1, "RULE L3")
+
+t = repo()
+(t / "knowledge/components/example.md").write_text("---\ntype: Reference\n---\nApp still exists.\n")
+commit(t, "header-only coverage")
+(t / "src/app.ts").unlink()
+commit(t, "remove application")
+check("deleted header-linked source retains base coverage", t, ["--diff", "HEAD~1"], 1, "RULE L3 src/app.ts")
+
+t = repo()
+(t / "knowledge/components/example.md").write_text("---\ntype: Reference\n---\nApplication behavior.\n")
+commit(t, "header-only coverage")
+(t / "src/app.ts").write_text("export const a = 3;\n")
+commit(t, "remove header and change behavior")
+check("removing a pointer does not erase changed-source coverage", t, ["--diff", "HEAD~1"], 1, "RULE L3 src/app.ts")
+
+t = repo()
+(t / "src/app.ts").write_text(f"// {TAG} knowledge/components/example.md\nexport const a = 2;\n")
 (t / "knowledge/components/example.md").write_text(DOC + "\nUpdated.\n")
 check("the doc changed with the code (uncommitted)", t, ["--diff", "HEAD", "--worktree"], 0, "PASS")
 

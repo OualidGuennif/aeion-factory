@@ -22,8 +22,8 @@ few lines of context instead of a failed CI run and a second pull request.
 | Reflex | Event | What it does |
 | --- | --- | --- |
 | **Orientation** | `SessionStart` (startup, resume, compact) | prints at most 25 lines: `git status`, the last commits, the open tasks of `work/current.md`, the health scorecard |
-| **Guard** | `PreToolUse` on `Bash` and on `Read/Edit/Write/Grep` | refuses reading secret files, environment dumps, force-pushes and `--no-verify` (exit 2 with the reason); asks a human before guard-overriding deploy flags |
-| **Check after edit** | `PostToolUse` on `Edit/Write` | runs only the checks that apply to the edited file (knowledge check, a linter, comment and size rules); silent when fine, at most 15 lines when not; names the doc that covers the file, once |
+| **Guard** | `PreToolUse` on `Bash` and on `Read/Edit/Write/Grep` | refuses reading secret files, environment dumps, force-pushes and `--no-verify` (exit 2 with the reason) |
+| **Check after edit** | `PostToolUse` on `Edit/Write` | runs only the checks that apply to the edited file (knowledge checks and documentation hints; add project lint/size checks explicitly); silent when fine, at most 15 lines when not; names the doc that covers the file, once |
 | **Sign-off** | `Stop` | if the branch changed code without its covering docs, the task state or the map, blocks **once** with the list; the same findings never block twice, and a second stop always passes |
 | **Pre-commit** | git `pre-commit` (`git config core.hooksPath tools/git-hooks`) | the same checks for every committer, human or agent |
 | **Context checkpoint** | session, prompt, tool, compact and stop events | 250k alert and closure-only work; current handover/docs required before compaction; entire-run stop at observed 300k or unavailable usage |
@@ -33,7 +33,9 @@ its fix on failure; never a hook that loops (the sign-off uses `stop_hook_active
 per-session memory of what it already said); tested (`.claude/hooks/test_hooks.py`).
 The context adapter has a five-second hook deadline and separate tests
 (`tools/context/tests/test_budget.py`). Its strict pre-request ceiling is unqualified; see
-`knowledge/operations/context-safety.md`. Native auto-compaction is enabled at 250k by default.
+`knowledge/operations/context-safety.md`. Claude and Codex configure native compaction at 250k. OpenCode uses its native model window.
+The adapters share guards/checkpoints, with the exact supported events and limits documented in
+`knowledge/operations/agent-compatibility.md`; they do not copy Claude settings blindly.
 
 ## Rules from corrections: `hookify`
 

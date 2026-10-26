@@ -53,3 +53,8 @@ before its code is written, has these sections in this order:
   formats or metadata after executable code; directory sources remain existence-only.
 - A documentation-only exemption accepts standalone comment `Spec:` lines and blanks, never
   executable code that happens to contain a pointer.
+
+Diff coverage retains bounded `Spec:` headers from the merge base for deleted files and removed
+pointers. Removing an implementation/header does not silently remove its documentation duty.
+`Docs-Checked` exemptions require the complete `Docs-Checked: knowledge/<doc>.md -- <reason>`
+line with a nonempty explanation; review still verifies whether that explanation is truthful.

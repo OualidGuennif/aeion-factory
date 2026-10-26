@@ -116,6 +116,20 @@ def valid_receipt(folder, target, config):
         return False
 
 
+def comparison_receipt(folder, target, base, requested_base, changed):
+    # Graphs are reusable per SHA; diff provenance belongs to the requested comparison.
+    parent = folder.parent / "comparisons" / target
+    parent.mkdir(parents=True, exist_ok=True)
+    path = parent / f"{requested_base or 'initial'}.json"
+    data = {"target": target, "base": base, "requested_base": requested_base, "changed_paths": changed,
+            "baseline_receipt_sha256": digest(folder / "receipt.json")}
+    with tempfile.NamedTemporaryFile(mode="w", dir=parent, delete=False) as stream:
+        json.dump(data, stream, indent=2)
+        stream.write("\n")
+    os.replace(stream.name, path)
+    return path
+
+
 def candidate(view, source, target, origin):
     # Resolve reviewed anchors against committed bytes; never invent or shift missing evidence.
     data = json.loads(json.dumps(view))
@@ -167,7 +181,9 @@ def refresh(root, target, base=None, check=False):
     with (analysis / f"{target}.lock").open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         if valid_receipt(destination, target, config):
+            comparison = comparison_receipt(destination, target, base, requested_base, changed)
             print(f"Architecture baseline: PASS {target} ({destination})")
+            print(f"Current comparison: {comparison}; baseline receipt preserves its original comparison.")
             return destination
         if check:
             raise ValueError("no valid Graphify/Archify baseline for this commit")
@@ -214,7 +230,9 @@ def refresh(root, target, base=None, check=False):
             temporary_receipt = output / ".receipt.tmp"
             temporary_receipt.write_text(json.dumps(receipt, indent=2) + "\n")
             os.replace(temporary_receipt, output / "receipt.json")
+        comparison = comparison_receipt(destination, target, base, requested_base, changed)
     print(f"Architecture baseline: PASS {target} ({destination})")
+    print(f"Current comparison: {comparison}")
     return destination
 
 

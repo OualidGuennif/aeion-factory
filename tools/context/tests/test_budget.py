@@ -6,6 +6,7 @@ from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
 
 MODULE = Path(__file__).resolve().parents[1] / "budget.py"
 spec = importlib.util.spec_from_file_location("budget", MODULE)
@@ -65,6 +66,71 @@ class BudgetTests(unittest.TestCase):
         self.assertEqual(self.call(hook_event_name="UserPromptSubmit"), {})
         self.assertFalse(self.call(hook_event_name="UserPromptSubmit")["continue"])
 
+    def test_delayed_native_usage_blocks_work_without_poisoning_session(self):
+        self.transcript.write_text("")
+        self.call(hook_event_name="SessionStart", source="startup")
+        self.assertEqual(self.call(hook_event_name="UserPromptSubmit"), {})
+        self.assertFalse(self.call()["continue"])
+        self.observe(1000)
+        self.assertEqual(self.call(), {})
+
+    def test_delayed_usage_after_compaction_can_recover_without_new_prompt(self):
+        self.call(hook_event_name="SessionStart", source="compact")
+        self.transcript.write_text(json.dumps({"type": "system", "subtype": "compact_boundary"}) + "\n")
+        self.assertFalse(self.call()["continue"])
+        self.observe(1000)
+        self.assertEqual(self.call(), {})
+
+    def test_precompact_latches_warning_and_delivers_it_at_next_supported_event(self):
+        self.observe(250000)
+        self.assertEqual(self.call(hook_event_name="PreCompact")["decision"], "block")
+        state = json.loads((self.root / ".factory/context/test-session.json").read_text())
+        self.assertEqual(state["state"], "HANDOVER_REQUIRED")
+        self.assertIn("250k", self.call(tool_name="Read")["systemMessage"])
+
+    def test_resume_does_not_claim_an_unverified_compaction(self):
+        self.observe(250000)
+        self.call(hook_event_name="PreCompact")
+        result = self.call(hook_event_name="SessionStart", source="resume")
+        self.assertIn("closure remains required", result["systemMessage"])
+        self.assertNotIn("verified handover was retained", result["systemMessage"])
+
+    def test_untracked_code_requires_current_task_update_before_checkpoint(self):
+        (self.root / '.gitignore').write_text('.factory/\nwork/handovers/\n*.jsonl\n')
+        (self.root / 'work').mkdir(exist_ok=True)
+        current = self.root / 'work/current.md'
+        current.write_text('# Current work\n')
+        budget.git(self.root, 'add', '.gitignore', 'work/current.md')
+        budget.git(self.root, '-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', 'commit', '-qm', 'task fixture')
+        self.call()
+        handover = budget.handover_path(self.root, 'test-session')
+        handover.write_text(handover.read_text().replace('TODO', 'Fixture evidence'))
+        (self.root / 'new-feature.py').write_text('value = 1\n')
+        actual_run = subprocess.run
+
+        def run(command, **options):
+            return actual_run(command, **options) if command[0] == 'git' else subprocess.CompletedProcess(command, 0)
+
+        with patch.object(budget.subprocess, 'run', side_effect=run):
+            with self.assertRaisesRegex(ValueError, 'work/current.md'):
+                budget.checkpoint(self.root, 'test-session', 'HEAD')
+            current.write_text('# Current work\nTask updated.\n')
+            budget.checkpoint(self.root, 'test-session', 'HEAD')
+
+    def test_launcher_enters_its_project_before_executing_runtime(self):
+        launcher = MODULE.parent / "run"
+        fake = self.root / "claude"
+        fake.write_text("#!/usr/bin/env python3\nimport os\nprint(os.getcwd())\n")
+        fake.chmod(0o755)
+        # The baseline subprocess is an independent gate, replaced only in this launcher fixture.
+        code = "import runpy,subprocess; from unittest.mock import patch; "
+        code += f"\nwith patch('subprocess.run', return_value=subprocess.CompletedProcess([], 0)):\n runpy.run_path({str(launcher)!r}, run_name='__main__')\n"
+        result = subprocess.run(["python3", "-c", code], cwd=self.root,
+                                env={**budget.os.environ, "PATH": str(self.root) + budget.os.pathsep + budget.os.environ["PATH"]},
+                                capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout.strip(), str(MODULE.parents[2]))
+
     def test_invalid_counts_and_cross_session_paths_are_refused(self):
         for value in (True, -1, "1"):
             self.transcript.write_text(json.dumps({"type": "assistant", "message": {
@@ -115,7 +181,7 @@ class BudgetTests(unittest.TestCase):
         self.assertIn("UNSUPPORTED", run.stderr)
 
     def test_malformed_usage_latches_stop_and_hook_returns_processable_json(self):
-        self.transcript.write_text('{"type":')
+        self.transcript.write_text('{"type":\n')
         self.assertFalse(self.call()["continue"])
         self.observe(1)
         self.assertFalse(self.call()["continue"])

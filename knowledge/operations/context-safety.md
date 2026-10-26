@@ -30,9 +30,12 @@ The default Claude profile enables native auto-compaction at 250,000 tokens and 
 on session start, prompts, tools, compaction and stop. SubagentStop also checks a child's final
 observation, including pure-text child responses. The hook reads only the current session's
 bounded transcript tail and retains native token counts, never transcript text. Cached input
-counts once. Missing, malformed or zero usage is unavailable, not an empty context.
+counts once. Missing or zero usage is unavailable, not an empty context. An incomplete final JSONL line is
+a transient write; a malformed complete record is invalid.
 
-At the first observed 250k crossing, the hook alerts both agent and user. Only closure work
+Every event latches the first observed 250k crossing, including PreCompact. The hook alerts both
+agent and user at the next supported event; PreCompact retains a pending alert because that event
+discards system messages. Only closure work
 (docs/task/handover edits and fixed verification commands) remains available. At an observed
 300k it returns `continue: false`; a Stop reminder cannot override this decision. The session
 state and active handover survive restart. Each session has its own file lock and atomic state.
@@ -50,16 +53,17 @@ work, constraints and evidence concise. These local handovers are ignored by Git
 belong in Knowledge. After compaction the same file is the recovery pointer.
 
 Startup and the first prompt allow a native bootstrap before usage exists. All later work
-requires a positive native observation. A `compact_boundary` or compact SessionStart clears the
+requires a positive native observation. A bounded retry waits for asynchronous transcript writes;
+unavailable usage blocks the current action without latching STOPPED, so a later valid observation
+can recover. Invalid complete records and the observed 300k stop remain terminal. A `compact_boundary` or compact SessionStart clears the
 old observation; resuming a stopped session does not clear its stop. Smaller model windows retain
 their native earlier limit. The guard does not expand a model's capacity.
 
 **Guarantee:** this is checkpoint-based enforcement, not a proof of an absolute 300k ceiling.
 Claude Code exposes no qualified before-every-request admission callback here. A large tool
 result or response may cross a threshold before another hook runs. `tools/context/run --strict`
-therefore refuses execution rather than advertising unsupported strict protection. Other
-harnesses are unqualified. Native dispatch and a live 250k/300k run remain unverified: the local
-Claude account returned a weekly-limit error during qualification on 2026-10-25.
+therefore refuses execution rather than advertising unsupported strict protection. Codex/OpenCode support shared guards and verified checkpoints through their own adapters, with
+token enforcement unqualified; see [compatibility](agent-compatibility.md). A live Claude 250k/300k long-session run remains unverified.
 
 Use `tools/context/run [claude arguments]` for managed interactive/headless runs. It verifies the
 current architecture baseline, passes `--autocompact 250000`, and refuses explicit compaction
@@ -69,3 +73,9 @@ edit its own scripts/settings. Raw CLI launches outside the managed entry point 
 Verification: `python3 tools/context/tests/test_budget.py`. Synthetic fixtures prove state and
 refusal behavior; they do not establish live runtime guarantees. The existing Stop hook remains
 a once-only normal sign-off reminder, separate from the mandatory pre-compaction checkpoint.
+
+All three managed entry points are available through `tools/agents/run <agent>`. The original
+Claude entry point remains supported and now always enters the repository root before launch.
+
+Checkpoint task-state checks include nonignored untracked files, not only tracked diffs. A resumed
+pending warning asks for closure; only a verified actual compaction can report a retained checkpoint.

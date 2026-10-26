@@ -6,6 +6,9 @@ description: Plans a non-trivial task before any change - inspects the code and 
 # Plan
 
 ## Overview
+Use the runtime's planning mode when available; otherwise make the plan explicit before edits.
+Existing owner approval for the same scope satisfies the wait; never ask for it twice.
+
 Plan mode first: the cheapest bug is the one never written. Reasons: `knowledge/policies/engineering.md`.
 
 ## When to use

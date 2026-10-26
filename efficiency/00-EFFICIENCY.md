@@ -44,8 +44,9 @@ a short name: [CRAFTED](CRAFTED.md).
 
 ## Assumptions
 
-- The agent is Claude Code (CLI or desktop) with plugins available. Other agents can follow the
-  files as documents; only the hooks, skills and plugins are Claude Code specific.
+- Claude Code, local Codex and OpenCode share instructions, Knowledge and maintained skills.
+  Native hooks/configuration differ; follow each setup in the Factory README and compatibility
+  runbook. Claude plugins remain Claude-specific; token guarantees are not assumed portable.
 - A git repository on a forge with pull requests (GitHub examples; others work the same way).
 - Nothing in this guide needs a paid service beyond the agent itself; optional integrations
   (a Decisions API, a memory service) stay **off** until someone turns them on.

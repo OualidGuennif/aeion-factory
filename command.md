@@ -39,7 +39,14 @@ tools/architecture/setup                             # isolated pinned Graphify 
 tools/architecture/refresh --target HEAD              # mandatory initial baseline, after commit
 tools/architecture/refresh --target HEAD --base origin/main  # refresh the reviewed change
 tools/architecture/refresh --check --target HEAD       # verify persisted artifact hashes
-tools/context/run                                    # managed Claude session, native compact at 250k
+tools/agents/run claude                             # existing Claude integration
+tools/agents/run codex                              # trust project/hooks first
+tools/agents/run opencode                           # native plugin, shared skills
+tools/agents/run opencode --isolated                # separate local profile on database conflict
+python3 tools/agents/tests/test_hooks.py
+node --test tools/agents/tests/test_opencode.mjs
+python3 tools/loops/tests/test_loops.py
+tools/context/run                                    # original Claude entry, native compact at 250k
 tools/context/run --strict                           # refuses: strict pre-request control unqualified
 python3 tools/context/budget.py checkpoint --session <id> --base origin/main --verify
 ```

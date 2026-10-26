@@ -12,6 +12,7 @@ import re
 import shlex
 import subprocess
 import tempfile
+import time
 
 ROOT = Path(__file__).resolve().parents[2]
 WARNING = 250_000
@@ -78,9 +79,15 @@ def native_usage(path, session):
         stream.seek(start)
         if start:
             stream.readline()
-        lines = stream.read(MAX_TAIL).splitlines()
-    for line in reversed(lines):
-        record = json.loads(line)
+        tail = stream.read(MAX_TAIL)
+        lines = tail.splitlines()
+    for index in range(len(lines) - 1, -1, -1):
+        try:
+            record = json.loads(lines[index])
+        except json.JSONDecodeError:
+            if index == len(lines) - 1 and not tail.endswith(b"\n"):
+                return None
+            raise
         if not isinstance(record, dict):
             raise ValueError("invalid transcript record")
         if record.get("subtype") == "compact_boundary":
@@ -93,6 +100,17 @@ def native_usage(path, session):
         if not isinstance(usage, dict) or any(type(usage.get(key)) is not int or usage[key] < 0 for key in FIELDS):
             raise ValueError("invalid native token counts")
         return sum(usage[key] for key in FIELDS) or None
+    return None
+
+
+def observed_usage(path, session):
+    # Native transcripts are asynchronous; wait briefly without granting unmeasured work.
+    for attempt in range(3):
+        usage = native_usage(path, session)
+        if usage is not None:
+            return usage
+        if attempt < 2:
+            time.sleep(0.05)
     return None
 
 
@@ -127,6 +145,14 @@ def fingerprint(root):
 
 def handover_path(root, session):
     return root / "work/handovers" / f"{session}.md"
+
+
+def ensure_handover(root, session):
+    path = handover_path(root, session)
+    if not path.exists():
+        atomic(path, f"# Handover {session}\n\n## Scope\nTODO\n\n## Completed\nTODO\n\n"
+               "## Remaining\nTODO\n\n## Constraints\nTODO\n\n## Evidence\nTODO\n")
+    return path
 
 
 def ready(root, session, state):
@@ -182,21 +208,24 @@ def handle(root, event):
         state = json.loads(file.read_text()) if file.exists() else {"epoch": 0, "state": "RUNNING"}
         state["owner_session"] = event["session_id"]
         state["agent_id"] = event.get("agent_id")
-        handover = handover_path(root, session)
-        if not handover.exists():
-            atomic(handover, f"# Handover {session}\n\n## Scope\nTODO\n\n## Completed\nTODO\n\n"
-                   "## Remaining\nTODO\n\n## Constraints\nTODO\n\n## Evidence\nTODO\n")
+        handover = ensure_handover(root, session)
+        compact_verified = name == "SessionStart" and event.get("source") == "compact" and ready(root, session, state)
         if name == "SessionStart" and event.get("source") == "compact" and state.get("state") != "STOPPED":
-            state = {"epoch": state["epoch"] + 1, "state": "RECOVERING"}
+            state = {"epoch": state["epoch"] + 1, "state": "RECOVERING", "warning_pending": state.get("warning_pending", False)}
         result = {}
         if state.get("state") == "STOPPED":
             result = stop(name, "Factory context run is stopped; start a new validated session from its handover.")
         elif name == "SessionStart":
             result = {"hookSpecificOutput": {"hookEventName": name, "additionalContext":
                       f"Factory checkpoint profile: 250k handover/compact, 300k observed stop; not a strict ceiling. Recovery: {handover.relative_to(root)}"}}
+            if state.pop("warning_pending", False):
+                message = ("Factory 250k alert: a verified handover was retained before compaction." if compact_verified
+                           else "Factory 250k alert: closure remains required; verify the handover/docs before compaction.")
+                result["systemMessage"] = message
+                result["hookSpecificOutput"]["additionalContext"] += "\n" + message
         else:
             try:
-                usage = native_usage(transcript, transcript_id)
+                usage = observed_usage(transcript, transcript_id)
             except (ValueError, OSError, TypeError, AttributeError):
                 state["state"] = "STOPPED"
                 atomic(file, json.dumps(state, sort_keys=True) + "\n")
@@ -205,28 +234,31 @@ def handle(root, event):
             if usage is None and name == "UserPromptSubmit" and not state.get("bootstrapped"):
                 state["bootstrapped"] = True
             elif usage is None:
-                state["state"] = "STOPPED"
-                result = stop(name, "Factory native usage unavailable; checkpoint profile refuses further work.")
+                result = stop(name, "Factory native usage temporarily unavailable; work is blocked. Retry after transcript persistence; no terminal stop was latched.")
             elif usage >= LIMIT:
                 state["state"] = "STOPPED"
                 result = stop(name, "Factory observed 300k context limit reached; task remains incomplete. Read the handover.")
-            elif name == "PreCompact":
-                if not ready(root, session, state):
-                    result = stop(name, f"Create a verified checkpoint before compaction: python3 tools/context/budget.py checkpoint --session {session} --base origin/main --verify")
-            elif usage >= WARNING or state["state"] == "HANDOVER_REQUIRED":
-                first = state["state"] != "HANDOVER_REQUIRED"
-                state["state"] = "HANDOVER_REQUIRED"
-                message = f"Factory 250k alert: finish closure only, update {handover.relative_to(root)}, work/current.md and affected docs; verify the checkpoint before compaction."
-                if name == "PreToolUse" and not closure_tool(root, {**event, "session_id": session}):
-                    result = {"hookSpecificOutput": {"hookEventName": name, "permissionDecision": "deny", "permissionDecisionReason": message}}
-                elif name in {"Stop", "SubagentStop"}:
-                    result = stop(name, message + " Task has not been signed off.")
-                elif first and name in {"PreToolUse", "PostToolUse", "UserPromptSubmit"}:
-                    result = {"systemMessage": message, "hookSpecificOutput": {"hookEventName": name, "additionalContext": message}}
-                if first:
-                    result["systemMessage"] = message
-            elif state["state"] == "RECOVERING":
-                state["state"] = "RUNNING"
+            else:
+                state["bootstrapped"] = True
+                if usage >= WARNING and state["state"] != "HANDOVER_REQUIRED":
+                    state["state"] = "HANDOVER_REQUIRED"
+                    state["warning_pending"] = True
+                if name == "PreCompact":
+                    if not ready(root, session, state):
+                        result = stop(name, f"Create a verified checkpoint before compaction: python3 tools/context/budget.py checkpoint --session {session} --base origin/main --verify")
+                elif state["state"] == "HANDOVER_REQUIRED":
+                    first = state.pop("warning_pending", False)
+                    message = f"Factory 250k alert: finish closure only, update {handover.relative_to(root)}, work/current.md and affected docs; verify the checkpoint before compaction."
+                    if name == "PreToolUse" and not closure_tool(root, {**event, "session_id": session}):
+                        result = {"hookSpecificOutput": {"hookEventName": name, "permissionDecision": "deny", "permissionDecisionReason": message}}
+                    elif name in {"Stop", "SubagentStop"}:
+                        result = stop(name, message + " Task has not been signed off.")
+                    elif first and name in {"PreToolUse", "PostToolUse", "UserPromptSubmit"}:
+                        result = {"systemMessage": message, "hookSpecificOutput": {"hookEventName": name, "additionalContext": message}}
+                    if first:
+                        result["systemMessage"] = message
+                elif state["state"] == "RECOVERING":
+                    state["state"] = "RUNNING"
             state["source"] = "current-session native transcript usage"
         atomic(file, json.dumps(state, sort_keys=True) + "\n")
         return result
@@ -245,7 +277,9 @@ def checkpoint(root, session, base):
         before = fingerprint(root)
         for command in (*CHECKS, ("tools/knowledge/doc-links", "--diff", base, "--worktree")):
             subprocess.run(command, cwd=root, check=True, timeout=30, stdout=subprocess.DEVNULL)
-        changed = git(root, "diff", "--name-only", "-z", base).decode().split("\0")
+        changed = set(git(root, "diff", "--name-only", "-z", base).decode().split("\0")) - {""}
+        changed |= {os.fsdecode(path) for path in git(root, "ls-files", "--others", "--exclude-standard", "-z").split(b"\0")
+                    if path and not os.fsdecode(path).startswith((".factory/", "work/handovers/"))}
         if changed and "work/current.md" not in changed:
             raise ValueError("update work/current.md before checkpointing")
         if fingerprint(root) != before:

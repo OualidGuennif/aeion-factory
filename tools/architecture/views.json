@@ -51,7 +51,7 @@
       {
         "id": "hooks",
         "type": "security",
-        "label": "Event hooks",
+        "label": "Native hook adapters",
         "sublabel": "Guard tools and task boundaries",
         "pos": [
           620,
@@ -65,6 +65,14 @@
           {
             "path": ".claude/settings.json",
             "anchor": "\"PreToolUse\": ["
+          },
+          {
+            "path": ".codex/hooks.json",
+            "anchor": "\"PreToolUse\": ["
+          },
+          {
+            "path": ".opencode/plugins/factory/index.js",
+            "anchor": "ctx.tool.hook('execute.before'"
           }
         ]
       },
@@ -132,7 +140,7 @@
         "id": "context",
         "type": "security",
         "label": "Context checkpoint",
-        "sublabel": "250k handover; observed 300k stop",
+        "sublabel": "Claude: 250k; observed 300k",
         "pos": [
           620,
           570
@@ -490,7 +498,7 @@
     "schema_version": 3,
     "diagram_type": "lifecycle",
     "meta": {
-      "title": "Context handover and recovery",
+      "title": "Claude context checkpoints",
       "quality_profile": "showcase",
       "output": "lifecycle.html"
     },
@@ -545,7 +553,7 @@
         "sources": [
           {
             "path": "tools/context/budget.py",
-            "anchor": "state = {\"epoch\": state[\"epoch\"] + 1, \"state\": \"RECOVERING\"}"
+            "anchor": "\"state\": \"RECOVERING\", \"warning_pending\""
           }
         ]
       },
@@ -553,7 +561,7 @@
         "id": "stopped",
         "type": "failure",
         "label": "Stopped",
-        "sublabel": "observed 300k or usage unavailable",
+        "sublabel": "observed 300k or invalid usage",
         "sources": [
           {
             "path": "tools/context/budget.py",
@@ -591,7 +599,7 @@
         "id": "limit",
         "from": "handover",
         "to": "stopped",
-        "label": "300k or lost usage",
+        "label": "300k or invalid usage",
         "variant": "security"
       },
       {

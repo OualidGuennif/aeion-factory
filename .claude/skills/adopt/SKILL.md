@@ -13,3 +13,7 @@ description: Applies the Æion efficiency guide to an existing repository one ph
    `tools/architecture/` scope/views to the actual project, then run setup and a real baseline.
    Graphify/Archify are mandatory from day one; missing tooling/browser/coverage is incomplete setup.
 5. Open a PR (skill `sign-off`, then `pr-review`). One phase per PR.
+
+Read the README runtime matrix before setup. Preserve the original Claude integration; load
+Codex project/hook trust and shared skills through .agents, or the local OpenCode plugin/config.
+Verify native discovery/denial behavior. A folder existing is not proof that callbacks are loaded.

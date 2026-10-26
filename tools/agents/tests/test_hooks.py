@@ -95,8 +95,14 @@ class HookTests(unittest.TestCase):
 
     def test_malformed_adapter_input_has_processable_denial(self):
         result=subprocess.run(['python3',str(ROOT/'tools/agents/hook.py'),'codex'],input='[]',capture_output=True,text=True)
-        self.assertEqual(result.returncode,0)
-        self.assertFalse(json.loads(result.stdout)['continue'])
+        self.assertEqual(result.returncode,2)
+        self.assertIn('refused',result.stderr)
+
+    def test_oversized_pretool_payload_is_a_native_blocking_exit(self):
+        event={**self.event,'tool_name':'apply_patch','tool_input':{'command':'*** Add File: .env\n'+'x'*(2*1024*1024)}}
+        result=subprocess.run(['python3',str(ROOT/'tools/agents/hook.py'),'codex'],input=json.dumps(event),capture_output=True,text=True)
+        self.assertEqual(result.returncode,2)
+        self.assertNotIn('*** Add File',result.stderr)
 
     def test_missing_native_command_or_file_path_is_not_an_implicit_allow(self):
         for tool in ('Bash', 'Read', 'Edit', 'Write'):

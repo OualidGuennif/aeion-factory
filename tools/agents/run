@@ -15,7 +15,7 @@ if '--strict' in arguments:
     sys.exit('UNSUPPORTED: strict pre-request 300k admission is not qualified for any Factory adapter.')
 os.chdir(root)
 if provider == 'claude':
-    sys.exit(subprocess.run([str(root / 'tools/context/run'), *arguments], cwd=root).returncode)
+    sys.exit(subprocess.run(['./tools/context/run', *arguments], cwd=root, shell=False).returncode)
 if subprocess.run([str(root / 'tools/architecture/refresh'), '--check', '--target', 'HEAD'], cwd=root).returncode:
     sys.exit('A valid exact-HEAD architecture baseline is required; see README.md.')
 if provider == 'codex':
@@ -37,5 +37,6 @@ if provider == 'opencode':
     version = re.search(r'\b(\d+)\.(\d+)\.(\d+)\b', result.stdout)
     if result.returncode or not version or tuple(map(int, version.groups())) < (2, 1, 4):
         sys.exit('Factory requires OpenCode 2.1.4+ native V2 hooks; older skill discovery does not prove hook support.')
-command = ['codex', *arguments] if provider == 'codex' else ['opencode', *arguments]
-sys.exit(subprocess.run(command, cwd=root).returncode)
+if provider == 'codex':
+    sys.exit(subprocess.run(['codex', *arguments], cwd=root, shell=False).returncode)
+sys.exit(subprocess.run(['opencode', *arguments], cwd=root, shell=False).returncode)

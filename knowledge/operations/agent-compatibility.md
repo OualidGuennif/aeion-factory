@@ -66,7 +66,7 @@ qualification and setup commands are recorded below.
    then `tools/agents/run codex`. A trusted project and trusted hook sources are distinct. Do not
    disable trust checks globally to make discovery appear successful.
 4. OpenCode: `tools/agents/run opencode`. The root config selects the maintained skill directory;
-   the native loader installs the pinned plugin package. A database schema conflict can use
+   the native loader loads the local plugin directory. A database schema conflict can use
    `--isolated`, a separate ignored XDG profile; connect that profile's provider natively.
 
 The shared guards are basename/command-pattern safeguards. Codex native Bash and apply_patch
@@ -99,3 +99,13 @@ directory with a default id/setup entrypoint and uses no SDK dependency.
 OpenCode consumes a verified receipt before each compaction attempt. A retry must verify a new
 checkpoint; it never silently reuses a receipt from an earlier compaction. The plugin imports only
 Node built-ins and does not bundle an unused SDK or its dependency graph.
+
+Malformed, non-object or oversized native input exits 2 without echoing the payload. A generic
+stop JSON object with exit 0 is insufficient for a Codex PreToolUse decode failure.
+
+On 2026-10-26, real disposable model tasks passed with native Codex and OpenCode 2.1.4 using
+paid `opencode-go/deepseek-v4.1-flash`: source, owning doc and task state changed, guard refusals
+were witnessed, and independent documentation/diff checks passed. OpenCode's denied call had
+no completed-tool event. This qualifies bounded tool dispatch, not long-context admission.
+Run disposable repositories outside a configured ancestor project: OpenCode inherits parent
+configuration and can select that ancestor's plugin instead of the instrumented local copy.

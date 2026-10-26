@@ -126,9 +126,18 @@ def handle(root, provider, event):
 
 
 def main():
-    event = {}
+    # Unknown-event failures need exit 2: native PreToolUse ignores generic stop fields.
     try:
-        event = json.loads(sys.stdin.read(2 * 1024 * 1024))
+        raw = sys.stdin.read(2 * 1024 * 1024 + 1)
+        if len(raw) > 2 * 1024 * 1024:
+            raise ValueError('oversized hook payload')
+        event = json.loads(raw)
+        if not isinstance(event, dict):
+            raise ValueError('hook payload must be an object')
+    except (ValueError, OSError):
+        print('Factory hook payload invalid or oversized; action refused.', file=sys.stderr)
+        return 2
+    try:
         result = handle(ROOT, sys.argv[1], event)
     except GuardRefusal as error:
         result = fail(event.get('hook_event_name'), str(error))
@@ -136,7 +145,8 @@ def main():
         name = event.get('hook_event_name') if isinstance(event, dict) else None
         result = fail(name, 'Factory adapter verification unavailable; resolve the hook/check error before continuing.')
     print(json.dumps(result))
+    return 0
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())

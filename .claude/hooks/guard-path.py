@@ -42,11 +42,11 @@ def check_intake(path, tool, data):
         scanned, total, count = 0, 0, 0
         with target.open("rb") as stream:
             for index in range(offset - 1 + (limit if bounded else MAX_INTAKE_LINES + 1)):
-                line = stream.readline(min(MAX_INTAKE_BYTES + 1, MAX_SCAN_BYTES - scanned + 1))
+                line = stream.readline(MAX_SCAN_BYTES - scanned + 1)
                 if not line:
                     break
                 scanned += len(line)
-                if scanned > MAX_SCAN_BYTES or len(line) > MAX_INTAKE_BYTES:
+                if scanned > MAX_SCAN_BYTES:
                     deny(INTAKE_REASON)
                 if index >= offset - 1:
                     total, count = total + len(line), count + 1

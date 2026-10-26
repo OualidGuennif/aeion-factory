@@ -323,10 +323,9 @@ def bounded_pipeline(command):
     return 0 < int(last[2]) <= (MAX_INTAKE_LINES if last[1] == "-n" else MAX_INTAKE_BYTES)
 
 
-def intake_dump(command, base):
+def intake_dump(command, base, changed_directory=False):
     if bounded_pipeline(command):
         return False
-    changed_directory = False
     for words in simple_commands(command):
         words = program(words)
         if not words:
@@ -335,7 +334,7 @@ def intake_dump(command, base):
         if name == "cd":
             changed_directory = True
         if name == "<script>":
-            if intake_dump(words[1], base):
+            if intake_dump(words[1], base, changed_directory):
                 return True
             continue
         if name == "find" and {"-exec", "-execdir"} & set(words) and {"cat", "less", "more"} & {PurePosixPath(w).name for w in words}:

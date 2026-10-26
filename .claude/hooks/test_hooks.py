@@ -137,6 +137,10 @@ with tempfile.TemporaryDirectory() as intake_dir:
     expect("intake bounds distant window scanning", run_hook("guard-path.py", {"path": str(far), "offset": 550000, "limit": 1}, tool_name="Read"), 2)
     small.write_text("x" * 35000);boundary.write_text("y" * 35000)
     expect("intake bounds combined cat operands", run_hook("guard-bash.py", {"command": f"cat '{small}' '{boundary}'"}), 2)
+    expect("intake keeps cwd uncertainty in nested shells", run_hook("guard-bash.py", {"command": f"cd '{intake}' && sh -c 'cat many.log'"}), 2)
+    expect("intake allows a bounded nested shell after cd", run_hook("guard-bash.py", {"command": f"cd '{intake}' && sh -c 'cat many.log | head -n 80'"}), 0)
+    wide.write_text("x" * 65537 + "\nanswer\n")
+    expect("intake skips a long line within scan budget", run_hook("guard-path.py", {"path": str(wide), "offset": 2, "limit": 1}, tool_name="Read"), 0)
 
 # Run after-edit against real child processes with controlled outcomes.
 after = Path(tempfile.mkdtemp())

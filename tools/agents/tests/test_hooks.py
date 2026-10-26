@@ -3,6 +3,7 @@
 import importlib.machinery
 import importlib.util
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -121,6 +122,19 @@ class HookTests(unittest.TestCase):
         for name,data in [('Edit',{'file_path':str(path)}),('Write',{'path':str(path)}),
                           ('apply_patch',{'command':f'*** Update File: {path}\n@@\n-a\n+b'})]:
             self.assertEqual(self.call(tool_name=name,tool_input=data),{})
+
+    def test_managed_launch_aligns_pwd_with_the_actual_project_root(self):
+        launcher=self.root/'tools/agents/run';launcher.parent.mkdir(parents=True)
+        shutil.copy2(ROOT/'tools/agents/run',launcher)
+        gate=self.root/'tools/architecture/refresh';gate.parent.mkdir(parents=True)
+        gate.write_text('#!/bin/sh\nexit 0\n');gate.chmod(0o755)
+        native=self.root/'bin/opencode';native.parent.mkdir()
+        native.write_text(f'#!{hook.sys.executable}\nimport json,os,sys\nprint("2.1.4" if "--version" in sys.argv else json.dumps({{"cwd":os.getcwd(),"pwd":os.getenv("PWD")}}))\n')
+        native.chmod(0o755)
+        caller=self.root/'caller';caller.mkdir()
+        result=subprocess.run([hook.sys.executable,str(launcher),'opencode'],cwd=caller,
+                              env={'PATH':str(native.parent)+os.pathsep+os.defpath,'PWD':str(caller)},capture_output=True,text=True,check=True)
+        self.assertEqual(json.loads(result.stdout),{'cwd':str(self.root),'pwd':str(self.root)})
 
     def test_read_only_loop_denies_writers_and_shell_composition(self):
         for command in ('tools/efficiency/bundle','tools/architecture/setup','git diff --output=x',

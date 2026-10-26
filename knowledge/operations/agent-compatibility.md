@@ -41,6 +41,8 @@ not establish loaded hooks or identical runtime guarantees.
 - Raw command/MCP paths, host-managed/cloud orchestration and deliberate local modification are
   outside any complete isolation claim. Native project/hook trust and sandbox controls still apply.
 - All managed CLI launchers enter the repository root and require an exact-HEAD architecture baseline.
+  The shared launcher also aligns `PWD`: OpenCode 2.1.4 uses it to select the run's location, so
+  changing only the process working directory can load another project's plugin/configuration.
 
 ## Verification
 

@@ -14,6 +14,7 @@ provider, arguments = sys.argv[1], sys.argv[2:]
 if '--strict' in arguments:
     sys.exit('UNSUPPORTED: strict pre-request 300k admission is not qualified for any Factory adapter.')
 os.chdir(root)
+os.environ['PWD'] = str(root)
 if provider == 'claude':
     sys.exit(subprocess.run(['./tools/context/run', *arguments], cwd=root, shell=False).returncode)
 if subprocess.run([str(root / 'tools/architecture/refresh'), '--check', '--target', 'HEAD'], cwd=root).returncode:

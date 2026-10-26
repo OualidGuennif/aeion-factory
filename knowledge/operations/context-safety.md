@@ -26,6 +26,10 @@ sources:
 
 # Context safety
 
+[Bounded intake](../policies/bounded-intake.md) reduces obvious large Read/Grep/Bash dumps before
+execution. Intake bounds are not output virtualization: no tool result is rewritten, and these
+heuristics cannot establish an absolute context ceiling. Keep targeted reads and summary commands.
+
 The default Claude profile enables native auto-compaction at 250,000 tokens and a budget hook
 on session start, prompts, tools, compaction and stop. SubagentStop also checks a child's final
 observation, including pure-text child responses. The hook reads only the current session's

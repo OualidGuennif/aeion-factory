@@ -52,6 +52,7 @@ Add your project's own build and test commands here, copied from CI.
 | The loops and schedules | `knowledge/operations/loops.md`, `command.md` |
 | Adopting the Factory in another repo | `efficiency/00-EFFICIENCY.md`; skill `adopt` |
 | Context limits and handovers | [Context safety](knowledge/operations/context-safety.md); enabled checkpoint profile, strict runtime limit unqualified |
+| Large files, logs and tool output | [Bounded intake](knowledge/policies/bounded-intake.md); targeted reads and summary commands |
 | Graphify, Archify and architecture changes | [Architecture maintenance](knowledge/operations/architecture-maintenance.md), [complete spec](knowledge/components/factory-architecture.md) |
 
 ## Critical rules

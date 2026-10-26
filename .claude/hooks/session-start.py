@@ -13,6 +13,8 @@ def out(*command):
 
 
 lines = []
+lines += ["Bounded intake: full reads/dumps above 64 KiB or 400 lines are refused.",
+          "Use targeted Read ranges, limited searches and summaries; see knowledge/policies/bounded-intake.md."]
 # Uncommitted changes: one you cannot explain is not yours.
 status = out("git", "status", "--short")
 lines.append(f"git status: {len(status)} changed path(s)" if status else "git status: clean")

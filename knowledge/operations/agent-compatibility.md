@@ -75,6 +75,11 @@ camelcase file paths and tool events, appends edit feedback to tool output, and 
 verified handover pointer during compaction. Use the shared sign-off skill before finishing;
 the plugin does not claim an idle hook forces continuation. Shell edits and arbitrary MCP tools are not complete edit coverage.
 
+The adapter preserves Read/Grep range/result limits and the real edit kind when invoking shared
+[intake guards](../policies/bounded-intake.md). OpenCode V2 uses `path`, 1-based `offset` and
+`limit`; Grep's native `limit` is accepted alongside Claude's `head_limit`. Patch path checks use
+Edit semantics, so checking a patch never becomes an accidental full-file Read refusal.
+
 ## Qualification and limits
 
 Regression commands: `python3 tools/agents/tests/test_hooks.py`,

@@ -109,6 +109,19 @@ class HookTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 self.call(tool_name=tool,tool_input={})
 
+    def test_native_range_fields_survive_shared_intake_guards(self):
+        path=self.root/'many.log';path.write_text('line\n'*401)
+        with self.assertRaises(ValueError):
+            self.call(tool_name='Read',tool_input={'filePath':str(path)})
+        self.assertEqual(self.call('opencode',tool_name='Read',tool_input={'path':str(path),'offset':350,'limit':20}),{})
+        self.assertEqual(self.call(tool_name='Grep',tool_input={'path':str(path),'pattern':'line','head_limit':20}),{})
+
+    def test_large_native_edits_are_not_treated_as_full_reads(self):
+        path=self.root/'large.txt';path.write_text('x'*65537)
+        for name,data in [('Edit',{'file_path':str(path)}),('Write',{'path':str(path)}),
+                          ('apply_patch',{'command':f'*** Update File: {path}\n@@\n-a\n+b'})]:
+            self.assertEqual(self.call(tool_name=name,tool_input=data),{})
+
     def test_read_only_loop_denies_writers_and_shell_composition(self):
         for command in ('tools/efficiency/bundle','tools/architecture/setup','git diff --output=x',
                         'gh issue list; touch unexpected'):

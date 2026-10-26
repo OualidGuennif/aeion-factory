@@ -111,7 +111,7 @@ Deployment remains the adopting project's own guarded procedure. Factory loops n
 
 ### Context and recovery
 
-Native auto-compaction is enabled at 250k. The state machine starts RUNNING; observing 250k
+In the Claude profile, native auto-compaction is enabled at 250k. The state machine starts RUNNING; observing 250k
 latches HANDOVER_REQUIRED and emits one alert to user and agent. Code/subtask tools are refused;
 closure docs and fixed check commands remain. A checkpoint validates handover sections, Knowledge,
 doc links, repository health and current task updates, then hashes source and handover bytes.
@@ -119,11 +119,16 @@ Any later source or handover change invalidates readiness. PreCompact refuses an
 checkpoint. A compact SessionStart begins RECOVERING and supplies the handover pointer; new
 positive native usage permits RUNNING. Resume alone does not clear STOPPED.
 
-Observed usage at 300k, or unavailable usage after bootstrap, returns an entire-run stop on a
-supported event; a PreCompact refusal uses that event's blocking decision. No extra model turn
+Observed usage at 300k or invalid complete usage latches STOPPED. Unavailable usage after bootstrap
+blocks the current action and can recover after a valid observation. A PreCompact refusal uses
+that event's blocking decision. No extra model turn
 is requested to finish missing docs. A partial task remains incomplete. The current harness is
 qualified only as a checkpoint profile: it has no proved before-every-request bound or exact
-mid-response cutoff. Strict launch is refused, and other harnesses remain unqualified.
+mid-response cutoff. Strict launch is refused; Codex/OpenCode token enforcement remains unqualified.
+
+Before tools run, the shared path/Bash guards also refuse recognizable large dumps under the
+[bounded-intake policy](../policies/bounded-intake.md). Native range/result fields and edit kinds
+are preserved. This reduces accidental intake without rewriting tool output or adding a runtime.
 
 ### Knowledge, state and retention
 

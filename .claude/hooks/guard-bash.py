@@ -11,12 +11,16 @@ import os
 import re
 import shlex
 import sys
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 
 TEMPLATES = {".env.example", ".env.sample", ".env.template", ".env.dist", "env.example.local"}
 READERS = {"cat", "less", "more", "head", "tail", "grep", "rg", "awk", "sed", "strings", "base64",
            "xxd", "od", "source", ".", "cp", "scp", "rsync", "jq", "python3", "python", "node", "vim", "nano"}
 SECRET_NAMES = {"auth.json", "credentials", "credentials.json", "id_rsa", "id_ed25519", "env.local"}
+MAX_INTAKE_BYTES, MAX_INTAKE_LINES = 65536, 400
+INTAKE_REASON = ("bounded intake: replace the dump with head -n 80, head -c 65536, "
+                 "a targeted rg search or a summary; keep a limiter last in its own pipeline "
+                 "(knowledge/policies/bounded-intake.md).")
 
 
 def deny(reason):
@@ -303,6 +307,72 @@ def refuses(check, command):
         return True
 
 
+def bounded_pipeline(command):
+    words = tokens_of(command)
+    if "|" not in words or any(w != "|" and set(w) <= SEPARATOR_CHARS | REDIRECT_CHARS for w in words):
+        return False
+    last = words[len(words) - 1 - words[::-1].index("|") + 1:]
+    if last and last[0] == "wc" and (len(last) == 1 or len(last) == 2 and last[1] in {"-l", "-c", "-w", "-m"}):
+        return True
+    if not last or last[0] not in {"head", "tail"}:
+        return False
+    if len(last) == 1:
+        return True
+    if len(last) != 3 or last[1] not in {"-n", "-c"} or not re.fullmatch(r"[0-9]{1,6}", last[2]):
+        return False
+    return 0 < int(last[2]) <= (MAX_INTAKE_LINES if last[1] == "-n" else MAX_INTAKE_BYTES)
+
+
+def intake_dump(command, base):
+    if bounded_pipeline(command):
+        return False
+    changed_directory = False
+    for words in simple_commands(command):
+        words = program(words)
+        if not words:
+            continue
+        name = PurePosixPath(words[0]).name
+        if name == "cd":
+            changed_directory = True
+        if name == "<script>":
+            if intake_dump(words[1], base):
+                return True
+            continue
+        if name == "find" and {"-exec", "-execdir"} & set(words) and {"cat", "less", "more"} & {PurePosixPath(w).name for w in words}:
+            return True
+        if name not in {"cat", "less", "more"}:
+            continue
+        if changed_directory:
+            return True
+        paths = [w for w in words[1:] if not w.startswith("-")]
+        if not paths:
+            # Small literal heredocs construct prompt/body text; unknown stdin is not sized.
+            if HEREDOC.search(command) and len(command.encode()) <= MAX_INTAKE_BYTES and len(command.splitlines()) <= MAX_INTAKE_LINES:
+                continue
+            return True
+        total, lines = 0, 0
+        for raw in paths:
+            path = Path(raw)
+            path = path if path.is_absolute() else base / path
+            if not path.exists():
+                if any(char in raw for char in "$*?["):
+                    return True
+                continue
+            if not path.is_file():
+                return True
+            if total + path.stat().st_size > MAX_INTAKE_BYTES:
+                return True
+            with path.open("rb") as stream:
+                data = stream.read(MAX_INTAKE_BYTES - total + 1)
+            total += len(data)
+            if total > MAX_INTAKE_BYTES:
+                return True
+            lines += data.count(b"\n") + bool(data and not data.endswith(b"\n"))
+            if lines > MAX_INTAKE_LINES:
+                return True
+    return False
+
+
 try:
     event = json.load(sys.stdin)
     command = event.get("tool_input", {}).get("command", "")
@@ -348,4 +418,10 @@ if re.search(r"\bgit\s+push\b", command) and re.search(r"\s(-f|--force|--force-w
     deny("force-pushing rewrites shared history.")
 if re.search(r"\bgit\b", command) and "--no-verify" in tokens:
     deny("--no-verify skips the pre-commit checks.")
+try:
+    base = event["tool_input"].get("workdir", event["tool_input"].get("cwd", event.get("cwd", ".")))
+    if intake_dump(command, Path(base)):
+        deny(INTAKE_REASON)
+except (OSError, TypeError, RecursionError):
+    deny("the dump size could not be verified; " + INTAKE_REASON)
 sys.exit(0)

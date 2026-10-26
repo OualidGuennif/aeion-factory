@@ -23,9 +23,10 @@ def run_hook(name, tool_input, cwd=ROOT, **extra):
                           capture_output=True, text=True, cwd=cwd)
 
 
-def expect(label, result, code, stdout_has=None):
+def expect(label, result, code, stdout_has=None, stderr_has=None):
     global passes
-    if result.returncode == code and (stdout_has is None or stdout_has in result.stdout):
+    if (result.returncode == code and (stdout_has is None or stdout_has in result.stdout)
+            and (stderr_has is None or stderr_has in result.stderr)):
         passes += 1
     else:
         failures.append(f"{label}: exit {result.returncode}, stdout {result.stdout!r}, stderr {result.stderr!r}")
@@ -92,6 +93,54 @@ for raw in ["{", "null", "[]", "{}", '{"tool_input": []}', '{"tool_input": {"pat
         failures.append("guard-path exposed a traceback instead of a denial")
 expect("path allow: Grep can use its implicit root", run_hook("guard-path.py", {"pattern": "fixture"}, tool_name="Grep"), 0)
 expect("path allow: Grep can use an empty default path", run_hook("guard-path.py", {"path": "", "pattern": "fixture"}, tool_name="Grep"), 0)
+
+# Intake decisions use public fixtures; no submitted command is executed.
+with tempfile.TemporaryDirectory() as intake_dir:
+    intake = Path(intake_dir)
+    small, many, wide = [intake / name for name in ("small.txt", "many.log", "wide.txt")]
+    small.write_text("answer\n")
+    many.write_text("line\n" * 401)
+    wide.write_text("x" * 65537)
+    for path in (many, wide):
+        expect("intake denies full Read", run_hook("guard-path.py", {"file_path": str(path)}, tool_name="Read"), 2, stderr_has="bounded-intake.md")
+        for name in ("cat", "less", "more"):
+            expect("intake denies file dump", run_hook("guard-bash.py", {"command": f"{name} '{path}'"}), 2, stderr_has="bounded-intake.md")
+        for name in ("Edit", "Write"):
+            expect("intake keeps large edits available", run_hook("guard-path.py", {"file_path": str(path)}, tool_name=name), 0)
+    expect("intake allows small Read", run_hook("guard-path.py", {"file_path": str(small)}, tool_name="Read"), 0)
+    expect("intake allows bounded Read window", run_hook("guard-path.py", {"file_path": str(many), "offset": 350, "limit": 20}, tool_name="Read"), 0)
+    expect("intake refuses long line despite line limit", run_hook("guard-path.py", {"file_path": str(wide), "limit": 1}, tool_name="Read"), 2)
+    for limit in (0, -1, 401, True):
+        expect("intake rejects ineffective large Read limit", run_hook("guard-path.py", {"file_path": str(many), "limit": limit}, tool_name="Read"), 2)
+    expect("intake denies unbounded large-file Grep", run_hook("guard-path.py", {"path": str(many), "pattern": ".", "output_mode": "content"}, tool_name="Grep"), 2)
+    for fields in ({"head_limit": 80}, {"limit": 80}, {"output_mode": "count"}, {"output_mode": "files_with_matches"}):
+        expect("intake keeps targeted Grep", run_hook("guard-path.py", {"path": str(many), "pattern": "line", **fields}, tool_name="Grep"), 0)
+    for suffix in ("head -n 80", "head -c 65536", "tail -n 80", "wc -l"):
+        expect("intake allows terminal limiter", run_hook("guard-bash.py", {"command": f"cat '{many}' | {suffix}"}), 0)
+    for command in (f"head -n 80 '{small}'; cat '{many}'", f"cat '{many}'; head -n 80 '{small}'",
+                    f"cat '{many}' | tail -n +1", f"cat '{many}' | head -n 999999", f"cat '{many}' | echo head",
+                    f"cat '{many}' 1>&2 | head -n 80", f"cat < '{many}'", "find . -type f -exec cat {} \\;",
+                    "cat *.log", "cat $LOG_FILE"):
+        expect("intake rejects an ineffective limiter", run_hook("guard-bash.py", {"command": command}), 2, stderr_has="bounded-intake.md")
+    expect("intake allows small cat", run_hook("guard-bash.py", {"command": f"cat '{small}'"}), 0)
+    boundary = intake / "boundary.txt"
+    for data in ("line\n" * 400, "x" * 65536):
+        boundary.write_text(data)
+        expect("intake allows exact threshold Read", run_hook("guard-path.py", {"path": str(boundary)}, tool_name="Read"), 0)
+        expect("intake allows exact threshold cat", run_hook("guard-bash.py", {"command": f"cat '{boundary}'"}), 0)
+    expect("intake respects native Bash workdir", run_hook("guard-bash.py", {"command": "cat many.log", "workdir": intake_dir}), 2)
+    expect("intake refuses unknown cwd after cd", run_hook("guard-bash.py", {"command": f"cd '{intake}'; cat many.log"}), 2)
+    expect("intake keeps secret refusal ahead of limiter", run_hook("guard-bash.py", {"command": "cat .env | head -n 80"}), 2, stderr_has="secret")
+    for count in ("²", "9" * 1000):
+        expect("intake refuses malformed limiter count", run_hook("guard-bash.py", {"command": f"cat '{many}' | head -n {count}"}), 2, stderr_has="bounded-intake.md")
+    far = intake / "distant.log";far.write_text("z\n" * 550000)
+    expect("intake bounds distant window scanning", run_hook("guard-path.py", {"path": str(far), "offset": 550000, "limit": 1}, tool_name="Read"), 2)
+    small.write_text("x" * 35000);boundary.write_text("y" * 35000)
+    expect("intake bounds combined cat operands", run_hook("guard-bash.py", {"command": f"cat '{small}' '{boundary}'"}), 2)
+    expect("intake keeps cwd uncertainty in nested shells", run_hook("guard-bash.py", {"command": f"cd '{intake}' && sh -c 'cat many.log'"}), 2)
+    expect("intake allows a bounded nested shell after cd", run_hook("guard-bash.py", {"command": f"cd '{intake}' && sh -c 'cat many.log | head -n 80'"}), 0)
+    wide.write_text("x" * 65537 + "\nanswer\n")
+    expect("intake skips a long line within scan budget", run_hook("guard-path.py", {"path": str(wide), "offset": 2, "limit": 1}, tool_name="Read"), 0)
 
 # Run after-edit against real child processes with controlled outcomes.
 after = Path(tempfile.mkdtemp())

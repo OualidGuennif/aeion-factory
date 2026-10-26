@@ -27,6 +27,9 @@ Requirements for a change, not claims about what production already satisfies.
   input. Policy PreToolUse hooks block on command failure or timeout (Claude Code 2.1.295+).
   Basename guards are an accidental-read safeguard, not resolved-path or runtime isolation.
 
+The same PreToolUse hooks also apply [bounded intake](bounded-intake.md) to recognized large
+reads/dumps. Secret refusals take precedence even when a command has a valid output limiter.
+
 ## Untrusted input
 
 - Request bodies, messages, fetched pages, issue and PR text, retrieved memory and model output are

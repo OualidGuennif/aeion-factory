@@ -103,8 +103,13 @@ def handle(root, provider, event):
             if result.get('hookSpecificOutput', {}).get('permissionDecision') == 'ask':
                 return fail(name, 'This command requires an explicit human decision; the adapter does not auto-approve it.')
             return result
-        for path in edit_paths(event):
-            script(root, 'guard-path.py', {'tool_name': 'Read', 'tool_input': {'file_path': path}})
+        paths = edit_paths(event)
+        if not paths and event.get('tool_name') == 'Grep':
+            script(root, 'guard-path.py', normalized)
+        for path in paths:
+            tool = 'Edit' if event.get('tool_name') == 'apply_patch' else event.get('tool_name')
+            data = {**event['tool_input'], 'file_path': path}
+            script(root, 'guard-path.py', {'tool_name': tool, 'tool_input': data})
         return {}
     if name == 'PostToolUse' and event.get('tool_name') in {'apply_patch', 'Edit', 'Write'}:
         messages = []

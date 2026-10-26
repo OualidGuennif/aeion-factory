@@ -136,6 +136,9 @@ OpenCode loads skills through its native skill tool.
 
 ## Context and architecture
 
+Shared [intake guards](knowledge/policies/bounded-intake.md) refuse obvious large full reads and
+dumps before execution. Use targeted ranges, limited searches and summaries; no output is rewritten.
+
 Before compaction, complete the active handover, current task and affected docs, then verify the
 checkpoint. Claude and Codex configure native compaction at 250k; OpenCode uses its native model
 window. Only the Claude profile implements the observed 300k stop. An absolute pre-request 300k

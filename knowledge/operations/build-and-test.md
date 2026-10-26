@@ -52,6 +52,10 @@ of diagnostics. Direct script tests do not qualify live harness dispatch or runt
 After-edit checks require macOS, Linux or WSL: a timed-out check's process group is terminated
 before capture pipes are drained, so ordinary descendants do not keep working after the timeout.
 
+The same hook suite tests [bounded intake](../policies/bounded-intake.md), including file/range
+thresholds, misleading limiters and preserved native edit/range fields. SessionStart adds two
+short intake instructions within its existing 25-line cap.
+
 ## Language servers
 
 `tools/claude-plugins/` is a local marketplace with `native-lsp`: TypeScript 7 (`tsc --lsp

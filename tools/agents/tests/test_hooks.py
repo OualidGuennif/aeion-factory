@@ -129,12 +129,17 @@ class HookTests(unittest.TestCase):
         gate=self.root/'tools/architecture/refresh';gate.parent.mkdir(parents=True)
         gate.write_text('#!/bin/sh\nexit 0\n');gate.chmod(0o755)
         native=self.root/'bin/opencode';native.parent.mkdir()
-        native.write_text(f'#!{hook.sys.executable}\nimport json,os,sys\nprint("2.1.4" if "--version" in sys.argv else json.dumps({{"cwd":os.getcwd(),"pwd":os.getenv("PWD")}}))\n')
+        native.write_text(f'#!{hook.sys.executable}\nimport json,os,sys\nprint("opencode v2.1.4" if "--version" in sys.argv else json.dumps({{"cwd":os.getcwd(),"pwd":os.getenv("PWD")}}))\n')
         native.chmod(0o755)
         caller=self.root/'caller';caller.mkdir()
         result=subprocess.run([hook.sys.executable,str(launcher),'opencode'],cwd=caller,
                               env={'PATH':str(native.parent)+os.pathsep+os.defpath,'PWD':str(caller)},capture_output=True,text=True,check=True)
         self.assertEqual(json.loads(result.stdout),{'cwd':str(self.root),'pwd':str(self.root)})
+        native.write_text(native.read_text().replace('v2.1.4','v2.1.3'))
+        result=subprocess.run([hook.sys.executable,str(launcher),'opencode'],cwd=caller,
+                              env={'PATH':str(native.parent)+os.pathsep+os.defpath,'PWD':str(caller)},capture_output=True,text=True)
+        self.assertNotEqual(result.returncode,0)
+        self.assertIn('requires OpenCode 2.1.4+',result.stderr)
 
     def test_read_only_loop_denies_writers_and_shell_composition(self):
         for command in ('tools/efficiency/bundle','tools/architecture/setup','git diff --output=x',

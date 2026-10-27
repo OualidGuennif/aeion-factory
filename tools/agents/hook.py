@@ -28,6 +28,7 @@ ANTIGRAVITY_TOOLS = {'run_command': 'Bash', 'view_file': 'Read', 'write_to_file'
 ANTIGRAVITY_PATH_KEY = re.compile(r'(paths?|files?|dirs?|directory|directories|uris?)$')
 # view_code_item's NodePaths are code symbols (Cache.key), not files.
 ANTIGRAVITY_SYMBOL_KEYS = {'nodepath', 'nodepaths'}
+ANTIGRAVITY_DIR_KEY = re.compile(r'(cwd|dir|directory|folder)$')
 
 
 class GuardRefusal(ValueError):
@@ -134,8 +135,14 @@ def antigravity_event(event):
     workdirs = [value for key, value in args.items() if argument_name(key) in {'cwd', 'workdir'}]
     if len(workdirs) > 1:
         raise ValueError('the Antigravity call names more than one working directory')
-    if workdirs and isinstance(workdirs[0], str):
+    if workdirs and not isinstance(workdirs[0], str):
+        raise ValueError('the Antigravity working directory must be a string')
+    if workdirs:
         data['workdir'] = workdirs[0]
+    # A shell call whose directory hides under another name would be sized at the root instead.
+    if command is not None and any(ANTIGRAVITY_DIR_KEY.search(argument_name(key)) and argument_name(key) not in {'cwd', 'workdir'}
+                                   for key in args):
+        raise ValueError('the Antigravity shell call names its directory under an unknown argument')
     # Every path-like argument meets the guards, not only the first: one call can name several files.
     paths = antigravity_paths(args)
     # view_file windows by StartLine/EndLine; the intake guard reads the same window as offset/limit.

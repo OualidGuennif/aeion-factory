@@ -301,6 +301,13 @@ class HookTests(unittest.TestCase):
                 self.agy(name,args)
         with self.assertRaises(ValueError):
             self.agy('run_command',{'CommandLine':'ls','Cwd':str(self.root),'workdir':str(sub)})
+        # A directory under another name, or not a string, is refused rather than sized at the root.
+        for args in ({'command':'cat big.log','working_directory':str(sub)},{'command':'cat big.log','WorkingDirectory':str(sub)},
+                     {'command':'cat big.log','directory':str(sub)},{'command':'cat big.log','cwd':[str(sub)]},
+                     {'CommandLine':'cat big.log','Cwd':{'path':str(sub)}}):
+            with self.assertRaises(ValueError,msg=str(args)):
+                self.agy('mcp_shell',args)
+        self.assertEqual(self.agy('run_command',{'CommandLine':'ls','Cwd':str(sub),'Blocking':True,'SafeToAutoRun':True,'WaitMsBeforeAsync':0}),{})
         for name,args in (('view_file',{'AbsolutePath':str(long)}),('grep_search',{'SearchPath':str(long),'Query':'x'}),
                           ('view_file',{'AbsolutePath':str(long),'limit':10}),
                           ('grep_search',{'SearchPath':str(long),'Query':'x','output_mode':'files_with_matches','head_limit':5})):

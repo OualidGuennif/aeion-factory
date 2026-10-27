@@ -59,8 +59,8 @@ belong in Knowledge. After compaction the same file is the recovery pointer.
 
 Startup and the first prompt allow a native bootstrap before usage exists. All later work
 requires a positive native observation. A bounded retry waits for asynchronous transcript writes;
-unavailable usage denies the current tool call (the agent keeps running and may retry it; other
-events stop) without latching STOPPED, so a later valid observation
+unavailable usage denies the current tool call (the agent keeps running and may retry it;
+PostToolUse passes; other events stop) without latching STOPPED, so a later valid observation
 can recover. Invalid complete records and the observed 300k stop remain terminal. A `compact_boundary` or compact SessionStart clears the
 old observation; resuming a stopped session does not clear its stop. Smaller model windows retain
 their native earlier limit. The guard does not expand a model's capacity.

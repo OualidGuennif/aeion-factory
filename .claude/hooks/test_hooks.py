@@ -187,6 +187,9 @@ for command in ["ls *", "head *.md", "grep x *.json", "ls c*", "ls *_*", "wc -l 
                 "grep -n 'key.*' config.py", "rg 'env.*' src", 'rg -n "auth.*" src | head -5',
                 "grep -e 'id_.*' f", "jq -r '.x' f | grep 'id_.*'"]:
     expect(f"bash allow ordinary glob: {command}", run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 0)
+# A path-qualified program may be any script, so its quoted glob is judged by name.
+for command in ["./grep 'id_*'", "bin/rg 'id_*'"]:
+    expect(f"bash ask: {command}", run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 0, '"ask"')
 expect("bash allow: a cd with a plain glob", run_hook("guard-bash.py", {"command": "cd sub && ls *.md", "workdir": str(glob_dir)}), 0)
 expect("bash deny names the Grep tool for searches", run_hook("guard-bash.py", {"command": "grep -rn id_rsa tools"}), 2,
        stderr_has="Grep tool")

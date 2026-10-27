@@ -449,7 +449,8 @@ def quotes_inert(command):
         run = program(words)
         if any(re.match(r"[A-Za-z_]\w*=", w) for w in words) or "watch" in (PurePosixPath(w).name for w in words):
             return False
-        if not run or PurePosixPath(run[0]).name not in QUOTE_SAFE:
+        # A bare name only: ./grep may be any script; a configured rg may run --pre.
+        if not run or run[0] not in QUOTE_SAFE or run[0] == "rg" and os.environ.get("RIPGREP_CONFIG_PATH"):
             return False
     return True
 

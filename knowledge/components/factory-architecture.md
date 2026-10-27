@@ -98,7 +98,7 @@ from another source; analysis refuses mismatched package provenance or a dirty A
 | Skills | Plan/spec/build/test/review/sign-off/ship and focused procedures | `.claude/skills/*/SKILL.md`; no second task ledger |
 | Hook adapter | Read event JSON and call a bounded local check | stdin/stdout JSON; failure blocks where supported |
 | Context budget | Usage, closure-only state, checkpoint receipt, observed stop | `.factory/context/<session>.json`; per-session file lock |
-| Handover | Recovery facts for the current session | Ignored `work/handovers/<session>.md`, atomically created |
+| Handover | Recovery facts for the current session | Ignored `work/handovers/<session>.md`, created atomically only when closure needs it |
 | Knowledge/link/health checkers | Frontmatter, caps, traceability and diff coverage | Exit code + bounded diagnostics; no provider |
 | Optional loops | Select prompt/model/tools and run a managed headless task | Off unless enabled; outer loop reads production only through its configured read path |
 | Analysis wrapper | Freeze Git, Graphify, evidence validation and Archify finalization | Ignored `.factory/analysis/<sha>/` and immutable receipts |

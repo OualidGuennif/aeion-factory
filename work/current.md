@@ -4,6 +4,13 @@ Task state only. One entry per open task, newest first. At most 150 lines, 10 pe
 Finished tasks are deleted: the commit message and knowledge/ keep what matters.
 Status: ACTIVE, WAITING-OWNER, MEASURING, BLOCKED, BACKLOG.
 
+## Main branch protection vs. its doc — WAITING-OWNER
+- Owner decision: pending; a direct push to main was accepted on 2026-10-27.
+- State: knowledge/operations/github-protection.md says pull requests are required, enforced for admins.
+- Next: owner checks Settings → Branches/Rulesets, then re-enables the rule or the doc is corrected (who: owner).
+- Blocker: the owner's choice.
+- Evidence: knowledge/operations/github-protection.md; audit fixes merged through PR #10
+
 ## Native strict context admission — BLOCKED
 - Owner decision: 2026-10-26, attempt native 300k qualification using paid OpenCode Go DeepSeek V4.1 Flash.
 - State: primary HTTP denial, 278k-input accounting and over-budget tool continuation exercised in isolation; strict launch still refuses.

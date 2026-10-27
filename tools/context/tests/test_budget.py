@@ -47,6 +47,27 @@ class BudgetTests(unittest.TestCase):
         self.observe(100)
         self.assertEqual(self.call()["hookSpecificOutput"]["permissionDecision"], "deny")
 
+    def test_handover_is_created_only_when_closure_needs_it(self):
+        handover = budget.handover_path(self.root, "test-session")
+        start = self.call(hook_event_name="SessionStart", source="startup")
+        self.assertNotIn("Recovery", start["hookSpecificOutput"]["additionalContext"])
+        self.call()
+        self.assertFalse(handover.exists())
+        self.observe(250000)
+        self.assertIn(str(handover.relative_to(self.root)), self.call()["systemMessage"])
+        self.assertIn("TODO", handover.read_text())
+        resume = self.call(hook_event_name="SessionStart", source="resume")
+        self.assertIn("Recovery", resume["hookSpecificOutput"]["additionalContext"])
+
+    def test_refused_compaction_and_checkpoint_create_the_skeleton_to_fill(self):
+        handover = budget.handover_path(self.root, "test-session")
+        self.call()
+        with self.assertRaisesRegex(ValueError, "handover sections"):
+            budget.checkpoint(self.root, "test-session", "HEAD")
+        handover.unlink()
+        self.assertIn(str(handover.relative_to(self.root)), self.call(hook_event_name="PreCompact")["reason"])
+        self.assertTrue(handover.is_file())
+
     def test_observed_limit_stops_and_cannot_be_reset_by_resume_or_compact(self):
         self.observe(300000)
         self.assertFalse(self.call()["continue"])
@@ -70,14 +91,17 @@ class BudgetTests(unittest.TestCase):
         self.transcript.write_text("")
         self.call(hook_event_name="SessionStart", source="startup")
         self.assertEqual(self.call(hook_event_name="UserPromptSubmit"), {})
-        self.assertFalse(self.call()["continue"])
+        # The tool call is denied, but the agent keeps running so it can retry the call.
+        self.assertEqual(self.call()["hookSpecificOutput"]["permissionDecision"], "deny")
+        self.assertNotIn("continue", self.call())
+        self.assertEqual(self.call(hook_event_name="PostToolUse"), {})
         self.observe(1000)
         self.assertEqual(self.call(), {})
 
     def test_delayed_usage_after_compaction_can_recover_without_new_prompt(self):
         self.call(hook_event_name="SessionStart", source="compact")
         self.transcript.write_text(json.dumps({"type": "system", "subtype": "compact_boundary"}) + "\n")
-        self.assertFalse(self.call()["continue"])
+        self.assertEqual(self.call()["hookSpecificOutput"]["permissionDecision"], "deny")
         self.observe(1000)
         self.assertEqual(self.call(), {})
 
@@ -103,7 +127,7 @@ class BudgetTests(unittest.TestCase):
         budget.git(self.root, 'add', '.gitignore', 'work/current.md')
         budget.git(self.root, '-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', 'commit', '-qm', 'task fixture')
         self.call()
-        handover = budget.handover_path(self.root, 'test-session')
+        handover = budget.ensure_handover(self.root, 'test-session')
         handover.write_text(handover.read_text().replace('TODO', 'Fixture evidence'))
         (self.root / 'new-feature.py').write_text('value = 1\n')
         actual_run = subprocess.run
@@ -208,7 +232,7 @@ class BudgetTests(unittest.TestCase):
         self.assertEqual(parent["state"], "HANDOVER_REQUIRED")
 
     def test_missing_child_transcript_refuses_child_without_stopping_parent(self):
-        self.assertFalse(self.call(agent_id="missing-child")["continue"])
+        self.assertEqual(self.call(agent_id="missing-child")["hookSpecificOutput"]["permissionDecision"], "deny")
         self.assertEqual(self.call(), {})
 
 

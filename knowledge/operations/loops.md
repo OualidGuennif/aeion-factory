@@ -51,8 +51,11 @@ The deadline, SIGINT and SIGTERM terminate the invocation's ordinary process gro
 additional optional API-billing cap, not a replacement for these limits on subscriptions.
 
 Read-only jobs set `FACTORY_LOOP_READ_ONLY=1`. The shared Bash guard permits fixed checker/Git
-read commands plus issue/review operations, and refuses writer-capable tools, shell composition
-and arbitrary Git flags. A configured production reader must be an exact, single trusted command;
+read commands, `doc-links --for <path>`, plus issue/review operations, and refuses writer-capable
+tools, shell composition and arbitrary Git flags. Their only write is finding/review text under the
+ignored `.factory/loop-bodies/`; `--body-file`/`-F` must name a regular file there as its own
+word (an attached `-Fpath` is refused), so an injected
+instruction cannot publish another local file. A configured production reader must be an exact, single trusted command;
 put complex reads in the approved read-only script rather than interpolating shell pipelines.
 Native sandbox/credentials remain separate boundaries; this is not a universal shell sandbox.
 

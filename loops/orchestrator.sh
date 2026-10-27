@@ -30,7 +30,7 @@ setting() {
 }
 
 # Each job: prompt file, criticality (low|normal|high), tool allowlist, permission mode.
-READ_ONLY="Read,Grep,Glob,Bash(git log -5 --oneline),Bash(git diff --stat),Bash(git diff --check),Bash(git status --short),Bash(tools/knowledge/knowledge-check),Bash(tools/knowledge/doc-links),Bash(tools/repo-health/repo-health),Bash(gh issue list *),Bash(gh issue view *),Bash(gh issue create *),Bash(gh issue comment *)"
+READ_ONLY="Read,Grep,Glob,Write(.factory/loop-bodies/**),Bash(git log -5 --oneline),Bash(git diff --stat),Bash(git diff --check),Bash(git status --short),Bash(tools/knowledge/knowledge-check),Bash(tools/knowledge/doc-links),Bash(tools/knowledge/doc-links --for *),Bash(tools/repo-health/repo-health),Bash(gh issue list *),Bash(gh issue view *),Bash(gh issue create *),Bash(gh issue comment *)"
 case "$JOB" in
     inner)    PROMPT="inner.md";    CRIT="normal"; MODE="acceptEdits"
               TOOLS="Read,Grep,Glob,Edit,Write,Agent,Bash(git *),Bash(gh issue *),Bash(gh pr *),Bash(tools/*),Bash(python3 *)"

@@ -208,7 +208,8 @@ def handle(root, event):
         state = json.loads(file.read_text()) if file.exists() else {"epoch": 0, "state": "RUNNING"}
         state["owner_session"] = event["session_id"]
         state["agent_id"] = event.get("agent_id")
-        handover = ensure_handover(root, session)
+        # The skeleton is created only when closure needs it, so ordinary sessions and subagents leave none.
+        handover = handover_path(root, session)
         compact_verified = name == "SessionStart" and event.get("source") == "compact" and ready(root, session, state)
         if name == "SessionStart" and event.get("source") == "compact" and state.get("state") != "STOPPED":
             state = {"epoch": state["epoch"] + 1, "state": "RECOVERING", "warning_pending": state.get("warning_pending", False)}
@@ -216,8 +217,10 @@ def handle(root, event):
         if state.get("state") == "STOPPED":
             result = stop(name, "Factory context run is stopped; start a new validated session from its handover.")
         elif name == "SessionStart":
-            result = {"hookSpecificOutput": {"hookEventName": name, "additionalContext":
-                      f"Factory checkpoint profile: 250k handover/compact, 300k observed stop; not a strict ceiling. Recovery: {handover.relative_to(root)}"}}
+            context = "Factory checkpoint profile: 250k handover/compact, 300k observed stop; not a strict ceiling."
+            if handover.is_file():
+                context += f" Recovery: {handover.relative_to(root)}"
+            result = {"hookSpecificOutput": {"hookEventName": name, "additionalContext": context}}
             if state.pop("warning_pending", False):
                 message = ("Factory 250k alert: a verified handover was retained before compaction." if compact_verified
                            else "Factory 250k alert: closure remains required; verify the handover/docs before compaction.")
@@ -234,9 +237,15 @@ def handle(root, event):
             if usage is None and name == "UserPromptSubmit" and not state.get("bootstrapped"):
                 state["bootstrapped"] = True
             elif usage is None:
-                result = stop(name, "Factory native usage temporarily unavailable; work is blocked. Retry after transcript persistence; no terminal stop was latched.")
+                reason = "Factory native usage temporarily unavailable; work is blocked. Retry after transcript persistence; no terminal stop was latched."
+                # Transcripts persist asynchronously: deny only this call so the agent can retry it, not stop the agent.
+                if name == "PreToolUse":
+                    result = {"hookSpecificOutput": {"hookEventName": name, "permissionDecision": "deny", "permissionDecisionReason": reason}}
+                elif name != "PostToolUse":
+                    result = stop(name, reason)
             elif usage >= LIMIT:
                 state["state"] = "STOPPED"
+                ensure_handover(root, session)
                 result = stop(name, "Factory observed 300k context limit reached; task remains incomplete. Read the handover.")
             else:
                 state["bootstrapped"] = True
@@ -245,8 +254,10 @@ def handle(root, event):
                     state["warning_pending"] = True
                 if name == "PreCompact":
                     if not ready(root, session, state):
-                        result = stop(name, f"Create a verified checkpoint before compaction: python3 tools/context/budget.py checkpoint --session {session} --base origin/main --verify")
+                        ensure_handover(root, session)
+                        result = stop(name, f"Fill {handover.relative_to(root)}, then create a verified checkpoint before compaction: python3 tools/context/budget.py checkpoint --session {session} --base origin/main --verify")
                 elif state["state"] == "HANDOVER_REQUIRED":
+                    ensure_handover(root, session)
                     first = state.pop("warning_pending", False)
                     message = f"Factory 250k alert: finish closure only, update {handover.relative_to(root)}, work/current.md and affected docs; verify the checkpoint before compaction."
                     if name == "PreToolUse" and not closure_tool(root, {**event, "session_id": session}):
@@ -270,7 +281,7 @@ def checkpoint(root, session, base):
         state = json.loads(file.read_text())
         if state["state"] == "STOPPED":
             raise ValueError("a stopped run cannot request another closure pass")
-        handover = handover_path(root, session)
+        handover = ensure_handover(root, session)
         text = handover.read_text()
         if "TODO" in text or any(f"## {key}\n" not in text for key in ("Scope", "Completed", "Remaining", "Constraints", "Evidence")):
             raise ValueError("complete all handover sections first")

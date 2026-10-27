@@ -37,7 +37,7 @@ not establish loaded hooks or identical runtime guarantees.
 - OpenCode 2.1.4+ loads root `opencode.json` and `.opencode/plugins/factory/index.js`. Auto-compaction remains
   native to its selected model; no supported fixed 250k setting is invented.
 - Both adapters enforce supported Bash/path refusals, edit feedback and a verified handover
-  before compaction. Native token stops and strict pre-request 300k admission are unqualified.
+  before compaction; the first refused compaction creates the skeleton to fill. Native token stops and strict pre-request 300k admission are unqualified.
 - Raw command/MCP paths, host-managed/cloud orchestration and deliberate local modification are
   outside any complete isolation claim. Native project/hook trust and sandbox controls still apply.
 - All managed CLI launchers enter the repository root and require an exact-HEAD architecture baseline.

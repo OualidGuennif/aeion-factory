@@ -78,7 +78,8 @@ if rel.startswith(("knowledge/", "work/")) or path.name in ("AGENTS.md", "CLAUDE
 # Code a doc covers: name the doc, once per file and session.
 hint = ""
 if not rel.startswith(("knowledge/", "work/")) and path.suffix != ".md":
-    docs = run("tools/knowledge/doc-links", "--for", rel).splitlines()
+    # An uncovered file prints one empty line: no doc, no hint.
+    docs = [doc for doc in run("tools/knowledge/doc-links", "--for", rel).splitlines() if doc]
     seen = Path(tempfile.gettempdir()) / f"claude-doc-hint-{session}"
     if docs and rel not in (seen.read_text().splitlines() if seen.exists() else []):
         with seen.open("a") as f:

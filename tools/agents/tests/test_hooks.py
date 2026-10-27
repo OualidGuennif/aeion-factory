@@ -265,11 +265,22 @@ class HookTests(unittest.TestCase):
         cases=(('run_command',{'CommandLine':'cat .env','Cwd':str(self.root)}),('view_file',{'AbsolutePath':path}),
                ('write_to_file',{'TargetFile':path,'CodeContent':'x'}),('replace_file_content',{'TargetFile':path}),
                ('grep_search',{'SearchPath':path,'Query':'x'}),('future_tool',{'FilePath':path}),
-               ('future_shell',{'CommandLine':'ls','FilePath':path}))
+               ('future_shell',{'CommandLine':'ls','FilePath':path}),('view_code_item',{'File':path}),
+               ('future_tool',{'FilePath':None,'Path':path}),('future_tool',{'TargetFile':'a.md','SearchPath':path}),
+               ('future_tool',{'TargetFiles':['a.md',path]}))
         for name,args in cases:
-            with self.assertRaisesRegex(hook.GuardRefusal,'secret',msg=name):
+            with self.assertRaisesRegex(hook.GuardRefusal,'secret',msg=(name,args)):
                 self.agy(name,args)
         self.assertEqual(self.agy('run_command',{'CommandLine':'git status --short'}),{})
+        self.assertEqual(self.agy('search_web',{'Query':'antigravity hooks'}),{})
+        with self.assertRaises(ValueError):
+            self.agy('future_tool',{'FilePath':{'nested':path}})
+        # A windowed view of a long file is a bounded read; the whole file is not.
+        long=self.root/'long.md'
+        long.write_text('x\n'*500)
+        self.assertEqual(self.agy('view_file',{'AbsolutePath':str(long),'StartLine':1,'EndLine':20}),{})
+        with self.assertRaisesRegex(hook.GuardRefusal,'intake|Bounded'):
+            self.agy('view_file',{'AbsolutePath':str(long)})
         # A file tool whose path field is unknown is refused, not waved through.
         with self.assertRaises(ValueError):
             self.agy('view_file',{'Location':path})
@@ -287,6 +298,9 @@ class HookTests(unittest.TestCase):
         self.assertIn('secret',denied['reason'])
         self.assertEqual(run({'toolCall':{'name':'run_command','args':{'CommandLine':'git status --short'}}}),{'decision':'allow'})
         self.assertEqual(run({'toolCall':{'name':'view_file','args':{}}})['decision'],'deny')
+        # A pre-tool payload in any other shape is refused, never allowed unguarded.
+        self.assertEqual(run({'tool_call':{'name':'view_file','args':{'AbsolutePath':'/x/.env'}}})['decision'],'deny')
+        self.assertNotIn('verification unavailable',json.dumps(run({},event='Stop')))
         self.assertEqual(run({'toolCall':{'name':'run_command','args':{'CommandLine':'ls'}}},event='Unknown')['continue'],False)
 
     def test_antigravity_edits_are_recorded_for_feedback_and_sign_off(self):

@@ -19,10 +19,11 @@ DEVIN_TOOLS = {'exec': 'Bash', 'bash': 'Bash', 'shell': 'Bash', 'read': 'Read', 
 # Factory's Droid sends Claude-shaped payloads with its own names for the shell, create and patch tools.
 DROID_TOOLS = {'Execute': 'Bash', 'Create': 'Write', 'ApplyPatch': 'apply_patch'}
 DROID_KNOWN = {*DROID_TOOLS, 'Bash', 'Read', 'Edit', 'MultiEdit', 'Write', 'Grep', 'Glob', 'LS'}
-# Antigravity nests the call as toolCall {name, args} with PascalCase arguments.
+# Antigravity nests the call as toolCall {name, args} with PascalCase arguments; any argument named like
+# AbsolutePath, TargetFile, File or SearchDirectory (or their plurals) names files for the guards.
 ANTIGRAVITY_TOOLS = {'run_command': 'Bash', 'view_file': 'Read', 'write_to_file': 'Write',
                      'replace_file_content': 'Edit', 'multi_replace_file_content': 'Edit'}
-ANTIGRAVITY_PATHS = ('AbsolutePath', 'TargetFile', 'FilePath', 'Path', 'DirectoryPath', 'SearchPath', 'SearchDirectory')
+ANTIGRAVITY_PATH_FIELD = re.compile(r'(Path|File|Directory)s?$')
 
 
 class GuardRefusal(ValueError):
@@ -75,15 +76,22 @@ def edit_paths(event):
         if not paths:
             raise ValueError('apply_patch has no recognized file paths')
         return paths
-    path = data.get('file_path', data.get('filePath', data.get('path')))
-    if path is None and event.get('tool_name') in {'Read', 'Edit', 'Write'}:
+    if 'antigravity_paths' in event:
+        paths = event['antigravity_paths']
+    else:
+        path = data.get('file_path', data.get('filePath', data.get('path')))
+        paths = [path] if path is not None else []
+    if not paths and event.get('tool_name') in {'Read', 'Edit', 'Write'}:
         raise ValueError('the native file tool requires its supported path field')
-    return [path] if path is not None else []
+    return paths
 
 
 def antigravity_event(event):
     call = event.get('toolCall')
     if call is None:
+        # A pre-tool payload without the documented call shape has nothing to guard, so it is not allowed blind.
+        if event.get('hook_event_name') == 'PreToolUse':
+            raise ValueError('the Antigravity pre-tool payload requires a toolCall')
         return event
     if not isinstance(call, dict) or not isinstance(call.get('args'), dict):
         raise ValueError('the Antigravity toolCall requires an args object')
@@ -91,14 +99,23 @@ def antigravity_event(event):
     data = dict(args)
     if 'CommandLine' in args:
         data['command'] = args['CommandLine']
-    path = next((args[field] for field in ANTIGRAVITY_PATHS if field in args), None)
-    if path is not None:
-        data['file_path'] = path
+    # Every path-like argument meets the guards, not only the first: one call can name several files.
+    paths = []
+    for field, value in args.items():
+        if not ANTIGRAVITY_PATH_FIELD.search(field) or value is None:
+            continue
+        values = value if isinstance(value, list) else [value]
+        if not all(isinstance(item, str) for item in values):
+            raise ValueError('an Antigravity path argument must be a string or a list of strings')
+        paths += values
+    # view_file windows by StartLine/EndLine; the intake guard reads the same window as offset/limit.
+    if type(args.get('StartLine')) is int and type(args.get('EndLine')) is int:
+        data['offset'], data['limit'] = args['StartLine'], args['EndLine'] - args['StartLine'] + 1
     tool = ANTIGRAVITY_TOOLS.get(call.get('name'), call.get('name'))
     # Any tool carrying a command line is a shell call; a file path in it still meets the path guard.
     if 'CommandLine' in args:
         tool = 'Bash'
-    return {**event, 'tool_name': tool, 'tool_input': data}
+    return {**event, 'tool_name': tool, 'tool_input': data, 'antigravity_paths': paths}
 
 
 def handle(root, provider, event):

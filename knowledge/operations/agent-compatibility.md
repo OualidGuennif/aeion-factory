@@ -73,11 +73,13 @@ directory does not establish loaded hooks or identical runtime guarantees.
   <event>`: the payload names no hook event or session, so the event is an argument and the
   session key is per clone, as for Devin. The adapter reads `toolCall {name, args}`, maps
   `run_command` (`CommandLine`) to Bash, `view_file` to Read, `write_to_file` to Write and
-  `replace_file_content`/`multi_replace_file_content` to Edit, and takes the path from
-  `AbsolutePath`, `TargetFile`, `FilePath`, `Path`, `DirectoryPath`, `SearchPath` or
-  `SearchDirectory` for any tool. A mapped file tool with none of them is refused. Any tool with
-  a `CommandLine` goes through the shell guard. A pre-tool answer is always an explicit
-  `{"decision": "allow"}` or `{"decision": "deny", "reason": ...}`, since Antigravity
+  `replace_file_content`/`multi_replace_file_content` to Edit, and sends every argument whose
+  name ends in `Path`, `File` or `Directory` (or their plurals, such as `AbsolutePath`,
+  `TargetFile`, `SearchDirectory`) through the path guard, for any tool. A mapped file tool with
+  none is refused, as is a path argument that is not a string or list of strings. `view_file`'s
+  `StartLine`/`EndLine` become the intake window. Any tool with a `CommandLine` goes through the
+  shell guard. A pre-tool payload without `toolCall` is refused. A pre-tool answer is always an
+  explicit `{"decision": "allow"}` or `{"decision": "deny", "reason": ...}`, since Antigravity
   reads an empty answer as a refusal. No compaction checkpoint or token stop.
 - Managed CLI launchers enter the repository root and check the exact-HEAD architecture baseline;
   its absence is a warning, because installing the integrations needs the user's yes.
@@ -175,7 +177,7 @@ Antigravity is not yet qualified live either; antigravity.google was unreachable
 container that added it. The `toolCall` payload, `run_command`'s `CommandLine`, the decisions and
 `.agents/hooks.json` follow the CLI changelog, a CLI issue quoting a real 1.4.4 payload and
 search excerpts of the hooks page. Unverified: the exact case of the file tools' path fields
-(an unknown field on a mapped file tool is refused), the Stop answer, and whether the IDE runs
+(an unknown field on a mapped file tool is refused), whether `StartLine` is 1-based, the Stop answer, and whether the IDE runs
 workspace hooks (a forum report says its PostToolUse did not fire). A hook that crashes or
 times out blocks the call. Qualify it with `agy`: `cat .env` and a view of that file refused
 with the guard's reason, and an edit naming its covering doc; then repeat in the IDE.

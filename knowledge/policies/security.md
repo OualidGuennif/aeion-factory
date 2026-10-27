@@ -40,8 +40,8 @@ Requirements for a change, not claims about what production already satisfies.
   like `[!x]`, and a bracket with a POSIX class (`[[:lower:]]`) as one wildcard. A quoted pattern
   (`grep 'key.*'`) is not judged by name only when quotes surely stay quotes: every program is a
   reader that runs no shell (`grep`, `rg`, `jq`, `head`, `cat`, ...) and the command has no `$(`,
-  backtick, backslash, `#`, `$'` or `<<`; anything else (`awk`, `env`, `watch`, `sh -c`) fails
-  closed. Every glob is
+  `${`, `$'`, backtick, backslash, `#`, `<<`, process substitution or `rg --pre`; anything else
+  (`awk`, `sort`, `env`, `watch`, `sh -c`) fails closed. Every glob is
   also judged by the files it expands to from the command's directory and each literal directory
   a `cd` or `pushd` moves to. The Grep tool's `glob` filter is refused when it names a secret the
   same way. The ordinary-name list is a heuristic: an odd glob such as `*2` matches only a

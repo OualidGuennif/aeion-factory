@@ -492,14 +492,14 @@ except Exception:
 TOKEN_SPLIT = r"[\s'\"=;&|<>()`]+"
 QUOTED_GLOB = str.maketrans("*?[", "\x01\x02\x03")
 # Programs that never hand an argument to a shell, so a quoted pattern given to them stays a pattern.
-QUOTE_SAFE = {"grep", "egrep", "fgrep", "rg", "jq", "head", "tail", "wc", "sort", "uniq", "cut", "tr", "ls", "cat", "echo"}
+QUOTE_SAFE = {"grep", "egrep", "fgrep", "rg", "jq", "head", "tail", "wc", "uniq", "cut", "tr", "ls", "cat", "echo"}
 
 
 def quotes_inert(command):
     """Whether the shell keeps quoted text literal: no substitution, escape, comment, ANSI-C quote or
     here-string can reopen a quote, and every program is a known reader that runs no shell (an
-    unknown one, like env, watch or awk's system(), might)."""
-    if re.search(r"\$\(|`|\\|#|\$'|<<", command):
+    unknown one, like env, watch or awk's system(), might; rg runs one with --pre)."""
+    if re.search(r"\$[({']|`|\\|#|<<|[<>]\(|--pre", command):
         return False
     for words in simple_commands(command):
         run = program(words)

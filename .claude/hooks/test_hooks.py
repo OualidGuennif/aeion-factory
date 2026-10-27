@@ -176,11 +176,14 @@ for command in ["head $X/id_*", "head $(pwd)/k/cred*", "cat id_*", "head auth*",
                 "watch 'head $X/id_*'", "bash <<< 'head $X/id_*'", "printf 'head $X/id_*' | sh",
                 "find . -exec sh -c 'head $X/id_*' \\;", "echo \\'; head -n 3 $X/id_*; echo \\'",
                 "echo x # '\nhead -n 3 $X/id_*\n# '", "echo $'\\'' ; head -n 3 $X/id_* ; echo $'\\''",
-                "awk 'BEGIN{system(\"head $X/id_*\")}'"]:
+                "awk 'BEGIN{system(\"head $X/id_*\")}'", "echo 'head $X/id_*' > f; rg --pre sh x f",
+                "echo 'head $X/id_*' | sort --compress-program=sh -S 1", "cat <(echo 'head $X/id_*') | grep x",
+                "echo 'head $X/id_*' > >(sh)"]:
     expect(f"bash deny named glob: {command}", run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 2)
 # A quoted pattern is a regex or prose the shell never expands.
 for command in ["ls *", "head *.md", "grep x *.json", "ls c*", "ls *_*", "wc -l *.py", "ls -d .*", "head k*", "wc -l *.kts",
-                "grep -n 'key.*' config.py", "rg 'env.*' src", 'rg -n "auth.*" src | head -5']:
+                "grep -n 'key.*' config.py", "rg 'env.*' src", 'rg -n "auth.*" src | head -5',
+                "grep -e 'id_.*' f", "jq -r '.x' f | grep 'id_.*'"]:
     expect(f"bash allow ordinary glob: {command}", run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 0)
 expect("bash allow: a cd with a plain glob", run_hook("guard-bash.py", {"command": "cd sub && ls *.md", "workdir": str(glob_dir)}), 0)
 expect("bash deny names the Grep tool for searches", run_hook("guard-bash.py", {"command": "grep -rn id_rsa tools"}), 2,

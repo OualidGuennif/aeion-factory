@@ -306,8 +306,13 @@ SHORT_VALUE = {"commit": set("mFcCt"), "push": {"o"}}
 
 
 def git_bypass(command):
-    """The reason a git command skips the hooks or force-pushes (short clusters, +refspec), or None."""
+    """The reason a git command skips the hooks or force-pushes, or None.
+
+    Covers short clusters, +refspecs, git's unique-prefix long options and any core.hooksPath
+    override (-c, --config-env, GIT_CONFIG_* variables, git config)."""
     for words in simple_commands(command):
+        if any("core.hookspath" in w.lower() for w in words):
+            return "overriding core.hooksPath skips the pre-commit checks."
         words = program(words)
         if words and words[0] == "<script>":
             reason = git_bypass(words[1])
@@ -320,21 +325,29 @@ def git_bypass(command):
         while rest and rest[0].startswith("-"):
             flag = rest.pop(0)
             if flag in GIT_VALUE_FLAGS and rest:
-                value = rest.pop(0)
-                if flag == "-c" and value.lower().startswith("core.hookspath"):
-                    return "overriding core.hooksPath skips the pre-commit checks."
-        if not rest or rest[0] not in SHORT_VALUE:
-            continue
-        sub, args = rest[0], rest[1:]
+                rest.pop(0)
+        sub, args = (rest[0], rest[1:]) if rest else (None, [])
+        value_next = False
         for arg in args:
+            if value_next:
+                value_next = False
+                continue
             if arg == "--":
                 break
+            name = arg.split("=", 1)[0]
+            # git accepts any unambiguous prefix of a long option.
+            if len(name) >= len("--no-veri") and "--no-verify".startswith(name):
+                return "--no-verify skips the pre-commit checks."
+            if sub == "push" and len(name) >= len("--force") and "--force-with-lease".startswith(name):
+                return "force-pushing rewrites shared history."
             if sub == "push" and arg.startswith("+") and len(arg) > 1:
                 return "force-pushing rewrites shared history."
-            if not re.fullmatch(r"-[a-zA-Z]+", arg):
+            if sub not in SHORT_VALUE or not re.fullmatch(r"-[a-zA-Z]+", arg):
                 continue
-            for flag in arg[1:]:
+            for index, flag in enumerate(arg[1:], start=1):
                 if flag in SHORT_VALUE[sub]:
+                    # A value flag ending the cluster takes the next word as its value.
+                    value_next = index == len(arg) - 1
                     break
                 if sub == "commit" and flag == "n":
                     return "-n (--no-verify) skips the pre-commit checks."
@@ -449,6 +462,8 @@ if os.environ.get("FACTORY_LOOP_READ_ONLY") == "1":
         for i, word in enumerate(words):
             if word == "--recover" or word.startswith("--recover="):
                 deny("read-only loops do not recover input from local files.")
+            if re.fullmatch(r"-[^-]*F.*", word) and word != "-F":
+                deny(f"read-only loops pass a body file as a separate word: -F {LOOP_BODIES}<name>.md.")
             if word in ("-F", "--body-file") or word.startswith("--body-file="):
                 body = word.split("=", 1)[1] if "=" in word else (words[i + 1] if i + 1 < len(words) else "")
                 if not re.fullmatch(re.escape(LOOP_BODIES) + r"[\w.-]+", body) or ".." in body \

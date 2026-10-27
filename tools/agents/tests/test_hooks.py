@@ -89,6 +89,8 @@ class HookTests(unittest.TestCase):
         key=hook.key('codex',self.event)
         state_file=self.root/'.factory/context'/f'{key}.json'
         state=json.loads(state_file.read_text());state['checkpoint']={'tree':'old'};state_file.write_text(json.dumps(state))
+        start=self.call(hook_event_name='SessionStart',source='startup')
+        self.assertIn('created at the first refused compaction',start['hookSpecificOutput']['additionalContext'])
         result=self.call(hook_event_name='SessionStart',source='compact')
         self.assertIn(key,result['hookSpecificOutput']['additionalContext'])
         self.assertNotIn('checkpoint',json.loads(state_file.read_text()))

@@ -28,4 +28,4 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           prompt: ${{ github.event.schedule == '0 6 * * 1' && 'Follow loops/prompts/security.md.' || 'Follow loops/prompts/outer.md, then loops/prompts/docs.md.' }}
-          claude_args: '--max-turns 30 --permission-mode dontAsk --allowedTools "Read,Grep,Glob,Write(.factory/loop-bodies/**),Agent,Skill,Bash(git log -5 --oneline),Bash(tools/knowledge/knowledge-check),Bash(tools/knowledge/doc-links),Bash(tools/repo-health/repo-health),Bash(gh issue list *),Bash(gh issue view *),Bash(gh issue create *),Bash(gh issue comment *),Bash(gh run list *)"'
+          claude_args: '--max-turns 30 --permission-mode dontAsk --allowedTools "Read,Grep,Glob,Write(.factory/loop-bodies/**),Agent,Skill,Bash(git log -5 --oneline),Bash(tools/knowledge/knowledge-check),Bash(tools/knowledge/doc-links),Bash(tools/knowledge/doc-links --for *),Bash(tools/repo-health/repo-health),Bash(gh issue list *),Bash(gh issue view *),Bash(gh issue create *),Bash(gh issue comment *),Bash(gh run list *)"'

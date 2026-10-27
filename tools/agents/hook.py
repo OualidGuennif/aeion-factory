@@ -90,7 +90,8 @@ def handle(root, provider, event):
             return {'systemMessage': f'Factory verified handover: {handover.relative_to(root)}'}
     if name == 'SessionStart':
         result = script(root, 'session-start.py', normalized)
-        context = (f'Factory {provider} checkpoint profile. Handover: {handover.relative_to(root)}. '
+        pointer = 'Handover' if handover.is_file() else 'Handover (created at the first refused compaction)'
+        context = (f'Factory {provider} checkpoint profile. {pointer}: {handover.relative_to(root)}. '
                    f'Checkpoint key: {session}. Native token-stop enforcement is unqualified; do not claim a strict 300k cap.')
         context += '\n' + result.get('hookSpecificOutput', {}).get('additionalContext', '')
         result['hookSpecificOutput'] = {'hookEventName': name, 'additionalContext': context}

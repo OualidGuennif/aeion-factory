@@ -63,7 +63,10 @@ for command in ["cat .env", "cat env.local", "printenv", "cat /proc/1/environ", 
                 "docker inspect $(docker ps -q\n)", "docker inspect $(docker ps -q;)", "docker inspect -f '{{- json . -}}' c", "docker inspect web",
                 "docker compose config", "git push --force origin main", "git commit --no-verify -m x",
                 "git commit -n -m x", "git commit -anm x", "git push origin +HEAD:main", "git push -fu origin main",
-                "git -c core.hooksPath=/dev/null commit -m x", "bash -c 'git commit -n -m x'"]:
+                "git -c core.hooksPath=/dev/null commit -m x", "bash -c 'git commit -n -m x'",
+                "git commit --no-verif -m x", "git merge --no-veri topic", "git --config-env=core.hooksPath=PWD commit -m x",
+                "GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=core.hooksPath GIT_CONFIG_VALUE_0=/dev/null git commit -m x",
+                "git config core.hooksPath /dev/null", "git push --force-with origin main", "git push --force-with-lease=main origin main"]:
     expect(f"bash deny: {command}", run_hook("guard-bash.py", {"command": command}), 2)
 expect("bash ask: mentions a secret", run_hook("guard-bash.py", {"command": "ls -la .env"}), 0, '"ask"')
 for command in ["git status --short", "git commit -m 'the environment check'",
@@ -75,7 +78,8 @@ for command in ["git status --short", "git commit -m 'the environment check'",
                 "docker inspect -f '{{.Config.Entrypoint}}' c", "docker inspect -f '{{.State.Health.Status}}' c", "docker inspect $(docker ps -q) --format '{{.Name}} {{.State.Status}}'",
                 "echo $(date) && git status", "echo $(date;) && git status", "gh pr create --body \"$(cat <<'EOF'\ndumps (env)\nEOF\n)\"", "cat env.example.local", "npm test", "set -euo pipefail",
                 "git commit -m 'use head -n 5'", "git commit -am wip", "git commit -mnew", "git push -u origin task/x",
-                "git push -n origin main", "git -C repo status"]:
+                "git push -n origin main", "git -C repo status", "git commit -m -n", "git commit -am -n",
+                "git push --follow-tags origin task/x", "git log --no-verbose"]:
     result = run_hook("guard-bash.py", {"command": command})
     expect(f"bash allow: {command}", result, 0)
     if '"ask"' in result.stdout:
@@ -102,7 +106,9 @@ with tempfile.TemporaryDirectory() as loop_dir:
                     "gh pr comment 7 --body-file=.factory/loop-bodies/../../secret.md",
                     "gh pr comment 7 -F .factory/loop-bodies/link.md", "gh issue create --recover state.json",
                     "gh issue create --title x --body 'a\nb'", "git diff origin/main...HEAD",
-                    "tools/knowledge/doc-links --for ../outside", "tools/knowledge/doc-links --diff origin/main"]:
+                    "tools/knowledge/doc-links --for ../outside", "tools/knowledge/doc-links --diff origin/main",
+                    "gh issue comment 1 -F/etc/hostname", "gh issue comment 1 -F=/etc/hostname",
+                    "gh pr comment 7 -wF/etc/hostname"]:
         expect(f"read-only deny: {command}", run_read_only(command, loop), 2)
 
 # guard-path: secrets refused, templates allowed.

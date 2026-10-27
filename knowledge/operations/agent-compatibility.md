@@ -83,8 +83,9 @@ directory does not establish loaded hooks or identical runtime guarantees.
   `StartLine`/`EndLine` become the intake window; `grep_search` with `MatchPerLine: false` lists
   names only. Any tool with a `CommandLine` goes through the
   shell guard, as does a `command` or `commandLine` argument in any case; a call with two is
-  refused, and `Cwd` is the shell's directory. The guards see only fields the adapter derives,
-  never a raw `limit` or output mode from the model. A pre-tool payload without `toolCall` is refused. A pre-tool answer is always an
+  refused. `Cwd` or `workdir` in any case is the shell's directory, and two are refused too.
+  The guards see only fields the adapter derives, never a raw `limit` or output mode from the
+  model. A pre-tool payload without `toolCall` is refused. A pre-tool answer is always an
   explicit `{"decision": "allow"}` or `{"decision": "deny", "reason": ...}`, since Antigravity
   reads an empty answer as a refusal. No compaction checkpoint or token stop.
 - Managed CLI launchers enter the repository root and check the exact-HEAD architecture baseline;

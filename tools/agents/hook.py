@@ -130,8 +130,12 @@ def antigravity_event(event):
     command = commands[0] if commands else None
     if command is not None:
         data['command'] = command
-    if isinstance(args.get('Cwd'), str):
-        data['workdir'] = args['Cwd']
+    # The shell's directory under any case (Cwd, cwd, workdir) sizes relative reads where they run.
+    workdirs = [value for key, value in args.items() if argument_name(key) in {'cwd', 'workdir'}]
+    if len(workdirs) > 1:
+        raise ValueError('the Antigravity call names more than one working directory')
+    if workdirs and isinstance(workdirs[0], str):
+        data['workdir'] = workdirs[0]
     # Every path-like argument meets the guards, not only the first: one call can name several files.
     paths = antigravity_paths(args)
     # view_file windows by StartLine/EndLine; the intake guard reads the same window as offset/limit.

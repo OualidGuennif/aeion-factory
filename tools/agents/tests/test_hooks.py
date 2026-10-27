@@ -291,6 +291,16 @@ class HookTests(unittest.TestCase):
         self.assertEqual(self.agy('grep_search',{'SearchPath':str(long),'Query':'x','MatchPerLine':False}),{})
         with self.assertRaisesRegex(hook.GuardRefusal,'intake|Bounded'):
             self.agy('run_command',{'CommandLine':'cat long.md','Cwd':str(self.root)})
+        # A relative read is sized in the directory it runs in, whatever the key's case.
+        sub=self.root/'sub'
+        sub.mkdir()
+        (sub/'big.log').write_text('x\n'*500)
+        for name,args in (('mcp_shell',{'command':'cat big.log','cwd':str(sub)}),('mcp_shell',{'command':'cat big.log','workdir':str(sub)}),
+                          ('run_command',{'CommandLine':'cat big.log','cwd':str(sub)})):
+            with self.assertRaisesRegex(hook.GuardRefusal,'intake|Bounded',msg=str(args)):
+                self.agy(name,args)
+        with self.assertRaises(ValueError):
+            self.agy('run_command',{'CommandLine':'ls','Cwd':str(self.root),'workdir':str(sub)})
         for name,args in (('view_file',{'AbsolutePath':str(long)}),('grep_search',{'SearchPath':str(long),'Query':'x'}),
                           ('view_file',{'AbsolutePath':str(long),'limit':10}),
                           ('grep_search',{'SearchPath':str(long),'Query':'x','output_mode':'files_with_matches','head_limit':5})):

@@ -6,6 +6,7 @@ Status: ACTIVE, WAITING-OWNER, MEASURING, BLOCKED, BACKLOG.
 
 ## Live Devin hook qualification — WAITING-OWNER
 - Owner decision: 2026-10-27, support Devin; the adapter merged with documented, not live-run, payloads.
+- State: adapter, tests and docs in PR #12; no live Devin run yet.
 - Next: run the qualification steps on a machine with Devin CLI and record the result (who: owner).
 - Blocker: no Devin CLI in the agent's container.
 - Evidence: knowledge/operations/agent-compatibility.md

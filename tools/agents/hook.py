@@ -81,8 +81,8 @@ def handle(root, provider, event):
         # An unknown Devin tool that carries a command string is a shell call until proven otherwise.
         if tool not in DEVIN_TOOLS and tool != 'apply_patch' and isinstance(data, dict) and isinstance(data.get('command'), str):
             tool = 'exec'
-        if tool in DEVIN_TOOLS:
-            event = {**event, 'tool_name': DEVIN_TOOLS[tool]}
+        if tool in DEVIN_TOOLS or tool == 'apply_patch':
+            event = {**event, 'tool_name': DEVIN_TOOLS.get(tool, tool)}
     name = event.get('hook_event_name')
     if name not in {'SessionStart', 'PreToolUse', 'PostToolUse', 'PreCompact', 'Stop'}:
         raise ValueError('unsupported adapter event')

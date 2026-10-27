@@ -86,7 +86,7 @@ base and target SHAs in the receipt. Main pushes retain their ordinary ancestor 
 Only allowed tracked text enters extraction. Secret paths refuse analysis, symlinks
 are excluded, and unsupported formats remain explicitly inventory-only. Tool versions are pinned.
 The graph includes code and native Markdown structure/frontmatter/links; semantic inference by
-an LLM is outside the mandatory baseline. This keeps the default independent of model credentials.
+an LLM is outside the baseline. This keeps the default independent of model credentials.
 Setup stamps Graphify's commit archive URL and SHA-256, including replacement of a same-version wheel
 from another source; analysis refuses mismatched package provenance or a dirty Archify checkout.
 

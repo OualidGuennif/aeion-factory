@@ -166,10 +166,12 @@ class HookTests(unittest.TestCase):
 
     def test_devin_tools_outside_the_map_still_reach_the_guards(self):
         for tool in ('bash','Exec','run_command'):
-            with self.assertRaises(ValueError):
+            with self.assertRaisesRegex(hook.GuardRefusal,'secret'):
                 self.call('devin',tool_name=tool,tool_input={'command':'cat .env'})
+        with self.assertRaisesRegex(hook.GuardRefusal,'secret'):
+            self.call('devin',tool_name='Apply_Patch',tool_input={'command':'*** Add File: .env\n+x'})
         path=self.root/'many.log';path.write_text('line\n'*401)
-        with self.assertRaises(ValueError):
+        with self.assertRaisesRegex(hook.GuardRefusal,'intake'):
             self.call('devin',tool_name='grep',tool_input={'path':str(path),'pattern':'line','head_limit':0})
 
     def test_devin_stop_and_start_failures_end_instead_of_continuing(self):

@@ -46,7 +46,7 @@ does not establish loaded hooks or identical runtime guarantees.
   `.claude/settings.json` hooks, but its tools are named `exec`, `read`, `edit`, `write` and
   `apply_patch`, so Claude matchers never fire and the matcher-less Claude budget hook reads a
   transcript Devin does not write. `.devin/config.json` therefore turns the Claude import off, and
-  `.devin/hooks.v1.json` sends SessionStart, PreToolUse, PostToolUse (edits) and Stop to
+  `.devin/hooks.v1.json` sends SessionStart, PreToolUse, PostToolUse and Stop (no matchers) to
   `tools/agents/hook.py devin`. The adapter maps the tool names (also `bash`, `shell`, `grep`, in
   any case) to the shared guards; an unknown tool carrying a `command` string goes through the
   shell guard. A refused tool call gets Devin's `{"decision": "block", "reason": ...}`; a failed

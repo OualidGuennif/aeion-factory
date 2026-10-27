@@ -267,20 +267,25 @@ class HookTests(unittest.TestCase):
                ('grep_search',{'SearchPath':path,'Query':'x'}),('future_tool',{'FilePath':path}),
                ('future_shell',{'CommandLine':'ls','FilePath':path}),('view_code_item',{'File':path}),
                ('future_tool',{'FilePath':None,'Path':path}),('future_tool',{'TargetFile':'a.md','SearchPath':path}),
-               ('future_tool',{'TargetFiles':['a.md',path]}))
+               ('future_tool',{'TargetFiles':['a.md',path]}),('mcp_read_file',{'path':path}),
+               ('mcp_read_file',{'file_path':path}),('future_tool',{'Options':{'AbsolutePath':path}}),
+               ('codebase_search',{'TargetDirectories':[path]}),('future_tool',{'Uri':'file://'+path}))
         for name,args in cases:
             with self.assertRaisesRegex(hook.GuardRefusal,'secret',msg=(name,args)):
                 self.agy(name,args)
         self.assertEqual(self.agy('run_command',{'CommandLine':'git status --short'}),{})
         self.assertEqual(self.agy('search_web',{'Query':'antigravity hooks'}),{})
-        with self.assertRaises(ValueError):
-            self.agy('future_tool',{'FilePath':{'nested':path}})
+        self.assertEqual(self.agy('grep_search',{'SearchPath':str(self.root),'Query':'x','ExcludePath':''}),{})
         # A windowed view of a long file is a bounded read; the whole file is not.
         long=self.root/'long.md'
         long.write_text('x\n'*500)
         self.assertEqual(self.agy('view_file',{'AbsolutePath':str(long),'StartLine':1,'EndLine':20}),{})
-        with self.assertRaisesRegex(hook.GuardRefusal,'intake|Bounded'):
-            self.agy('view_file',{'AbsolutePath':str(long)})
+        for name,args in (('view_file',{'AbsolutePath':str(long)}),('grep_search',{'SearchPath':str(long),'Query':'x'})):
+            with self.assertRaisesRegex(hook.GuardRefusal,'intake|Bounded',msg=name):
+                self.agy(name,args)
+        # Only the Antigravity branch reads its own path list; another provider's payload cannot supply one.
+        with self.assertRaisesRegex(hook.GuardRefusal,'secret'):
+            self.call('codex',hook_event_name='PreToolUse',tool_name='Read',tool_input={'file_path':path},antigravity_paths=['README.md'])
         # A file tool whose path field is unknown is refused, not waved through.
         with self.assertRaises(ValueError):
             self.agy('view_file',{'Location':path})

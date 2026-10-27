@@ -19,11 +19,12 @@ DEVIN_TOOLS = {'exec': 'Bash', 'bash': 'Bash', 'shell': 'Bash', 'read': 'Read', 
 # Factory's Droid sends Claude-shaped payloads with its own names for the shell, create and patch tools.
 DROID_TOOLS = {'Execute': 'Bash', 'Create': 'Write', 'ApplyPatch': 'apply_patch'}
 DROID_KNOWN = {*DROID_TOOLS, 'Bash', 'Read', 'Edit', 'MultiEdit', 'Write', 'Grep', 'Glob', 'LS'}
-# Antigravity nests the call as toolCall {name, args} with PascalCase arguments; any argument named like
-# AbsolutePath, TargetFile, File or SearchDirectory (or their plurals) names files for the guards.
+# Antigravity nests the call as toolCall {name, args}. Its own tools use PascalCase arguments, MCP tools any
+# case; an argument at any depth named like a path, file, directory or URI (AbsolutePath, TargetDirectories,
+# file_path, Uri) names files for the guards.
 ANTIGRAVITY_TOOLS = {'run_command': 'Bash', 'view_file': 'Read', 'write_to_file': 'Write',
-                     'replace_file_content': 'Edit', 'multi_replace_file_content': 'Edit'}
-ANTIGRAVITY_PATH_FIELD = re.compile(r'(Path|File|Directory)s?$')
+                     'replace_file_content': 'Edit', 'multi_replace_file_content': 'Edit', 'grep_search': 'Grep'}
+ANTIGRAVITY_PATH_KEY = re.compile(r'(paths?|files?|dirs?|directory|directories|uris?)$')
 
 
 class GuardRefusal(ValueError):
@@ -64,7 +65,7 @@ def script(root, name, event):
     return json.loads(result.stdout) if result.stdout.lstrip().startswith('{') else {}
 
 
-def edit_paths(event):
+def edit_paths(event, provider=None):
     data = event.get('tool_input', {})
     if not isinstance(data, dict):
         raise ValueError('tool_input must be an object')
@@ -76,7 +77,7 @@ def edit_paths(event):
         if not paths:
             raise ValueError('apply_patch has no recognized file paths')
         return paths
-    if 'antigravity_paths' in event:
+    if provider == 'antigravity':
         paths = event['antigravity_paths']
     else:
         path = data.get('file_path', data.get('filePath', data.get('path')))
@@ -86,13 +87,28 @@ def edit_paths(event):
     return paths
 
 
+def antigravity_paths(value, named=False):
+    # A string is a path only under a path-like name; nested objects and lists are walked.
+    if isinstance(value, dict):
+        paths = []
+        for key, item in value.items():
+            name = re.sub(r'[_-]', '', str(key)).lower()
+            paths += antigravity_paths(item, named or ANTIGRAVITY_PATH_KEY.search(name) is not None)
+        return paths
+    if isinstance(value, list):
+        return [path for item in value for path in antigravity_paths(item, named)]
+    if named and isinstance(value, str) and value:
+        return [value.removeprefix('file://')]
+    return []
+
+
 def antigravity_event(event):
     call = event.get('toolCall')
     if call is None:
         # A pre-tool payload without the documented call shape has nothing to guard, so it is not allowed blind.
         if event.get('hook_event_name') == 'PreToolUse':
             raise ValueError('the Antigravity pre-tool payload requires a toolCall')
-        return event
+        return {**event, 'antigravity_paths': []}
     if not isinstance(call, dict) or not isinstance(call.get('args'), dict):
         raise ValueError('the Antigravity toolCall requires an args object')
     args = call['args']
@@ -100,14 +116,7 @@ def antigravity_event(event):
     if 'CommandLine' in args:
         data['command'] = args['CommandLine']
     # Every path-like argument meets the guards, not only the first: one call can name several files.
-    paths = []
-    for field, value in args.items():
-        if not ANTIGRAVITY_PATH_FIELD.search(field) or value is None:
-            continue
-        values = value if isinstance(value, list) else [value]
-        if not all(isinstance(item, str) for item in values):
-            raise ValueError('an Antigravity path argument must be a string or a list of strings')
-        paths += values
+    paths = antigravity_paths(args)
     # view_file windows by StartLine/EndLine; the intake guard reads the same window as offset/limit.
     if type(args.get('StartLine')) is int and type(args.get('EndLine')) is int:
         data['offset'], data['limit'] = args['StartLine'], args['EndLine'] - args['StartLine'] + 1
@@ -181,10 +190,10 @@ def handle(root, provider, event):
             if result.get('hookSpecificOutput', {}).get('permissionDecision') == 'ask':
                 return fail(provider, name, 'This command requires an explicit human decision; the adapter does not auto-approve it.')
             # An unknown tool routed here may also name a file; that path still meets the path guard.
-            for path in edit_paths(event):
+            for path in edit_paths(event, provider):
                 script(root, 'guard-path.py', {'tool_name': 'Edit', 'tool_input': {**data, 'file_path': path}})
             return result
-        paths = edit_paths(event)
+        paths = edit_paths(event, provider)
         if not paths and event.get('tool_name') == 'Grep':
             script(root, 'guard-path.py', normalized)
         for path in paths:
@@ -194,7 +203,7 @@ def handle(root, provider, event):
         return {}
     if name == 'PostToolUse' and event.get('tool_name') in {'apply_patch', 'Edit', 'Write'}:
         messages = []
-        for raw in edit_paths(event):
+        for raw in edit_paths(event, provider):
             path = Path(raw)
             path = (root / path).resolve() if not path.is_absolute() else path.resolve()
             if not path.is_relative_to(root):
@@ -220,7 +229,7 @@ def main():
         event = json.loads(raw)
         if not isinstance(event, dict):
             raise ValueError('hook payload must be an object')
-    except (ValueError, OSError):
+    except (ValueError, OSError, RecursionError):
         print('Æion Factory hook payload invalid or oversized; action refused.', file=sys.stderr)
         return 2
     provider = sys.argv[1] if len(sys.argv) > 1 else None
@@ -234,7 +243,7 @@ def main():
             result = {'decision': 'allow'}
     except GuardRefusal as error:
         result = fail(provider, event.get('hook_event_name'), str(error))
-    except (ValueError, KeyError, IndexError, TypeError, OSError, subprocess.SubprocessError):
+    except (ValueError, KeyError, IndexError, TypeError, OSError, RecursionError, subprocess.SubprocessError):
         name = event.get('hook_event_name') if isinstance(event, dict) else None
         result = fail(provider, name, 'Æion Factory adapter verification unavailable; resolve the hook/check error before continuing.')
     print(json.dumps(result))

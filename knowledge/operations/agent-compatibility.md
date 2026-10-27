@@ -73,11 +73,12 @@ directory does not establish loaded hooks or identical runtime guarantees.
   <event>`: the payload names no hook event or session, so the event is an argument and the
   session key is per clone, as for Devin. The adapter reads `toolCall {name, args}`, maps
   `run_command` (`CommandLine`) to Bash, `view_file` to Read, `write_to_file` to Write and
-  `replace_file_content`/`multi_replace_file_content` to Edit, and sends every argument whose
-  name ends in `Path`, `File` or `Directory` (or their plurals, such as `AbsolutePath`,
-  `TargetFile`, `SearchDirectory`) through the path guard, for any tool. A mapped file tool with
-  none is refused, as is a path argument that is not a string or list of strings. `view_file`'s
-  `StartLine`/`EndLine` become the intake window. Any tool with a `CommandLine` goes through the
+  `replace_file_content`/`multi_replace_file_content` to Edit and `grep_search` to Grep. For any
+  tool, including MCP tools, every nonempty string at any depth under an argument whose name,
+  ignoring case and `_`/`-`, ends in path, file, dir, directory or uri, or their plurals
+  (`AbsolutePath`, `TargetDirectories`, `file_path`, `Uri`; a `file://` prefix is dropped), goes
+  through the path guard. A mapped file tool with none is refused; other names (`target`) are
+  not recognized. `view_file`'s `StartLine`/`EndLine` become the intake window. Any tool with a `CommandLine` goes through the
   shell guard. A pre-tool payload without `toolCall` is refused. A pre-tool answer is always an
   explicit `{"decision": "allow"}` or `{"decision": "deny", "reason": ...}`, since Antigravity
   reads an empty answer as a refusal. No compaction checkpoint or token stop.

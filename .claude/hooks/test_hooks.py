@@ -170,11 +170,17 @@ expect("bash deny: a glob in a heredoc fed to a shell",
 for command in ["head $X/id_*", "head $(pwd)/k/cred*", "cat id_*", "head auth*", "head $X/[^x]d_rsa",
                 "head $X/id*", "head $X/env.*", "head $X/server.*", "head $X/.*rc", "head $X/.?nv",
                 "head i[[:lower:]]_rsa", "head $X/.[[:alpha:]]nv", 'head "$X"/id_*', 'eval "head $X/id_*"',
-                'bash -c "cat $X/id_*"', "ssh h 'cat ~/.ssh/id_*'"]:
+                'bash -c "cat $X/id_*"', "ssh h 'cat ~/.ssh/id_*'",
+                # Quotes that a substitution, an unknown runner, an escape, a comment or ANSI-C reopen.
+                'echo "$(head -n 3 $X/id_*)"', 'echo "`head -n 3 $X/id_*`"', "env sh -c 'head $X/id_*'",
+                "watch 'head $X/id_*'", "bash <<< 'head $X/id_*'", "printf 'head $X/id_*' | sh",
+                "find . -exec sh -c 'head $X/id_*' \\;", "echo \\'; head -n 3 $X/id_*; echo \\'",
+                "echo x # '\nhead -n 3 $X/id_*\n# '", "echo $'\\'' ; head -n 3 $X/id_* ; echo $'\\''",
+                "awk 'BEGIN{system(\"head $X/id_*\")}'"]:
     expect(f"bash deny named glob: {command}", run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 2)
 # A quoted pattern is a regex or prose the shell never expands.
 for command in ["ls *", "head *.md", "grep x *.json", "ls c*", "ls *_*", "wc -l *.py", "ls -d .*", "head k*", "wc -l *.kts",
-                "grep -n 'key.*' config.py", "rg 'env.*' src", "awk '/env.*/' f.txt", 'rg -n "auth.*" src']:
+                "grep -n 'key.*' config.py", "rg 'env.*' src", 'rg -n "auth.*" src | head -5']:
     expect(f"bash allow ordinary glob: {command}", run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 0)
 expect("bash allow: a cd with a plain glob", run_hook("guard-bash.py", {"command": "cd sub && ls *.md", "workdir": str(glob_dir)}), 0)
 expect("bash deny names the Grep tool for searches", run_hook("guard-bash.py", {"command": "grep -rn id_rsa tools"}), 2,

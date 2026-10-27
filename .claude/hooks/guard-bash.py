@@ -491,17 +491,31 @@ except Exception:
     deny("the hook input could not be read; refusing rather than guessing.")
 TOKEN_SPLIT = r"[\s'\"=;&|<>()`]+"
 QUOTED_GLOB = str.maketrans("*?[", "\x01\x02\x03")
+# Programs that never hand an argument to a shell, so a quoted pattern given to them stays a pattern.
+QUOTE_SAFE = {"grep", "egrep", "fgrep", "rg", "jq", "head", "tail", "wc", "sort", "uniq", "cut", "tr", "ls", "cat", "echo"}
+
+
+def quotes_inert(command):
+    """Whether the shell keeps quoted text literal: no substitution, escape, comment, ANSI-C quote or
+    here-string can reopen a quote, and every program is a known reader that runs no shell (an
+    unknown one, like env, watch or awk's system(), might)."""
+    if re.search(r"\$\(|`|\\|#|\$'|<<", command):
+        return False
+    for words in simple_commands(command):
+        run = program(words)
+        if not run or PurePosixPath(run[0]).name not in QUOTE_SAFE:
+            return False
+    return True
 tokens = [t for t in re.split(TOKEN_SPLIT, command) if t]
 workdir = event.get("tool_input", {}).get("workdir", event.get("tool_input", {}).get("cwd", event.get("cwd", ".")))
 try:
     # Quotes join a shell word (sub/'.e'*), so they are dropped rather than split on.
     shell_text = re.sub(r"['\"]", "", without_inert_heredocs(command))
     shell_tokens = [t for t in re.split(r"[\s=;&|<>()`]+", shell_text) if t]
-    # The same words with quoted glob characters made inert; an unbalanced quote keeps them live, and so
-    # does a nested shell (sh -c, ssh, eval), which expands what the outer quotes protected.
-    nested = any(program(words)[:1] == ["<script>"] or "eval" in words for words in simple_commands(command))
-    inert = without_inert_heredocs(command) if nested else re.sub(
-        r"'[^']*'|\"(?:\\.|[^\"\\])*\"", lambda m: m.group(0).translate(QUOTED_GLOB), without_inert_heredocs(command))
+    # The same words with quoted glob characters made inert, only where quotes surely stay quotes.
+    inert = without_inert_heredocs(command)
+    if quotes_inert(command):
+        inert = re.sub(r"'[^']*'|\"[^\"]*\"", lambda m: m.group(0).translate(QUOTED_GLOB), inert)
     marked = [t for t in re.split(r"[\s=;&|<>()`]+", re.sub(r"['\"]", "", inert)) if t]
     unquoted_globs = [any(char in t for char in "*?[") for t in marked]
     secrets = mentioned_secrets(tokens, shell_tokens, directories(command, workdir if isinstance(workdir, str) else "."),

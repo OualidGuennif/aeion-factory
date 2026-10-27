@@ -19,6 +19,10 @@ def deny(reason):
 
 
 def check_intake(path, tool, data):
+    # An explicit unlimited content search is unbounded wherever it runs, including directories.
+    limit = data.get("head_limit", data.get("limit"))
+    if tool == "Grep" and type(limit) is int and limit == 0 and data.get("output_mode") not in {"count", "files_with_matches"}:
+        deny(INTAKE_REASON)
     if tool not in {"Read", "Grep"} or not path:
         return
     target = Path(path)
@@ -33,7 +37,9 @@ def check_intake(path, tool, data):
                 return
             limit, offset = None, 1
         else:
+            # Read accepts offset 0 as the start of the file, the same window as offset 1.
             limit, offset = data.get("limit"), data.get("offset", 1)
+            offset = 1 if type(offset) is int and offset == 0 else offset
         bounded = type(limit) is int and 0 < limit <= MAX_INTAKE_LINES
         if type(offset) is not int or offset < 1:
             deny(INTAKE_REASON)

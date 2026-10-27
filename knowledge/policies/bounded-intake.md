@@ -22,10 +22,11 @@ Extract errors and summaries from logs, builds and tests; avoid full dumps by de
 
 Shared PreToolUse guards inspect native Read/Grep arguments and recognizable Bash dumps.
 Constants in the two guards set **64 KiB / 400 lines** for ordinary full-file intake.
-Read windows use positive `offset`/`limit`, at most 400 lines and 64 KiB, with at most 1 MiB of
-local scanning. Use a bounded shell selection when a distant window exceeds that scan budget.
+Read windows use a positive `limit` and an `offset` of 0 or more (0 and 1 both mean the first
+line), at most 400 lines and 64 KiB, with at most 1 MiB of local scanning. Use a bounded shell selection when a distant window exceeds that scan budget.
 Large-file Grep uses an explicit positive `head_limit`/native `limit` of at most 400, or an
-explicit count/file-name output mode. Directory searches are not recursively pre-counted.
+explicit count/file-name output mode. Directory searches are not recursively pre-counted, but an
+explicit unlimited (`head_limit: 0`) content search is refused on any path.
 
 ## Outputs and refusals
 

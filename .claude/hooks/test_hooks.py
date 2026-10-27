@@ -140,6 +140,10 @@ with tempfile.TemporaryDirectory() as intake_dir:
     expect("intake refuses long line despite line limit", run_hook("guard-path.py", {"file_path": str(wide), "limit": 1}, tool_name="Read"), 2)
     for limit in (0, -1, 401, True):
         expect("intake rejects ineffective large Read limit", run_hook("guard-path.py", {"file_path": str(many), "limit": limit}, tool_name="Read"), 2)
+    expect("intake treats Read offset 0 as the start", run_hook("guard-path.py", {"file_path": str(many), "offset": 0, "limit": 20}, tool_name="Read"), 0)
+    for target in ({"path": intake_dir}, {}):
+        expect("intake denies unlimited content Grep", run_hook("guard-path.py", {**target, "pattern": ".", "output_mode": "content", "head_limit": 0}, tool_name="Grep"), 2, stderr_has="bounded-intake.md")
+        expect("intake keeps unlimited file-name Grep", run_hook("guard-path.py", {**target, "pattern": ".", "output_mode": "files_with_matches", "head_limit": 0}, tool_name="Grep"), 0)
     expect("intake denies unbounded large-file Grep", run_hook("guard-path.py", {"path": str(many), "pattern": ".", "output_mode": "content"}, tool_name="Grep"), 2)
     for fields in ({"head_limit": 80}, {"limit": 80}, {"output_mode": "count"}, {"output_mode": "files_with_matches"}):
         expect("intake keeps targeted Grep", run_hook("guard-path.py", {"path": str(many), "pattern": "line", **fields}, tool_name="Grep"), 0)

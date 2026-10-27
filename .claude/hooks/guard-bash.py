@@ -49,11 +49,39 @@ def directories(command, base):
     return found
 
 
+GROUP = re.compile(r"([@+?*!]?)\(([^()]*)\)")
+# A word with a glued group: zsh alternation (i|x)d_rsa or bash extglob @(i)d_rsa, never a spaced subshell.
+GROUP_WORD = re.compile(r"[^\s;&<>`()]*\([^()\s]*\)[^\s;&|<>()`]*")
+# A parameter default (${X:-word}, :=, :+, :?) expands to its word when X is unset.
+DEFAULT = re.compile(r"\$\{\w+:?[-=+?]([^{}]*)\}")
+
+
+def group_variants(word):
+    """The words a group makes of word: each alternative of (a|b) or @(a|b); a group that may match
+    anything else (?(a), *(a), !(a), a zsh qualifier *(D)) widens to a wildcard."""
+    match = GROUP.search(word)
+    if not match:
+        return [word]
+    op, inner = match.groups()
+    options = ["*"] if op and op in "?*!" else inner.split("|")
+    variants = [v for option in options for v in group_variants(word[:match.start()] + option + word[match.end():])]
+    if len(variants) > 256:
+        raise ValueError("too many group variants to verify")
+    return variants
+
+
+def shell_words(text):
+    """The words the shell globs: quotes dropped (they join a word), defaults as their word, and each
+    glued group word kept whole besides its parenthesis-split parts."""
+    text = DEFAULT.sub(r"\1", re.sub(r"['\"]", "", text))
+    return [t for t in re.split(r"[\s=;&|<>()`]+", text) if t] + GROUP_WORD.findall(text)
+
+
 def mentioned_secrets(tokens, shell_tokens, bases, unquoted_globs):
     names = {PurePosixPath(t).name for t in tokens if is_secret(PurePosixPath(t).name)}
     # Only the shell expands braces and globs; a heredoc body fed to a program is text.
     for token, unquoted in zip(shell_tokens, unquoted_globs):
-        for word in brace_variants(token):
+        for word in (b for g in group_variants(token) for b in brace_variants(g)):
             name = PurePosixPath(word).name
             if is_secret(name):
                 names.add(name)
@@ -409,6 +437,28 @@ def git_bypass(command):
     return None
 
 
+GIT_CONFIG_FILE = re.compile(r"(^|/)\.git/(config|config\.worktree|worktrees/[^/]+/config\.worktree)$")
+CONFIG_READERS = {"cat", "head", "tail", "grep", "rg", "less", "wc", "git", "ls", "stat", "diff"}
+
+
+def config_write(command):
+    """The reason a command writes the repository's git config file directly, or None: an editor
+    or redirection there sets aeion.mode or core.hooksPath without git config's checks."""
+    reason = "writing .git/config directly skips the git config checks; use git config."
+    if re.search(r">\s*['\"]?[^\s;&|<>'\"]*\.git/(config|worktrees/)", command):
+        return reason
+    for words in simple_commands(command):
+        words = program(words)
+        if words and words[0] == "<script>":
+            if config_write(words[1]):
+                return reason
+            continue
+        if words and PurePosixPath(words[0]).name not in CONFIG_READERS and any(
+                GIT_CONFIG_FILE.search(re.sub(r"['\"]", "", w)) for w in words[1:]):
+            return reason
+    return None
+
+
 def refuses(check, command):
     """Runs one check; a command nested so deep that the check cannot finish is refused."""
     try:
@@ -516,13 +566,12 @@ tokens = [t for t in re.split(TOKEN_SPLIT, command) if t]
 workdir = event.get("tool_input", {}).get("workdir", event.get("tool_input", {}).get("cwd", event.get("cwd", ".")))
 try:
     # Quotes join a shell word (sub/'.e'*), so they are dropped rather than split on.
-    shell_text = re.sub(r"['\"]", "", without_inert_heredocs(command))
-    shell_tokens = [t for t in re.split(r"[\s=;&|<>()`]+", shell_text) if t]
+    shell_tokens = shell_words(without_inert_heredocs(command))
     # The same words with quoted glob characters made inert, only where quotes surely stay quotes.
     inert = without_inert_heredocs(command)
     if quotes_inert(command):
         inert = re.sub(r"'[^']*'|\"[^\"]*\"", lambda m: m.group(0).translate(QUOTED_GLOB), inert)
-    marked = [t for t in re.split(r"[\s=;&|<>()`]+", re.sub(r"['\"]", "", inert)) if t]
+    marked = shell_words(inert)
     unquoted_globs = [any(char in t for char in "*?[") for t in marked]
     secrets = mentioned_secrets(tokens, shell_tokens, directories(command, workdir if isinstance(workdir, str) else "."),
                                 unquoted_globs)
@@ -583,6 +632,9 @@ if re.search(r"\bgit\b", command) and "--no-verify" in tokens:
 bypass = refuses(git_bypass, command)
 if bypass:
     deny(bypass if isinstance(bypass, str) else "the git command is nested too deeply to verify.")
+written = refuses(config_write, command)
+if written:
+    deny(written if isinstance(written, str) else "the command is nested too deeply to verify.")
 try:
     base = event["tool_input"].get("workdir", event["tool_input"].get("cwd", event.get("cwd", ".")))
     if intake_dump(command, Path(base)):

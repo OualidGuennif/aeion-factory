@@ -54,6 +54,7 @@ def named_secrets(pattern):
     dotted = pattern.startswith(".")
     secrets = {n for n in EXAMPLES if n.startswith(".") == dotted and fnmatch.fnmatchcase(n, pattern)}
     ordinary = DOT_ORDINARY if dotted else ORDINARY
-    if re.match(r"\.[^*?.]", pattern) or not any(fnmatch.fnmatchcase(n, pattern) for n in ordinary):
+    # A literal or a positive class after the dot names its letter (.e*, .[e]nv); a negated class (.[!.]*) does not.
+    if re.match(r"\.([^*?.\[]|\[(?![!^]))", pattern) or not any(fnmatch.fnmatchcase(n, pattern) for n in ordinary):
         return secrets
     return set()

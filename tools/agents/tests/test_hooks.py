@@ -272,12 +272,16 @@ class HookTests(unittest.TestCase):
                ('codebase_search',{'TargetDirectories':[path]}),('future_tool',{'Uri':'file://'+path}),
                ('view_file',{'AbsolutePath':'file://'+path.replace('.env','%2E'+'.env'[1:])}),
                ('future_tool',{'uri':'file://'+path+'#L10'}),('future_tool',{'Uri':'file://'+path+'?x=1'}),
-               ('mcp_shell',{'commandLine':'cat .env'}),('mcp_shell',{'command':'cat .env'}))
+               ('mcp_shell',{'commandLine':'cat .env'}),('mcp_shell',{'command':'cat .env'}),
+               ('view_file',{'AbsolutePath':'FILE://'+path.replace('.env','%2E'+'.env'[1:])}))
         for name,args in cases:
             with self.assertRaisesRegex(hook.GuardRefusal,'secret',msg=(name,args)):
                 self.agy(name,args)
         self.assertEqual(self.agy('run_command',{'CommandLine':'git status --short'}),{})
         self.assertEqual(self.agy('search_web',{'Query':'antigravity hooks'}),{})
+        # Two command lines in one call cannot hide the second from the shell guard.
+        with self.assertRaises(ValueError):
+            self.agy('run_command',{'command':'echo ok','CommandLine':'cat .env'})
         self.assertEqual(self.agy('view_code_item',{'File':str(self.root/'notes.md'),'NodePaths':['Cache.key','credentials']}),{})
         self.assertEqual(self.agy('grep_search',{'SearchPath':str(self.root),'Query':'x','ExcludePath':''}),{})
         # A windowed view of a long file is a bounded read; the whole file is not.
@@ -285,7 +289,11 @@ class HookTests(unittest.TestCase):
         long.write_text('x\n'*500)
         self.assertEqual(self.agy('view_file',{'AbsolutePath':str(long),'StartLine':1,'EndLine':20}),{})
         self.assertEqual(self.agy('grep_search',{'SearchPath':str(long),'Query':'x','MatchPerLine':False}),{})
-        for name,args in (('view_file',{'AbsolutePath':str(long)}),('grep_search',{'SearchPath':str(long),'Query':'x'})):
+        with self.assertRaisesRegex(hook.GuardRefusal,'intake|Bounded'):
+            self.agy('run_command',{'CommandLine':'cat long.md','Cwd':str(self.root)})
+        for name,args in (('view_file',{'AbsolutePath':str(long)}),('grep_search',{'SearchPath':str(long),'Query':'x'}),
+                          ('view_file',{'AbsolutePath':str(long),'limit':10}),
+                          ('grep_search',{'SearchPath':str(long),'Query':'x','output_mode':'files_with_matches','head_limit':5})):
             with self.assertRaisesRegex(hook.GuardRefusal,'intake|Bounded',msg=name):
                 self.agy(name,args)
         # Only the Antigravity branch reads its own path list; another provider's payload cannot supply one.

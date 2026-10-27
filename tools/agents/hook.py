@@ -107,7 +107,7 @@ def antigravity_paths(value, named=False):
         return [path for item in value for path in antigravity_paths(item, named)]
     if named and isinstance(value, str) and value:
         # A file URI may carry a fragment, a query or percent-encoding; only its decoded path names the file.
-        return [unquote(urlsplit(value).path) if value.startswith('file:') else value]
+        return [unquote(urlsplit(value).path) if value[:5].lower() == 'file:' else value]
     return []
 
 
@@ -121,11 +121,17 @@ def antigravity_event(event):
     if not isinstance(call, dict) or not isinstance(call.get('args'), dict):
         raise ValueError('the Antigravity toolCall requires an args object')
     args = call['args']
-    data = dict(args)
+    # The guards see only what the adapter derives, so a model-supplied limit or output mode cannot widen them.
+    data = {}
     # A command line under any case (CommandLine, command_line, command) is a shell call, as for Devin and Droid.
-    command = next((value for key, value in args.items() if argument_name(key) in {'commandline', 'command'}), None)
+    commands = [value for key, value in args.items() if argument_name(key) in {'commandline', 'command'}]
+    if len(commands) > 1:
+        raise ValueError('the Antigravity call names more than one command line')
+    command = commands[0] if commands else None
     if command is not None:
         data['command'] = command
+    if isinstance(args.get('Cwd'), str):
+        data['workdir'] = args['Cwd']
     # Every path-like argument meets the guards, not only the first: one call can name several files.
     paths = antigravity_paths(args)
     # view_file windows by StartLine/EndLine; the intake guard reads the same window as offset/limit.

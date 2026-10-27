@@ -32,12 +32,15 @@ Requirements for a change, not claims about what production already satisfies.
   architecture scope: `.claude/hooks/secret_names.py` (dotenv files, `env.local`, credential and
   `auth.json` files, SSH keys, `.netrc`, `.npmrc`, `.pypirc`, `.pgpass`, `.envrc`, `*.pem`, `*.key`,
   `*.p12`, `*.pfx`; templates such as `.env.example` stay allowed). A shell glob is judged by the
-  files it expands to from the command's directory, dotfiles only for a leading dot, as in bash.
+  files it expands to from the command's directory and every directory a `cd` or `pushd` in it
+  moves to, dotfiles only for a leading dot, as in bash; brace alternatives are expanded first. A
+  glob whose directory is unknown (a variable in it or in the `cd`, `cd -`) is refused.
   A read of a secret name is refused even as a search pattern; search names with the Grep tool.
 - The Bash guard refuses skipping Git hooks or force-pushing in its common spellings: `-n` in a
   commit cluster, any unambiguous prefix of `--no-verify`, a `core.hooksPath` override (`-c`,
   `--config-env`, `GIT_CONFIG_*`, or `git config` set to anything but `tools/git-hooks`; reading it
-  stays allowed), `-f`/`--force*`/`--mirror`/`+refspec` on push. CI repeats
+  stays allowed), `-f`/`--force*`/`--mirror`/`+refspec` on push. It also refuses setting or
+  unsetting `aeion.mode`: local mode relaxes the sign-off and checkpoint, so the user switches it. CI repeats
   the checks, so it stays the gate a deliberate local bypass cannot pass.
 
 The same PreToolUse hooks also apply [bounded intake](bounded-intake.md) to recognized large

@@ -18,7 +18,8 @@ folder.mkdir(parents=True, exist_ok=True)
 python = folder / "graphify-venv/bin/python"
 if not python.exists():
     venv.EnvBuilder(with_pip=True).create(python.parent.parent)
-# Every pinned file is hash-checked, so a replaced upload or an unpinned dependency fails the install.
+# Every pinned file is hash-checked, so a replaced upload or an unpinned runtime dependency fails the
+# install; the tools pip fetches to build a source archive in isolation are not hash-checked.
 run([str(python), "-m", "pip", "install", "--disable-pip-version-check", "--require-hashes", "-r",
      str(root / "tools/architecture/requirements.txt")], timeout=600)
 # Pip may keep a same-version wheel from another source; stamp the reviewed commit explicitly.

@@ -35,17 +35,60 @@ def ask(reason):
     sys.exit(0)
 
 
-def mentioned_secrets(tokens, base):
-    names = set()
-    for token in tokens:
-        name = PurePosixPath(token).name
-        if is_secret(name):
-            names.add(name)
-        elif any(char in token for char in "*?["):
-            # A glob names the files the shell would expand it to (dotfiles only for a leading dot, as in bash).
-            pattern = os.path.expanduser(token)
-            matches = glob.glob(pattern, root_dir=None if os.path.isabs(pattern) else base)
-            names |= {PurePosixPath(match).name for match in matches if is_secret(PurePosixPath(match).name)}
+BRACES = re.compile(r"\{[^{}]*(,|\.\.)[^{}]*\}")
+VARIABLE = re.compile(r"\$\{?[A-Za-z_]")
+
+
+def brace_variants(word):
+    """The words bash brace expansion makes of word; a sequence ({a..z}) widens to a wildcard."""
+    match = BRACES.search(word)
+    if not match:
+        return [word]
+    inner = match.group(0)[1:-1]
+    options = inner.split(",") if "," in inner else ["*"]
+    variants = [v for option in options for v in brace_variants(word[:match.start()] + option + word[match.end():])]
+    if len(variants) > 256:
+        raise ValueError("too many brace variants to verify")
+    return variants
+
+
+def directories(command, base):
+    """The directories a glob in the command may expand in: its own and each one a cd moves to.
+
+    None when a move cannot be followed (a variable, cd -)."""
+    current, found = base, [base]
+    for words in simple_commands(command):
+        words = program(words)
+        if words and words[0] == "<script>":
+            nested = directories(words[1], current)
+            if nested is None:
+                return None
+            found += nested
+        elif words and PurePosixPath(words[0]).name in ("cd", "pushd"):
+            target = next((w for w in words[1:] if w == "-" or not w.startswith("-")), "~")
+            if target == "-" or VARIABLE.search(target):
+                return None
+            current = os.path.join(current, os.path.expanduser(target))
+            found.append(current)
+    return found
+
+
+def mentioned_secrets(tokens, shell_tokens, bases):
+    names = {PurePosixPath(t).name for t in tokens if is_secret(PurePosixPath(t).name)}
+    # Only the shell expands braces and globs; a heredoc body fed to a program is text.
+    for token in shell_tokens:
+        for word in brace_variants(token):
+            name = PurePosixPath(word).name
+            if is_secret(name):
+                names.add(name)
+            elif any(char in word for char in "*?["):
+                # A glob names the files the shell would expand it to (dotfiles only for a leading dot, as in bash).
+                if bases is None or VARIABLE.search(word):
+                    raise ValueError("the directory a glob expands in is unknown")
+                pattern = os.path.expanduser(word)
+                for base in bases:
+                    matches = glob.glob(pattern, root_dir=None if os.path.isabs(pattern) else base)
+                    names |= {PurePosixPath(m).name for m in matches if is_secret(PurePosixPath(m).name)}
     return sorted(names)
 
 
@@ -319,7 +362,7 @@ def git_bypass(command):
 
     Covers short clusters, +refspecs, --mirror, git's unique-prefix long options and a
     core.hooksPath override (-c, --config-env, GIT_CONFIG_* variables, or git config setting
-    anything but the repository's hooks). Reading the setting stays allowed."""
+    anything but the repository's hooks), and setting aeion.mode. Reading either stays allowed."""
     hooks_reason = "overriding core.hooksPath skips the pre-commit checks."
     for words in simple_commands(command):
         # GIT_CONFIG_* variables inject configuration into every later git run.
@@ -348,6 +391,11 @@ def git_bypass(command):
                 unset = "unset" in positional[:keys[0]] or any(a.startswith("--unset") for a in args)
                 if unset or values and values[0] != HOOKS_PATH:
                     return hooks_reason
+            # Local mode relaxes the sign-off and the closure checkpoint, so only the user switches it.
+            modes = [i for i, a in enumerate(positional) if a.lower() == "aeion.mode"]
+            if modes and (positional[modes[0] + 1:] or "unset" in positional[:modes[0]]
+                          or any(a.startswith("--unset") for a in args)):
+                return "aeion.mode is the user's switch between team and local flow; the user sets it."
         value_next = False
         for arg in args:
             if value_next:
@@ -458,10 +506,12 @@ try:
         raise TypeError("command is not a string")
 except Exception:
     deny("the hook input could not be read; refusing rather than guessing.")
-tokens = [t for t in re.split(r"[\s'\"=;&|<>()`]+", command) if t]
+TOKEN_SPLIT = r"[\s'\"=;&|<>()`]+"
+tokens = [t for t in re.split(TOKEN_SPLIT, command) if t]
 workdir = event.get("tool_input", {}).get("workdir", event.get("tool_input", {}).get("cwd", event.get("cwd", ".")))
 try:
-    secrets = mentioned_secrets(tokens, workdir if isinstance(workdir, str) else ".")
+    shell_tokens = [t for t in re.split(TOKEN_SPLIT, without_inert_heredocs(command)) if t]
+    secrets = mentioned_secrets(tokens, shell_tokens, directories(command, workdir if isinstance(workdir, str) else "."))
 except (OSError, ValueError, RecursionError):
     deny("the files a glob names could not be verified; name the files explicitly.")
 

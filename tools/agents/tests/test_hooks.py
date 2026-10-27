@@ -164,6 +164,20 @@ class HookTests(unittest.TestCase):
         self.assertEqual(decision['decision'],'block')
         self.assertIn('secret',decision['reason'])
 
+    def test_devin_tools_outside_the_map_still_reach_the_guards(self):
+        for tool in ('bash','Exec','run_command'):
+            with self.assertRaises(ValueError):
+                self.call('devin',tool_name=tool,tool_input={'command':'cat .env'})
+        path=self.root/'many.log';path.write_text('line\n'*401)
+        with self.assertRaises(ValueError):
+            self.call('devin',tool_name='grep',tool_input={'path':str(path),'pattern':'line','head_limit':0})
+
+    def test_devin_stop_and_start_failures_end_instead_of_continuing(self):
+        for name in ('Stop','SessionStart'):
+            event={**self.event,'hook_event_name':name,'session_id':''}
+            result=subprocess.run(['python3',str(ROOT/'tools/agents/hook.py'),'devin'],input=json.dumps(event),capture_output=True,text=True)
+            self.assertEqual(json.loads(result.stdout)['continue'],False)
+
     def test_devin_payload_without_session_id_still_guards(self):
         event={name:value for name,value in self.event.items() if name!='session_id'}
         self.assertEqual(hook.handle(self.root,'devin',{**event,'tool_name':'exec'}),{})

@@ -86,7 +86,8 @@ claude plugin install native-lsp@aeion-local --scope project
 ## Git flow
 
 The team flow below is the default. In local mode (`git config factory.mode local`), commit on
-`main` directly; the safety guards still apply.
+`main` locally; pushing is the user's call, and the safety guards still apply. Only the user
+switches the mode.
 
 ```bash
 git switch -c task/<slug> origin/main

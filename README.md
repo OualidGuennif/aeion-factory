@@ -35,10 +35,11 @@ commit credentials to the project.
 ```bash
 git clone https://github.com/OualidGuennif/aeion-factory.git && cd aeion-factory
 git config factory.mode local   # optional: play on main, no branch/PR/CI ritual
-claude                          # or: codex, opencode, devin
+tools/agents/run claude         # or: codex, opencode (2.1.4+), devin
 ```
 
-The hooks and skills load from the repository; nothing is installed. The safety guards (secrets,
+The launcher applies each agent's checked profile; the hooks and skills load from the repository,
+and nothing is installed. The safety guards (secrets,
 Git hook and force-push bypasses, large dumps) stay on in local mode. `git config --unset
 factory.mode` returns to the team flow. The agent recommends the architecture baseline and asks
 before installing it: on a work computer, check your company's policy first.

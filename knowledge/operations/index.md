@@ -11,7 +11,7 @@ generated:
 # Operations
 
 - [Context safety and handover](context-safety.md)
-- [Mandatory Graphify/Archify maintenance](architecture-maintenance.md)
+- [Graphify/Archify maintenance](architecture-maintenance.md)
 
 | Concept | Status | Notes |
 | --- | --- | --- |

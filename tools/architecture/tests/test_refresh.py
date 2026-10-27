@@ -114,6 +114,14 @@ class RefreshTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "anchor"):
             refresh.candidate(view, self.root, self.base, "https://github.com/example/example")
 
+    def test_committed_views_satisfy_the_archify_source_limits(self):
+        root = SCRIPT.parents[2]
+        for view in json.loads((root / "tools/architecture/views.json").read_text()):
+            refresh.candidate(view, root, "HEAD", "https://github.com/example/example")
+        view = {"meta": {}, "components": [{"id": "app", "sources": [{"path": "src/app.py", "anchor": "def run():"}] * 4}]}
+        with self.assertRaisesRegex(ValueError, "one to three"):
+            refresh.candidate(view, self.root, self.base, "https://github.com/example/example")
+
     def test_external_evidence_path_is_refused(self):
         view = {"meta": {}, "components": [{"sources": [{"path": "../outside.py", "anchor": "anything"}]}]}
         with self.assertRaisesRegex(ValueError, "unsafe"):

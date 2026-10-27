@@ -94,9 +94,9 @@ The session start names the mode (`git config factory.mode`).
 - **Team (default).** One branch per task (`task/<slug>`), small commits, `gh pr create`, then the
   skill `pr-review`: a fresh subagent reviews and posts `Review: OK` or `Review: NOT OK` on the pull
   request. Merge after that comment and a green CI. Nothing is pushed to the default branch directly.
-- **Local** (`git config factory.mode local`). Someone trying the repository or an app on their
-  machine: commit on `main`, no pull request, CI or `work/current.md` entry. Done means the tests
-  for what changed pass; the safety guards and rules 1 to 5 still apply.
+- **Local** (`git config factory.mode local`, set by the user only). Someone trying the repository
+  on their machine: commit on `main` locally (pushing is the user's call), no pull request, CI or
+  `work/current.md` entry. Done means the tests for what changed pass; every critical rule applies.
 
 ## Feedback you get
 

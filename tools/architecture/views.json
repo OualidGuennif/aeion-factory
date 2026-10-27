@@ -67,12 +67,8 @@
             "anchor": "\"PreToolUse\": ["
           },
           {
-            "path": ".codex/hooks.json",
-            "anchor": "\"PreToolUse\": ["
-          },
-          {
-            "path": ".devin/hooks.v1.json",
-            "anchor": "\"PreToolUse\": ["
+            "path": "tools/agents/hook.py",
+            "anchor": "def handle(root, provider, event):"
           },
           {
             "path": ".opencode/plugins/factory/index.js",

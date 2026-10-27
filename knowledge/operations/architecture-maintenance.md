@@ -58,7 +58,7 @@ LLM inference are not claimed. This deterministic baseline needs no model token 
 The canonical [architecture spec](../components/factory-architecture.md) and `views.json` are
 reviewed source, not generated policy. Runtime/config changes must update the architecture spec
 in the same diff (or carry its existing `Docs-Checked` trailer). Reviewers verify semantic
-completeness. Refresh validates source anchors, pins diagram provenance to the target SHA,
+completeness. Refresh validates source anchors (one to three per node, Archify's limit), pins diagram provenance to the target SHA,
 and runs Archify `finalize` for every view, including browser checks. A browser/gate failure
 is not success. Automated gates cannot prove semantic correctness or visual quality.
 

@@ -186,7 +186,8 @@ No production migration, rollback command or availability/SLO is applicable to t
    not reset by resume; unavailable usage is refused (`tools/context/tests/test_budget.py`).
 3. Compaction readiness binds the handover and exact source state; later edits invalidate it
    (`test_budget.py`, checkpoint/compaction tests).
-4. Source evidence belongs to the target SHA; missing/ambiguous anchors and secret paths fail
+4. Source evidence belongs to the target SHA; missing/ambiguous anchors, secret paths and nodes
+   outside Archify's one-to-three sources fail
    (`tools/architecture/tests/test_refresh.py` and real Archify gates).
 5. Required code/Markdown extraction is complete structurally; deletions cannot survive in a
    freshly assembled current graph (coverage checks and the real baseline).

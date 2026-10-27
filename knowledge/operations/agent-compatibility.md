@@ -47,10 +47,12 @@ does not establish loaded hooks or identical runtime guarantees.
   `apply_patch`, so Claude matchers never fire and the matcher-less Claude budget hook reads a
   transcript Devin does not write. `.devin/config.json` therefore turns the Claude import off, and
   `.devin/hooks.v1.json` sends SessionStart, PreToolUse, PostToolUse (edits) and Stop to
-  `tools/agents/hook.py devin`. The adapter maps the tool names to the shared guards and answers a
-  refusal with Devin's `{"decision": "block", "reason": ...}`. A payload without `session_id`
-  uses one shared `devin-local` key, so sign-off reminders are shared across Devin sessions.
-  Devin has no Factory compaction checkpoint or token stop.
+  `tools/agents/hook.py devin`. The adapter maps the tool names (also `bash`, `shell`, `grep`, in
+  any case) to the shared guards; an unknown tool carrying a `command` string goes through the
+  shell guard. A refused tool call gets Devin's `{"decision": "block", "reason": ...}`; a failed
+  Stop or SessionStart gets `continue: false`, because Devin's block on Stop means "keep going".
+  A payload without `session_id` uses one key per clone, so sign-off reminders are shared across
+  that clone's Devin sessions. Devin has no Factory compaction checkpoint or token stop.
 - Managed CLI launchers enter the repository root and check the exact-HEAD architecture baseline;
   its absence is a warning, because installing the integrations needs the user's yes.
 - Raw command/MCP paths, host-managed/cloud orchestration and deliberate local modification are

@@ -14,7 +14,8 @@ sys.path.insert(0, str(ROOT / 'tools/context'))
 import budget
 
 # Devin names its native tools in lowercase; the shared guards use Claude's names.
-DEVIN_TOOLS = {'exec': 'Bash', 'read': 'Read', 'edit': 'Edit', 'write': 'Write'}
+DEVIN_TOOLS = {'exec': 'Bash', 'bash': 'Bash', 'shell': 'Bash', 'read': 'Read', 'grep': 'Grep',
+               'edit': 'Edit', 'write': 'Write'}
 
 
 class GuardRefusal(ValueError):
@@ -23,16 +24,17 @@ class GuardRefusal(ValueError):
 
 def key(provider, event):
     value = event.get('session_id')
-    # Devin does not document a session id; one shared key keeps the guards on instead of refusing everything.
+    # Devin does not document a session id; one key per clone keeps the guards on instead of refusing everything.
     if provider == 'devin' and value is None:
-        return 'devin-local'
+        return 'devin-local-' + hashlib.sha256(str(ROOT).encode()).hexdigest()[:16]
     if not isinstance(value, str) or not value or len(value) > 200:
         raise ValueError('a bounded native session identifier is required')
     return provider + '-' + hashlib.sha256(value.encode()).hexdigest()[:40]
 
 
 def fail(provider, name, reason):
-    if provider == 'devin':
+    # Devin's block on Stop means "keep going", so only a tool call is refused that way.
+    if provider == 'devin' and name == 'PreToolUse':
         return {'decision': 'block', 'reason': reason}
     if name == 'PreToolUse':
         return {'hookSpecificOutput': {'hookEventName': name, 'permissionDecision': 'deny',
@@ -73,8 +75,14 @@ def edit_paths(event):
 def handle(root, provider, event):
     if provider not in {'codex', 'opencode', 'devin'} or not isinstance(event, dict):
         raise ValueError('invalid provider or event')
-    if provider == 'devin' and event.get('tool_name') in DEVIN_TOOLS:
-        event = {**event, 'tool_name': DEVIN_TOOLS[event['tool_name']]}
+    if provider == 'devin':
+        tool = str(event.get('tool_name', '')).lower()
+        data = event.get('tool_input')
+        # An unknown Devin tool that carries a command string is a shell call until proven otherwise.
+        if tool not in DEVIN_TOOLS and tool != 'apply_patch' and isinstance(data, dict) and isinstance(data.get('command'), str):
+            tool = 'exec'
+        if tool in DEVIN_TOOLS:
+            event = {**event, 'tool_name': DEVIN_TOOLS[tool]}
     name = event.get('hook_event_name')
     if name not in {'SessionStart', 'PreToolUse', 'PostToolUse', 'PreCompact', 'Stop'}:
         raise ValueError('unsupported adapter event')

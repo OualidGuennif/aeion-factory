@@ -17,8 +17,9 @@ from urllib.parse import urlsplit, urlunsplit
 from process import run
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / ".claude/hooks"))
+from secret_names import is_secret  # noqa: E402
 CODE = {".py", ".sh", ".js", ".mjs", ".ts", ".tsx", ".go", ".rs", ".java"}
-SECRETS = {"auth.json", "env.local", "credentials", "credentials.json", "id_rsa", "id_ed25519"}
 
 
 def git(root, *args):
@@ -30,9 +31,7 @@ def revision(root, ref):
 
 
 def secret_path(path):
-    return any(part in SECRETS or part == ".env" or part.startswith(".env.") and part not in {
-        ".env.example", ".env.sample", ".env.template", ".env.dist"} or part.endswith((".pem", ".key"))
-        for part in Path(path).parts)
+    return any(is_secret(part) for part in Path(path).parts)
 
 
 def scope(root, target, config):

@@ -44,7 +44,7 @@
         ]
       },
       {
-        "matcher": "Read|Edit|Write|Grep",
+        "matcher": "Read|Edit|MultiEdit|Write|NotebookEdit|Grep",
         "hooks": [
           {
             "type": "command",
@@ -67,7 +67,7 @@
         ]
       },
       {
-        "matcher": "Edit|Write",
+        "matcher": "Edit|MultiEdit|Write|NotebookEdit",
         "hooks": [
           {
             "type": "command",

@@ -117,8 +117,27 @@ with tempfile.TemporaryDirectory() as loop_dir:
         expect(f"read-only deny: {command}", run_read_only(command, loop), 2)
 
 # guard-path: secrets refused, templates allowed.
-for path in ["/repo/.env", "/repo/env.local", "/x/server.pem", "/h/auth.json"]:
+for path in ["/repo/.env", "/repo/env.local", "/x/server.pem", "/h/auth.json", "/h/.netrc", "/h/.ssh/id_ecdsa",
+             "/x/client.p12", "/repo/.envrc", "/h/.npmrc"]:
     expect(f"path deny: {path}", run_hook("guard-path.py", {"file_path": path}), 2)
+expect("path deny: NotebookEdit names its file notebook_path",
+       run_hook("guard-path.py", {"notebook_path": "/repo/.env"}, tool_name="NotebookEdit"), 2)
+expect("sign-off ignores a session id that is a path", run_hook("sign-off.py", {}, session_id="../../etc/x"), 0)
+expect("sign-off ignores unreadable input", subprocess.run([sys.executable, str(HOOKS / "sign-off.py")], input="{",
+                                                           capture_output=True, text=True), 0)
+
+# A glob is judged by the files it expands to, as the shell would expand it.
+glob_dir = Path(tempfile.mkdtemp())
+(glob_dir / ".env").write_text("KEY=x\n")
+(glob_dir / "notes.md").write_text("x\n")
+for command in ["head .env*", "grep -r . .e*", "base64 .en?", "tail .[e]nv", f"head {glob_dir}/.e*"]:
+    expect(f"bash deny glob: {command}", run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 2)
+expect("bash ask: a glob that names a secret", run_hook("guard-bash.py", {"command": "ls .e*", "workdir": str(glob_dir)}), 0, '"ask"')
+for command in ["ls *", "head *.md", "grep -r x .", "wc -l .x*"]:
+    expect(f"bash allow glob: {command}", run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 0)
+expect("bash deny names the Grep tool for searches", run_hook("guard-bash.py", {"command": "grep -rn id_rsa tools"}), 2,
+       stderr_has="Grep tool")
+shutil.rmtree(glob_dir)
 for path in ["/repo/.env.example", "/repo/env.example.local", str(ROOT / "AGENTS.md")]:
     expect(f"path allow: {path}", run_hook("guard-path.py", {"file_path": path}), 0)
 
@@ -213,6 +232,9 @@ for label, body, code, diagnostic in [
         failures.append(f"after-edit {label}: missing diagnostic")
     if len(result.stderr.splitlines()) > 15:
         failures.append(f"after-edit {label}: diagnostic exceeds 15 lines")
+fake_check(checker, "import sys\nprint('synthetic failure', file=sys.stderr)\nraise SystemExit(1)\n")
+expect("after-edit: NotebookEdit's notebook_path is checked", run_hook("after-edit.py", {"notebook_path": str(document)},
+       cwd=after, session_id=after_session), 2, stderr_has="synthetic failure")
 heartbeat = after / "heartbeat"
 child = (f"from pathlib import Path\nimport time\npath = Path({str(heartbeat)!r})\n"
          "for number in range(200):\n    path.write_text(str(number))\n    time.sleep(0.05)\n")
@@ -252,7 +274,7 @@ shutil.rmtree(after)
 
 # sign-off: in a throwaway repo, a code change without its doc blocks once, then passes.
 tmp = Path(tempfile.mkdtemp())
-for rel in (".claude/hooks/sign-off.py", "tools/knowledge/doc-links"):
+for rel in (".claude/hooks/sign-off.py", ".claude/hooks/secret_names.py", "tools/knowledge/doc-links"):
     (tmp / rel).parent.mkdir(parents=True, exist_ok=True)
     shutil.copy(ROOT / rel, tmp / rel)
 (tmp / "knowledge/components").mkdir(parents=True)

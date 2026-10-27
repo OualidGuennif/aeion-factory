@@ -6,17 +6,17 @@ Input: the hook event as JSON on stdin; tool_input.command is the command. Outpu
 reason on stderr blocks it; a JSON "ask" decision asks a human; exit 0 lets it run. A seatbelt,
 not a guarantee: the rules are in knowledge/policies/security.md.
 """
+import glob
 import json
 import os
 import re
 import shlex
 import sys
 from pathlib import Path, PurePosixPath
+from secret_names import is_secret
 
-TEMPLATES = {".env.example", ".env.sample", ".env.template", ".env.dist", "env.example.local"}
 READERS = {"cat", "less", "more", "head", "tail", "grep", "rg", "awk", "sed", "strings", "base64",
            "xxd", "od", "source", ".", "cp", "scp", "rsync", "jq", "python3", "python", "node", "vim", "nano"}
-SECRET_NAMES = {"auth.json", "credentials", "credentials.json", "id_rsa", "id_ed25519", "env.local"}
 MAX_INTAKE_BYTES, MAX_INTAKE_LINES = 65536, 400
 LOOP_BODIES = ".aeion/loop-bodies/"
 INTAKE_REASON = ("bounded intake: replace the dump with head -n 80, head -c 65536, "
@@ -35,10 +35,18 @@ def ask(reason):
     sys.exit(0)
 
 
-def is_secret(name):
-    if name in TEMPLATES:
-        return False
-    return bool(re.fullmatch(r"\.env(\..+)?", name)) or name in SECRET_NAMES or name.endswith((".pem", ".key"))
+def mentioned_secrets(tokens, base):
+    names = set()
+    for token in tokens:
+        name = PurePosixPath(token).name
+        if is_secret(name):
+            names.add(name)
+        elif any(char in token for char in "*?["):
+            # A glob names the files the shell would expand it to (dotfiles only for a leading dot, as in bash).
+            pattern = os.path.expanduser(token)
+            matches = glob.glob(pattern, root_dir=None if os.path.isabs(pattern) else base)
+            names |= {PurePosixPath(match).name for match in matches if is_secret(PurePosixPath(match).name)}
+    return sorted(names)
 
 
 # Environment dumps hold keys. The command is split into simple commands (newlines, ; & | && || and
@@ -451,7 +459,11 @@ try:
 except Exception:
     deny("the hook input could not be read; refusing rather than guessing.")
 tokens = [t for t in re.split(r"[\s'\"=;&|<>()`]+", command) if t]
-secrets = sorted({PurePosixPath(t).name for t in tokens if is_secret(PurePosixPath(t).name)})
+workdir = event.get("tool_input", {}).get("workdir", event.get("tool_input", {}).get("cwd", event.get("cwd", ".")))
+try:
+    secrets = mentioned_secrets(tokens, workdir if isinstance(workdir, str) else ".")
+except (OSError, ValueError, RecursionError):
+    deny("the files a glob names could not be verified; name the files explicitly.")
 
 if os.environ.get("AEION_LOOP_READ_ONLY") == "1":
     fixed = {"git log -5 --oneline", "git diff --stat", "git diff --check", "git status --short",
@@ -487,7 +499,8 @@ if os.environ.get("AEION_LOOP_READ_ONLY") == "1":
 # Secret files: reading one is refused; any other mention is a human's call.
 if secrets:
     if READERS & set(tokens):
-        deny(f"it reads a secret file ({', '.join(secrets)}). Secrets are never read or printed.")
+        deny(f"it reads a secret file ({', '.join(secrets)}). Secrets are never read or printed "
+             "(to search for the name itself, use the Grep tool).")
     ask(f"The command mentions a secret file ({', '.join(secrets)}).")
 
 # Environment dumps hold keys.

@@ -2,12 +2,10 @@
 # Spec: knowledge/policies/security.md
 """Refuse secret paths and unbounded large reads before native tool execution (exit 2)."""
 import json
-import re
 import sys
 from pathlib import Path, PurePosixPath
+from secret_names import is_secret
 
-TEMPLATES = {".env.example", ".env.sample", ".env.template", ".env.dist", "env.example.local"}
-SECRET_NAMES = {"auth.json", "credentials", "credentials.json", "id_rsa", "id_ed25519", "env.local"}
 MAX_INTAKE_BYTES, MAX_INTAKE_LINES = 65536, 400
 MAX_SCAN_BYTES = 1024 * 1024
 INTAKE_REASON = ("bounded intake: use a Read window of at most 400 lines, head -c 65536, "
@@ -69,7 +67,7 @@ except (ValueError, OSError):
 if not isinstance(event, dict) or not isinstance(event.get("tool_input"), dict):
     deny("the hook event must contain a tool_input object")
 tool_input = event["tool_input"]
-path = tool_input.get("file_path", tool_input.get("filePath", tool_input.get("path")))
+path = tool_input.get("file_path", tool_input.get("filePath", tool_input.get("path", tool_input.get("notebook_path"))))
 if path is None and event.get("tool_name") == "Grep":
     path = ""
 elif not isinstance(path, str) or (not path and event.get("tool_name") != "Grep"):
@@ -77,8 +75,7 @@ elif not isinstance(path, str) or (not path and event.get("tool_name") != "Grep"
 if "\0" in path:
     deny("the tool path contains a null byte")
 name = PurePosixPath(path).name
-if name not in TEMPLATES and (bool(re.fullmatch(r"\.env(\..+)?", name)) or name in SECRET_NAMES
-                              or name.endswith((".pem", ".key"))):
+if is_secret(name):
     print(f"Blocked by .claude/hooks/guard-path.py: {name} holds secrets and is never opened "
           f"(knowledge/policies/security.md).", file=sys.stderr)
     sys.exit(2)

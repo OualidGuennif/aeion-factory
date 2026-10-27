@@ -49,5 +49,17 @@ class RepoHealthTests(unittest.TestCase):
         self.assertIn(".py", card["source_suffixes"])
 
 
+    def test_extensionless_script_is_checked_and_plain_text_is_not(self):
+        subprocess.run(["git", "init", "-q", str(self.root)], check=True)
+        (self.root / "refresh").write_text("#!/usr/bin/env python3\n" + "value = 1\n" * 1501)
+        (self.root / "LICENSE").write_text("text\n" * 1501)
+        subprocess.run(["git", "add", "refresh", "LICENSE"], cwd=self.root, check=True)
+        result = self.check_health("--json")
+        self.assertEqual(result.returncode, 1)
+        card = json.loads(result.stdout)
+        self.assertEqual(card["files_over_1500_lines"], ["refresh"])
+        self.assertEqual(card["source_files_checked"], 1)
+
+
 if __name__ == "__main__":
     unittest.main()

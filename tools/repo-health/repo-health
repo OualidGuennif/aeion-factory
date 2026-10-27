@@ -4,7 +4,7 @@
     tools/repo-health/repo-health            print the scorecard; fail on a cap
     tools/repo-health/repo-health --json     the scorecard as JSON
 
-Caps: AGENTS.md at most 120 lines; work/current.md at most 150; no tracked source file over 1,500
+Caps: AGENTS.md at most 120 lines; work/current.md at most 150; no tracked source file (by suffix or shebang) over 1,500
 lines; no comment block over 20 lines; at most nine top-level folders. Spec: knowledge/policies/engineering.md
 """
 import json
@@ -31,6 +31,16 @@ def tracked():
     return [ROOT / p for p in result.stdout.split("\0") if p and (ROOT / p).is_file()]
 
 
+def is_source(path):
+    # Extensionless executables (tools/*/run, refresh) are source too: their shebang says so.
+    if path.suffix in SOURCE:
+        return True
+    if path.suffix:
+        return False
+    with path.open("rb") as stream:
+        return stream.read(2) == b"#!"
+
+
 def longest_comment_block(text):
     best = run = 0
     for line in text.splitlines():
@@ -41,7 +51,7 @@ def longest_comment_block(text):
 
 def main(argv):
     files = tracked()
-    sources = [p for p in files if p.suffix in SOURCE and not p.name.startswith("test_")]
+    sources = [p for p in files if is_source(p) and not p.name.startswith("test_")]
     big, blocks = [], []
     for p in sources:
         text = p.read_text(encoding="utf-8", errors="replace")

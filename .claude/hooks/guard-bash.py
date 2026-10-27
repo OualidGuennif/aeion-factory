@@ -13,7 +13,7 @@ import re
 import shlex
 import sys
 from pathlib import Path, PurePosixPath
-from secret_names import brace_variants, dotfile_secrets, is_secret
+from secret_names import brace_variants, is_secret, named_secrets, shell_pattern
 
 READERS = {"cat", "less", "more", "head", "tail", "grep", "rg", "awk", "sed", "strings", "base64",
            "xxd", "od", "source", ".", "cp", "scp", "rsync", "jq", "python3", "python", "node", "vim", "nano"}
@@ -49,19 +49,21 @@ def directories(command, base):
     return found
 
 
-def mentioned_secrets(tokens, shell_tokens, bases):
+def mentioned_secrets(tokens, shell_tokens, bases, unquoted_globs):
     names = {PurePosixPath(t).name for t in tokens if is_secret(PurePosixPath(t).name)}
     # Only the shell expands braces and globs; a heredoc body fed to a program is text.
-    for token in shell_tokens:
+    for token, unquoted in zip(shell_tokens, unquoted_globs):
         for word in brace_variants(token):
             name = PurePosixPath(word).name
             if is_secret(name):
                 names.add(name)
             elif any(char in word for char in "*?["):
-                # A dotfile glob is judged by its name wherever it expands, since a variable, a command
-                # substitution or a cd can hide its directory; any other glob by the files it expands to.
-                names |= dotfile_secrets(name)
-                pattern = os.path.expanduser(word)
+                # A glob is judged by the secret it names wherever it expands, since a variable, a command
+                # substitution or a cd can hide its directory; and by the files it expands to here. A
+                # quoted pattern ('key.*') is a regex or prose the shell never expands, so only the files.
+                if unquoted:
+                    names |= named_secrets(name)
+                pattern = shell_pattern(os.path.expanduser(word))
                 for base in bases:
                     matches = glob.glob(pattern, root_dir=None if os.path.isabs(pattern) else base)
                     names |= {PurePosixPath(m).name for m in matches if is_secret(PurePosixPath(m).name)}
@@ -373,6 +375,10 @@ def git_bypass(command):
             if modes and not reads and (positional[modes[0] + 1:] or "unset" in positional[:modes[0]]
                           or any(a.startswith("--unset") for a in args)):
                 return "aeion.mode is the user's switch between team and local flow; the user sets it."
+            # Renaming another section to aeion (or removing it) switches the mode without naming the key.
+            sections = {"--rename-section", "rename-section", "--remove-section", "remove-section"}
+            if sections & set(args) and any(a.lower() == "aeion" for a in positional):
+                return "aeion.mode is the user's switch between team and local flow; the user sets it."
         value_next = False
         for arg in args:
             if value_next:
@@ -425,6 +431,28 @@ def bounded_pipeline(command):
     if len(last) != 3 or last[1] not in {"-n", "-c"} or not re.fullmatch(r"[0-9]{1,6}", last[2]):
         return False
     return 0 < int(last[2]) <= (MAX_INTAKE_LINES if last[1] == "-n" else MAX_INTAKE_BYTES)
+
+
+QUOTED_GLOB = str.maketrans("*?[", "\x01\x02\x03")
+# Programs that never hand an argument to a shell, so a quoted pattern given to them stays a pattern.
+QUOTE_SAFE = {"grep", "egrep", "fgrep", "rg", "jq", "head", "tail", "wc", "uniq", "cut", "tr", "ls", "cat", "echo"}
+
+
+def quotes_inert(command):
+    """Whether the shell keeps quoted text literal: no substitution, escape, comment, ANSI-C quote or
+    here-string can reopen a quote, and every program is a known reader that runs no shell (an
+    unknown one, like env or awk's system(), might; watch runs its words with sh -c, rg with --pre).
+    An assignment can configure a reader to run one (RIPGREP_CONFIG_PATH holding --pre)."""
+    if re.search(r"\$[({']|`|\\|#|<<|[<>]\(|--pre", command):
+        return False
+    for words in simple_commands(command):
+        run = program(words)
+        if any(re.match(r"[A-Za-z_]\w*=", w) for w in words) or "watch" in (PurePosixPath(w).name for w in words):
+            return False
+        # A bare name only: ./grep may be any script; a configured rg may run --pre.
+        if not run or run[0] not in QUOTE_SAFE or run[0] == "rg" and os.environ.get("RIPGREP_CONFIG_PATH"):
+            return False
+    return True
 
 
 def intake_dump(command, base, changed_directory=False):
@@ -490,7 +518,14 @@ try:
     # Quotes join a shell word (sub/'.e'*), so they are dropped rather than split on.
     shell_text = re.sub(r"['\"]", "", without_inert_heredocs(command))
     shell_tokens = [t for t in re.split(r"[\s=;&|<>()`]+", shell_text) if t]
-    secrets = mentioned_secrets(tokens, shell_tokens, directories(command, workdir if isinstance(workdir, str) else "."))
+    # The same words with quoted glob characters made inert, only where quotes surely stay quotes.
+    inert = without_inert_heredocs(command)
+    if quotes_inert(command):
+        inert = re.sub(r"'[^']*'|\"[^\"]*\"", lambda m: m.group(0).translate(QUOTED_GLOB), inert)
+    marked = [t for t in re.split(r"[\s=;&|<>()`]+", re.sub(r"['\"]", "", inert)) if t]
+    unquoted_globs = [any(char in t for char in "*?[") for t in marked]
+    secrets = mentioned_secrets(tokens, shell_tokens, directories(command, workdir if isinstance(workdir, str) else "."),
+                                unquoted_globs)
 except (OSError, ValueError, RecursionError):
     deny("the files a glob names could not be verified; name the files explicitly.")
 

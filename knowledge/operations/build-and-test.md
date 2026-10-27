@@ -60,8 +60,10 @@ The same hook suite tests [bounded intake](../policies/bounded-intake.md), inclu
 thresholds, misleading limiters and preserved native edit/range fields. SessionStart adds two
 short intake instructions and the flow mode within its existing 25-line cap.
 
-The flow mode is a per-clone Git setting. The default team flow ends a task in a pull request
-with review and green CI. `git config aeion.mode local` selects local play: commits go to
+The flow mode is a per-clone Git setting, read from the repository's local config only
+(`git config --local`; includes and the global config do not count). The default team flow ends
+a task in a pull request with review and green CI. `git config aeion.mode local` sets local play
+in the repository's local config: commits go to
 `main` directly, the Stop sign-off reminder is silent, and the safety guards (secrets, Git hook
 and force-push bypasses, large dumps) stay on. `git config --unset aeion.mode` restores the team flow.
 

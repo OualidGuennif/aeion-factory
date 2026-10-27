@@ -296,7 +296,7 @@ def checkpoint(root, session, base):
         changed |= {os.fsdecode(path) for path in git(root, "ls-files", "--others", "--exclude-standard", "-z").split(b"\0")
                     if path and not os.fsdecode(path).startswith((".aeion/", "work/handovers/"))}
         # Local play (git config aeion.mode local) keeps no work/current.md entry.
-        local = subprocess.run(["git", "config", "--get", "aeion.mode"], cwd=root, capture_output=True, text=True).stdout.strip() == "local"
+        local = subprocess.run(["git", "config", "--local", "--get", "aeion.mode"], cwd=root, capture_output=True, text=True).stdout.strip() == "local"
         if changed and not local and "work/current.md" not in changed:
             raise ValueError("update work/current.md before checkpointing")
         if fingerprint(root) != before:

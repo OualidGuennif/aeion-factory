@@ -31,7 +31,7 @@ def main():
                 "inventory_only": sorted({item["path"] for item in manifest} - sources),
                 "nodes": graph.number_of_nodes(), "edges": graph.number_of_edges(), "missing": missing}
     (out / "coverage.json").write_text(json.dumps(coverage, indent=2) + "\n")
-    (out / "GRAPH_REPORT.md").write_text("# Factory Graphify structural report\n\n"
+    (out / "GRAPH_REPORT.md").write_text("# Æion Factory Graphify structural report\n\n"
         f"{coverage['nodes']} nodes, {coverage['edges']} edges; {len(required)} required source/docs files covered.\n\n"
         "Native Markdown headings, frontmatter and links are included. Inferred edges retain upstream confidence.\n"
         "This is a structural graph, not complete semantic understanding. See coverage.json for inventory-only paths.\n")

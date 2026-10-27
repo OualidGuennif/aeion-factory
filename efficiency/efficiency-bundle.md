@@ -47,7 +47,7 @@ a short name: CRAFTED (principles below).
 ## Assumptions
 
 - Claude Code, local Codex and OpenCode share instructions, Knowledge and maintained skills.
-  Native hooks/configuration differ; follow each setup in the Factory README and compatibility
+  Native hooks/configuration differ; follow each setup in Æion Factory README and compatibility
   runbook. Claude plugins remain Claude-specific; token guarantees are not assumed portable.
 - A git repository on a forge with pull requests (GitHub examples; others work the same way).
 - Nothing in this guide needs a paid service beyond the agent itself; optional integrations
@@ -78,7 +78,7 @@ established external standard or a promise of autonomous correctness.
 
 ## Try the core checks
 
-Run these from a Factory checkout with Python 3 available:
+Run these from an Æion Factory checkout with Python 3 available:
 
 ~~~sh
 tools/knowledge/knowledge-check
@@ -377,7 +377,7 @@ deleted — the commit message and the knowledge base keep what matters.
   Header discovery scans the first 8 KiB of leading comments/docstrings in tracked regular text
   files; Markdown, vendored/dependency/cache content, known secrets and symlinks are excluded.
   For formats without comments, use `sources`. This does not install language tools or validate syntax.
-- **`tools/knowledge/doc-links`** (shipped with the Factory, Python standard library only):
+- **`tools/knowledge/doc-links`** (shipped with Æion Factory, Python standard library only):
   - **L1** a `Spec:` pointer resolves; **L2** every `sources` path exists;
   - **L3** with `--diff origin/main`: a file changed while a doc covering it did not. Updating the
     doc passes, and so does a commit trailer
@@ -392,7 +392,7 @@ deleted — the commit message and the knowledge base keep what matters.
 
 Create a `tech-watch/` folder in English with:
 
-- `tech-watch/README.md` — the method (copy the Factory's): start from current evidence (read
+- `tech-watch/README.md` — the method (copy Æion Factory's): start from current evidence (read
   `AGENTS.md`, the knowledge index, `work/current.md`; record the commit and a cutoff date), form
   findings before reading older reports, search primary sources (official docs, release and
   security notes for the **versions the project actually pins**, papers, credible practitioners),
@@ -468,7 +468,7 @@ description: What it does, in the third person. Use when <the trigger>.   # <= ~
 - **Path-scoped instructions** that should load only near some files go in `.claude/rules/<area>.md`
   with a `paths:` glob list, not in a skill.
 
-## The lifecycle set shipped with the Factory
+## The lifecycle set shipped with Æion Factory
 
 | Skill | Use when |
 | --- | --- |
@@ -751,7 +751,7 @@ them — human or agent decisions with their reasons — that loops can read bef
 - **The contract** (`loops/decisions-api/README.md`): `GET /decisions?topic=...` returns the
   current decision and its reason; `POST /decisions` records a proposed one for a human to approve.
   Every call carries `Authorization: Bearer $DECISION_API_SECRET`.
-- **JEV is the example** in the Factory: an external decision service your loops can consult. Any
+- **JEV is the example** in Æion Factory: an external decision service your loops can consult. Any
   service with that contract fits.
 - **Off by default** (`DECISION_API_ENABLED=false`): the client refuses to run until it is turned
   on, and the secret lives only in the local env file, never in the repository or a prompt.
@@ -812,7 +812,7 @@ service that was turned on has its cost, its data scope and its off switch writt
   https://github.com/anthropics/claude-plugins-official · https://code.claude.com/docs
 - **Addy Osmani, `agent-skills`** (MIT) — the skill anatomy (overview, when to use, process,
   rationalizations, red flags, verification) and the DEFINE → PLAN → BUILD → VERIFY → REVIEW → SHIP
-  lifecycle that the Factory's skills follow. https://github.com/addyosmani/agent-skills ·
+  lifecycle that Æion Factory's skills follow. https://github.com/addyosmani/agent-skills ·
   "Own the Outer Loop" (2026).
 - **Vectorize, Hindsight** (MIT) — agent memory with retain, recall and reflect.
   https://github.com/vectorize-io/hindsight
@@ -822,7 +822,7 @@ service that was turned on has its cost, its data scope and its off switch writt
 ## Research and practice
 
 - **Jesse Vincent / obra, Superpowers** (MIT) — investigation, evidence before completion,
-  precise plans and verified review feedback inspired the focused Factory skill updates.
+  precise plans and verified review feedback inspired the focused Æion Factory skill updates.
   https://github.com/obra/superpowers · license notice reproduced below.
 - **Mert Koseoğlu, context-mode** (Elastic-2.0) — bounded output and pre-compaction recovery
   informed the context design. No context-mode code or MCP runtime is bundled.

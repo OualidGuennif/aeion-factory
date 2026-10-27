@@ -9,8 +9,8 @@ language in the chat. While working, either emit tool calls with no text or, if 
 intermediate note to yourself, write a single-line compact JSON object only (e.g.
 {"s":"test","n":"fix"}). Use natural language only for the short final answer to the user.
 
-**Precedence.** Instructions that existed in this repository before the Factory, and anything the
-owner says, win over the Factory's defaults. When they conflict, keep theirs and note it in
+**Precedence.** Instructions that existed in this repository before Æion Factory, and anything the
+owner says, win over Æion Factory's defaults. When they conflict, keep theirs and note it in
 `knowledge/policies/owner-preferences.md`.
 
 **Plan first.** For any non-trivial task, enter plan mode, propose, and wait for a yes.
@@ -29,6 +29,7 @@ tools/        knowledge/link/health checks, agent adapters, architecture and loc
 .codex/       Codex native config/hooks; .agents/skills links to the maintained skills
 .opencode/    OpenCode native plugin; root opencode.json selects shared skills/compaction
 .devin/       Devin CLI hooks and import settings (Claude import off; shared adapter)
+.factory/     Droid (factory.ai, another product) hooks only; Æion local state is the ignored .aeion/
 ```
 
 ## Build and test
@@ -61,7 +62,7 @@ open that file and follow it.
 | Security-sensitive code | `knowledge/policies/security.md`; `.agents/skills/security-scan/SKILL.md` |
 | A user interface | `knowledge/policies/ui-ux.md` |
 | The loops and schedules | `knowledge/operations/loops.md`, `command.md` |
-| Adopting the Factory in another repo | `efficiency/00-EFFICIENCY.md`; `.agents/skills/adopt/SKILL.md` |
+| Adopting Æion Factory in another repo | `efficiency/00-EFFICIENCY.md`; `.agents/skills/adopt/SKILL.md` |
 | Context limits and handovers | [Context safety](knowledge/operations/context-safety.md); enabled checkpoint profile, strict runtime limit unqualified |
 | Large files, logs and tool output | [Bounded intake](knowledge/policies/bounded-intake.md); targeted reads and summary commands |
 | Graphify, Archify and architecture changes | [Architecture maintenance](knowledge/operations/architecture-maintenance.md), [complete spec](knowledge/components/factory-architecture.md) |
@@ -78,7 +79,7 @@ open that file and follow it.
    before compaction. Only Claude has the observed 300k guard; strict admission is unqualified.
 7. Install nothing the repository does not already run without the user's yes. The Graphify/Archify
    baseline is strongly recommended: before `tools/architecture/setup`, say what it installs (a venv
-   and pinned packages in `.factory/`, an Archify clone; Node and Chrome needed) and ask whether this
+   and pinned packages in `.aeion/`, an Archify clone; Node and Chrome needed) and ask whether this
    is a work computer. CI analyses every main update.
 
 ## How code is written here
@@ -89,12 +90,12 @@ never the history; no abstraction without two real users; a spec before the code
 
 ## How a task flows
 
-The session start names the mode (`git config factory.mode`).
+The session start names the mode (`git config aeion.mode`).
 
 - **Team (default).** One branch per task (`task/<slug>`), small commits, `gh pr create`, then the
   skill `pr-review`: a fresh subagent reviews and posts `Review: OK` or `Review: NOT OK` on the pull
   request. Merge after that comment and a green CI. Nothing is pushed to the default branch directly.
-- **Local** (`git config factory.mode local`, set by the user only). Someone trying the repository
+- **Local** (`git config aeion.mode local`, set by the user only). Someone trying the repository
   on their machine: commit on `main` locally (pushing is the user's call), no pull request, CI or
   `work/current.md` entry. Done means the tests for what changed pass; every critical rule applies.
 

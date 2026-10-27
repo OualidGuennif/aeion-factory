@@ -15,7 +15,7 @@ established external standard or a promise of autonomous correctness.
 
 ## Try the core checks
 
-Run these from a Factory checkout with Python 3 available:
+Run these from an Æion Factory checkout with Python 3 available:
 
 ~~~sh
 tools/knowledge/knowledge-check

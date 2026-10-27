@@ -30,7 +30,7 @@ setting() {
 }
 
 # Each job: prompt file, criticality (low|normal|high), tool allowlist, permission mode.
-READ_ONLY="Read,Grep,Glob,Write(.factory/loop-bodies/**),Bash(git log -5 --oneline),Bash(git diff --stat),Bash(git diff --check),Bash(git status --short),Bash(tools/knowledge/knowledge-check),Bash(tools/knowledge/doc-links),Bash(tools/knowledge/doc-links --for *),Bash(tools/repo-health/repo-health),Bash(gh issue list *),Bash(gh issue view *),Bash(gh issue create *),Bash(gh issue comment *)"
+READ_ONLY="Read,Grep,Glob,Write(.aeion/loop-bodies/**),Bash(git log -5 --oneline),Bash(git diff --stat),Bash(git diff --check),Bash(git status --short),Bash(tools/knowledge/knowledge-check),Bash(tools/knowledge/doc-links),Bash(tools/knowledge/doc-links --for *),Bash(tools/repo-health/repo-health),Bash(gh issue list *),Bash(gh issue view *),Bash(gh issue create *),Bash(gh issue comment *)"
 case "$JOB" in
     inner)    PROMPT="inner.md";    CRIT="normal"; MODE="acceptEdits"
               TOOLS="Read,Grep,Glob,Edit,Write,Agent,Bash(git *),Bash(gh issue *),Bash(gh pr *),Bash(tools/*),Bash(python3 *)"
@@ -92,10 +92,10 @@ if [[ "$ENABLED" != true ]]; then
 fi
 
 # Run from the repository root; keep the log out of git.
-mkdir -p "$ROOT/.factory/logs"
-LOG="$ROOT/.factory/logs/${JOB}-$(date -u +%Y%m%dT%H%M%SZ).log"
+mkdir -p "$ROOT/.aeion/logs"
+LOG="$ROOT/.aeion/logs/${JOB}-$(date -u +%Y%m%dT%H%M%SZ).log"
 cd "$ROOT"
-case "$JOB" in outer|docs|security|middle) export FACTORY_LOOP_READ_ONLY=1 ;; esac
-[[ "$JOB" == outer && -n "$PROD_READ" ]] && export FACTORY_PROD_READ_COMMAND="$PROD_READ"
+case "$JOB" in outer|docs|security|middle) export AEION_LOOP_READ_ONLY=1 ;; esac
+[[ "$JOB" == outer && -n "$PROD_READ" ]] && export AEION_PROD_READ_COMMAND="$PROD_READ"
 python3 "$ROOT/tools/loops/run" --timeout "$DEADLINE" -- "${CMD[@]}" > "$LOG" 2>&1 || { echo "loop $JOB failed; see $LOG" >&2; exit 1; }
 echo "loop $JOB done; log $LOG" >&2

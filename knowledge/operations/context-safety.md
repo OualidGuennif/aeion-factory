@@ -74,7 +74,7 @@ token enforcement unqualified; see [compatibility](agent-compatibility.md). A li
 The [2026-10-26 OpenCode experiment](../references/opencode-context-qualification.md) exercised a
 real paid DeepSeek V4.1 Flash call with 278,859 input tokens and a native refusal after a tool result
 crossed the experimental reserved budget. It establishes a primary HTTP admission mechanism in
-an isolated profile; it does not enable Factory strict mode or qualify handover/compaction and
+an isolated profile; it does not enable Æion Factory strict mode or qualify handover/compaction and
 auxiliary-call coverage.
 
 Use `tools/context/run [claude arguments]` for managed interactive/headless runs. It checks the

@@ -18,7 +18,7 @@ READERS = {"cat", "less", "more", "head", "tail", "grep", "rg", "awk", "sed", "s
            "xxd", "od", "source", ".", "cp", "scp", "rsync", "jq", "python3", "python", "node", "vim", "nano"}
 SECRET_NAMES = {"auth.json", "credentials", "credentials.json", "id_rsa", "id_ed25519", "env.local"}
 MAX_INTAKE_BYTES, MAX_INTAKE_LINES = 65536, 400
-LOOP_BODIES = ".factory/loop-bodies/"
+LOOP_BODIES = ".aeion/loop-bodies/"
 INTAKE_REASON = ("bounded intake: replace the dump with head -n 80, head -c 65536, "
                  "a targeted rg search or a summary; keep a limiter last in its own pipeline "
                  "(knowledge/policies/bounded-intake.md).")
@@ -453,7 +453,7 @@ except Exception:
 tokens = [t for t in re.split(r"[\s'\"=;&|<>()`]+", command) if t]
 secrets = sorted({PurePosixPath(t).name for t in tokens if is_secret(PurePosixPath(t).name)})
 
-if os.environ.get("FACTORY_LOOP_READ_ONLY") == "1":
+if os.environ.get("AEION_LOOP_READ_ONLY") == "1":
     fixed = {"git log -5 --oneline", "git diff --stat", "git diff --check", "git status --short",
              "tools/knowledge/knowledge-check", "tools/knowledge/doc-links", "tools/repo-health/repo-health"}
     try:
@@ -465,7 +465,7 @@ if os.environ.get("FACTORY_LOOP_READ_ONLY") == "1":
              or words[1:3] == ["run", "list"]))
     doc_for = (len(words) == 3 and words[:2] == ["tools/knowledge/doc-links", "--for"]
                and re.fullmatch(r"[\w.-]+(/[\w.-]+)*", words[2]) and ".." not in words[2].split("/"))
-    production = os.environ.get("FACTORY_PROD_READ_COMMAND")
+    production = os.environ.get("AEION_PROD_READ_COMMAND")
     if command.strip() not in fixed and not (forge or doc_for or production and command.strip() == production):
         deny("this loop permits fixed read-only checks and finding/review comments only.")
     if any(char in command for char in ";|&<>`$\n"):

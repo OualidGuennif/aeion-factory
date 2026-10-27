@@ -49,7 +49,7 @@ structural scorecard; each project's build, linter and tests provide language-sp
 
 ## Branch, pull request, review
 
-This is the team flow. In local mode (`git config factory.mode local`, see
+This is the team flow. In local mode (`git config aeion.mode local`, see
 [build and test](../operations/build-and-test.md)) commits go to `main` directly, without a pull
 request, CI or a `work/current.md` entry; tests for what changed still run.
 

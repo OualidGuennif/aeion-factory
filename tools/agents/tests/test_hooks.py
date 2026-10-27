@@ -74,7 +74,7 @@ class HookTests(unittest.TestCase):
             result=self.call(provider,hook_event_name='PreCompact')
             self.assertFalse(result['continue'])
             self.assertIn(f'work/handovers/{key}.md',result['stopReason'])
-            state_file=self.root/'.factory/context'/f'{key}.json'
+            state_file=self.root/'.aeion/context'/f'{key}.json'
             state=json.loads(state_file.read_text())
             handover=hook.budget.handover_path(self.root,key)
             state['checkpoint']={'tree':hook.budget.fingerprint(self.root),'handover':hook.budget.hashlib.sha256(handover.read_bytes()).hexdigest()}
@@ -87,7 +87,7 @@ class HookTests(unittest.TestCase):
     def test_compaction_resets_receipt_but_keeps_recovery_pointer(self):
         self.call()
         key=hook.key('codex',self.event)
-        state_file=self.root/'.factory/context'/f'{key}.json'
+        state_file=self.root/'.aeion/context'/f'{key}.json'
         state=json.loads(state_file.read_text());state['checkpoint']={'tree':'old'};state_file.write_text(json.dumps(state))
         start=self.call(hook_event_name='SessionStart',source='startup')
         self.assertIn('created at the first refused compaction',start['hookSpecificOutput']['additionalContext'])
@@ -197,24 +197,70 @@ class HookTests(unittest.TestCase):
         self.call('devin',hook_event_name='PostToolUse',tool_name='edit',tool_input={'file_path':str(self.root/'a.py')})
         self.assertEqual(set(log.read_text().splitlines()),{'a.py'})
 
-    def test_launch_without_baseline_recommends_it_and_still_starts_devin(self):
+    def test_launch_without_baseline_recommends_it_and_still_starts_devin_and_droid(self):
         launcher=self.root/'tools/agents/run';launcher.parent.mkdir(parents=True)
         shutil.copy2(ROOT/'tools/agents/run',launcher)
         gate=self.root/'tools/architecture/refresh';gate.parent.mkdir(parents=True)
         gate.write_text('#!/bin/sh\nexit 1\n');gate.chmod(0o755)
-        native=self.root/'bin/devin';native.parent.mkdir()
-        native.write_text(f'#!{hook.sys.executable}\nimport sys\nprint("devin", *sys.argv[1:])\n');native.chmod(0o755)
-        result=subprocess.run([hook.sys.executable,str(launcher),'devin','--version'],cwd=self.root,
-                              env={'PATH':str(native.parent)+os.pathsep+os.defpath},capture_output=True,text=True)
-        self.assertEqual(result.returncode,0,result.stderr)
-        self.assertEqual(result.stdout.strip(),'devin --version')
-        self.assertIn('strongly recommended',result.stderr)
-        self.assertIn('never installed automatically',result.stderr)
+        (self.root/'bin').mkdir()
+        for agent in ('devin','droid'):
+            native=self.root/'bin'/agent
+            native.write_text(f'#!{hook.sys.executable}\nimport sys\nprint("{agent}", *sys.argv[1:])\n');native.chmod(0o755)
+            result=subprocess.run([hook.sys.executable,str(launcher),agent,'--version'],cwd=self.root,
+                                  env={'PATH':str(native.parent)+os.pathsep+os.defpath},capture_output=True,text=True)
+            self.assertEqual(result.returncode,0,result.stderr)
+            self.assertEqual(result.stdout.strip(),f'{agent} --version')
+            self.assertIn('strongly recommended',result.stderr)
+            self.assertIn('never installed automatically',result.stderr)
+
+    def test_droid_tools_reach_the_shared_guards(self):
+        with self.assertRaisesRegex(hook.GuardRefusal,'secret'):
+            self.call('droid',tool_name='Execute',tool_input={'command':'cat .env'})
+        with self.assertRaisesRegex(hook.GuardRefusal,'secret'):
+            self.call('droid',tool_name='Create',tool_input={'file_path':str(self.root/'.env'),'content':'x'})
+        with self.assertRaisesRegex(hook.GuardRefusal,'secret'):
+            self.call('droid',tool_name='ApplyPatch',tool_input={'input':'*** Add File: .env\n+x'})
+        self.assertEqual(self.call('droid',tool_name='Execute',tool_input={'command':'git status --short'}),{})
+
+    def test_droid_tools_outside_the_map_still_reach_the_shell_guard(self):
+        for tool in ('Shell','execute','Bash'):
+            with self.assertRaisesRegex(hook.GuardRefusal,'secret'):
+                self.call('droid',tool_name=tool,tool_input={'command':'cat .env'})
+        # A known file tool keeps its path guard even when its input also carries a command.
+        path=str(self.root/'.env')
+        for tool,data in (('Read',{'file_path':path}),('Edit',{'file_path':path}),('Grep',{'path':path,'pattern':'x'})):
+            with self.assertRaisesRegex(hook.GuardRefusal,'secret'):
+                self.call('droid',tool_name=tool,tool_input={**data,'command':'ls'})
+        for provider,tool in (('droid','read'),('devin','run_command')):
+            with self.assertRaisesRegex(hook.GuardRefusal,'secret'):
+                self.call(provider,tool_name=tool,tool_input={'file_path':path,'command':'ls'})
+
+    def test_droid_refusal_uses_the_claude_shaped_deny(self):
+        event={**self.event,'tool_name':'Execute','tool_input':{'command':'cat .env'}}
+        result=subprocess.run(['python3',str(ROOT/'tools/agents/hook.py'),'droid'],input=json.dumps(event),capture_output=True,text=True)
+        decision=json.loads(result.stdout)['hookSpecificOutput']
+        self.assertEqual(decision['permissionDecision'],'deny')
+        self.assertIn('secret',decision['permissionDecisionReason'])
+
+    def test_droid_created_files_are_recorded_for_feedback_and_sign_off(self):
+        key=hook.key('droid',self.event)
+        log=Path(tempfile.gettempdir())/f'claude-edited-{key}'
+        log.unlink(missing_ok=True)
+        self.addCleanup(log.unlink,missing_ok=True)
+        (self.root/'b.py').write_text('b = 1\n')
+        self.call('droid',hook_event_name='PostToolUse',tool_name='Create',tool_input={'file_path':str(self.root/'b.py')})
+        self.assertEqual(set(log.read_text().splitlines()),{'b.py'})
+
+    def test_droid_settings_route_every_event_to_the_adapter(self):
+        hooks=json.loads((ROOT/'.factory/settings.json').read_text())['hooks']
+        self.assertEqual(set(hooks),{'SessionStart','PreToolUse','PostToolUse','Stop'})
+        for entries in hooks.values():
+            self.assertTrue(all(h['command'].endswith('tools/agents/hook.py" droid') for e in entries for h in e['hooks']))
 
     def test_read_only_loop_denies_writers_and_shell_composition(self):
         for command in ('tools/efficiency/bundle','tools/architecture/setup','git diff --output=x',
                         'gh issue list; touch unexpected'):
-            with patch.dict(hook.subprocess.os.environ,{'FACTORY_LOOP_READ_ONLY':'1'}):
+            with patch.dict(hook.subprocess.os.environ,{'AEION_LOOP_READ_ONLY':'1'}):
                 with self.assertRaises(ValueError):
                     self.call(tool_input={'command':command})
 

@@ -56,7 +56,7 @@ deleted — the commit message and the knowledge base keep what matters.
   Header discovery scans the first 8 KiB of leading comments/docstrings in tracked regular text
   files; Markdown, vendored/dependency/cache content, known secrets and symlinks are excluded.
   For formats without comments, use `sources`. This does not install language tools or validate syntax.
-- **`tools/knowledge/doc-links`** (shipped with the Factory, Python standard library only):
+- **`tools/knowledge/doc-links`** (shipped with Æion Factory, Python standard library only):
   - **L1** a `Spec:` pointer resolves; **L2** every `sources` path exists;
   - **L3** with `--diff origin/main`: a file changed while a doc covering it did not. Updating the
     doc passes, and so does a commit trailer
@@ -71,7 +71,7 @@ deleted — the commit message and the knowledge base keep what matters.
 
 Create a `tech-watch/` folder in English with:
 
-- `tech-watch/README.md` — the method (copy the Factory's): start from current evidence (read
+- `tech-watch/README.md` — the method (copy Æion Factory's): start from current evidence (read
   `AGENTS.md`, the knowledge index, `work/current.md`; record the commit and a cutoff date), form
   findings before reading older reports, search primary sources (official docs, release and
   security notes for the **versions the project actually pins**, papers, credible practitioners),

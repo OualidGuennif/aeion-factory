@@ -9,11 +9,11 @@ import venv
 from process import run
 
 if sys.version_info < (3, 12) or sys.version_info[:3] == (3, 14, 1):
-    sys.exit("Factory analysis pins require Python 3.12+ (excluding 3.14.1); use a supported interpreter.")
+    sys.exit("Æion Factory analysis pins require Python 3.12+ (excluding 3.14.1); use a supported interpreter.")
 
 root = Path(__file__).resolve().parents[2]
 config = json.loads((root / "tools/architecture/integrations.json").read_text())
-folder = root / ".factory/integrations"
+folder = root / ".aeion/integrations"
 folder.mkdir(parents=True, exist_ok=True)
 python = folder / "graphify-venv/bin/python"
 if not python.exists():
@@ -31,4 +31,4 @@ if actual.returncode or actual.stdout.strip() != config["archify"]["revision"] o
     run(["git", "-C", str(archify), "fetch", "origin", config["archify"]["revision"]])
     run(["git", "-C", str(archify), "checkout", "--detach", config["archify"]["revision"]], timeout=60)
 run(["node", str(archify / "archify/bin/archify.mjs"), "doctor"], timeout=30)
-print("Factory analysis integrations: ready (a real refresh is still required)")
+print("Æion Factory analysis integrations: ready (a real refresh is still required)")

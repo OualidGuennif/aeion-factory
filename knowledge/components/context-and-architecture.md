@@ -1,6 +1,6 @@
 ---
 type: Reference
-title: "Factory integration choices"
+title: "Æion Factory integration choices"
 description: "The narrow upstream practices retained for context safety, skills and mandatory architecture maintenance."
 status: stable
 generated:
@@ -20,7 +20,7 @@ sources:
 
 # Integration choices
 
-The approved plan preserves Doc / OKF / Knowledge, frontmatter/tags, Factory skill entry points,
+The approved plan preserves Doc / OKF / Knowledge, frontmatter/tags, Æion Factory skill entry points,
 existing hooks and the reviewed task flow. Current behavior belongs to the linked runbooks and
 architecture specification; this file records the integration choices rather than a second policy.
 
@@ -29,7 +29,7 @@ architecture specification; this file records the integration choices rather tha
 [Inspected source](https://github.com/mksglu/context-mode/tree/8b74cbba68a79e45170dd5866dee949fd6ddd8e1).
 Retain bounded output, processing large results in code, file artifacts and handover restoration.
 No upstream code/MCP/memory store is installed. Its best-effort snapshot is not a deterministic
-250k/300k token guard. Factory uses native compaction at 250k, explicit closure and a verified
+250k/300k token guard. Æion Factory uses native compaction at 250k, explicit closure and a verified
 checkpoint; the observed 300k stop is not qualified pre-request admission. Strict execution
 refuses instead of claiming an unsupported guarantee.
 

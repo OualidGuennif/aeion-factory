@@ -94,22 +94,22 @@ for command in ["git status --short", "git commit -m 'the environment check'",
 def run_read_only(command, cwd):
     event = json.dumps({"tool_input": {"command": command}, "cwd": str(cwd)})
     return subprocess.run([sys.executable, str(HOOKS / "guard-bash.py")], input=event, capture_output=True,
-                          text=True, cwd=ROOT, env={"PATH": "/usr/bin:/bin", "FACTORY_LOOP_READ_ONLY": "1"})
+                          text=True, cwd=ROOT, env={"PATH": "/usr/bin:/bin", "AEION_LOOP_READ_ONLY": "1"})
 
 
 with tempfile.TemporaryDirectory() as loop_dir:
     loop = Path(loop_dir)
-    (loop / ".factory/loop-bodies").mkdir(parents=True)
-    (loop / ".factory/loop-bodies/finding.md").write_text("Finding\n")
-    (loop / ".factory/loop-bodies/link.md").symlink_to(loop / "outside.md")
-    for command in ["gh issue create --title x --body-file .factory/loop-bodies/finding.md --label loop:outer",
-                    "gh pr comment 7 -F .factory/loop-bodies/finding.md", "gh pr diff 7",
+    (loop / ".aeion/loop-bodies").mkdir(parents=True)
+    (loop / ".aeion/loop-bodies/finding.md").write_text("Finding\n")
+    (loop / ".aeion/loop-bodies/link.md").symlink_to(loop / "outside.md")
+    for command in ["gh issue create --title x --body-file .aeion/loop-bodies/finding.md --label loop:outer",
+                    "gh pr comment 7 -F .aeion/loop-bodies/finding.md", "gh pr diff 7",
                     "tools/knowledge/doc-links --for tools/repo-health/repo-health"]:
         expect(f"read-only allow: {command}", run_read_only(command, loop), 0)
     for command in ["gh issue create --title x --body-file /home/u/.config/gh/hosts.yml",
-                    "gh issue comment 3 -F ../.factory/loop-bodies/finding.md",
-                    "gh pr comment 7 --body-file=.factory/loop-bodies/../../secret.md",
-                    "gh pr comment 7 -F .factory/loop-bodies/link.md", "gh issue create --recover state.json",
+                    "gh issue comment 3 -F ../.aeion/loop-bodies/finding.md",
+                    "gh pr comment 7 --body-file=.aeion/loop-bodies/../../secret.md",
+                    "gh pr comment 7 -F .aeion/loop-bodies/link.md", "gh issue create --recover state.json",
                     "gh issue create --title x --body 'a\nb'", "git diff origin/main...HEAD",
                     "tools/knowledge/doc-links --for ../outside", "tools/knowledge/doc-links --diff origin/main",
                     "gh issue comment 1 -F/etc/hostname", "gh issue comment 1 -F=/etc/hostname",
@@ -296,12 +296,12 @@ expect("sign-off: a spaced accented path is checked", special_result, 0, '"decis
 if special not in json.loads(special_result.stdout or "{}").get("reason", ""):
     failures.append("sign-off lost a spaced accented path")
 
-# Local mode (git config factory.mode local) skips the sign-off reminder for the same change.
+# Local mode (git config aeion.mode local) skips the sign-off reminder for the same change.
 for session in ("team", "local"):
     with (Path(tempfile.gettempdir()) / f"claude-edited-{session}-{RUN}").open("a") as f:
         f.write("src/a.ts\n")
 expect("sign-off: a fresh team session blocks", stop("team"), 0, '"decision": "block"')
-subprocess.run(git + ["config", "factory.mode", "local"], cwd=tmp, capture_output=True, check=True)
+subprocess.run(git + ["config", "aeion.mode", "local"], cwd=tmp, capture_output=True, check=True)
 local_result = stop("local")
 expect("sign-off: local mode passes", local_result, 0)
 if '"block"' in local_result.stdout:
@@ -310,16 +310,16 @@ if '"block"' in local_result.stdout:
 # session-start: at most 25 lines, and it names the flow mode.
 def session_start(mode):
     # Environment configuration outranks a developer's own repository setting.
-    env = {**os.environ, "GIT_CONFIG_COUNT": "1", "GIT_CONFIG_KEY_0": "factory.mode", "GIT_CONFIG_VALUE_0": mode}
+    env = {**os.environ, "GIT_CONFIG_COUNT": "1", "GIT_CONFIG_KEY_0": "aeion.mode", "GIT_CONFIG_VALUE_0": mode}
     return subprocess.run([sys.executable, str(HOOKS / "session-start.py")], capture_output=True, text=True, cwd=ROOT, env=env)
 
 
 result = session_start("team")
 expect("session-start runs", result, 0, "git status")
-expect("session-start names the team flow", result, 0, "Factory mode: team")
+expect("session-start names the team flow", result, 0, "Æion Factory mode: team")
 if len(result.stdout.strip().split("\n")) > 25:
     failures.append("session-start printed more than 25 lines")
-expect("session-start names local mode", session_start("local"), 0, "Factory mode: local")
+expect("session-start names local mode", session_start("local"), 0, "Æion Factory mode: local")
 
 print(f"hook tests: {passes} passed, {len(failures)} failed")
 for f in failures:

@@ -6,7 +6,7 @@ Trust the project in Codex and review/enable its hooks in `/hooks`; project conf
 are separate requirements. Untrusted projects intentionally ignore this folder.
 
 The checked-in config enables native compaction at 250000 and local lifecycle hooks. The adapter
-reuses Factory's guards, edit feedback, sign-off reminder and verified pre-compaction handover.
+reuses Æion Factory's guards, edit feedback, sign-off reminder and verified pre-compaction handover.
 It does not interpret Codex's unstable transcript format as a token API. No observed or strict
 300k token stop is claimed for this adapter. Account/model/provider remain your existing choices.
 

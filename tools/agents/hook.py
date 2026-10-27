@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # Spec: knowledge/operations/agent-compatibility.md
-"""Adapt native Codex/OpenCode/Devin payloads to existing guards and verified handovers."""
+"""Adapt native Codex/OpenCode/Devin/Droid payloads to existing guards and verified handovers."""
 import hashlib
 import json
 from pathlib import Path
@@ -16,6 +16,9 @@ import budget
 # Devin names its native tools in lowercase; the shared guards use Claude's names.
 DEVIN_TOOLS = {'exec': 'Bash', 'bash': 'Bash', 'shell': 'Bash', 'read': 'Read', 'grep': 'Grep',
                'edit': 'Edit', 'write': 'Write'}
+# Factory's Droid sends Claude-shaped payloads with its own names for the shell, create and patch tools.
+DROID_TOOLS = {'Execute': 'Bash', 'Create': 'Write', 'ApplyPatch': 'apply_patch'}
+DROID_KNOWN = {*DROID_TOOLS, 'Bash', 'Read', 'Edit', 'MultiEdit', 'Write', 'Grep', 'Glob', 'LS'}
 
 
 class GuardRefusal(ValueError):
@@ -46,9 +49,9 @@ def script(root, name, event):
     result = subprocess.run([sys.executable, str(root / '.claude/hooks' / name)], cwd=root,
                             input=json.dumps(event), capture_output=True, text=True, timeout=4)
     if result.returncode == 2:
-        raise GuardRefusal((result.stderr or 'Factory check refused this action')[:1500])
+        raise GuardRefusal((result.stderr or 'Æion Factory check refused this action')[:1500])
     if result.returncode:
-        raise ValueError('Factory checker failed')
+        raise ValueError('Æion Factory checker failed')
     if name == 'session-start.py':
         return {'hookSpecificOutput': {'hookEventName': 'SessionStart', 'additionalContext': result.stdout.strip()}}
     return json.loads(result.stdout) if result.stdout.lstrip().startswith('{') else {}
@@ -59,7 +62,7 @@ def edit_paths(event):
     if not isinstance(data, dict):
         raise ValueError('tool_input must be an object')
     if event.get('tool_name') == 'apply_patch':
-        patch = data.get('command', data.get('patchText'))
+        patch = next((data[field] for field in ('command', 'patchText', 'patch', 'input') if field in data), None)
         if not isinstance(patch, str):
             raise ValueError('apply_patch requires its native patch string')
         paths = re.findall(r'^\*\*\* (?:Add File|Update File|Delete File|Move to): (.+)$', '\n'.join(patch.splitlines()), re.M)
@@ -73,7 +76,7 @@ def edit_paths(event):
 
 
 def handle(root, provider, event):
-    if provider not in {'codex', 'opencode', 'devin'} or not isinstance(event, dict):
+    if provider not in {'codex', 'opencode', 'devin', 'droid'} or not isinstance(event, dict):
         raise ValueError('invalid provider or event')
     if provider == 'devin':
         tool = str(event.get('tool_name', '')).lower()
@@ -83,6 +86,14 @@ def handle(root, provider, event):
             tool = 'exec'
         if tool in DEVIN_TOOLS or tool == 'apply_patch':
             event = {**event, 'tool_name': DEVIN_TOOLS.get(tool, tool)}
+    if provider == 'droid':
+        tool = event.get('tool_name')
+        data = event.get('tool_input')
+        # Droid's tool names are not live-verified, so an unknown tool carrying a command string is a shell call.
+        if tool not in DROID_KNOWN and isinstance(data, dict) and isinstance(data.get('command'), str):
+            tool = 'Execute'
+        if tool in DROID_TOOLS:
+            event = {**event, 'tool_name': DROID_TOOLS[tool]}
     name = event.get('hook_event_name')
     if name not in {'SessionStart', 'PreToolUse', 'PostToolUse', 'PreCompact', 'Stop'}:
         raise ValueError('unsupported adapter event')
@@ -92,7 +103,7 @@ def handle(root, provider, event):
         state = json.loads(file.read_text()) if file.exists() else {'epoch': 0, 'state': 'RUNNING', 'profile': provider}
         handover = budget.handover_path(root, session)
         if state.get('state') == 'STOPPED':
-            return fail(provider, name, 'Factory session is stopped; use its handover in a new session.')
+            return fail(provider, name, 'Æion Factory session is stopped; use its handover in a new session.')
         if name == 'SessionStart' and event.get('source') == 'compact':
             state.pop('checkpoint', None)
             state['epoch'] += 1
@@ -105,14 +116,14 @@ def handle(root, provider, event):
             if provider == 'opencode':
                 state.pop('checkpoint', None)
                 budget.atomic(file, json.dumps(state, sort_keys=True) + '\n')
-            return {'systemMessage': f'Factory verified handover: {handover.relative_to(root)}'}
+            return {'systemMessage': f'Æion Factory verified handover: {handover.relative_to(root)}'}
     if name == 'SessionStart':
         result = script(root, 'session-start.py', normalized)
         pointer = 'Handover' if handover.is_file() else 'Handover (created at the first refused compaction)'
-        context = (f'Factory {provider} checkpoint profile. {pointer}: {handover.relative_to(root)}. '
+        context = (f'Æion Factory {provider} checkpoint profile. {pointer}: {handover.relative_to(root)}. '
                    f'Checkpoint key: {session}. Native token-stop enforcement is unqualified; do not claim a strict 300k cap.')
-        if provider == 'devin':
-            context = 'Factory devin profile: shared guards and edit feedback; no compaction checkpoint or token stop.'
+        if provider in {'devin', 'droid'}:
+            context = f'Æion Factory {provider} profile: shared guards and edit feedback; no compaction checkpoint or token stop.'
         context += '\n' + result.get('hookSpecificOutput', {}).get('additionalContext', '')
         result['hookSpecificOutput'] = {'hookEventName': name, 'additionalContext': context}
         return result
@@ -124,6 +135,9 @@ def handle(root, provider, event):
             result = script(root, 'guard-bash.py', normalized)
             if result.get('hookSpecificOutput', {}).get('permissionDecision') == 'ask':
                 return fail(provider, name, 'This command requires an explicit human decision; the adapter does not auto-approve it.')
+            # An unknown tool routed here may also name a file; that path still meets the path guard.
+            for path in edit_paths(event):
+                script(root, 'guard-path.py', {'tool_name': 'Edit', 'tool_input': {**data, 'file_path': path}})
             return result
         paths = edit_paths(event)
         if not paths and event.get('tool_name') == 'Grep':
@@ -162,7 +176,7 @@ def main():
         if not isinstance(event, dict):
             raise ValueError('hook payload must be an object')
     except (ValueError, OSError):
-        print('Factory hook payload invalid or oversized; action refused.', file=sys.stderr)
+        print('Æion Factory hook payload invalid or oversized; action refused.', file=sys.stderr)
         return 2
     provider = sys.argv[1] if len(sys.argv) > 1 else None
     try:
@@ -171,7 +185,7 @@ def main():
         result = fail(provider, event.get('hook_event_name'), str(error))
     except (ValueError, KeyError, IndexError, TypeError, OSError, subprocess.SubprocessError):
         name = event.get('hook_event_name') if isinstance(event, dict) else None
-        result = fail(provider, name, 'Factory adapter verification unavailable; resolve the hook/check error before continuing.')
+        result = fail(provider, name, 'Æion Factory adapter verification unavailable; resolve the hook/check error before continuing.')
     print(json.dumps(result))
     return 0
 

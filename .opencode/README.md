@@ -8,7 +8,7 @@ OpenCode also discovers the shared .agents/skills links; bodies are maintained o
 Launch with `tools/agents/run opencode`. The plugin uses Node built-ins and declares no SDK dependency.
 
 If your existing OpenCode database is incompatible, `tools/agents/run opencode --isolated`
-selects project-local XDG data/config/state/cache under ignored .factory/opencode. Connect your
+selects project-local XDG data/config/state/cache under ignored .aeion/opencode. Connect your
 provider through OpenCode's own UI for that separate profile; never copy stored credential files.
 The existing user database and configuration remain yours.
 

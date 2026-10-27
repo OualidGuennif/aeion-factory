@@ -10,7 +10,7 @@
   https://github.com/anthropics/claude-plugins-official · https://code.claude.com/docs
 - **Addy Osmani, `agent-skills`** (MIT) — the skill anatomy (overview, when to use, process,
   rationalizations, red flags, verification) and the DEFINE → PLAN → BUILD → VERIFY → REVIEW → SHIP
-  lifecycle that the Factory's skills follow. https://github.com/addyosmani/agent-skills ·
+  lifecycle that Æion Factory's skills follow. https://github.com/addyosmani/agent-skills ·
   "Own the Outer Loop" (2026).
 - **Vectorize, Hindsight** (MIT) — agent memory with retain, recall and reflect.
   https://github.com/vectorize-io/hindsight
@@ -20,7 +20,7 @@
 ## Research and practice
 
 - **Jesse Vincent / obra, Superpowers** (MIT) — investigation, evidence before completion,
-  precise plans and verified review feedback inspired the focused Factory skill updates.
+  precise plans and verified review feedback inspired the focused Æion Factory skill updates.
   https://github.com/obra/superpowers · [license notice](docs/licenses/superpowers-MIT.txt).
 - **Mert Koseoğlu, context-mode** (Elastic-2.0) — bounded output and pre-compaction recovery
   informed the context design. No context-mode code or MCP runtime is bundled.

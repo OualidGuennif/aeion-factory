@@ -17,4 +17,4 @@ description: Investigates a reproducible bug, failed check or unexpected runtime
    Stop accumulating fixes when the hypothesis fails; return to evidence.
 
 Adapted from the investigation sequence in obra/Superpowers `systematic-debugging` (MIT).
-Attribution: `CREDITS.md`. Factory's existing authority, test and sign-off rules still apply.
+Attribution: `CREDITS.md`. Æion Factory's existing authority, test and sign-off rules still apply.

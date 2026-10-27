@@ -162,7 +162,7 @@ for name, content in [
     ("docs/example.md", f"# {TAG} knowledge/missing.md\n"),
     ("vendor/example.py", f"# {TAG} knowledge/missing.md\n"),
     ("node_modules/example.js", f"// {TAG} knowledge/missing.md\n"),
-    (".factory/generated.py", f"# {TAG} knowledge/missing.md\n"),
+    (".aeion/generated.py", f"# {TAG} knowledge/missing.md\n"),
     ("auth.json", f"# {TAG} knowledge/missing.md\n"),
     ("src/string.py", f'VALUE = "{TAG} knowledge/missing.md"\n'),
 ]:

@@ -45,7 +45,7 @@ a short name: [CRAFTED](CRAFTED.md).
 ## Assumptions
 
 - Claude Code, local Codex and OpenCode share instructions, Knowledge and maintained skills.
-  Native hooks/configuration differ; follow each setup in the Factory README and compatibility
+  Native hooks/configuration differ; follow each setup in Æion Factory README and compatibility
   runbook. Claude plugins remain Claude-specific; token guarantees are not assumed portable.
 - A git repository on a forge with pull requests (GitHub examples; others work the same way).
 - Nothing in this guide needs a paid service beyond the agent itself; optional integrations

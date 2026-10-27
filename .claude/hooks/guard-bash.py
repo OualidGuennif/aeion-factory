@@ -300,7 +300,8 @@ def docker_inspect_dump(command):
     return False
 
 
-GIT_VALUE_FLAGS = {"-C", "-c", "--git-dir", "--work-tree", "--namespace"}
+GIT_VALUE_FLAGS = {"-C", "-c", "--config-env", "--git-dir", "--work-tree", "--namespace"}
+HOOKS_PATH = "tools/git-hooks"
 # Short options that take a value: in a cluster, the rest is that value, not more flags.
 SHORT_VALUE = {"commit": set("mFcCt"), "push": {"o"}}
 
@@ -308,11 +309,14 @@ SHORT_VALUE = {"commit": set("mFcCt"), "push": {"o"}}
 def git_bypass(command):
     """The reason a git command skips the hooks or force-pushes, or None.
 
-    Covers short clusters, +refspecs, git's unique-prefix long options and any core.hooksPath
-    override (-c, --config-env, GIT_CONFIG_* variables, git config)."""
+    Covers short clusters, +refspecs, --mirror, git's unique-prefix long options and a
+    core.hooksPath override (-c, --config-env, GIT_CONFIG_* variables, or git config setting
+    anything but the repository's hooks). Reading the setting stays allowed."""
+    hooks_reason = "overriding core.hooksPath skips the pre-commit checks."
     for words in simple_commands(command):
-        if any("core.hookspath" in w.lower() for w in words):
-            return "overriding core.hooksPath skips the pre-commit checks."
+        # GIT_CONFIG_* variables inject configuration into every later git run.
+        if any(re.match(r"GIT_CONFIG_\w*=", w) and "core.hookspath" in w.lower() for w in words):
+            return hooks_reason
         words = program(words)
         if words and words[0] == "<script>":
             reason = git_bypass(words[1])
@@ -324,9 +328,18 @@ def git_bypass(command):
         rest = list(words[1:])
         while rest and rest[0].startswith("-"):
             flag = rest.pop(0)
-            if flag in GIT_VALUE_FLAGS and rest:
-                rest.pop(0)
+            value = rest.pop(0) if flag in GIT_VALUE_FLAGS and rest else flag
+            if flag.split("=", 1)[0] in ("-c", "--config-env") and "core.hookspath" in value.lower():
+                return hooks_reason
         sub, args = (rest[0], rest[1:]) if rest else (None, [])
+        if sub == "config":
+            positional = [a for a in args if not a.startswith("-")]
+            keys = [i for i, a in enumerate(positional) if a.lower() == "core.hookspath"]
+            if keys:
+                values = positional[keys[0] + 1:]
+                unset = "unset" in positional[:keys[0]] or any(a.startswith("--unset") for a in args)
+                if unset or values and values[0] != HOOKS_PATH:
+                    return hooks_reason
         value_next = False
         for arg in args:
             if value_next:
@@ -338,7 +351,8 @@ def git_bypass(command):
             # git accepts any unambiguous prefix of a long option.
             if len(name) >= len("--no-veri") and "--no-verify".startswith(name):
                 return "--no-verify skips the pre-commit checks."
-            if sub == "push" and len(name) >= len("--force") and "--force-with-lease".startswith(name):
+            if sub == "push" and (len(name) >= len("--force") and "--force-with-lease".startswith(name)
+                                  or len(name) >= len("--mi") and "--mirror".startswith(name)):
                 return "force-pushing rewrites shared history."
             if sub == "push" and arg.startswith("+") and len(arg) > 1:
                 return "force-pushing rewrites shared history."

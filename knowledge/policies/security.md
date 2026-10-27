@@ -28,7 +28,8 @@ Requirements for a change, not claims about what production already satisfies.
   Basename guards are an accidental-read safeguard, not resolved-path or runtime isolation.
 - The Bash guard refuses skipping Git hooks or force-pushing in its common spellings: `-n` in a
   commit cluster, any unambiguous prefix of `--no-verify`, a `core.hooksPath` override (`-c`,
-  `--config-env`, `GIT_CONFIG_*`, `git config`), `-f`/`--force*`/`+refspec` on push. CI repeats
+  `--config-env`, `GIT_CONFIG_*`, or `git config` set to anything but `tools/git-hooks`; reading it
+  stays allowed), `-f`/`--force*`/`--mirror`/`+refspec` on push. CI repeats
   the checks, so it stays the gate a deliberate local bypass cannot pass.
 
 The same PreToolUse hooks also apply [bounded intake](bounded-intake.md) to recognized large

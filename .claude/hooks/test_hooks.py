@@ -66,7 +66,9 @@ for command in ["cat .env", "cat env.local", "printenv", "cat /proc/1/environ", 
                 "git -c core.hooksPath=/dev/null commit -m x", "bash -c 'git commit -n -m x'",
                 "git commit --no-verif -m x", "git merge --no-veri topic", "git --config-env=core.hooksPath=PWD commit -m x",
                 "GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=core.hooksPath GIT_CONFIG_VALUE_0=/dev/null git commit -m x",
-                "git config core.hooksPath /dev/null", "git push --force-with origin main", "git push --force-with-lease=main origin main"]:
+                "git config core.hooksPath /dev/null", "git push --force-with origin main", "git push --force-with-lease=main origin main",
+                "git config --unset core.hooksPath", "git config --local core.hooksPath .git/hooks", "export GIT_CONFIG_KEY_0=core.hooksPath",
+                "git --config-env core.hooksPath=PWD commit -m x", "git push --mirror origin"]:
     expect(f"bash deny: {command}", run_hook("guard-bash.py", {"command": command}), 2)
 expect("bash ask: mentions a secret", run_hook("guard-bash.py", {"command": "ls -la .env"}), 0, '"ask"')
 for command in ["git status --short", "git commit -m 'the environment check'",
@@ -79,7 +81,9 @@ for command in ["git status --short", "git commit -m 'the environment check'",
                 "echo $(date) && git status", "echo $(date;) && git status", "gh pr create --body \"$(cat <<'EOF'\ndumps (env)\nEOF\n)\"", "cat env.example.local", "npm test", "set -euo pipefail",
                 "git commit -m 'use head -n 5'", "git commit -am wip", "git commit -mnew", "git push -u origin task/x",
                 "git push -n origin main", "git -C repo status", "git commit -m -n", "git commit -am -n",
-                "git push --follow-tags origin task/x", "git log --no-verbose"]:
+                "git push --follow-tags origin task/x", "git log --no-verbose",
+                "git config core.hooksPath tools/git-hooks", "git config --get core.hooksPath",
+                "grep -rn core.hooksPath README.md", "git commit -m 'document core.hooksPath setup'"]:
     result = run_hook("guard-bash.py", {"command": command})
     expect(f"bash allow: {command}", result, 0)
     if '"ask"' in result.stdout:

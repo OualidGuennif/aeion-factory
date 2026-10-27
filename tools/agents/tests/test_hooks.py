@@ -146,6 +146,71 @@ class HookTests(unittest.TestCase):
         self.assertNotEqual(result.returncode,0)
         self.assertIn('requires OpenCode 2.1.4+',result.stderr)
 
+    def test_devin_native_tool_names_reach_the_shared_guards(self):
+        with self.assertRaises(ValueError):
+            self.call('devin',tool_name='exec',tool_input={'command':'cat .env'})
+        with self.assertRaises(ValueError):
+            self.call('devin',tool_name='read',tool_input={'file_path':str(self.root/'.env')})
+        with self.assertRaises(ValueError):
+            self.call('devin',tool_name='exec',tool_input={})
+        self.assertEqual(self.call('devin',tool_name='exec',tool_input={'command':'git status --short'}),{})
+        self.assertEqual(self.call('devin',tool_name='read',tool_input={'file_path':'README.md'}),{})
+
+    def test_devin_refusal_uses_its_block_decision(self):
+        event={**self.event,'tool_name':'exec','tool_input':{'command':'cat .env'}}
+        result=subprocess.run(['python3',str(ROOT/'tools/agents/hook.py'),'devin'],input=json.dumps(event),capture_output=True,text=True)
+        self.assertEqual(result.returncode,0)
+        decision=json.loads(result.stdout)
+        self.assertEqual(decision['decision'],'block')
+        self.assertIn('secret',decision['reason'])
+
+    def test_devin_tools_outside_the_map_still_reach_the_guards(self):
+        for tool in ('bash','Exec','run_command'):
+            with self.assertRaisesRegex(hook.GuardRefusal,'secret'):
+                self.call('devin',tool_name=tool,tool_input={'command':'cat .env'})
+        with self.assertRaisesRegex(hook.GuardRefusal,'secret'):
+            self.call('devin',tool_name='Apply_Patch',tool_input={'command':'*** Add File: .env\n+x'})
+        path=self.root/'many.log';path.write_text('line\n'*401)
+        with self.assertRaisesRegex(hook.GuardRefusal,'intake'):
+            self.call('devin',tool_name='grep',tool_input={'path':str(path),'pattern':'line','head_limit':0})
+
+    def test_devin_stop_and_start_failures_end_instead_of_continuing(self):
+        for name in ('Stop','SessionStart'):
+            event={**self.event,'hook_event_name':name,'session_id':''}
+            result=subprocess.run(['python3',str(ROOT/'tools/agents/hook.py'),'devin'],input=json.dumps(event),capture_output=True,text=True)
+            self.assertEqual(json.loads(result.stdout)['continue'],False)
+
+    def test_devin_payload_without_session_id_still_guards(self):
+        event={name:value for name,value in self.event.items() if name!='session_id'}
+        self.assertEqual(hook.handle(self.root,'devin',{**event,'tool_name':'exec'}),{})
+        with self.assertRaises(ValueError):
+            hook.handle(self.root,'devin',{**event,'tool_name':'exec','tool_input':{'command':'cat .env'}})
+        with self.assertRaises(ValueError):
+            hook.handle(self.root,'codex',event)
+
+    def test_devin_edits_are_recorded_for_feedback_and_sign_off(self):
+        key=hook.key('devin',self.event)
+        log=Path(tempfile.gettempdir())/f'claude-edited-{key}'
+        log.unlink(missing_ok=True)
+        self.addCleanup(log.unlink,missing_ok=True)
+        (self.root/'a.py').write_text('a = 1\n')
+        self.call('devin',hook_event_name='PostToolUse',tool_name='edit',tool_input={'file_path':str(self.root/'a.py')})
+        self.assertEqual(set(log.read_text().splitlines()),{'a.py'})
+
+    def test_launch_without_baseline_recommends_it_and_still_starts_devin(self):
+        launcher=self.root/'tools/agents/run';launcher.parent.mkdir(parents=True)
+        shutil.copy2(ROOT/'tools/agents/run',launcher)
+        gate=self.root/'tools/architecture/refresh';gate.parent.mkdir(parents=True)
+        gate.write_text('#!/bin/sh\nexit 1\n');gate.chmod(0o755)
+        native=self.root/'bin/devin';native.parent.mkdir()
+        native.write_text(f'#!{hook.sys.executable}\nimport sys\nprint("devin", *sys.argv[1:])\n');native.chmod(0o755)
+        result=subprocess.run([hook.sys.executable,str(launcher),'devin','--version'],cwd=self.root,
+                              env={'PATH':str(native.parent)+os.pathsep+os.defpath},capture_output=True,text=True)
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertEqual(result.stdout.strip(),'devin --version')
+        self.assertIn('strongly recommended',result.stderr)
+        self.assertIn('never installed automatically',result.stderr)
+
     def test_read_only_loop_denies_writers_and_shell_composition(self):
         for command in ('tools/efficiency/bundle','tools/architecture/setup','git diff --output=x',
                         'gh issue list; touch unexpected'):

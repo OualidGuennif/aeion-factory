@@ -4,6 +4,13 @@ Task state only. One entry per open task, newest first. At most 150 lines, 10 pe
 Finished tasks are deleted: the commit message and knowledge/ keep what matters.
 Status: ACTIVE, WAITING-OWNER, MEASURING, BLOCKED, BACKLOG.
 
+## Live Devin hook qualification — WAITING-OWNER
+- Owner decision: 2026-10-27, support Devin; the adapter merged with documented, not live-run, payloads.
+- State: adapter, tests and docs in PR #12; no live Devin run yet.
+- Next: run the qualification steps on a machine with Devin CLI and record the result (who: owner).
+- Blocker: no Devin CLI in the agent's container.
+- Evidence: knowledge/operations/agent-compatibility.md
+
 ## Main branch protection vs. its doc — WAITING-OWNER
 - Owner decision: pending; a direct push to main was accepted on 2026-10-27.
 - State: knowledge/operations/github-protection.md says pull requests are required, enforced for admins.

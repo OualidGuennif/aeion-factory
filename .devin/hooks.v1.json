@@ -1,0 +1,46 @@
+{
+  "SessionStart": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python3 \"${DEVIN_PROJECT_DIR:-$(git rev-parse --show-toplevel)}/tools/agents/hook.py\" devin",
+          "timeout": 15
+        }
+      ]
+    }
+  ],
+  "PreToolUse": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python3 \"${DEVIN_PROJECT_DIR:-$(git rev-parse --show-toplevel)}/tools/agents/hook.py\" devin",
+          "timeout": 15
+        }
+      ]
+    }
+  ],
+  "PostToolUse": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python3 \"${DEVIN_PROJECT_DIR:-$(git rev-parse --show-toplevel)}/tools/agents/hook.py\" devin",
+          "timeout": 15
+        }
+      ]
+    }
+  ],
+  "Stop": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python3 \"${DEVIN_PROJECT_DIR:-$(git rev-parse --show-toplevel)}/tools/agents/hook.py\" devin",
+          "timeout": 15
+        }
+      ]
+    }
+  ]
+}

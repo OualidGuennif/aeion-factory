@@ -1,6 +1,6 @@
 ---
 type: Runbook
-title: "Claude Code, Codex and OpenCode"
+title: "Claude Code, Codex, OpenCode and Devin"
 description: "One Factory instruction/skill source, runtime-specific adapters, setup and explicitly bounded guarantees."
 status: stable
 sources:
@@ -16,6 +16,10 @@ sources:
     title: "OpenCode native config"
   - resource: ../../.opencode/plugins/factory/index.js
     title: "OpenCode plugin callbacks"
+  - resource: ../../.devin/config.json
+    title: "Devin import settings"
+  - resource: ../../.devin/hooks.v1.json
+    title: "Devin hook registrations"
 generated:
   by: aeion-factory/1.2
   at: 2026-10-25
@@ -24,9 +28,9 @@ generated:
 # Agent compatibility
 
 AGENTS.md, Knowledge, task state, checker commands and the reviewed PR workflow are shared.
-Claude Code remains the original integration. Codex and OpenCode use their documented native
-configuration and small adapters to the existing guards/checkpoints; copying a directory does
-not establish loaded hooks or identical runtime guarantees.
+Claude Code remains the original integration. Codex, OpenCode and Devin use their documented
+native configuration and small adapters to the existing guards/checkpoints; copying a directory
+does not establish loaded hooks or identical runtime guarantees.
 
 ## Contract
 
@@ -38,10 +42,22 @@ not establish loaded hooks or identical runtime guarantees.
   native to its selected model; no supported fixed 250k setting is invented.
 - Both adapters enforce supported Bash/path refusals, edit feedback and a verified handover
   before compaction; the first refused compaction creates the skeleton to fill. Native token stops and strict pre-request 300k admission are unqualified.
+- Devin CLI reads `AGENTS.md` and `.agents/skills` natively. By default it also imports
+  `.claude/settings.json` hooks, but its tools are named `exec`, `read`, `edit`, `write` and
+  `apply_patch`, so Claude matchers never fire and the matcher-less Claude budget hook reads a
+  transcript Devin does not write. `.devin/config.json` therefore turns the Claude import off, and
+  `.devin/hooks.v1.json` sends SessionStart, PreToolUse, PostToolUse and Stop (no matchers) to
+  `tools/agents/hook.py devin`. The adapter maps the tool names (also `bash`, `shell`, `grep`, in
+  any case) to the shared guards; an unknown tool carrying a `command` string goes through the
+  shell guard. A refused tool call gets Devin's `{"decision": "block", "reason": ...}`; a failed
+  Stop or SessionStart gets `continue: false`, because Devin's block on Stop means "keep going".
+  A payload without `session_id` uses one key per clone, so sign-off reminders are shared across
+  that clone's Devin sessions. Devin has no Factory compaction checkpoint or token stop.
+- Managed CLI launchers enter the repository root and check the exact-HEAD architecture baseline;
+  its absence is a warning, because installing the integrations needs the user's yes.
 - Raw command/MCP paths, host-managed/cloud orchestration and deliberate local modification are
   outside any complete isolation claim. Native project/hook trust and sandbox controls still apply.
-- All managed CLI launchers enter the repository root and require an exact-HEAD architecture baseline.
-  The shared launcher also aligns `PWD`: OpenCode 2.1.4 uses it to select the run's location, so
+- The shared launcher also aligns `PWD`: OpenCode 2.1.4 uses it to select the run's location, so
   changing only the process working directory can load another project's plugin/configuration.
 
 ## Verification
@@ -58,11 +74,15 @@ qualification and setup commands are recorded below.
 - https://opencode.ai/v2/docs/build/plugins/
 - https://opencode.ai/v2/docs/config/
 - https://opencode.ai/v2/docs/skills/
+- https://docs.devin.ai/cli/extensibility/hooks/overview
+- https://docs.devin.ai/cli/reference/configuration/read-config-from
+- https://docs.devin.ai/cli/extensibility/skills/overview
 
 ## Setup
 
-1. Follow README common checks and the mandatory architecture baseline. Install the chosen native
-   CLI separately; preserve user account/provider settings.
+1. Follow the README common checks. Offer the recommended architecture baseline and install it
+   only on the user's yes ([architecture maintenance](architecture-maintenance.md)). Install the
+   chosen native CLI separately; preserve user account/provider settings.
 2. Claude: trust the workspace, then `tools/agents/run claude`.
 3. Codex: trust the project in native settings, review/enable the local hooks in `/hooks`, restart,
    then `tools/agents/run codex`. A trusted project and trusted hook sources are distinct. Do not
@@ -70,6 +90,8 @@ qualification and setup commands are recorded below.
 4. OpenCode: `tools/agents/run opencode`. The root config selects the maintained skill directory;
    the native loader loads the local plugin directory. A database schema conflict can use
    `--isolated`, a separate ignored XDG profile; connect that profile's provider natively.
+5. Devin CLI: `devin` or `tools/agents/run devin` from the repository root. Approve the project
+   hooks if Devin asks. Keep the model/provider choice in Devin's own user settings.
 
 The shared guards are basename/command-pattern safeguards. Codex native Bash and apply_patch
 payloads are normalized explicitly, including deleted/moved patch paths. OpenCode maps native
@@ -100,6 +122,12 @@ The [dated OpenCode experiment](../references/opencode-context-qualification.md)
 No full 250k handover/compaction cycle or absolute Factory admission ceiling is claimed. Local hook failures
 can be advisory in some native events; retain native sandbox/permissions and check actual dispatch.
 Hosted/cloud orchestration and optional scheduled native actions require separate qualification.
+
+Devin is not yet qualified live: no Devin CLI ran in the change that added it. The hook file shape,
+tool names, `DEVIN_PROJECT_DIR` and the block decision follow Devin's documentation and two public
+integrations verified on Devin 3000.11.3. To qualify, in a disposable clone ask Devin to `cat .env`
+and to edit a file: the first must be refused with the guard's reason, the second must name the
+covering doc. Devin cloud sessions do not read `.devin/` and are not covered.
 
 OpenCode 2.1.4 is the qualified V2 target. Legacy 1.19.4 can discover skills but does not dispatch
 these V2 callbacks; do not claim its guards are working from discovery alone. The plugin is a

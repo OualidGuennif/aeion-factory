@@ -49,6 +49,10 @@ structural scorecard; each project's build, linter and tests provide language-sp
 
 ## Branch, pull request, review
 
+This is the team flow. In local mode (`git config factory.mode local`, see
+[build and test](../operations/build-and-test.md)) commits go to `main` directly, without a pull
+request, CI or a `work/current.md` entry; tests for what changed still run.
+
 - One branch per task, `task/<slug>`, from an up-to-date default branch; small commits.
 - `gh pr create` with what, why and the checks run (skill `sign-off`).
 - The skill `pr-review`: a fresh subagent reviews; every finding is verified; one comment:

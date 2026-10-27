@@ -4,6 +4,7 @@
 Run with: python3 .claude/hooks/test_hooks.py
 """
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -295,11 +296,30 @@ expect("sign-off: a spaced accented path is checked", special_result, 0, '"decis
 if special not in json.loads(special_result.stdout or "{}").get("reason", ""):
     failures.append("sign-off lost a spaced accented path")
 
-# session-start: at most 25 lines.
-result = subprocess.run([sys.executable, str(HOOKS / "session-start.py")], capture_output=True, text=True, cwd=ROOT)
+# Local mode (git config factory.mode local) skips the sign-off reminder for the same change.
+for session in ("team", "local"):
+    with (Path(tempfile.gettempdir()) / f"claude-edited-{session}-{RUN}").open("a") as f:
+        f.write("src/a.ts\n")
+expect("sign-off: a fresh team session blocks", stop("team"), 0, '"decision": "block"')
+subprocess.run(git + ["config", "factory.mode", "local"], cwd=tmp, capture_output=True, check=True)
+local_result = stop("local")
+expect("sign-off: local mode passes", local_result, 0)
+if '"block"' in local_result.stdout:
+    failures.append("sign-off blocked in local mode")
+
+# session-start: at most 25 lines, and it names the flow mode.
+def session_start(mode):
+    # Environment configuration outranks a developer's own repository setting.
+    env = {**os.environ, "GIT_CONFIG_COUNT": "1", "GIT_CONFIG_KEY_0": "factory.mode", "GIT_CONFIG_VALUE_0": mode}
+    return subprocess.run([sys.executable, str(HOOKS / "session-start.py")], capture_output=True, text=True, cwd=ROOT, env=env)
+
+
+result = session_start("team")
 expect("session-start runs", result, 0, "git status")
+expect("session-start names the team flow", result, 0, "Factory mode: team")
 if len(result.stdout.strip().split("\n")) > 25:
     failures.append("session-start printed more than 25 lines")
+expect("session-start names local mode", session_start("local"), 0, "Factory mode: local")
 
 print(f"hook tests: {passes} passed, {len(failures)} failed")
 for f in failures:

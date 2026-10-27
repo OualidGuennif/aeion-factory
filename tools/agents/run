@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # Spec: knowledge/operations/agent-compatibility.md
-"""Launch one native agent from this project after checking its architecture baseline."""
+"""Launch one native agent from this project, recommending (never installing) its architecture baseline."""
 import os
 import re
 from pathlib import Path
@@ -8,8 +8,8 @@ import subprocess
 import sys
 
 root = Path(__file__).resolve().parents[2]
-if len(sys.argv) < 2 or sys.argv[1] not in {'claude', 'codex', 'opencode'}:
-    sys.exit('usage: tools/agents/run <claude|codex|opencode> [native arguments]')
+if len(sys.argv) < 2 or sys.argv[1] not in {'claude', 'codex', 'opencode', 'devin'}:
+    sys.exit('usage: tools/agents/run <claude|codex|opencode|devin> [native arguments]')
 provider, arguments = sys.argv[1], sys.argv[2:]
 if '--strict' in arguments:
     sys.exit('UNSUPPORTED: strict pre-request 300k admission is not qualified for any Factory adapter.')
@@ -17,8 +17,10 @@ os.chdir(root)
 os.environ['PWD'] = str(root)
 if provider == 'claude':
     sys.exit(subprocess.run(['./tools/context/run', *arguments], cwd=root, shell=False).returncode)
+# The baseline needs local installs, which the user approves; its absence is a warning, not a refusal.
 if subprocess.run([str(root / 'tools/architecture/refresh'), '--check', '--target', 'HEAD'], cwd=root).returncode:
-    sys.exit('A valid exact-HEAD architecture baseline is required; see README.md.')
+    print('Factory: no verified Graphify/Archify baseline for this commit. It is strongly recommended and never '
+          'installed automatically; see knowledge/operations/architecture-maintenance.md. Continuing.', file=sys.stderr)
 if provider == 'codex':
     for value in arguments:
         if any(key in value for key in ('model_auto_compact_token_limit', 'features.hooks', 'disableAllHooks')):
@@ -40,4 +42,6 @@ if provider == 'opencode':
         sys.exit('Factory requires OpenCode 2.1.4+ native V2 hooks; older skill discovery does not prove hook support.')
 if provider == 'codex':
     sys.exit(subprocess.run(['codex', *arguments], cwd=root, shell=False).returncode)
+if provider == 'devin':
+    sys.exit(subprocess.run(['devin', *arguments], cwd=root, shell=False).returncode)
 sys.exit(subprocess.run(['opencode', *arguments], cwd=root, shell=False).returncode)

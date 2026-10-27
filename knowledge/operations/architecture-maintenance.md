@@ -1,7 +1,7 @@
 ---
 type: Runbook
-title: "Mandatory Graphify and Archify maintenance"
-description: "Day-one baseline and exact-commit graph/architecture refresh after every main update, without model credentials."
+title: "Graphify and Archify maintenance"
+description: "Recommended local baseline installed only on the user's yes, and the CI exact-commit refresh after every main update, without model credentials."
 status: stable
 generated:
   by: aeion-factory/1.1
@@ -32,9 +32,13 @@ sources:
 
 # Architecture maintenance
 
-Run `tools/architecture/setup`, then `tools/architecture/refresh --target HEAD` before the first
-managed task. Setup installs the reviewed Graphify revision into `.factory/integrations/` and
-checks out the pinned Archify package there. Git, Python 3.12+ (excluding 3.14.1), Node 18+ and Chrome/Chromium are
+A local baseline is strongly recommended and never installed automatically. An agent asks the
+user before running `tools/architecture/setup`, says what it installs (below), and asks whether the
+machine is a work computer whose policy restricts installs. On a yes, run setup, then
+`tools/architecture/refresh --target HEAD`. Without a baseline the launchers warn and continue;
+CI still runs the analysis on GitHub. Setup creates a virtual environment in `.factory/integrations/`,
+downloads the reviewed Graphify revision and its pinned packages into it, and clones the pinned
+Archify package there. Git, Python 3.12+ (excluding 3.14.1), Node 18+ and Chrome/Chromium are
 required. Dependencies and browser execution are explicit; there is no global plugin install.
 Setup reinstalls the Graphify source pin even if the same package version was installed from a
 different source; refresh verifies its immutable commit archive URL and SHA-256 before importing it.
@@ -54,7 +58,7 @@ LLM inference are not claimed. This deterministic baseline needs no model token 
 The canonical [architecture spec](../components/factory-architecture.md) and `views.json` are
 reviewed source, not generated policy. Runtime/config changes must update the architecture spec
 in the same diff (or carry its existing `Docs-Checked` trailer). Reviewers verify semantic
-completeness. Refresh validates source anchors, pins diagram provenance to the target SHA,
+completeness. Refresh validates source anchors (one to three per node, Archify's limit), pins diagram provenance to the target SHA,
 and runs Archify `finalize` for every view, including browser checks. A browser/gate failure
 is not success. Automated gates cannot prove semantic correctness or visual quality.
 
@@ -64,7 +68,7 @@ Archify renders at its permanent target path because moving its HTML invalidates
 provenance. Incomplete attempts have no PASS receipt; invalid prior attempts are retained aside.
 A same-SHA successful rerun verifies artifact hashes and all gate summaries before reuse.
 There is no shared writable cross-job graph cache.
-`tools/architecture/refresh --check --target HEAD` verifies all artifact hashes before launch.
+`tools/architecture/refresh --check --target HEAD` verifies all artifact hashes at launch.
 No mutable latest pointer can be moved backward by an older finishing job.
 Downloaded CI artifacts preserve the original run's evidence and portable hashes. To revalidate
 Archify path provenance in a different location, run a new local baseline for that SHA.

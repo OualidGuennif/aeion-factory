@@ -10,6 +10,6 @@ reuses Factory's guards, edit feedback, sign-off reminder and verified pre-compa
 It does not interpret Codex's unstable transcript format as a token API. No observed or strict
 300k token stop is claimed for this adapter. Account/model/provider remain your existing choices.
 
-After the mandatory baseline, launch from a shell with `tools/agents/run codex`. CLI options are
+Launch from a shell with `tools/agents/run codex`. CLI options are
 native Codex options. Cloud-hosted orchestration can ignore local command hooks; qualify it
 separately rather than assuming local behavior transfers.

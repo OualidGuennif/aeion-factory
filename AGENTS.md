@@ -28,6 +28,7 @@ tools/        knowledge/link/health checks, agent adapters, architecture and loc
 .claude/      original hooks, maintained skills, path-scoped rules, hookify examples
 .codex/       Codex native config/hooks; .agents/skills links to the maintained skills
 .opencode/    OpenCode native plugin; root opencode.json selects shared skills/compaction
+.devin/       Devin CLI hooks and import settings (Claude import off; shared adapter)
 ```
 
 ## Build and test
@@ -47,15 +48,20 @@ Add your project's own build and test commands here, copied from CI.
 
 ## Load by task
 
+A skill is a file: `.agents/skills/<name>/SKILL.md`. When your agent does not offer it natively,
+open that file and follow it.
+
 | Task | Open first |
 | --- | --- |
 | Agent setup and runtime differences | [Compatibility](knowledge/operations/agent-compatibility.md); README setup |
-| Any change | `knowledge/index.md`, then the doc of the area; skill `plan` |
-| A feature or component | `knowledge/policies/specs-first.md`; skill `spec` |
-| Security-sensitive code | `knowledge/policies/security.md`; skill `security-scan` |
+| Any change | `knowledge/index.md`, then the doc of the area; `.agents/skills/plan/SKILL.md` |
+| A feature or component | `knowledge/policies/specs-first.md`; `.agents/skills/spec/SKILL.md` |
+| A bug or a failing check | `.agents/skills/debug/SKILL.md`, then `.agents/skills/test/SKILL.md` |
+| Finishing a task | `.agents/skills/sign-off/SKILL.md` (team flow) |
+| Security-sensitive code | `knowledge/policies/security.md`; `.agents/skills/security-scan/SKILL.md` |
 | A user interface | `knowledge/policies/ui-ux.md` |
 | The loops and schedules | `knowledge/operations/loops.md`, `command.md` |
-| Adopting the Factory in another repo | `efficiency/00-EFFICIENCY.md`; skill `adopt` |
+| Adopting the Factory in another repo | `efficiency/00-EFFICIENCY.md`; `.agents/skills/adopt/SKILL.md` |
 | Context limits and handovers | [Context safety](knowledge/operations/context-safety.md); enabled checkpoint profile, strict runtime limit unqualified |
 | Large files, logs and tool output | [Bounded intake](knowledge/policies/bounded-intake.md); targeted reads and summary commands |
 | Graphify, Archify and architecture changes | [Architecture maintenance](knowledge/operations/architecture-maintenance.md), [complete spec](knowledge/components/factory-architecture.md) |
@@ -70,8 +76,10 @@ Add your project's own build and test commands here, copied from CI.
 5. English in code, comments, docs and commits.
 6. Claude and Codex native compaction is 250k; OpenCode uses its model window. Verify handover/docs
    before compaction. Only Claude has the observed 300k guard; strict admission is unqualified.
-7. Graphify/Archify baseline is mandatory before the first managed run. Every merged main update
-   must pass its analysis round; use `tools/architecture/refresh`, including after docs-only work.
+7. Install nothing the repository does not already run without the user's yes. The Graphify/Archify
+   baseline is strongly recommended: before `tools/architecture/setup`, say what it installs (a venv
+   and pinned packages in `.factory/`, an Archify clone; Node and Chrome needed) and ask whether this
+   is a work computer. CI analyses every main update.
 
 ## How code is written here
 
@@ -81,9 +89,14 @@ never the history; no abstraction without two real users; a spec before the code
 
 ## How a task flows
 
-One branch per task (`task/<slug>`), small commits, `gh pr create`, then the skill `pr-review`: a
-fresh subagent reviews and posts `Review: OK` or `Review: NOT OK` on the pull request. Merge after
-that comment and a green CI. Nothing is pushed to the default branch directly.
+The session start names the mode (`git config factory.mode`).
+
+- **Team (default).** One branch per task (`task/<slug>`), small commits, `gh pr create`, then the
+  skill `pr-review`: a fresh subagent reviews and posts `Review: OK` or `Review: NOT OK` on the pull
+  request. Merge after that comment and a green CI. Nothing is pushed to the default branch directly.
+- **Local** (`git config factory.mode local`, set by the user only). Someone trying the repository
+  on their machine: commit on `main` locally (pushing is the user's call), no pull request, CI or
+  `work/current.md` entry. Done means the tests for what changed pass; every critical rule applies.
 
 ## Feedback you get
 
@@ -97,7 +110,7 @@ names the rule and its fix.
 - The docs the change touches are updated, with their links (`tools/knowledge/doc-links --diff
   origin/main` passes); `work/current.md` is updated or its entry deleted (skill `sign-off`).
 - The pull request carries the `pr-review` comment, and its CI is green.
-- The exact merged main SHA has a passing Graphify/Archify round and its architecture spec is current.
+- The exact merged main SHA has a passing Graphify/Archify round in CI and its architecture spec is current.
 
 ## What not to do
 

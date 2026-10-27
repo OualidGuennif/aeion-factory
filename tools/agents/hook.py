@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # Spec: knowledge/operations/agent-compatibility.md
-"""Adapt native Codex/OpenCode payloads to existing guards and verified handovers."""
+"""Adapt native Codex/OpenCode/Devin payloads to existing guards and verified handovers."""
 import hashlib
 import json
 from pathlib import Path
@@ -13,6 +13,10 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools/context'))
 import budget
 
+# Devin names its native tools in lowercase; the shared guards use Claude's names.
+DEVIN_TOOLS = {'exec': 'Bash', 'bash': 'Bash', 'shell': 'Bash', 'read': 'Read', 'grep': 'Grep',
+               'edit': 'Edit', 'write': 'Write'}
+
 
 class GuardRefusal(ValueError):
     """A known guard verdict, safe to return without echoing the input payload."""
@@ -20,12 +24,18 @@ class GuardRefusal(ValueError):
 
 def key(provider, event):
     value = event.get('session_id')
+    # Devin does not document a session id; one key per clone keeps the guards on instead of refusing everything.
+    if provider == 'devin' and value is None:
+        return 'devin-local-' + hashlib.sha256(str(ROOT).encode()).hexdigest()[:16]
     if not isinstance(value, str) or not value or len(value) > 200:
         raise ValueError('a bounded native session identifier is required')
     return provider + '-' + hashlib.sha256(value.encode()).hexdigest()[:40]
 
 
-def fail(name, reason):
+def fail(provider, name, reason):
+    # Devin's block on Stop means "keep going", so only a tool call is refused that way.
+    if provider == 'devin' and name == 'PreToolUse':
+        return {'decision': 'block', 'reason': reason}
     if name == 'PreToolUse':
         return {'hookSpecificOutput': {'hookEventName': name, 'permissionDecision': 'deny',
                                        'permissionDecisionReason': reason}}
@@ -63,8 +73,16 @@ def edit_paths(event):
 
 
 def handle(root, provider, event):
-    if provider not in {'codex', 'opencode'} or not isinstance(event, dict):
+    if provider not in {'codex', 'opencode', 'devin'} or not isinstance(event, dict):
         raise ValueError('invalid provider or event')
+    if provider == 'devin':
+        tool = str(event.get('tool_name', '')).lower()
+        data = event.get('tool_input')
+        # An unknown Devin tool that carries a command string is a shell call until proven otherwise.
+        if tool not in DEVIN_TOOLS and tool != 'apply_patch' and isinstance(data, dict) and isinstance(data.get('command'), str):
+            tool = 'exec'
+        if tool in DEVIN_TOOLS or tool == 'apply_patch':
+            event = {**event, 'tool_name': DEVIN_TOOLS.get(tool, tool)}
     name = event.get('hook_event_name')
     if name not in {'SessionStart', 'PreToolUse', 'PostToolUse', 'PreCompact', 'Stop'}:
         raise ValueError('unsupported adapter event')
@@ -74,7 +92,7 @@ def handle(root, provider, event):
         state = json.loads(file.read_text()) if file.exists() else {'epoch': 0, 'state': 'RUNNING', 'profile': provider}
         handover = budget.handover_path(root, session)
         if state.get('state') == 'STOPPED':
-            return fail(name, 'Factory session is stopped; use its handover in a new session.')
+            return fail(provider, name, 'Factory session is stopped; use its handover in a new session.')
         if name == 'SessionStart' and event.get('source') == 'compact':
             state.pop('checkpoint', None)
             state['epoch'] += 1
@@ -82,7 +100,7 @@ def handle(root, provider, event):
         if name == 'PreCompact':
             if not budget.ready(root, session, state):
                 budget.ensure_handover(root, session)
-                return fail(name, f'Fill {handover.relative_to(root)} and verify the docs before compaction: '
+                return fail(provider, name, f'Fill {handover.relative_to(root)} and verify the docs before compaction: '
                             f'python3 tools/context/budget.py checkpoint --session {session} --base origin/main --verify')
             if provider == 'opencode':
                 state.pop('checkpoint', None)
@@ -93,6 +111,8 @@ def handle(root, provider, event):
         pointer = 'Handover' if handover.is_file() else 'Handover (created at the first refused compaction)'
         context = (f'Factory {provider} checkpoint profile. {pointer}: {handover.relative_to(root)}. '
                    f'Checkpoint key: {session}. Native token-stop enforcement is unqualified; do not claim a strict 300k cap.')
+        if provider == 'devin':
+            context = 'Factory devin profile: shared guards and edit feedback; no compaction checkpoint or token stop.'
         context += '\n' + result.get('hookSpecificOutput', {}).get('additionalContext', '')
         result['hookSpecificOutput'] = {'hookEventName': name, 'additionalContext': context}
         return result
@@ -103,7 +123,7 @@ def handle(root, provider, event):
                 raise ValueError('the native Bash tool requires a nonempty command string')
             result = script(root, 'guard-bash.py', normalized)
             if result.get('hookSpecificOutput', {}).get('permissionDecision') == 'ask':
-                return fail(name, 'This command requires an explicit human decision; the adapter does not auto-approve it.')
+                return fail(provider, name, 'This command requires an explicit human decision; the adapter does not auto-approve it.')
             return result
         paths = edit_paths(event)
         if not paths and event.get('tool_name') == 'Grep':
@@ -144,13 +164,14 @@ def main():
     except (ValueError, OSError):
         print('Factory hook payload invalid or oversized; action refused.', file=sys.stderr)
         return 2
+    provider = sys.argv[1] if len(sys.argv) > 1 else None
     try:
-        result = handle(ROOT, sys.argv[1], event)
+        result = handle(ROOT, provider, event)
     except GuardRefusal as error:
-        result = fail(event.get('hook_event_name'), str(error))
+        result = fail(provider, event.get('hook_event_name'), str(error))
     except (ValueError, KeyError, IndexError, TypeError, OSError, subprocess.SubprocessError):
         name = event.get('hook_event_name') if isinstance(event, dict) else None
-        result = fail(name, 'Factory adapter verification unavailable; resolve the hook/check error before continuing.')
+        result = fail(provider, name, 'Factory adapter verification unavailable; resolve the hook/check error before continuing.')
     print(json.dumps(result))
     return 0
 

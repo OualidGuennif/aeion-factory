@@ -5,7 +5,7 @@ Root opencode.json enables native auto-compaction and points at the maintained C
 source. The local V2 plugin reuses existing Python guards, edit checks and handover checkpoints.
 OpenCode also discovers the shared .agents/skills links; bodies are maintained once.
 
-After the mandatory baseline, launch with `tools/agents/run opencode`. The plugin uses Node built-ins and declares no SDK dependency.
+Launch with `tools/agents/run opencode`. The plugin uses Node built-ins and declares no SDK dependency.
 
 If your existing OpenCode database is incompatible, `tools/agents/run opencode --isolated`
 selects project-local XDG data/config/state/cache under ignored .factory/opencode. Connect your

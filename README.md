@@ -1,7 +1,7 @@
 # Æion Factory
 
-**A repository template for Claude Code, Codex and OpenCode: shared instructions, linked specs,
-reusable skills and automatic checks.**
+**A repository template for Claude Code, Codex, OpenCode and Devin: shared instructions, linked
+specs, reusable skills and automatic checks.**
 
 Factory organizes the work around **plan → change → test → review → merge**. Your project's
 existing instructions and the owner's decisions take precedence.
@@ -11,22 +11,38 @@ existing instructions and the owner's decisions take precedence.
 | [AGENTS.md](AGENTS.md) | Project instructions, authority and workflow |
 | [Knowledge](knowledge/index.md) | Canonical policies, component specs and decisions |
 | `work/current.md` | Open tasks only |
-| `.claude/skills/` | Maintained skill bodies; `.agents/skills/` exposes them to Codex |
-| `.claude/`, `.codex/`, `.opencode/` | Native configuration/adapters for each agent |
+| `.claude/skills/` | Maintained skill bodies; `.agents/skills/` exposes them to Codex and Devin |
+| `.claude/`, `.codex/`, `.opencode/`, `.devin/` | Native configuration/adapters for each agent |
 | `tools/` and GitHub CI | Documentation checks, tests and source-backed architecture |
 
 ## Requirements
 
-Git, **Python 3.12+** (excluding 3.14.1 for the analysis pins), **Node 18+** and
-**Chrome/Chromium** for the architecture browser checks. Shell tools support macOS, Linux and WSL.
-Install `gh` for the GitHub PR workflow and your chosen agent separately:
+Git and **Python 3.12+** for the checks and hooks. Shell tools support macOS, Linux and WSL.
+The recommended architecture baseline also needs **Node 18+** and **Chrome/Chromium** (Python
+3.14.1 excluded for its pins); it is installed only when you say yes. Install `gh` for the GitHub
+PR workflow and your chosen agent separately:
 
 - [Claude Code](https://code.claude.com/docs/en/setup)
 - [Codex](https://learn.chatgpt.com/docs/cli)
 - [OpenCode V2](https://opencode.ai/v2/docs/) — 2.1.4+ for Factory's native plugin
+- [Devin CLI](https://docs.devin.ai/cli/extensibility) — reads `.devin/`, `AGENTS.md` and `.agents/skills`
 
 Keep authentication, provider and model choices in the agent's native user settings. Never
 commit credentials to the project.
+
+## Quick start: try it, install nothing
+
+```bash
+git clone https://github.com/OualidGuennif/aeion-factory.git && cd aeion-factory
+git config factory.mode local   # optional: play on main, no branch/PR/CI ritual
+tools/agents/run claude         # or: codex, opencode (2.1.4+), devin
+```
+
+The launcher applies each agent's checked profile; the hooks and skills load from the repository,
+and nothing is installed. The safety guards (secrets,
+Git hook and force-push bypasses, large dumps) stay on in local mode. `git config --unset
+factory.mode` returns to the team flow. The agent recommends the architecture baseline and asks
+before installing it: on a work computer, check your company's policy first.
 
 ## How to: new project
 
@@ -39,6 +55,7 @@ commit credentials to the project.
    claude       # Claude Code
    codex        # Codex
    opencode     # OpenCode V2
+   devin        # Devin CLI
    ```
 
 3. Give the agent this setup request:
@@ -46,13 +63,14 @@ commit credentials to the project.
    > Read AGENTS.md, README.md and efficiency/00-EFFICIENCY.md. Prepare Factory for this new
    > project: describe the project and owner, add its actual build/test commands, adapt the
    > architecture spec and analysis scope/views, and configure my chosen agent's native setup.
-   > Enable the Git pre-commit checks, run the checks and build the mandatory architecture
-   > baseline. Keep one maintained source for instructions, Knowledge and skills. Report anything
-   > that still needs configuration. Wait for approval before implementing application features.
+   > Run the checks. Ask me before enabling the Git pre-commit checks and before installing the
+   > recommended Graphify/Archify baseline; tell me what it installs first. Keep one maintained
+   > source for instructions, Knowledge and skills. Report anything that still needs
+   > configuration. Wait for approval before implementing application features.
 
 4. Complete the native workspace/project trust prompts. In Codex, also review and enable the
    project hooks in `/hooks`, then restart the session. For OpenCode, connect your provider
-   through its native interface.
+   through its native interface. For Devin, approve the project hooks if it asks.
 5. Confirm setup and start normal work through the managed launcher below. Configure
    [GitHub main protection](knowledge/operations/github-protection.md) in the new repository;
    GitHub settings are not copied by templates.
@@ -74,8 +92,8 @@ commit credentials to the project.
    > Inspect this project's existing instructions, docs, CI, skills and hooks first. Propose the
    > smallest adoption plan, one phase at a time. Merge useful Factory pieces into what exists;
    > preserve my project's authority, conventions and working tools. Include native setup for my
-   > agent, linked specs, relevant checks and the mandatory architecture baseline. Wait for my
-   > approval before changing files.
+   > agent, linked specs and relevant checks; offer the recommended architecture baseline and ask
+   > me before installing anything. Wait for my approval before changing files.
 
 4. Approve the fitting phases, validate each one and deliver through your project's PR workflow.
    Use [the adoption guide](efficiency/00-EFFICIENCY.md) and
@@ -90,9 +108,11 @@ Run these from the repository root. Additional arguments are native CLI argument
 | Claude Code | `tools/agents/run claude` | Existing `.claude/settings.json`, hooks and skills |
 | Codex | `tools/agents/run codex` | Trusted `.codex/config.toml` / `hooks.json`, shared `.agents/skills` |
 | OpenCode | `tools/agents/run opencode` | Root `opencode.json`, native V2 plugin in `.opencode/plugins/factory/` |
+| Devin CLI | `tools/agents/run devin` | `.devin/hooks.v1.json` and `config.json`, `AGENTS.md`, shared `.agents/skills` |
 
-The launchers enter the project root and require a verified architecture baseline for the current
-commit. The original Claude entry point, `tools/context/run`, also remains available.
+The launchers enter the project root and check the architecture baseline for the current commit;
+without one they recommend it and continue. The original Claude entry point, `tools/context/run`,
+also remains available.
 
 ## Available commands
 
@@ -104,11 +124,12 @@ commit. The original Claude entry point, `tools/context/run`, also remains avail
 | `tools/knowledge/doc-links --diff origin/main --worktree` | Check affected docs for committed and local changes |
 | `tools/knowledge/doc-links --for path/to/file` | Find the docs covering a file |
 | `tools/repo-health/repo-health --json` | Show repository size/comment/structure checks |
-| `python3 tools/architecture/setup` | Prepare pinned local Graphify/Archify tools |
-| `tools/architecture/refresh --target HEAD` | Build the mandatory initial/updated source baseline |
+| `git config factory.mode local` | Local play: commit on main, no PR/CI ritual (`--unset` to undo) |
+| `python3 tools/architecture/setup` | Install pinned Graphify/Archify into `.factory/` (only on your yes) |
+| `tools/architecture/refresh --target HEAD` | Build the recommended initial/updated source baseline |
 | `tools/architecture/refresh --target HEAD --base origin/main` | Analyze the committed change and its comparison |
 | `tools/architecture/refresh --check --target HEAD` | Verify the persisted baseline and artifact hashes |
-| `tools/agents/run <claude\|codex\|opencode>` | Start a managed native agent |
+| `tools/agents/run <claude\|codex\|opencode\|devin>` | Start a managed native agent |
 | `python3 tools/context/budget.py checkpoint --session <id> --base origin/main --verify` | Verify handover, docs and source state before compaction |
 | `loops/orchestrator.sh <job> --dry-run` | Inspect loop settings without launching an agent |
 | `loops/orchestrator.sh inner --issue <n>` | Run one approved `agent-ready` issue when loops are enabled |
@@ -121,7 +142,8 @@ configured. Enabled local jobs default to 30 turns and a 900-second deadline.
 ## Available skills
 
 Ask the agent to use a named skill; Claude Code also supports `/name`, and Codex supports `$name`.
-OpenCode loads skills through its native skill tool.
+OpenCode loads skills through its native skill tool; Devin reads `.agents/skills`. Any agent can
+open `.agents/skills/<name>/SKILL.md` directly.
 
 | Skills | Use them for |
 | --- | --- |
@@ -144,8 +166,8 @@ checkpoint. Claude and Codex configure native compaction at 250k; OpenCode uses 
 window. Only the Claude profile implements the observed 300k stop. An absolute pre-request 300k
 ceiling remains unqualified; strict mode refuses rather than claiming it.
 
-Graphify/Archify analyze committed source and documentation before managed work and after every
-main update. Generated output stays outside tracked source. Keep the canonical architecture spec
+Graphify/Archify analyze committed source and documentation in CI after every main update, and
+locally once you approve their install. Generated output stays outside tracked source. Keep the canonical architecture spec
 current and wait for the exact merged commit's analysis before declaring delivery complete.
 
 [Agent workflow](Workflow_Agent.md) · [command reference](command.md) ·

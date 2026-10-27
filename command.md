@@ -3,7 +3,7 @@
 Everything you can run here, grouped by loop. Skills are invoked by name in a Claude Code session
 (`/plan`, or "run the skill plan"); tools and loops from a shell.
 
-## Skills (`.claude/skills/`)
+## Skills (`.claude/skills/`, also `.agents/skills/<name>/SKILL.md`)
 
 | Skill | When |
 | --- | --- |
@@ -35,14 +35,17 @@ python3 tools/knowledge/tests/test_doc_links.py       # tool tests
 python3 .claude/hooks/test_hooks.py                   # hook tests
 python3 tools/context/tests/test_budget.py            # context boundary/recovery regressions
 python3 tools/architecture/tests/test_refresh.py       # analysis provenance/coverage regressions
-tools/architecture/setup                             # isolated pinned Graphify and Archify
-tools/architecture/refresh --target HEAD              # mandatory initial baseline, after commit
+tools/architecture/setup                             # installs pinned Graphify/Archify locally: ask the user first
+tools/architecture/refresh --target HEAD              # recommended initial baseline, after commit
 tools/architecture/refresh --target HEAD --base origin/main  # refresh the reviewed change
 tools/architecture/refresh --check --target HEAD       # verify persisted artifact hashes
 tools/agents/run claude                             # existing Claude integration
 tools/agents/run codex                              # trust project/hooks first
 tools/agents/run opencode                           # native plugin, shared skills
 tools/agents/run opencode --isolated                # separate local profile on database conflict
+tools/agents/run devin                              # Devin CLI: .devin/ hooks, shared skills
+git config factory.mode local                       # local play: commits on main, no PR/CI ritual
+git config --unset factory.mode                     # back to the team flow
 python3 tools/agents/tests/test_hooks.py
 node --test tools/agents/tests/test_opencode.mjs
 python3 tools/loops/tests/test_loops.py
@@ -66,8 +69,8 @@ loops/orchestrator.sh <job> [--dry-run] [--issue N]
 
 Every job reads `env.local`, refuses to run while `LOOPS_ENABLED=false` (except `--dry-run`), and
 prints the managed command it runs. Schedules: `loops/schedules/`.
-The command uses `tools/context/run` so enabled loops require the architecture baseline and the
-same native compaction profile. Dry-run still launches no agent or integration.
+The command uses `tools/context/run` so enabled loops get the same architecture-baseline check
+(a warning when absent) and the same native compaction profile. Dry-run still launches no agent or integration.
 
 ## Plugins (Claude Code)
 
@@ -81,6 +84,10 @@ claude plugin install native-lsp@aeion-local --scope project
 ```
 
 ## Git flow
+
+The team flow below is the default. In local mode (`git config factory.mode local`), commit on
+`main` locally; pushing is the user's call, and the safety guards still apply. Only the user
+switches the mode.
 
 ```bash
 git switch -c task/<slug> origin/main

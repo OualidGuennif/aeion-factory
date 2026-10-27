@@ -40,8 +40,10 @@ structural facts; fresh review establishes the verdict; GitHub records PR/merge/
 There is no application server, broker, production database or deployed Factory control plane.
 Adopting projects keep their existing instructions and architecture.
 
-Claude Code retains its native hooks. Codex and OpenCode load the same instructions and skills,
-with narrow adapters to the existing secret guards, edit checks and handover checkpoints.
+Claude Code retains its native hooks. Codex, OpenCode and Devin load the same instructions and
+skills, with narrow adapters to the existing secret guards, edit checks and handover checkpoints
+(Devin has no compaction checkpoint). A per-clone flow mode selects the team flow (PR, review, CI)
+or local play (commits on main, no sign-off reminder); the safety guards run in both.
 Their native token/compaction interfaces differ; compatibility is not a claim of identical
 enforcement. See [agent compatibility](../operations/agent-compatibility.md).
 
@@ -84,7 +86,7 @@ base and target SHAs in the receipt. Main pushes retain their ordinary ancestor 
 Only allowed tracked text enters extraction. Secret paths refuse analysis, symlinks
 are excluded, and unsupported formats remain explicitly inventory-only. Tool versions are pinned.
 The graph includes code and native Markdown structure/frontmatter/links; semantic inference by
-an LLM is outside the mandatory baseline. This keeps the default independent of model credentials.
+an LLM is outside the baseline. This keeps the default independent of model credentials.
 Setup stamps Graphify's commit archive URL and SHA-256, including replacement of a same-version wheel
 from another source; analysis refuses mismatched package provenance or a dirty Archify checkout.
 
@@ -147,7 +149,8 @@ latest pointer, graph database, shared writable cache or exactly-once delivery a
 
 Scripts never execute model-produced commands. Only fixed closure commands and validated Git
 arguments pass to subprocesses. Tool installations are project-local and pinned; normal analysis
-requires no LLM credential. CI uses a read-only token and never sends source to a model. A local
+requires no LLM credential; agents ask before installing them. CI uses a read-only token and
+never sends source to a model. A local
 agent/runtime still needs its existing account. Raw CLI sessions outside the managed launcher
 and deliberately modified local hooks are outside the enforcement claim.
 
@@ -166,7 +169,8 @@ Pre-commit/CI retain Knowledge, doc-link, health and security gates; CI also fai
 efficiency bundle drifts from its sources. Architecture runs on PRs
 and every main push, including docs-only and multi-commit pushes, records changed/removed paths,
 and uploads immutable outputs. It cannot undo a merge: a failed round prevents release and
-completed-work claims until corrected. Adoption requires a baseline before managed execution.
+completed-work claims until corrected. A local baseline is recommended before managed execution
+and installed only on the user's yes; launchers warn without one.
 Rendering uses its permanent SHA directory; an atomic final receipt publishes success only
 after every gate passes. Moving Archify HTML would invalidate its native path provenance.
 
@@ -182,7 +186,8 @@ No production migration, rollback command or availability/SLO is applicable to t
    not reset by resume; unavailable usage is refused (`tools/context/tests/test_budget.py`).
 3. Compaction readiness binds the handover and exact source state; later edits invalidate it
    (`test_budget.py`, checkpoint/compaction tests).
-4. Source evidence belongs to the target SHA; missing/ambiguous anchors and secret paths fail
+4. Source evidence belongs to the target SHA; missing/ambiguous anchors, secret paths and nodes
+   outside Archify's one-to-three sources fail
    (`tools/architecture/tests/test_refresh.py` and real Archify gates).
 5. Required code/Markdown extraction is complete structurally; deletions cannot survive in a
    freshly assembled current graph (coverage checks and the real baseline).

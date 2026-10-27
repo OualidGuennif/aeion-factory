@@ -136,6 +136,9 @@ def candidate(view, source, target, origin):
     data["meta"]["repository"] = {"url": origin, "revision": target, "link_mode": "web" if origin.startswith("https://github.com/") else "local-only"}
     for collection in ("components", "nodes", "states"):
         for node in data.get(collection, []):
+            # Archify's schema accepts one to three source references per node.
+            if "sources" in node and not 1 <= len(node["sources"]) <= 3:
+                raise ValueError(f"diagram node needs one to three sources: {node.get('id')}")
             for evidence in node.get("sources", []):
                 path = source / evidence["path"]
                 if path.is_symlink() or not path.resolve().is_relative_to(source.resolve()) or secret_path(evidence["path"]):

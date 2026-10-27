@@ -127,7 +127,7 @@ for path in ["/repo/.env", "/repo/env.local", "/x/server.pem", "/h/auth.json", "
 for pattern in [".env", ".e*", "**/.env*", ".{e,x}nv", "*.pem"]:
     expect(f"path deny: Grep glob {pattern}",
            run_hook("guard-path.py", {"pattern": "x", "glob": pattern, "path": "/repo"}, tool_name="Grep"), 2)
-for pattern in ["id_*", "cred*", "[^x]d_*", ".*rc", "env.*"]:
+for pattern in ["id_*", "cred*", "[^x]d_*", ".*rc", "env.*", "i[[:lower:]]_*"]:
     expect(f"path deny: Grep glob {pattern}",
            run_hook("guard-path.py", {"pattern": "x", "glob": pattern, "path": "/repo"}, tool_name="Grep"), 2)
 for pattern in ["*.py", "*.{ts,tsx}", "**/*.md", ".github/**", "!.env", "*.json", "*.kts", "k*", ".*"]:
@@ -168,9 +168,13 @@ expect("bash deny: a glob in a heredoc fed to a shell",
 # A glob that names a secret and no ordinary file is refused wherever it expands.
 # A caret class is negation to the shell, and a stem or a dotfile suffix names its secrets.
 for command in ["head $X/id_*", "head $(pwd)/k/cred*", "cat id_*", "head auth*", "head $X/[^x]d_rsa",
-                "head $X/id*", "head $X/env.*", "head $X/server.*", "head $X/.*rc", "head $X/.?nv"]:
+                "head $X/id*", "head $X/env.*", "head $X/server.*", "head $X/.*rc", "head $X/.?nv",
+                "head i[[:lower:]]_rsa", "head $X/.[[:alpha:]]nv", 'head "$X"/id_*', 'eval "head $X/id_*"',
+                'bash -c "cat $X/id_*"', "ssh h 'cat ~/.ssh/id_*'"]:
     expect(f"bash deny named glob: {command}", run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 2)
-for command in ["ls *", "head *.md", "grep x *.json", "ls c*", "ls *_*", "wc -l *.py", "ls -d .*", "head k*", "wc -l *.kts"]:
+# A quoted pattern is a regex or prose the shell never expands.
+for command in ["ls *", "head *.md", "grep x *.json", "ls c*", "ls *_*", "wc -l *.py", "ls -d .*", "head k*", "wc -l *.kts",
+                "grep -n 'key.*' config.py", "rg 'env.*' src", "awk '/env.*/' f.txt", 'rg -n "auth.*" src']:
     expect(f"bash allow ordinary glob: {command}", run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 0)
 expect("bash allow: a cd with a plain glob", run_hook("guard-bash.py", {"command": "cd sub && ls *.md", "workdir": str(glob_dir)}), 0)
 expect("bash deny names the Grep tool for searches", run_hook("guard-bash.py", {"command": "grep -rn id_rsa tools"}), 2,

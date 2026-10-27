@@ -49,18 +49,20 @@ def directories(command, base):
     return found
 
 
-def mentioned_secrets(tokens, shell_tokens, bases):
+def mentioned_secrets(tokens, shell_tokens, bases, unquoted_globs):
     names = {PurePosixPath(t).name for t in tokens if is_secret(PurePosixPath(t).name)}
     # Only the shell expands braces and globs; a heredoc body fed to a program is text.
-    for token in shell_tokens:
+    for token, unquoted in zip(shell_tokens, unquoted_globs):
         for word in brace_variants(token):
             name = PurePosixPath(word).name
             if is_secret(name):
                 names.add(name)
             elif any(char in word for char in "*?["):
                 # A glob is judged by the secret it names wherever it expands, since a variable, a command
-                # substitution or a cd can hide its directory; and by the files it expands to here.
-                names |= named_secrets(name)
+                # substitution or a cd can hide its directory; and by the files it expands to here. A
+                # quoted pattern ('key.*') is a regex or prose the shell never expands, so only the files.
+                if unquoted:
+                    names |= named_secrets(name)
                 pattern = shell_pattern(os.path.expanduser(word))
                 for base in bases:
                     matches = glob.glob(pattern, root_dir=None if os.path.isabs(pattern) else base)
@@ -488,13 +490,22 @@ try:
 except Exception:
     deny("the hook input could not be read; refusing rather than guessing.")
 TOKEN_SPLIT = r"[\s'\"=;&|<>()`]+"
+QUOTED_GLOB = str.maketrans("*?[", "\x01\x02\x03")
 tokens = [t for t in re.split(TOKEN_SPLIT, command) if t]
 workdir = event.get("tool_input", {}).get("workdir", event.get("tool_input", {}).get("cwd", event.get("cwd", ".")))
 try:
     # Quotes join a shell word (sub/'.e'*), so they are dropped rather than split on.
     shell_text = re.sub(r"['\"]", "", without_inert_heredocs(command))
     shell_tokens = [t for t in re.split(r"[\s=;&|<>()`]+", shell_text) if t]
-    secrets = mentioned_secrets(tokens, shell_tokens, directories(command, workdir if isinstance(workdir, str) else "."))
+    # The same words with quoted glob characters made inert; an unbalanced quote keeps them live, and so
+    # does a nested shell (sh -c, ssh, eval), which expands what the outer quotes protected.
+    nested = any(program(words)[:1] == ["<script>"] or "eval" in words for words in simple_commands(command))
+    inert = without_inert_heredocs(command) if nested else re.sub(
+        r"'[^']*'|\"(?:\\.|[^\"\\])*\"", lambda m: m.group(0).translate(QUOTED_GLOB), without_inert_heredocs(command))
+    marked = [t for t in re.split(r"[\s=;&|<>()`]+", re.sub(r"['\"]", "", inert)) if t]
+    unquoted_globs = [any(char in t for char in "*?[") for t in marked]
+    secrets = mentioned_secrets(tokens, shell_tokens, directories(command, workdir if isinstance(workdir, str) else "."),
+                                unquoted_globs)
 except (OSError, ValueError, RecursionError):
     deny("the files a glob names could not be verified; name the files explicitly.")
 

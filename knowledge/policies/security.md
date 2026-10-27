@@ -37,7 +37,9 @@ Requirements for a change, not claims about what production already satisfies.
   with a literal first letter (`.e*`, `.[e]nv`) against the dotfile secrets; any other glob
   (`id*`, `cred*`, `.*rc`) when it matches a secret name and no ordinary file name, so `*`,
   `*.json`, `c*` and `.*` stay allowed. A `[^x]` class is read as the shell reads it, a negation
-  like `[!x]`. Every glob is
+  like `[!x]`, and a bracket with a POSIX class (`[[:lower:]]`) as one wildcard. A quoted pattern
+  (`grep 'key.*'`) is a regex the shell never expands, so it is not judged by name, unless a nested
+  shell (`sh -c`, `ssh`, `eval`) runs it. Every glob is
   also judged by the files it expands to from the command's directory and each literal directory
   a `cd` or `pushd` moves to. The Grep tool's `glob` filter is refused when it names a secret the
   same way. The ordinary-name list is a heuristic: an odd glob such as `*2` matches only a

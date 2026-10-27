@@ -38,7 +38,9 @@ DOT_ORDINARY = (".git", ".github", ".gitignore", ".editorconfig", ".vscode", ".c
 
 
 def shell_pattern(pattern):
-    """The glob as Python's fnmatch and glob read it: bash, zsh and ripgrep take [^x] for [!x]."""
+    """The glob as Python's fnmatch and glob read it: bash, zsh and ripgrep take [^x] for [!x], and a
+    bracket with a POSIX class ([[:lower:]]) widens to one wildcard, since fnmatch reads it literally."""
+    pattern = re.sub(r"\[[^\[\]]*(\[:\w+:\][^\[\]]*)+\]", "?", pattern)
     return pattern.replace("[^", "[!")
 
 

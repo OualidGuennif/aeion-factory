@@ -10,6 +10,7 @@ on:
 permissions:
   contents: read
   issues: write
+  id-token: write  # claude-code-action's default GitHub App authentication uses OIDC
 jobs:
   outer:
     if: vars.OUTER_LOOP_ENABLED == 'true'

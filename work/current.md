@@ -4,12 +4,11 @@ Task state only. One entry per open task, newest first. At most 150 lines, 10 pe
 Finished tasks are deleted: the commit message and knowledge/ keep what matters.
 Status: ACTIVE, WAITING-OWNER, MEASURING, BLOCKED, BACKLOG.
 
-## Devin support, local mode, install on request — ACTIVE
-- Owner decision: 2026-10-27, add Devin, a local play mode and never install Graphify/Archify without a yes.
-- State: adapter, mode switch, launcher warnings and docs on task/devin-local-mode.
-- Next: PR, pr-review, green CI, merge; then live-qualify Devin hooks on a machine with Devin CLI (who: owner).
-- Blocker: none for the merge; no Devin CLI in the agent's container.
-- Evidence: knowledge/operations/agent-compatibility.md; knowledge/policies/owner-preferences.md
+## Live Devin hook qualification — WAITING-OWNER
+- Owner decision: 2026-10-27, support Devin; the adapter merged with documented, not live-run, payloads.
+- Next: run the qualification steps on a machine with Devin CLI and record the result (who: owner).
+- Blocker: no Devin CLI in the agent's container.
+- Evidence: knowledge/operations/agent-compatibility.md
 
 ## Main branch protection vs. its doc — WAITING-OWNER
 - Owner decision: pending; a direct push to main was accepted on 2026-10-27.

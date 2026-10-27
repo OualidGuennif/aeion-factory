@@ -7,7 +7,6 @@ TEMPLATES = {".env.example", ".env.sample", ".env.template", ".env.dist", "env.e
 NAMES = {"auth.json", "credentials", "credentials.json", "env.local", "id_rsa", "id_ed25519", "id_ecdsa", "id_dsa",
          ".netrc", ".npmrc", ".pypirc", ".pgpass", ".envrc"}
 SUFFIXES = (".pem", ".key", ".p12", ".pfx")
-DOTFILES = sorted({name for name in NAMES if name.startswith(".")} | {".env", ".env.local"})
 BRACES = re.compile(r"\{[^{}]*(,|\.\.)[^{}]*\}")
 
 
@@ -30,8 +29,17 @@ def brace_variants(word):
     return variants
 
 
-def dotfile_secrets(pattern):
-    """The dotfile secrets a glob's last part names wherever it expands; none unless it starts with a literal dot."""
-    if not re.match(r"\.[^*?.]", pattern):
+EXAMPLES = sorted(NAMES | {".env", ".env.local", "key.pem", "server.key", "cert.p12", "cert.pfx"})
+# Ordinary files that a generic glob (*, *.json, c*, *_*) also matches.
+ORDINARY = ("README.md", "main.py", "test_main.py", "package.json", "config.yml", "index.js", "app.tsx",
+            "data", "docs", "go.sum", "Makefile", "notes.txt", "id", "env.example", "server.py")
+
+
+def named_secrets(pattern):
+    """The secrets a glob's last part names wherever it expands: a dotfile glob by its name; any other
+    glob when it matches a secret and no ordinary name, so *.json stays allowed and id_* does not."""
+    if re.match(r"\.[^*?.]", pattern):
+        return {n for n in EXAMPLES if n.startswith(".") and fnmatch.fnmatchcase(n, pattern)}
+    if pattern.startswith(".") or any(fnmatch.fnmatchcase(n, pattern) for n in ORDINARY):
         return set()
-    return {name for name in DOTFILES if fnmatch.fnmatchcase(name, pattern)}
+    return {n for n in EXAMPLES if not n.startswith(".") and fnmatch.fnmatchcase(n, pattern)}

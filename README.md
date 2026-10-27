@@ -37,7 +37,7 @@ commit credentials to the project.
 
 ```bash
 git clone https://github.com/OualidGuennif/aeion-factory.git && cd aeion-factory
-git config aeion.mode local    # optional: play on main, no branch/PR/CI ritual
+git config aeion.mode local    # optional, this clone's local config: play on main, no PR/CI ritual
 tools/agents/run claude        # or: codex, opencode (2.1.4+), devin, droid
 ```
 
@@ -129,7 +129,7 @@ also remains available.
 | `tools/knowledge/doc-links --diff origin/main --worktree` | Check affected docs for committed and local changes |
 | `tools/knowledge/doc-links --for path/to/file` | Find the docs covering a file |
 | `tools/repo-health/repo-health --json` | Show repository size/comment/structure checks |
-| `git config aeion.mode local` | Local play: commit on main, no PR/CI ritual (`--unset` to undo) |
+| `git config aeion.mode local` | Local play in this clone's local config: commit on main, no PR/CI ritual (`--unset` to undo) |
 | `python3 tools/architecture/setup` | Install pinned Graphify/Archify into `.aeion/` (only on your yes) |
 | `tools/architecture/refresh --target HEAD` | Build the recommended initial/updated source baseline |
 | `tools/architecture/refresh --target HEAD --base origin/main` | Analyze the committed change and its comparison |

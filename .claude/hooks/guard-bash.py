@@ -13,7 +13,7 @@ import re
 import shlex
 import sys
 from pathlib import Path, PurePosixPath
-from secret_names import brace_variants, dotfile_secrets, is_secret
+from secret_names import brace_variants, is_secret, named_secrets
 
 READERS = {"cat", "less", "more", "head", "tail", "grep", "rg", "awk", "sed", "strings", "base64",
            "xxd", "od", "source", ".", "cp", "scp", "rsync", "jq", "python3", "python", "node", "vim", "nano"}
@@ -58,9 +58,9 @@ def mentioned_secrets(tokens, shell_tokens, bases):
             if is_secret(name):
                 names.add(name)
             elif any(char in word for char in "*?["):
-                # A dotfile glob is judged by its name wherever it expands, since a variable, a command
-                # substitution or a cd can hide its directory; any other glob by the files it expands to.
-                names |= dotfile_secrets(name)
+                # A glob is judged by the secret it names wherever it expands, since a variable, a command
+                # substitution or a cd can hide its directory; and by the files it expands to here.
+                names |= named_secrets(name)
                 pattern = os.path.expanduser(word)
                 for base in bases:
                     matches = glob.glob(pattern, root_dir=None if os.path.isabs(pattern) else base)
@@ -372,6 +372,10 @@ def git_bypass(command):
             reads = {"get", "--get", "--get-all", "--get-regexp"} & set(args)
             if modes and not reads and (positional[modes[0] + 1:] or "unset" in positional[:modes[0]]
                           or any(a.startswith("--unset") for a in args)):
+                return "aeion.mode is the user's switch between team and local flow; the user sets it."
+            # Renaming another section to aeion (or removing it) switches the mode without naming the key.
+            sections = {"--rename-section", "rename-section", "--remove-section", "remove-section"}
+            if sections & set(args) and any(a.lower() == "aeion" for a in positional):
                 return "aeion.mode is the user's switch between team and local flow; the user sets it."
         value_next = False
         for arg in args:

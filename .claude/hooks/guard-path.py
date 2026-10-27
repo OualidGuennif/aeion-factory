@@ -4,7 +4,7 @@
 import json
 import sys
 from pathlib import Path, PurePosixPath
-from secret_names import brace_variants, dotfile_secrets, is_secret
+from secret_names import brace_variants, is_secret, named_secrets
 
 MAX_INTAKE_BYTES, MAX_INTAKE_LINES = 65536, 400
 MAX_SCAN_BYTES = 1024 * 1024
@@ -87,7 +87,7 @@ if event.get("tool_name") == "Grep" and tool_input.get("glob") is not None:
         names = [PurePosixPath(p).name for p in brace_variants(tool_input["glob"])]
     except ValueError:
         deny("the Grep glob could not be verified; name the files explicitly")
-    if any(is_secret(n) or dotfile_secrets(n) for n in names):
+    if any(is_secret(n) or named_secrets(n) for n in names):
         deny("the Grep glob names a secret file, which is never opened")
 check_intake(path, event.get("tool_name", "Read"), tool_input)
 sys.exit(0)

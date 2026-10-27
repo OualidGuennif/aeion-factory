@@ -70,7 +70,9 @@ for command in ["cat .env", "cat env.local", "printenv", "cat /proc/1/environ", 
                 "git config core.hooksPath /dev/null", "git push --force-with origin main", "git push --force-with-lease=main origin main",
                 "git config --unset core.hooksPath", "git config --local core.hooksPath .git/hooks", "export GIT_CONFIG_KEY_0=core.hooksPath",
                 "git --config-env core.hooksPath=PWD commit -m x", "git push --mirror origin",
-                "git config aeion.mode local", "git config --unset aeion.mode", "git config set aeion.mode local"]:
+                "git config aeion.mode local", "git config --unset aeion.mode", "git config set aeion.mode local",
+                "git config --rename-section foo aeion", "git config rename-section foo aeion", "git config --remove-section aeion",
+                "git config --rename-section foo AEION"]:
     expect(f"bash deny: {command}", run_hook("guard-bash.py", {"command": command}), 2)
 expect("bash ask: mentions a secret", run_hook("guard-bash.py", {"command": "ls -la .env"}), 0, '"ask"')
 for command in ["git status --short", "git commit -m 'the environment check'",
@@ -85,6 +87,7 @@ for command in ["git status --short", "git commit -m 'the environment check'",
                 "git push -n origin main", "git -C repo status", "git commit -m -n", "git commit -am -n",
                 "git push --follow-tags origin task/x", "git log --no-verbose",
                 "git config core.hooksPath tools/git-hooks", "git config --get core.hooksPath", "git config --get aeion.mode", "git config --get aeion.mode local",
+                "git config --local --get aeion.mode", "git config --rename-section foo bar",
                 "grep -rn core.hooksPath README.md", "git commit -m 'document core.hooksPath setup'"]:
     result = run_hook("guard-bash.py", {"command": command})
     expect(f"bash allow: {command}", result, 0)
@@ -124,7 +127,10 @@ for path in ["/repo/.env", "/repo/env.local", "/x/server.pem", "/h/auth.json", "
 for pattern in [".env", ".e*", "**/.env*", ".{e,x}nv", "*.pem"]:
     expect(f"path deny: Grep glob {pattern}",
            run_hook("guard-path.py", {"pattern": "x", "glob": pattern, "path": "/repo"}, tool_name="Grep"), 2)
-for pattern in ["*.py", "*.{ts,tsx}", "**/*.md", ".github/**", "!.env"]:
+for pattern in ["id_*", "cred*"]:
+    expect(f"path deny: Grep glob {pattern}",
+           run_hook("guard-path.py", {"pattern": "x", "glob": pattern, "path": "/repo"}, tool_name="Grep"), 2)
+for pattern in ["*.py", "*.{ts,tsx}", "**/*.md", ".github/**", "!.env", "*.json"]:
     expect(f"path allow: Grep glob {pattern}",
            run_hook("guard-path.py", {"pattern": "x", "glob": pattern, "path": "/repo"}, tool_name="Grep"), 0)
 expect("path deny: MultiEdit on a secret", run_hook("guard-path.py", {"file_path": "/repo/.env"}, tool_name="MultiEdit"), 2)
@@ -159,6 +165,11 @@ expect("bash allow: a glob in a heredoc fed to a program is text",
        run_hook("guard-bash.py", {"command": "git commit -F - <<'EOF'\nfix head $PWD/sub/.e*\nEOF", "workdir": str(glob_dir)}), 0)
 expect("bash deny: a glob in a heredoc fed to a shell",
        run_hook("guard-bash.py", {"command": "bash <<'EOF'\nhead $PWD/sub/.e*\nEOF", "workdir": str(glob_dir)}), 2)
+# A glob that names a secret and no ordinary file is refused wherever it expands.
+for command in ["head $X/id_*", "head $(pwd)/k/cred*", "cat id_*", "head auth*"]:
+    expect(f"bash deny named glob: {command}", run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 2)
+for command in ["ls *", "head *.md", "grep x *.json", "ls c*", "ls *_*", "wc -l *.py"]:
+    expect(f"bash allow ordinary glob: {command}", run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 0)
 expect("bash allow: a cd with a plain glob", run_hook("guard-bash.py", {"command": "cd sub && ls *.md", "workdir": str(glob_dir)}), 0)
 expect("bash deny names the Grep tool for searches", run_hook("guard-bash.py", {"command": "grep -rn id_rsa tools"}), 2,
        stderr_has="Grep tool")
@@ -344,10 +355,17 @@ if special not in json.loads(special_result.stdout or "{}").get("reason", ""):
     failures.append("sign-off lost a spaced accented path")
 
 # Local mode (git config aeion.mode local) skips the sign-off reminder for the same change.
-for session in ("team", "local"):
+for session in ("team", "include", "local"):
     with (Path(tempfile.gettempdir()) / f"claude-edited-{session}-{RUN}").open("a") as f:
         f.write("src/a.ts\n")
 expect("sign-off: a fresh team session blocks", stop("team"), 0, '"decision": "block"')
+# An included file cannot switch the mode: the readers ask for the repository's own config only.
+included = Path(tempfile.mkdtemp()) / "mode.cfg"
+included.write_text("[aeion]\n\tmode = local\n")
+subprocess.run(git + ["config", "include.path", str(included)], cwd=tmp, capture_output=True, check=True)
+expect("sign-off: an included aeion.mode stays team", stop("include"), 0, '"decision": "block"')
+subprocess.run(git + ["config", "--unset", "include.path"], cwd=tmp, capture_output=True, check=True)
+shutil.rmtree(included.parent)
 subprocess.run(git + ["config", "aeion.mode", "local"], cwd=tmp, capture_output=True, check=True)
 local_result = stop("local")
 expect("sign-off: local mode passes", local_result, 0)
@@ -355,10 +373,17 @@ if '"block"' in local_result.stdout:
     failures.append("sign-off blocked in local mode")
 
 # session-start: at most 25 lines, and it names the flow mode.
+# The mode is read from the repository's local config, so each run gets a throwaway repository.
 def session_start(mode):
-    # Environment configuration outranks a developer's own repository setting.
-    env = {**os.environ, "GIT_CONFIG_COUNT": "1", "GIT_CONFIG_KEY_0": "aeion.mode", "GIT_CONFIG_VALUE_0": mode}
-    return subprocess.run([sys.executable, str(HOOKS / "session-start.py")], capture_output=True, text=True, cwd=ROOT, env=env)
+    repo = Path(tempfile.mkdtemp())
+    for rel in (".claude/hooks/session-start.py", "tools/repo-health/repo-health"):
+        (repo / rel).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(ROOT / rel, repo / rel)
+    subprocess.run(["git", "init", "-q"], cwd=repo, capture_output=True, check=True)
+    subprocess.run(["git", "config", "aeion.mode", mode], cwd=repo, capture_output=True, check=True)
+    result = subprocess.run([sys.executable, str(repo / ".claude/hooks/session-start.py")], capture_output=True, text=True, cwd=repo)
+    shutil.rmtree(repo)
+    return result
 
 
 result = session_start("team")

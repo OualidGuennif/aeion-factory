@@ -52,7 +52,8 @@ Before any compaction, fill `work/handovers/<session-id>.md`, update `work/curre
 docs, and run `python3 tools/context/budget.py checkpoint --session <id> --base <git-ref> --verify`.
 The command runs knowledge/link/health checks and binds readiness to the current source diff
 and handover hash. Later edits invalidate it. Compaction is refused without a current receipt.
-Local mode (`git config aeion.mode local`) keeps no `work/current.md` entry, so its checkpoint
+Local mode (`git config aeion.mode local`, read with `--local` so includes and the global config
+do not count) keeps no `work/current.md` entry, so its checkpoint
 does not require one. During closure a command the shell cannot parse is denied, never a stop.
 The skeleton appears only when closure needs it (the 250k alert, the observed stop, a refused
 compaction or the first checkpoint command), so ordinary sessions and subagents leave none; replace each TODO. Keep outcomes, remaining

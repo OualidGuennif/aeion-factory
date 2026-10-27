@@ -10,12 +10,13 @@ A fresh context catches what the author's context hides. One comment, one verdic
 
 ## Process
 1. `gh pr view <n> --json number,title,files,additions,deletions` and `gh pr checks <n>`.
-2. Start ONE fresh, read-only reviewer subagent with: the PR number, `git diff origin/main...HEAD`, `AGENTS.md`, and the docs `tools/knowledge/doc-links --for <file>` names. Ask for findings ranked by severity, each with path:line and a concrete failure scenario.
+2. Start ONE fresh, read-only reviewer subagent with: the PR number, `gh pr diff <n>` (works in read-only loops too), `AGENTS.md`, and the docs `tools/knowledge/doc-links --for <file>` names. Ask for findings ranked by severity, each with path:line and a concrete failure scenario.
 3. A sensitive diff: also skill `security-scan` on the changes, or say it was not run.
 4. Verify every finding yourself; drop what you cannot confirm.
    Trace suggestions against the code/spec before implementing them; disagree with an unsupported
    fix. For context/architecture work, verify claimed guarantees and exact-SHA artifact coverage.
-5. Post with `gh pr comment <n> --body-file <file>`:
+5. Write the verdict to `.factory/loop-bodies/review-<n>.md` (ignored; the only body path read-only
+   loops may publish) and post it with `gh pr comment <n> --body-file .factory/loop-bodies/review-<n>.md`:
    ```
    Review: OK            (or)   Review: NOT OK
    - <high|medium|low> path:line -- the finding (at most five)

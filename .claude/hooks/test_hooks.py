@@ -61,7 +61,9 @@ for command in ["cat .env", "cat env.local", "printenv", "cat /proc/1/environ", 
                 "docker inspect --format json c", "docker inspect -f json c", "docker inspect --format=json c",
                 "docker inspect --format '' c", "docker inspect -f '{{. | json}}' c",
                 "docker inspect $(docker ps -q\n)", "docker inspect $(docker ps -q;)", "docker inspect -f '{{- json . -}}' c", "docker inspect web",
-                "docker compose config", "git push --force origin main", "git commit --no-verify -m x"]:
+                "docker compose config", "git push --force origin main", "git commit --no-verify -m x",
+                "git commit -n -m x", "git commit -anm x", "git push origin +HEAD:main", "git push -fu origin main",
+                "git -c core.hooksPath=/dev/null commit -m x", "bash -c 'git commit -n -m x'"]:
     expect(f"bash deny: {command}", run_hook("guard-bash.py", {"command": command}), 2)
 expect("bash ask: mentions a secret", run_hook("guard-bash.py", {"command": "ls -la .env"}), 0, '"ask"')
 for command in ["git status --short", "git commit -m 'the environment check'",
@@ -71,11 +73,37 @@ for command in ["git status --short", "git commit -m 'the environment check'",
                 "docker compose logs brain | grep -i config", "docker compose config -q", "ssh host python3 - <<'EOF'\nprint(sorted(set([1])))\nEOF",
                 "docker compose config --services", "command -v env", "docker inspect -f '{{.Config.Image}}' c",
                 "docker inspect -f '{{.Config.Entrypoint}}' c", "docker inspect -f '{{.State.Health.Status}}' c", "docker inspect $(docker ps -q) --format '{{.Name}} {{.State.Status}}'",
-                "echo $(date) && git status", "echo $(date;) && git status", "gh pr create --body \"$(cat <<'EOF'\ndumps (env)\nEOF\n)\"", "cat env.example.local", "npm test", "set -euo pipefail"]:
+                "echo $(date) && git status", "echo $(date;) && git status", "gh pr create --body \"$(cat <<'EOF'\ndumps (env)\nEOF\n)\"", "cat env.example.local", "npm test", "set -euo pipefail",
+                "git commit -m 'use head -n 5'", "git commit -am wip", "git commit -mnew", "git push -u origin task/x",
+                "git push -n origin main", "git -C repo status"]:
     result = run_hook("guard-bash.py", {"command": command})
     expect(f"bash allow: {command}", result, 0)
     if '"ask"' in result.stdout:
         failures.append(f"bash allow asked instead: {command}")
+
+# Read-only loops publish only their own body files, never an arbitrary local file.
+def run_read_only(command, cwd):
+    event = json.dumps({"tool_input": {"command": command}, "cwd": str(cwd)})
+    return subprocess.run([sys.executable, str(HOOKS / "guard-bash.py")], input=event, capture_output=True,
+                          text=True, cwd=ROOT, env={"PATH": "/usr/bin:/bin", "FACTORY_LOOP_READ_ONLY": "1"})
+
+
+with tempfile.TemporaryDirectory() as loop_dir:
+    loop = Path(loop_dir)
+    (loop / ".factory/loop-bodies").mkdir(parents=True)
+    (loop / ".factory/loop-bodies/finding.md").write_text("Finding\n")
+    (loop / ".factory/loop-bodies/link.md").symlink_to(loop / "outside.md")
+    for command in ["gh issue create --title x --body-file .factory/loop-bodies/finding.md --label loop:outer",
+                    "gh pr comment 7 -F .factory/loop-bodies/finding.md", "gh pr diff 7",
+                    "tools/knowledge/doc-links --for tools/repo-health/repo-health"]:
+        expect(f"read-only allow: {command}", run_read_only(command, loop), 0)
+    for command in ["gh issue create --title x --body-file /home/u/.config/gh/hosts.yml",
+                    "gh issue comment 3 -F ../.factory/loop-bodies/finding.md",
+                    "gh pr comment 7 --body-file=.factory/loop-bodies/../../secret.md",
+                    "gh pr comment 7 -F .factory/loop-bodies/link.md", "gh issue create --recover state.json",
+                    "gh issue create --title x --body 'a\nb'", "git diff origin/main...HEAD",
+                    "tools/knowledge/doc-links --for ../outside", "tools/knowledge/doc-links --diff origin/main"]:
+        expect(f"read-only deny: {command}", run_read_only(command, loop), 2)
 
 # guard-path: secrets refused, templates allowed.
 for path in ["/repo/.env", "/repo/env.local", "/x/server.pem", "/h/auth.json"]:
@@ -195,6 +223,11 @@ linker = after / "tools/knowledge/doc-links"
 fake_check(linker, "import sys\nprint('synthetic link failure', file=sys.stderr)\nraise SystemExit(1)\n")
 expect("after-edit: failed doc hint is visible", run_hook("after-edit.py", {"file_path": str(source)},
        cwd=after, session_id=after_session), 2)
+fake_check(linker, "print('')\n")
+uncovered = run_hook("after-edit.py", {"file_path": str(source)}, cwd=after, session_id=after_session)
+expect("after-edit: an uncovered file gets no hint", uncovered, 0)
+if uncovered.stdout.strip():
+    failures.append("after-edit hinted an empty covering doc")
 fake_check(linker, "print('knowledge/a doc.md')\n")
 hint = run_hook("after-edit.py", {"file_path": str(source)}, cwd=after, session_id=after_session)
 expect("after-edit: a spaced doc is one hint", hint, 0, "covered by knowledge/a doc.md")

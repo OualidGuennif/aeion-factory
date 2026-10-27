@@ -18,6 +18,7 @@ READERS = {"cat", "less", "more", "head", "tail", "grep", "rg", "awk", "sed", "s
            "xxd", "od", "source", ".", "cp", "scp", "rsync", "jq", "python3", "python", "node", "vim", "nano"}
 SECRET_NAMES = {"auth.json", "credentials", "credentials.json", "id_rsa", "id_ed25519", "env.local"}
 MAX_INTAKE_BYTES, MAX_INTAKE_LINES = 65536, 400
+LOOP_BODIES = ".factory/loop-bodies/"
 INTAKE_REASON = ("bounded intake: replace the dump with head -n 80, head -c 65536, "
                  "a targeted rg search or a summary; keep a limiter last in its own pipeline "
                  "(knowledge/policies/bounded-intake.md).")
@@ -299,6 +300,49 @@ def docker_inspect_dump(command):
     return False
 
 
+GIT_VALUE_FLAGS = {"-C", "-c", "--git-dir", "--work-tree", "--namespace"}
+# Short options that take a value: in a cluster, the rest is that value, not more flags.
+SHORT_VALUE = {"commit": set("mFcCt"), "push": {"o"}}
+
+
+def git_bypass(command):
+    """The reason a git command skips the hooks or force-pushes (short clusters, +refspec), or None."""
+    for words in simple_commands(command):
+        words = program(words)
+        if words and words[0] == "<script>":
+            reason = git_bypass(words[1])
+            if reason:
+                return reason
+            continue
+        if not words or PurePosixPath(words[0]).name != "git":
+            continue
+        rest = list(words[1:])
+        while rest and rest[0].startswith("-"):
+            flag = rest.pop(0)
+            if flag in GIT_VALUE_FLAGS and rest:
+                value = rest.pop(0)
+                if flag == "-c" and value.lower().startswith("core.hookspath"):
+                    return "overriding core.hooksPath skips the pre-commit checks."
+        if not rest or rest[0] not in SHORT_VALUE:
+            continue
+        sub, args = rest[0], rest[1:]
+        for arg in args:
+            if arg == "--":
+                break
+            if sub == "push" and arg.startswith("+") and len(arg) > 1:
+                return "force-pushing rewrites shared history."
+            if not re.fullmatch(r"-[a-zA-Z]+", arg):
+                continue
+            for flag in arg[1:]:
+                if flag in SHORT_VALUE[sub]:
+                    break
+                if sub == "commit" and flag == "n":
+                    return "-n (--no-verify) skips the pre-commit checks."
+                if sub == "push" and flag == "f":
+                    return "force-pushing rewrites shared history."
+    return None
+
+
 def refuses(check, command):
     """Runs one check; a command nested so deep that the check cannot finish is refused."""
     try:
@@ -392,11 +436,24 @@ if os.environ.get("FACTORY_LOOP_READ_ONLY") == "1":
     forge = (len(words) >= 3 and words[0] == "gh" and ((words[1] == "issue" and words[2] in {"list", "view", "create", "comment"})
              or (words[1] == "pr" and words[2] in {"list", "view", "checks", "diff", "comment"})
              or words[1:3] == ["run", "list"]))
+    doc_for = (len(words) == 3 and words[:2] == ["tools/knowledge/doc-links", "--for"]
+               and re.fullmatch(r"[\w.-]+(/[\w.-]+)*", words[2]) and ".." not in words[2].split("/"))
     production = os.environ.get("FACTORY_PROD_READ_COMMAND")
-    if command.strip() not in fixed and not (forge or production and command.strip() == production):
+    if command.strip() not in fixed and not (forge or doc_for or production and command.strip() == production):
         deny("this loop permits fixed read-only checks and finding/review comments only.")
     if any(char in command for char in ";|&<>`$\n"):
-        deny("read-only loops do not accept shell composition; use a body file for finding text.")
+        deny(f"read-only loops do not accept shell composition; write finding text to {LOOP_BODIES}<name>.md.")
+    # A body file is published: only the loop's own scratch files, never an arbitrary local file.
+    if forge:
+        workdir = Path(event["tool_input"].get("workdir", event["tool_input"].get("cwd", event.get("cwd", "."))))
+        for i, word in enumerate(words):
+            if word == "--recover" or word.startswith("--recover="):
+                deny("read-only loops do not recover input from local files.")
+            if word in ("-F", "--body-file") or word.startswith("--body-file="):
+                body = word.split("=", 1)[1] if "=" in word else (words[i + 1] if i + 1 < len(words) else "")
+                if not re.fullmatch(re.escape(LOOP_BODIES) + r"[\w.-]+", body) or ".." in body \
+                        or (workdir / body).is_symlink() or (workdir / LOOP_BODIES).is_symlink():
+                    deny(f"read-only loops publish only body files under {LOOP_BODIES}.")
 
 # Secret files: reading one is refused; any other mention is a human's call.
 if secrets:
@@ -417,6 +474,9 @@ if re.search(r"\bgit\s+push\b", command) and re.search(r"\s(-f|--force|--force-w
     deny("force-pushing rewrites shared history.")
 if re.search(r"\bgit\b", command) and "--no-verify" in tokens:
     deny("--no-verify skips the pre-commit checks.")
+bypass = refuses(git_bypass, command)
+if bypass:
+    deny(bypass if isinstance(bypass, str) else "the git command is nested too deeply to verify.")
 try:
     base = event["tool_input"].get("workdir", event["tool_input"].get("cwd", event.get("cwd", ".")))
     if intake_dump(command, Path(base)):

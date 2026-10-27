@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # Spec: knowledge/operations/agent-compatibility.md
-"""Adapt native Codex/OpenCode/Devin/Droid payloads to existing guards and verified handovers."""
+"""Adapt native Codex/OpenCode/Devin/Droid/Antigravity payloads to existing guards and verified handovers."""
 import hashlib
 import json
 from pathlib import Path
@@ -19,6 +19,10 @@ DEVIN_TOOLS = {'exec': 'Bash', 'bash': 'Bash', 'shell': 'Bash', 'read': 'Read', 
 # Factory's Droid sends Claude-shaped payloads with its own names for the shell, create and patch tools.
 DROID_TOOLS = {'Execute': 'Bash', 'Create': 'Write', 'ApplyPatch': 'apply_patch'}
 DROID_KNOWN = {*DROID_TOOLS, 'Bash', 'Read', 'Edit', 'MultiEdit', 'Write', 'Grep', 'Glob', 'LS'}
+# Antigravity nests the call as toolCall {name, args} with PascalCase arguments.
+ANTIGRAVITY_TOOLS = {'run_command': 'Bash', 'view_file': 'Read', 'write_to_file': 'Write',
+                     'replace_file_content': 'Edit', 'multi_replace_file_content': 'Edit'}
+ANTIGRAVITY_PATHS = ('AbsolutePath', 'TargetFile', 'FilePath', 'Path', 'DirectoryPath', 'SearchPath', 'SearchDirectory')
 
 
 class GuardRefusal(ValueError):
@@ -27,9 +31,9 @@ class GuardRefusal(ValueError):
 
 def key(provider, event):
     value = event.get('session_id')
-    # Devin does not document a session id; one key per clone keeps the guards on instead of refusing everything.
-    if provider == 'devin' and value is None:
-        return 'devin-local-' + hashlib.sha256(str(ROOT).encode()).hexdigest()[:16]
+    # Devin and Antigravity document no session id; one key per clone keeps the guards on instead of refusing everything.
+    if provider in {'devin', 'antigravity'} and value is None:
+        return provider + '-local-' + hashlib.sha256(str(ROOT).encode()).hexdigest()[:16]
     if not isinstance(value, str) or not value or len(value) > 200:
         raise ValueError('a bounded native session identifier is required')
     return provider + '-' + hashlib.sha256(value.encode()).hexdigest()[:40]
@@ -39,6 +43,8 @@ def fail(provider, name, reason):
     # Devin's block on Stop means "keep going", so only a tool call is refused that way.
     if provider == 'devin' and name == 'PreToolUse':
         return {'decision': 'block', 'reason': reason}
+    if provider == 'antigravity' and name == 'PreToolUse':
+        return {'decision': 'deny', 'reason': reason}
     if name == 'PreToolUse':
         return {'hookSpecificOutput': {'hookEventName': name, 'permissionDecision': 'deny',
                                        'permissionDecisionReason': reason}}
@@ -75,9 +81,31 @@ def edit_paths(event):
     return [path] if path is not None else []
 
 
+def antigravity_event(event):
+    call = event.get('toolCall')
+    if call is None:
+        return event
+    if not isinstance(call, dict) or not isinstance(call.get('args'), dict):
+        raise ValueError('the Antigravity toolCall requires an args object')
+    args = call['args']
+    data = dict(args)
+    if 'CommandLine' in args:
+        data['command'] = args['CommandLine']
+    path = next((args[field] for field in ANTIGRAVITY_PATHS if field in args), None)
+    if path is not None:
+        data['file_path'] = path
+    tool = ANTIGRAVITY_TOOLS.get(call.get('name'), call.get('name'))
+    # Any tool carrying a command line is a shell call; a file path in it still meets the path guard.
+    if 'CommandLine' in args:
+        tool = 'Bash'
+    return {**event, 'tool_name': tool, 'tool_input': data}
+
+
 def handle(root, provider, event):
-    if provider not in {'codex', 'opencode', 'devin', 'droid'} or not isinstance(event, dict):
+    if provider not in {'codex', 'opencode', 'devin', 'droid', 'antigravity'} or not isinstance(event, dict):
         raise ValueError('invalid provider or event')
+    if provider == 'antigravity':
+        event = antigravity_event(event)
     if provider == 'devin':
         tool = str(event.get('tool_name', '')).lower()
         data = event.get('tool_input')
@@ -122,7 +150,7 @@ def handle(root, provider, event):
         pointer = 'Handover' if handover.is_file() else 'Handover (created at the first refused compaction)'
         context = (f'Æion Factory {provider} checkpoint profile. {pointer}: {handover.relative_to(root)}. '
                    f'Checkpoint key: {session}. Native token-stop enforcement is unqualified; do not claim a strict 300k cap.')
-        if provider in {'devin', 'droid'}:
+        if provider in {'devin', 'droid', 'antigravity'}:
             context = f'Æion Factory {provider} profile: shared guards and edit feedback; no compaction checkpoint or token stop.'
         context += '\n' + result.get('hookSpecificOutput', {}).get('additionalContext', '')
         result['hookSpecificOutput'] = {'hookEventName': name, 'additionalContext': context}
@@ -179,8 +207,14 @@ def main():
         print('Æion Factory hook payload invalid or oversized; action refused.', file=sys.stderr)
         return 2
     provider = sys.argv[1] if len(sys.argv) > 1 else None
+    # Antigravity's payload names no hook event, so its registration passes the event as an argument.
+    if provider == 'antigravity':
+        event['hook_event_name'] = sys.argv[2] if len(sys.argv) > 2 else None
     try:
         result = handle(ROOT, provider, event)
+        # Antigravity reads a pre-tool answer without a decision as a refusal, so an allowed call says so.
+        if provider == 'antigravity' and event['hook_event_name'] == 'PreToolUse' and 'decision' not in result:
+            result = {'decision': 'allow'}
     except GuardRefusal as error:
         result = fail(provider, event.get('hook_event_name'), str(error))
     except (ValueError, KeyError, IndexError, TypeError, OSError, subprocess.SubprocessError):

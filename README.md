@@ -1,7 +1,7 @@
 # Æion Factory
 
-**A repository template for Claude Code, Codex, OpenCode, Devin and Factory's Droid: shared instructions, linked
-specs, reusable skills and automatic checks.**
+**A repository template for Claude Code, Codex, OpenCode, Devin, Factory's Droid and Google
+Antigravity: shared instructions, linked specs, reusable skills and automatic checks.**
 
 Æion Factory organizes the work around **plan → change → test → review → merge**. Your project's
 existing instructions and the owner's decisions take precedence.
@@ -11,8 +11,8 @@ existing instructions and the owner's decisions take precedence.
 | [AGENTS.md](AGENTS.md) | Project instructions, authority and workflow |
 | [Knowledge](knowledge/index.md) | Canonical policies, component specs and decisions |
 | `work/current.md` | Open tasks only |
-| `.claude/skills/` | Maintained skill bodies; `.agents/skills/` exposes them to Codex, Devin and Droid |
-| `.claude/`, `.codex/`, `.opencode/`, `.devin/`, `.factory/` | Native configuration/adapters for each agent (`.factory/` is Droid's) |
+| `.claude/skills/` | Maintained skill bodies; `.agents/skills/` exposes them to Codex, Devin, Droid and Antigravity |
+| `.claude/`, `.codex/`, `.opencode/`, `.devin/`, `.factory/`, `.agents/hooks.json` | Native configuration/adapters for each agent (`.factory/` is Droid's, `.agents/hooks.json` Antigravity's) |
 | `.aeion/` (ignored) | Æion Factory's local state: analysis, context checkpoints, loop bodies |
 | `tools/` and GitHub CI | Documentation checks, tests and source-backed architecture |
 
@@ -29,6 +29,8 @@ PR workflow and your chosen agent separately:
 - [Devin CLI](https://docs.devin.ai/cli/extensibility) — reads `.devin/`, `AGENTS.md` and `.agents/skills`
 - [Droid](https://docs.factory.ai/cli/configuration/hooks-guide), the CLI of Factory (factory.ai), a separate
   product — reads `.factory/settings.json`, `AGENTS.md` and `.agents/skills`
+- [Google Antigravity](https://antigravity.google/docs/hooks) (`agy` CLI or IDE) — reads
+  `AGENTS.md`, `.agents/skills` and `.agents/hooks.json`
 
 Keep authentication, provider and model choices in the agent's native user settings. Never
 commit credentials to the project.
@@ -38,7 +40,7 @@ commit credentials to the project.
 ```bash
 git clone https://github.com/OualidGuennif/aeion-factory.git && cd aeion-factory
 git config aeion.mode local    # optional: play on main, no branch/PR/CI ritual
-tools/agents/run claude        # or: codex, opencode (2.1.4+), devin, droid
+tools/agents/run claude        # or: codex, opencode (2.1.4+), devin, droid, antigravity
 ```
 
 The launcher applies each agent's checked profile; the hooks and skills load from the repository,
@@ -60,6 +62,7 @@ before installing it: on a work computer, check your company's policy first.
    opencode     # OpenCode V2
    devin        # Devin CLI
    droid        # Droid (factory.ai)
+   agy          # Google Antigravity CLI
    ```
 
 3. Give the agent this setup request:
@@ -74,7 +77,8 @@ before installing it: on a work computer, check your company's policy first.
 
 4. Complete the native workspace/project trust prompts. In Codex, also review and enable the
    project hooks in `/hooks`, then restart the session. For OpenCode, connect your provider
-   through its native interface. For Devin and Droid, approve the project hooks if asked.
+   through its native interface. For Devin, Droid and Antigravity, approve the project hooks or
+   trust the folder if asked.
 5. Confirm setup and start normal work through the managed launcher below. Configure
    [GitHub main protection](knowledge/operations/github-protection.md) in the new repository;
    GitHub settings are not copied by templates.
@@ -114,6 +118,7 @@ Run these from the repository root. Additional arguments are native CLI argument
 | OpenCode | `tools/agents/run opencode` | Root `opencode.json`, native V2 plugin in `.opencode/plugins/factory/` |
 | Devin CLI | `tools/agents/run devin` | `.devin/hooks.v1.json` and `config.json`, `AGENTS.md`, shared `.agents/skills` |
 | Droid (factory.ai) | `tools/agents/run droid` | `.factory/settings.json` hooks, `AGENTS.md`, shared `.agents/skills` |
+| Google Antigravity | `tools/agents/run antigravity` | `.agents/hooks.json`, `AGENTS.md`, shared `.agents/skills` |
 
 The launchers enter the project root and check the architecture baseline for the current commit;
 without one they recommend it and continue. The original Claude entry point, `tools/context/run`,
@@ -134,7 +139,7 @@ also remains available.
 | `tools/architecture/refresh --target HEAD` | Build the recommended initial/updated source baseline |
 | `tools/architecture/refresh --target HEAD --base origin/main` | Analyze the committed change and its comparison |
 | `tools/architecture/refresh --check --target HEAD` | Verify the persisted baseline and artifact hashes |
-| `tools/agents/run <claude\|codex\|opencode\|devin\|droid>` | Start a managed native agent |
+| `tools/agents/run <claude\|codex\|opencode\|devin\|droid\|antigravity>` | Start a managed native agent |
 | `python3 tools/context/budget.py checkpoint --session <id> --base origin/main --verify` | Verify handover, docs and source state before compaction |
 | `loops/orchestrator.sh <job> --dry-run` | Inspect loop settings without launching an agent |
 | `loops/orchestrator.sh inner --issue <n>` | Run one approved `agent-ready` issue when loops are enabled |
@@ -147,8 +152,8 @@ configured. Enabled local jobs default to 30 turns and a 900-second deadline.
 ## Available skills
 
 Ask the agent to use a named skill; Claude Code also supports `/name`, and Codex supports `$name`.
-OpenCode loads skills through its native skill tool; Devin and Droid read `.agents/skills`. Any agent can
-open `.agents/skills/<name>/SKILL.md` directly.
+OpenCode loads skills through its native skill tool; Devin, Droid and Antigravity read
+`.agents/skills`. Any agent can open `.agents/skills/<name>/SKILL.md` directly.
 
 | Skills | Use them for |
 | --- | --- |

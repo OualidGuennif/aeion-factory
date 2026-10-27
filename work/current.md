@@ -4,10 +4,10 @@ Task state only. One entry per open task, newest first. At most 150 lines, 10 pe
 Finished tasks are deleted: the commit message and knowledge/ keep what matters.
 Status: ACTIVE, WAITING-OWNER, MEASURING, BLOCKED, BACKLOG.
 
-## Live Devin and Droid hook qualification — WAITING-OWNER
-- Owner decision: 2026-10-27, support Devin and Droid; adapters merged with documented, not live-run, payloads.
-- State: Devin in PR #12, Droid in task/droid-and-naming; no live run of either yet.
-- Next: run the qualification steps with Devin CLI and Droid and record the result (who: owner).
+## Live Devin, Droid and Antigravity hook qualification — WAITING-OWNER
+- Owner decision: 2026-10-27, support Devin, Droid and Antigravity; adapters use documented, not live-run, payloads.
+- State: Devin merged in #12, Droid in #13, Antigravity in task/antigravity; no live run of any yet.
+- Next: run the qualification steps with Devin CLI, Droid and agy and record the result (who: owner).
 - Blocker: neither CLI is in the agent's container.
 - Evidence: knowledge/operations/agent-compatibility.md
 

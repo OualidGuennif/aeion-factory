@@ -197,19 +197,19 @@ class HookTests(unittest.TestCase):
         self.call('devin',hook_event_name='PostToolUse',tool_name='edit',tool_input={'file_path':str(self.root/'a.py')})
         self.assertEqual(set(log.read_text().splitlines()),{'a.py'})
 
-    def test_launch_without_baseline_recommends_it_and_still_starts_devin_and_droid(self):
+    def test_launch_without_baseline_recommends_it_and_still_starts_devin_droid_and_antigravity(self):
         launcher=self.root/'tools/agents/run';launcher.parent.mkdir(parents=True)
         shutil.copy2(ROOT/'tools/agents/run',launcher)
         gate=self.root/'tools/architecture/refresh';gate.parent.mkdir(parents=True)
         gate.write_text('#!/bin/sh\nexit 1\n');gate.chmod(0o755)
         (self.root/'bin').mkdir()
-        for agent in ('devin','droid'):
-            native=self.root/'bin'/agent
-            native.write_text(f'#!{hook.sys.executable}\nimport sys\nprint("{agent}", *sys.argv[1:])\n');native.chmod(0o755)
+        for agent,binary in (('devin','devin'),('droid','droid'),('antigravity','agy')):
+            native=self.root/'bin'/binary
+            native.write_text(f'#!{hook.sys.executable}\nimport sys\nprint("{binary}", *sys.argv[1:])\n');native.chmod(0o755)
             result=subprocess.run([hook.sys.executable,str(launcher),agent,'--version'],cwd=self.root,
                                   env={'PATH':str(native.parent)+os.pathsep+os.defpath},capture_output=True,text=True)
             self.assertEqual(result.returncode,0,result.stderr)
-            self.assertEqual(result.stdout.strip(),f'{agent} --version')
+            self.assertEqual(result.stdout.strip(),f'{binary} --version')
             self.assertIn('strongly recommended',result.stderr)
             self.assertIn('never installed automatically',result.stderr)
 
@@ -256,6 +256,59 @@ class HookTests(unittest.TestCase):
         self.assertEqual(set(hooks),{'SessionStart','PreToolUse','PostToolUse','Stop'})
         for entries in hooks.values():
             self.assertTrue(all(h['command'].endswith('tools/agents/hook.py" droid') for e in entries for h in e['hooks']))
+
+    def agy(self,name,args,event='PreToolUse'):
+        return self.call('antigravity',session_id=None,hook_event_name=event,toolCall={'name':name,'args':args})
+
+    def test_antigravity_tools_reach_the_shared_guards(self):
+        path=str(self.root/'.env')
+        cases=(('run_command',{'CommandLine':'cat .env','Cwd':str(self.root)}),('view_file',{'AbsolutePath':path}),
+               ('write_to_file',{'TargetFile':path,'CodeContent':'x'}),('replace_file_content',{'TargetFile':path}),
+               ('grep_search',{'SearchPath':path,'Query':'x'}),('future_tool',{'FilePath':path}),
+               ('future_shell',{'CommandLine':'ls','FilePath':path}))
+        for name,args in cases:
+            with self.assertRaisesRegex(hook.GuardRefusal,'secret',msg=name):
+                self.agy(name,args)
+        self.assertEqual(self.agy('run_command',{'CommandLine':'git status --short'}),{})
+        # A file tool whose path field is unknown is refused, not waved through.
+        with self.assertRaises(ValueError):
+            self.agy('view_file',{'Location':path})
+        with self.assertRaises(ValueError):
+            self.call('antigravity',session_id=None,toolCall={'name':'run_command','args':'cat'})
+
+    def test_antigravity_decisions_are_explicit(self):
+        def run(payload,event='PreToolUse'):
+            result=subprocess.run(['python3',str(ROOT/'tools/agents/hook.py'),'antigravity',event],
+                                  input=json.dumps(payload),capture_output=True,text=True)
+            self.assertEqual(result.returncode,0,result.stderr)
+            return json.loads(result.stdout)
+        denied=run({'toolCall':{'name':'run_command','args':{'CommandLine':'cat .env'}}})
+        self.assertEqual(denied['decision'],'deny')
+        self.assertIn('secret',denied['reason'])
+        self.assertEqual(run({'toolCall':{'name':'run_command','args':{'CommandLine':'git status --short'}}}),{'decision':'allow'})
+        self.assertEqual(run({'toolCall':{'name':'view_file','args':{}}})['decision'],'deny')
+        self.assertEqual(run({'toolCall':{'name':'run_command','args':{'CommandLine':'ls'}}},event='Unknown')['continue'],False)
+
+    def test_antigravity_edits_are_recorded_for_feedback_and_sign_off(self):
+        key=hook.key('antigravity',{})
+        log=Path(tempfile.gettempdir())/f'claude-edited-{key}'
+        log.unlink(missing_ok=True)
+        self.addCleanup(log.unlink,missing_ok=True)
+        (self.root/'notes.md').write_text('x\n')
+        self.agy('replace_file_content',{'TargetFile':str(self.root/'notes.md')},event='PostToolUse')
+        self.assertEqual(set(log.read_text().splitlines()),{'notes.md'})
+
+    def test_antigravity_hooks_route_every_event_to_the_adapter(self):
+        groups=json.loads((ROOT/'.agents/hooks.json').read_text())
+        self.assertEqual(list(groups),['aeion-factory'])
+        hooks=groups['aeion-factory']
+        self.assertEqual(set(hooks),{'PreToolUse','PostToolUse','Stop'})
+        for event,entries in hooks.items():
+            for entry in entries:
+                commands=[h['command'] for h in entry.get('hooks',[entry])]
+                self.assertTrue(all(c.endswith(f'tools/agents/hook.py" antigravity {event}') for c in commands))
+                if event!='Stop':
+                    self.assertEqual(entry['matcher'],'.*')
 
     def test_read_only_loop_denies_writers_and_shell_composition(self):
         for command in ('tools/efficiency/bundle','tools/architecture/setup','git diff --output=x',

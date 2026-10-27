@@ -8,8 +8,8 @@ import subprocess
 import sys
 
 root = Path(__file__).resolve().parents[2]
-if len(sys.argv) < 2 or sys.argv[1] not in {'claude', 'codex', 'opencode', 'devin', 'droid'}:
-    sys.exit('usage: tools/agents/run <claude|codex|opencode|devin|droid> [native arguments]')
+if len(sys.argv) < 2 or sys.argv[1] not in {'claude', 'codex', 'opencode', 'devin', 'droid', 'antigravity'}:
+    sys.exit('usage: tools/agents/run <claude|codex|opencode|devin|droid|antigravity> [native arguments]')
 provider, arguments = sys.argv[1], sys.argv[2:]
 if '--strict' in arguments:
     sys.exit('UNSUPPORTED: strict pre-request 300k admission is not qualified for any Æion Factory adapter.')
@@ -46,4 +46,6 @@ if provider == 'devin':
     sys.exit(subprocess.run(['devin', *arguments], cwd=root, shell=False).returncode)
 if provider == 'droid':
     sys.exit(subprocess.run(['droid', *arguments], cwd=root, shell=False).returncode)
+if provider == 'antigravity':
+    sys.exit(subprocess.run(['agy', *arguments], cwd=root, shell=False).returncode)
 sys.exit(subprocess.run(['opencode', *arguments], cwd=root, shell=False).returncode)

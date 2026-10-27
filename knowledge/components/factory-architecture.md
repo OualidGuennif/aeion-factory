@@ -162,7 +162,8 @@ the graph never substitutes an earlier base or changed-path set for the current 
 
 ### Delivery and rollback
 
-Pre-commit/CI retain Knowledge, doc-link, health and security gates. Architecture runs on PRs
+Pre-commit/CI retain Knowledge, doc-link, health and security gates; CI also fails when the
+efficiency bundle drifts from its sources. Architecture runs on PRs
 and every main push, including docs-only and multi-commit pushes, records changed/removed paths,
 and uploads immutable outputs. It cannot undo a merge: a failed round prevents release and
 completed-work claims until corrected. Adoption requires a baseline before managed execution.

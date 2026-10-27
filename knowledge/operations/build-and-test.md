@@ -20,7 +20,8 @@ sources:
 CI action revisions are pinned to upstream commit SHAs; review upstream changes before updating them.
 
 The standalone efficiency bundle includes the CRAFTED principles as well as the seven chapters.
-Rebuild it with `tools/efficiency/bundle` after editing those sources.
+Rebuild it with `tools/efficiency/bundle` after editing those sources or `CREDITS.md`; CI rebuilds
+it and fails when the committed bundle differs.
 
 | Layer | Gate | From |
 | --- | --- | --- |
@@ -31,6 +32,7 @@ Rebuild it with `tools/efficiency/bundle` after editing those sources.
 | Health regressions | `python3 tools/repo-health/tests/test_repo_health.py` | the root |
 | Context and analysis regressions | `python3 tools/context/tests/test_budget.py`, `python3 tools/architecture/tests/test_refresh.py` | the root |
 | Agent adapters and loop boundaries | `python3 tools/agents/tests/test_hooks.py`, `node --test tools/agents/tests/test_opencode.mjs`, `python3 tools/loops/tests/test_loops.py` | root; Node 18+ |
+| Efficiency bundle | `tools/efficiency/bundle`, then `git diff --exit-code efficiency/efficiency-bundle.md` | the root |
 | Mandatory source analysis | `tools/architecture/refresh --target HEAD --base origin/main` after committing | pinned tools, Node and Chrome required |
 | Your code | add your build, lint and test commands here, copied from CI | |
 

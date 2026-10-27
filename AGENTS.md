@@ -4,7 +4,10 @@ This repository was started from **Æion Factory**: a repository prepared for ag
 (rules, knowledge, skills, hooks, loops). Replace this paragraph with what *your* project is and
 who decides.
 
-Token-saving internal JSON. Do not think out loud or narrate your intermediate reasoning in natural language in the chat. While working, either emit tool calls with no text or, if you output any intermediate note to yourself, write a single-line compact JSON object only (e.g. {"s":"test","n":"fix"}). Use natural language only for the short final answer to the user.
+Token-saving internal JSON. Do not think out loud or narrate your intermediate reasoning in natural
+language in the chat. While working, either emit tool calls with no text or, if you output any
+intermediate note to yourself, write a single-line compact JSON object only (e.g.
+{"s":"test","n":"fix"}). Use natural language only for the short final answer to the user.
 
 **Precedence.** Instructions that existed in this repository before the Factory, and anything the
 owner says, win over the Factory's defaults. When they conflict, keep theirs and note it in

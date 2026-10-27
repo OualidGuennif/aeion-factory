@@ -142,6 +142,14 @@ class BudgetTests(unittest.TestCase):
             budget.git(self.root, 'config', 'aeion.mode', 'local')
             budget.checkpoint(self.root, 'test-session', 'HEAD')
             budget.git(self.root, 'config', '--unset', 'aeion.mode')
+            # An included file cannot switch the mode: only the repository's own config counts.
+            included = self.root.parent / f'{self.root.name}-mode.cfg'
+            included.write_text('[aeion]\n\tmode = local\n')
+            budget.git(self.root, 'config', 'include.path', str(included))
+            with self.assertRaisesRegex(ValueError, 'work/current.md'):
+                budget.checkpoint(self.root, 'test-session', 'HEAD')
+            budget.git(self.root, 'config', '--unset', 'include.path')
+            included.unlink()
             current.write_text('# Current work\nTask updated.\n')
             budget.checkpoint(self.root, 'test-session', 'HEAD')
 

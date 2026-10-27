@@ -30,16 +30,28 @@ def brace_variants(word):
 
 
 EXAMPLES = sorted(NAMES | {".env", ".env.local", "key.pem", "server.key", "cert.p12", "cert.pfx"})
-# Ordinary files that a generic glob (*, *.json, c*, *_*) also matches.
+# Ordinary files that a generic glob (*, *.json, c*, *_*, .*) also matches; none shares a secret's stem.
 ORDINARY = ("README.md", "main.py", "test_main.py", "package.json", "config.yml", "index.js", "app.tsx",
-            "data", "docs", "go.sum", "Makefile", "notes.txt", "id", "env.example", "server.py")
+            "data", "docs", "go.sum", "Makefile", "notes.txt", "eslint.config.js", "setup.py",
+            "kustomization.yaml", "build.gradle.kts")
+DOT_ORDINARY = (".git", ".github", ".gitignore", ".editorconfig", ".vscode", ".claude")
+
+
+def shell_pattern(pattern):
+    """The glob as Python's fnmatch and glob read it: bash, zsh and ripgrep take [^x] for [!x]."""
+    return pattern.replace("[^", "[!")
 
 
 def named_secrets(pattern):
-    """The secrets a glob's last part names wherever it expands: a dotfile glob by its name; any other
-    glob when it matches a secret and no ordinary name, so *.json stays allowed and id_* does not."""
-    if re.match(r"\.[^*?.]", pattern):
-        return {n for n in EXAMPLES if n.startswith(".") and fnmatch.fnmatchcase(n, pattern)}
-    if pattern.startswith(".") or any(fnmatch.fnmatchcase(n, pattern) for n in ORDINARY):
+    """The secrets a glob's last part names wherever it expands: a dotfile glob with a literal first
+    letter (.e*) by its name; any other glob when it matches a secret and no ordinary name, so *.json
+    and .* stay allowed and id_* and .*rc do not."""
+    pattern = shell_pattern(pattern)
+    if pattern.startswith(".."):
         return set()
-    return {n for n in EXAMPLES if not n.startswith(".") and fnmatch.fnmatchcase(n, pattern)}
+    dotted = pattern.startswith(".")
+    secrets = {n for n in EXAMPLES if n.startswith(".") == dotted and fnmatch.fnmatchcase(n, pattern)}
+    ordinary = DOT_ORDINARY if dotted else ORDINARY
+    if re.match(r"\.[^*?.]", pattern) or not any(fnmatch.fnmatchcase(n, pattern) for n in ordinary):
+        return secrets
+    return set()

@@ -34,8 +34,10 @@ Requirements for a change, not claims about what production already satisfies.
   `*.p12`, `*.pfx`; templates such as `.env.example` stay allowed). In a Bash command, quotes are
   joined and brace alternatives expanded first. A glob is judged by the secret it names, wherever
   it expands, since a variable, a substitution or a `cd` can hide its directory: a dotfile glob
-  (`.e*`, `.[e]nv`) against the dotfile secrets; any other glob (`id_*`, `cred*`) when it matches
-  a secret name and no ordinary file name, so `*`, `*.json` and `c*` stay allowed. Every glob is
+  with a literal first letter (`.e*`, `.[e]nv`) against the dotfile secrets; any other glob
+  (`id*`, `cred*`, `.*rc`) when it matches a secret name and no ordinary file name, so `*`,
+  `*.json`, `c*` and `.*` stay allowed. A `[^x]` class is read as the shell reads it, a negation
+  like `[!x]`. Every glob is
   also judged by the files it expands to from the command's directory and each literal directory
   a `cd` or `pushd` moves to. The Grep tool's `glob` filter is refused when it names a secret the
   same way. The ordinary-name list is a heuristic: an odd glob such as `*2` matches only a

@@ -13,7 +13,7 @@ import re
 import shlex
 import sys
 from pathlib import Path, PurePosixPath
-from secret_names import brace_variants, is_secret, named_secrets
+from secret_names import brace_variants, is_secret, named_secrets, shell_pattern
 
 READERS = {"cat", "less", "more", "head", "tail", "grep", "rg", "awk", "sed", "strings", "base64",
            "xxd", "od", "source", ".", "cp", "scp", "rsync", "jq", "python3", "python", "node", "vim", "nano"}
@@ -61,7 +61,7 @@ def mentioned_secrets(tokens, shell_tokens, bases):
                 # A glob is judged by the secret it names wherever it expands, since a variable, a command
                 # substitution or a cd can hide its directory; and by the files it expands to here.
                 names |= named_secrets(name)
-                pattern = os.path.expanduser(word)
+                pattern = shell_pattern(os.path.expanduser(word))
                 for base in bases:
                     matches = glob.glob(pattern, root_dir=None if os.path.isabs(pattern) else base)
                     names |= {PurePosixPath(m).name for m in matches if is_secret(PurePosixPath(m).name)}

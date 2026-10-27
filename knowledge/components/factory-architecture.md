@@ -1,7 +1,7 @@
 ---
 type: Component
-title: "Factory architecture"
-description: "Complete source-backed specification of Factory's authority, execution, Knowledge, context checkpoints, analysis and delivery."
+title: "Æion Factory architecture"
+description: "Complete source-backed specification of Æion Factory's authority, execution, Knowledge, context checkpoints, analysis and delivery."
 status: stable
 generated:
   by: aeion-factory/1.1
@@ -30,19 +30,20 @@ sources:
     title: "Reviewed Archify views and evidence anchors"
 ---
 
-# Factory architecture
+# Æion Factory architecture
 
 ## Intent
 
-Factory is a Git repository template and local toolset for agent-assisted engineering. The
+Æion Factory is a Git repository template and local toolset for agent-assisted engineering. The
 owner authorizes scope and delivery. Agents plan and edit; Python/Git checks establish bounded
 structural facts; fresh review establishes the verdict; GitHub records PR/merge/CI evidence.
-There is no application server, broker, production database or deployed Factory control plane.
+There is no application server, broker, production database or deployed Æion Factory control plane.
 Adopting projects keep their existing instructions and architecture.
 
-Claude Code retains its native hooks. Codex, OpenCode and Devin load the same instructions and
-skills, with narrow adapters to the existing secret guards, edit checks and handover checkpoints
-(Devin has no compaction checkpoint). A per-clone flow mode selects the team flow (PR, review, CI)
+Claude Code retains its native hooks. Codex, OpenCode, Devin and Droid (factory.ai) load the same
+instructions and skills, with narrow adapters to the existing secret guards, edit checks and
+handover checkpoints (Devin and Droid have no compaction checkpoint). Droid owns `.factory/`, so
+Æion Factory's local state lives in the ignored `.aeion/`. A per-clone flow mode selects the team flow (PR, review, CI)
 or local play (commits on main, no sign-off reminder); the safety guards run in both.
 Their native token/compaction interfaces differ; compatibility is not a claim of identical
 enforcement. See [agent compatibility](../operations/agent-compatibility.md).
@@ -99,17 +100,17 @@ from another source; analysis refuses mismatched package provenance or a dirty A
 | Instructions and seven-phase guide | Owner precedence, scope and adoption | Markdown links; `CLAUDE.md` points to `AGENTS.md` |
 | Skills | Plan/spec/build/test/review/sign-off/ship and focused procedures | `.claude/skills/*/SKILL.md`; no second task ledger |
 | Hook adapter | Read event JSON and call a bounded local check | stdin/stdout JSON; failure blocks where supported |
-| Context budget | Usage, closure-only state, checkpoint receipt, observed stop | `.factory/context/<session>.json`; per-session file lock |
+| Context budget | Usage, closure-only state, checkpoint receipt, observed stop | `.aeion/context/<session>.json`; per-session file lock |
 | Handover | Recovery facts for the current session | Ignored `work/handovers/<session>.md`, created atomically only when closure needs it |
 | Knowledge/link/health checkers | Frontmatter, caps, traceability and diff coverage | Exit code + bounded diagnostics; no provider |
 | Optional loops | Select prompt/model/tools and run a managed headless task | Off unless enabled; outer loop reads production only through its configured read path |
-| Analysis wrapper | Freeze Git, Graphify, evidence validation and Archify finalization | Ignored `.factory/analysis/<sha>/` and immutable receipts |
+| Analysis wrapper | Freeze Git, Graphify, evidence validation and Archify finalization | Ignored `.aeion/analysis/<sha>/` and immutable receipts |
 | GitHub workflows | PR checks and post-main analysis; artifact retention | Read-only checkout/job permissions; no generated-source push |
 | Native language servers | Editor diagnostics for their registered language | Local processes; explicit plugin enablement |
 
 Normal task: read -> approved plan -> component spec -> thin changes/tests -> docs/current task
 update -> fresh review -> authorized PR merge -> exact-merged-SHA analysis -> closure/release.
-Deployment remains the adopting project's own guarded procedure. Factory loops never deploy.
+Deployment remains the adopting project's own guarded procedure. Æion Factory loops never deploy.
 
 ### Context and recovery
 

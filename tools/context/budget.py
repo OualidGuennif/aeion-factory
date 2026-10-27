@@ -60,7 +60,7 @@ def identity(event):
 
 @contextmanager
 def locked(root, session):
-    folder = root / ".factory/context"
+    folder = root / ".aeion/context"
     folder.mkdir(parents=True, exist_ok=True)
     with (folder / f"{session}.lock").open("a") as stream:
         fcntl.flock(stream, fcntl.LOCK_EX)
@@ -125,7 +125,7 @@ def fingerprint(root):
     digest = hashlib.sha256(git(root, "rev-parse", "HEAD"))
     for raw in sorted(paths - {b""}):
         rel = os.fsdecode(raw)
-        if rel.startswith(("work/handovers/", ".factory/")):
+        if rel.startswith(("work/handovers/", ".aeion/")):
             continue
         name = Path(rel).name
         if name in {"auth.json", "env.local", "credentials", "credentials.json", "id_rsa", "id_ed25519"} or name.endswith((".key", ".pem")):
@@ -215,15 +215,15 @@ def handle(root, event):
             state = {"epoch": state["epoch"] + 1, "state": "RECOVERING", "warning_pending": state.get("warning_pending", False)}
         result = {}
         if state.get("state") == "STOPPED":
-            result = stop(name, "Factory context run is stopped; start a new validated session from its handover.")
+            result = stop(name, "Æion Factory context run is stopped; start a new validated session from its handover.")
         elif name == "SessionStart":
-            context = "Factory checkpoint profile: 250k handover/compact, 300k observed stop; not a strict ceiling."
+            context = "Æion Factory checkpoint profile: 250k handover/compact, 300k observed stop; not a strict ceiling."
             if handover.is_file():
                 context += f" Recovery: {handover.relative_to(root)}"
             result = {"hookSpecificOutput": {"hookEventName": name, "additionalContext": context}}
             if state.pop("warning_pending", False):
-                message = ("Factory 250k alert: a verified handover was retained before compaction." if compact_verified
-                           else "Factory 250k alert: closure remains required; verify the handover/docs before compaction.")
+                message = ("Æion Factory 250k alert: a verified handover was retained before compaction." if compact_verified
+                           else "Æion Factory 250k alert: closure remains required; verify the handover/docs before compaction.")
                 result["systemMessage"] = message
                 result["hookSpecificOutput"]["additionalContext"] += "\n" + message
         else:
@@ -232,12 +232,12 @@ def handle(root, event):
             except (ValueError, OSError, TypeError, AttributeError):
                 state["state"] = "STOPPED"
                 atomic(file, json.dumps(state, sort_keys=True) + "\n")
-                return stop(name, "Factory native usage is invalid; refusing further work.")
+                return stop(name, "Æion Factory native usage is invalid; refusing further work.")
             state["observed_tokens"] = usage
             if usage is None and name == "UserPromptSubmit" and not state.get("bootstrapped"):
                 state["bootstrapped"] = True
             elif usage is None:
-                reason = "Factory native usage temporarily unavailable; work is blocked. Retry after transcript persistence; no terminal stop was latched."
+                reason = "Æion Factory native usage temporarily unavailable; work is blocked. Retry after transcript persistence; no terminal stop was latched."
                 # Transcripts persist asynchronously: deny only this call so the agent can retry it, not stop the agent.
                 if name == "PreToolUse":
                     result = {"hookSpecificOutput": {"hookEventName": name, "permissionDecision": "deny", "permissionDecisionReason": reason}}
@@ -246,7 +246,7 @@ def handle(root, event):
             elif usage >= LIMIT:
                 state["state"] = "STOPPED"
                 ensure_handover(root, session)
-                result = stop(name, "Factory observed 300k context limit reached; task remains incomplete. Read the handover.")
+                result = stop(name, "Æion Factory observed 300k context limit reached; task remains incomplete. Read the handover.")
             else:
                 state["bootstrapped"] = True
                 if usage >= WARNING and state["state"] != "HANDOVER_REQUIRED":
@@ -259,7 +259,7 @@ def handle(root, event):
                 elif state["state"] == "HANDOVER_REQUIRED":
                     ensure_handover(root, session)
                     first = state.pop("warning_pending", False)
-                    message = f"Factory 250k alert: finish closure only, update {handover.relative_to(root)}, work/current.md and affected docs; verify the checkpoint before compaction."
+                    message = f"Æion Factory 250k alert: finish closure only, update {handover.relative_to(root)}, work/current.md and affected docs; verify the checkpoint before compaction."
                     if name == "PreToolUse" and not closure_tool(root, {**event, "session_id": session}):
                         result = {"hookSpecificOutput": {"hookEventName": name, "permissionDecision": "deny", "permissionDecisionReason": message}}
                     elif name in {"Stop", "SubagentStop"}:
@@ -290,7 +290,7 @@ def checkpoint(root, session, base):
             subprocess.run(command, cwd=root, check=True, timeout=30, stdout=subprocess.DEVNULL)
         changed = set(git(root, "diff", "--name-only", "-z", base).decode().split("\0")) - {""}
         changed |= {os.fsdecode(path) for path in git(root, "ls-files", "--others", "--exclude-standard", "-z").split(b"\0")
-                    if path and not os.fsdecode(path).startswith((".factory/", "work/handovers/"))}
+                    if path and not os.fsdecode(path).startswith((".aeion/", "work/handovers/"))}
         if changed and "work/current.md" not in changed:
             raise ValueError("update work/current.md before checkpointing")
         if fingerprint(root) != before:

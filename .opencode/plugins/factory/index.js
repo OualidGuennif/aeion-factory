@@ -6,7 +6,7 @@ function invoke(root, event) {
   const result = spawnSync('python3', [resolve(root, 'tools/agents/hook.py'), 'opencode'], {
     cwd: root, input: JSON.stringify(event), encoding: 'utf8', timeout: 15000, maxBuffer: 128 * 1024,
   });
-  if (result.error || result.status !== 0) throw new Error('Factory hook unavailable; action refused.');
+  if (result.error || result.status !== 0) throw new Error('Æion Factory hook unavailable; action refused.');
   const output = JSON.parse(result.stdout);
   const reason = output.stopReason || (output.decision === 'block' && output.reason)
     || (output.hookSpecificOutput?.permissionDecision === 'deny' && output.hookSpecificOutput.permissionDecisionReason);
@@ -41,7 +41,7 @@ export default {
       if (!message) return;
       const content = event.result.content;
       const parts = typeof content === 'string' ? [{ type: 'text', text: content }] : [...(content || [])];
-      event.result = { ...event.result, content: [...parts, { type: 'text', text: `Factory feedback: ${message}` }] };
+      event.result = { ...event.result, content: [...parts, { type: 'text', text: `Æion Factory feedback: ${message}` }] };
     });
     await ctx.session.hook('compaction', async (event) => {
       const { reason, output } = invoke(root, { session_id: event.sessionID, hook_event_name: 'PreCompact' });

@@ -7,7 +7,7 @@ knowledge base.
 
 - Read `AGENTS.md` (it is short). The session starts with a summary from the `SessionStart` hook:
   git status, recent commits, open tasks.
-- Instructions that existed before the Factory, and the owner's words, win.
+- Instructions that existed before Æion Factory, and the owner's words, win.
 - The Graphify/Archify baseline is strongly recommended and installed only on the user's yes
   (`knowledge/operations/architecture-maintenance.md`). Start through `tools/agents/run <claude|codex|opencode|devin>`; Claude also retains `tools/context/run`.
 

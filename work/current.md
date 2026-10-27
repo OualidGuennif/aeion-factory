@@ -4,11 +4,11 @@ Task state only. One entry per open task, newest first. At most 150 lines, 10 pe
 Finished tasks are deleted: the commit message and knowledge/ keep what matters.
 Status: ACTIVE, WAITING-OWNER, MEASURING, BLOCKED, BACKLOG.
 
-## Live Devin hook qualification — WAITING-OWNER
-- Owner decision: 2026-10-27, support Devin; the adapter merged with documented, not live-run, payloads.
-- State: adapter, tests and docs in PR #12; no live Devin run yet.
-- Next: run the qualification steps on a machine with Devin CLI and record the result (who: owner).
-- Blocker: no Devin CLI in the agent's container.
+## Live Devin and Droid hook qualification — WAITING-OWNER
+- Owner decision: 2026-10-27, support Devin and Droid; adapters merged with documented, not live-run, payloads.
+- State: Devin in PR #12, Droid in task/droid-and-naming; no live run of either yet.
+- Next: run the qualification steps with Devin CLI and Droid and record the result (who: owner).
+- Blocker: neither CLI is in the agent's container.
 - Evidence: knowledge/operations/agent-compatibility.md
 
 ## Main branch protection vs. its doc — WAITING-OWNER
@@ -25,9 +25,9 @@ Status: ACTIVE, WAITING-OWNER, MEASURING, BLOCKED, BACKLOG.
 - Blocker: the experimental counter/profile is not shipped; provider framing and complete native lifecycle coverage remain unqualified.
 - Evidence: knowledge/references/opencode-context-qualification.md; knowledge/operations/context-safety.md
 
-## Adapt the Factory to this project — ACTIVE
+## Adapt Æion Factory to this project — ACTIVE
 - Owner decision: <date>, started from Æion Factory (knowledge/decisions/ADR-001).
-- State: the structure is in place; AGENTS.md still describes the Factory, not the project.
+- State: the structure is in place; AGENTS.md still describes Æion Factory, not the project.
 - Next: write the project's paragraph and build commands in AGENTS.md; walk efficiency/ phases 1 to 7 (who: agent, with the owner's yes per phase).
 - Blocker: none.
 - Evidence: efficiency/00-EFFICIENCY.md

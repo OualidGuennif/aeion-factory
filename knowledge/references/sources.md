@@ -1,6 +1,6 @@
 ---
 type: Reference
-title: "Sources behind the Factory"
+title: "Sources behind Æion Factory"
 description: "The research, docs and tools the guide's recommendations rest on, with links."
 status: stable
 generated:
@@ -22,7 +22,7 @@ sources:
   https://github.com/anthropics/claude-plugins-official · https://code.claude.com/docs
 - **Addy Osmani, `agent-skills`** (MIT) — the skill anatomy (overview, when to use, process,
   rationalizations, red flags, verification) and the DEFINE → PLAN → BUILD → VERIFY → REVIEW → SHIP
-  lifecycle that the Factory's skills follow. https://github.com/addyosmani/agent-skills ·
+  lifecycle that Æion Factory's skills follow. https://github.com/addyosmani/agent-skills ·
   "Own the Outer Loop" (2026).
 - **Vectorize, Hindsight** (MIT) — agent memory with retain, recall and reflect.
   https://github.com/vectorize-io/hindsight

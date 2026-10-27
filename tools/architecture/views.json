@@ -3,7 +3,7 @@
     "schema_version": 1,
     "diagram_type": "architecture",
     "meta": {
-      "title": "Factory authority and execution",
+      "title": "Æion Factory authority and execution",
       "quality_profile": "showcase",
       "output": "architecture.html"
     },

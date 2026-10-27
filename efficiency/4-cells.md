@@ -41,7 +41,7 @@ description: What it does, in the third person. Use when <the trigger>.   # <= ~
 - **Path-scoped instructions** that should load only near some files go in `.claude/rules/<area>.md`
   with a `paths:` glob list, not in a skill.
 
-## The lifecycle set shipped with the Factory
+## The lifecycle set shipped with Æion Factory
 
 | Skill | Use when |
 | --- | --- |

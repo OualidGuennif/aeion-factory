@@ -15,6 +15,7 @@
     ".agents/**",
     ".codex/**",
     ".devin/**",
+    ".factory/settings.json",
     ".opencode/**",
     ".claude/**",
     ".github/**",

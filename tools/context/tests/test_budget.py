@@ -108,7 +108,7 @@ class BudgetTests(unittest.TestCase):
     def test_precompact_latches_warning_and_delivers_it_at_next_supported_event(self):
         self.observe(250000)
         self.assertEqual(self.call(hook_event_name="PreCompact")["decision"], "block")
-        state = json.loads((self.root / ".factory/context/test-session.json").read_text())
+        state = json.loads((self.root / ".aeion/context/test-session.json").read_text())
         self.assertEqual(state["state"], "HANDOVER_REQUIRED")
         self.assertIn("250k", self.call(tool_name="Read")["systemMessage"])
 
@@ -120,7 +120,7 @@ class BudgetTests(unittest.TestCase):
         self.assertNotIn("verified handover was retained", result["systemMessage"])
 
     def test_untracked_code_requires_current_task_update_before_checkpoint(self):
-        (self.root / '.gitignore').write_text('.factory/\nwork/handovers/\n*.jsonl\n')
+        (self.root / '.gitignore').write_text('.aeion/\nwork/handovers/\n*.jsonl\n')
         (self.root / 'work').mkdir(exist_ok=True)
         current = self.root / 'work/current.md'
         current.write_text('# Current work\n')
@@ -174,7 +174,7 @@ class BudgetTests(unittest.TestCase):
         result = self.call(hook_event_name="PreCompact")
         self.assertEqual(result["decision"], "block")
         handover = budget.handover_path(self.root, "test-session")
-        state_file = self.root / ".factory/context/test-session.json"
+        state_file = self.root / ".aeion/context/test-session.json"
         state = json.loads(state_file.read_text())
         state["checkpoint"] = {"tree": budget.fingerprint(self.root),
                                "handover": budget.hashlib.sha256(handover.read_bytes()).hexdigest()}
@@ -227,8 +227,8 @@ class BudgetTests(unittest.TestCase):
         child.write_text(json.dumps({"type": "assistant", "message": {"usage": usage}}) + "\n")
         self.assertFalse(self.call(**event)["continue"])
         self.assertFalse(self.call(agent_id="agent-child1", agent_transcript_path=str(child), hook_event_name="SubagentStop")["continue"])
-        self.assertEqual(len(list((self.root / ".factory/context").glob("*.json"))), 2)
-        parent = json.loads((self.root / ".factory/context/test-session.json").read_text())
+        self.assertEqual(len(list((self.root / ".aeion/context").glob("*.json"))), 2)
+        parent = json.loads((self.root / ".aeion/context/test-session.json").read_text())
         self.assertEqual(parent["state"], "HANDOVER_REQUIRED")
 
     def test_missing_child_transcript_refuses_child_without_stopping_parent(self):

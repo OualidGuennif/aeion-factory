@@ -18,7 +18,7 @@ linear history and resolved conversations. Enforce these rules for administrator
 force-push and branch deletion. Preserve stronger existing rules. Pin required checks to their
 actual GitHub App where available; do not invent check names or require disabled optional jobs.
 
-Factory requires Knowledge/links/health, Graphify/Archify, secret-scan, dependency-scan and
+Æion Factory requires Knowledge/links/health, Graphify/Archify, secret-scan, dependency-scan and
 sast-scan. The fresh `Review: OK` comment remains required by the delivery workflow; it is not
 an approving forge review. The solo-owner workflow uses zero required human approvals, rather
 than making the author approve their own PR. This distinction is explicit: CI/PR requirements

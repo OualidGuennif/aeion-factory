@@ -1,7 +1,7 @@
 ---
 type: Runbook
-title: "Claude Code, Codex, OpenCode and Devin"
-description: "One Factory instruction/skill source, runtime-specific adapters, setup and explicitly bounded guarantees."
+title: "Claude Code, Codex, OpenCode, Devin and Droid"
+description: "One Æion Factory instruction/skill source, runtime-specific adapters, setup and explicitly bounded guarantees."
 status: stable
 sources:
   - resource: ../../tools/agents/hook.py
@@ -20,6 +20,8 @@ sources:
     title: "Devin import settings"
   - resource: ../../.devin/hooks.v1.json
     title: "Devin hook registrations"
+  - resource: ../../.factory/settings.json
+    title: "Droid hook registrations"
 generated:
   by: aeion-factory/1.2
   at: 2026-10-25
@@ -52,7 +54,14 @@ does not establish loaded hooks or identical runtime guarantees.
   shell guard. A refused tool call gets Devin's `{"decision": "block", "reason": ...}`; a failed
   Stop or SessionStart gets `continue: false`, because Devin's block on Stop means "keep going".
   A payload without `session_id` uses one key per clone, so sign-off reminders are shared across
-  that clone's Devin sessions. Devin has no Factory compaction checkpoint or token stop.
+  that clone's Devin sessions. Devin has no Æion Factory compaction checkpoint or token stop.
+- Droid, the CLI of Factory (factory.ai, a product separate from Æion Factory), reads `AGENTS.md`,
+  `.agents/skills` and `.factory/settings.json`. That is why Æion Factory's local state lives in
+  `.aeion/` and only Droid's config is tracked in `.factory/`. Its hooks send SessionStart,
+  PreToolUse, PostToolUse and Stop to `tools/agents/hook.py droid`. Droid payloads and decisions
+  are Claude-shaped; the adapter maps `Execute`, `Create` and `ApplyPatch` (patch text in
+  `command`, `patchText`, `patch` or `input`) to the shared guards and refuses with
+  `permissionDecision: deny`. Droid has no Æion Factory compaction checkpoint or token stop.
 - Managed CLI launchers enter the repository root and check the exact-HEAD architecture baseline;
   its absence is a warning, because installing the integrations needs the user's yes.
 - Raw command/MCP paths, host-managed/cloud orchestration and deliberate local modification are
@@ -77,6 +86,9 @@ qualification and setup commands are recorded below.
 - https://docs.devin.ai/cli/extensibility/hooks/overview
 - https://docs.devin.ai/cli/reference/configuration/read-config-from
 - https://docs.devin.ai/cli/extensibility/skills/overview
+- https://docs.factory.ai/reference/hooks-reference
+- https://docs.factory.ai/cli/configuration/hooks-guide
+- https://docs.factory.ai/cli/configuration/skills
 
 ## Setup
 
@@ -92,6 +104,8 @@ qualification and setup commands are recorded below.
    `--isolated`, a separate ignored XDG profile; connect that profile's provider natively.
 5. Devin CLI: `devin` or `tools/agents/run devin` from the repository root. Approve the project
    hooks if Devin asks. Keep the model/provider choice in Devin's own user settings.
+6. Droid: `droid` or `tools/agents/run droid` from the repository root. Approve the project hooks
+   if Droid asks; account and model stay in Droid's user settings (`~/.factory/`).
 
 The shared guards are basename/command-pattern safeguards. Codex native Bash and apply_patch
 payloads are normalized explicitly, including deleted/moved patch paths. OpenCode maps native
@@ -119,7 +133,7 @@ Real model-driven qualification is separate: it must show actual file changes an
 native guard denial in a disposable repository, not merely an agent's completion statement.
 The [dated OpenCode experiment](../references/opencode-context-qualification.md) covers a native
 278k-input call and refusal of an over-budget tool continuation in an isolated primary-HTTP profile.
-No full 250k handover/compaction cycle or absolute Factory admission ceiling is claimed. Local hook failures
+No full 250k handover/compaction cycle or absolute Æion Factory admission ceiling is claimed. Local hook failures
 can be advisory in some native events; retain native sandbox/permissions and check actual dispatch.
 Hosted/cloud orchestration and optional scheduled native actions require separate qualification.
 
@@ -128,6 +142,12 @@ tool names, `DEVIN_PROJECT_DIR` and the block decision follow Devin's documentat
 integrations verified on Devin 3000.11.3. To qualify, in a disposable clone ask Devin to `cat .env`
 and to edit a file: the first must be refused with the guard's reason, the second must name the
 covering doc. Devin cloud sessions do not read `.devin/` and are not covered.
+
+Droid is not yet qualified live either. docs.factory.ai was unreachable from the container that
+added it, so the payload shape, tool names and `$FACTORY_PROJECT_DIR` follow search excerpts of
+its hooks reference and public Droid hook integrations. Unverified: `ApplyPatch`'s input field
+(an unknown field is refused, failing closed) and whether Droid also loads `.claude/` hooks.
+Qualify it like Devin: `cat .env` refused with the guard's reason, an edit naming its covering doc.
 
 OpenCode 2.1.4 is the qualified V2 target. Legacy 1.19.4 can discover skills but does not dispatch
 these V2 callbacks; do not claim its guards are working from discovery alone. The plugin is a

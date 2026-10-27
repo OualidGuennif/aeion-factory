@@ -9,6 +9,6 @@
   <array><string>/path/to/repo/loops/orchestrator.sh</string><string>outer</string></array>
   <key>WorkingDirectory</key><string>/path/to/repo</string>
   <key>StartCalendarInterval</key><dict><key>Hour</key><integer>6</integer><key>Minute</key><integer>15</integer></dict>
-  <key>StandardErrorPath</key><string>/path/to/repo/.factory/logs/launchd-outer.err</string>
+  <key>StandardErrorPath</key><string>/path/to/repo/.aeion/logs/launchd-outer.err</string>
 </dict>
 </plist>

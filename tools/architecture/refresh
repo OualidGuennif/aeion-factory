@@ -154,7 +154,7 @@ def candidate(view, source, target, origin):
 
 
 def toolchain(root, config):
-    integrations = root / ".factory/integrations"
+    integrations = root / ".aeion/integrations"
     python = integrations / "graphify-venv/bin/python"
     archify = integrations / "archify"
     if not python.is_file() or not archify.is_dir():
@@ -174,7 +174,7 @@ def toolchain(root, config):
 def refresh(root, target, base=None, check=False):
     target = revision(root, target)
     config = json.loads((root / "tools/architecture/integrations.json").read_text())
-    analysis = root / ".factory/analysis"
+    analysis = root / ".aeion/analysis"
     analysis.mkdir(parents=True, exist_ok=True)
     destination = analysis / target
     requested_base = revision(root, base) if base and base != "0" * 40 else None
@@ -223,8 +223,8 @@ def refresh(root, target, base=None, check=False):
                 logged(["node", str(archify), "finalize", name, str(diagram), str(output / f"{name}.html"),
                         "--repo-root", str(source), "--quality", "showcase", "--json"],
                        archify.parents[2], analysis / "logs" / f"{target}-{name}.log")
-            (output / "index.html").write_text('<!doctype html><meta charset="utf-8"><title>Factory architecture</title>'
-                '<h1>Factory architecture</h1><p>Immutable source snapshot; structural graph and reviewed architecture views.</p>'
+            (output / "index.html").write_text('<!doctype html><meta charset="utf-8"><title>Æion Factory architecture</title>'
+                '<h1>Æion Factory architecture</h1><p>Immutable source snapshot; structural graph and reviewed architecture views.</p>'
                 + ''.join(f'<p><a href="{view["diagram_type"]}.html">{html.escape(view["meta"]["title"])}</a></p>' for view in views))
             artifacts = {path.relative_to(output).as_posix(): digest(path) for path in output.rglob("*") if path.is_file()}
             receipt = {"schema_version": 2, "status": "PASS", "target": target, "base": base, "requested_base": requested_base, "changed_paths": changed,

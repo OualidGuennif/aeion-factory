@@ -21,7 +21,7 @@ Everything you can run here, grouped by loop. Skills are invoked by name in a Cl
 | `pr-taste` | the owner commented on a PR: keep the durable preferences |
 | `retro` | weekly or after a long session: lessons into hooks, skills and preferences |
 | `loop-triage` | an outer-loop finding: turn it into an issue an inner loop can fix |
-| `adopt` | apply the Factory to an existing repository, one phase at a time |
+| `adopt` | apply Æion Factory to an existing repository, one phase at a time |
 
 ## Tools
 
@@ -44,8 +44,9 @@ tools/agents/run codex                              # trust project/hooks first
 tools/agents/run opencode                           # native plugin, shared skills
 tools/agents/run opencode --isolated                # separate local profile on database conflict
 tools/agents/run devin                              # Devin CLI: .devin/ hooks, shared skills
-git config factory.mode local                       # local play: commits on main, no PR/CI ritual
-git config --unset factory.mode                     # back to the team flow
+tools/agents/run droid                              # Droid (factory.ai): .factory/ hooks, shared skills
+git config aeion.mode local                       # local play: commits on main, no PR/CI ritual
+git config --unset aeion.mode                     # back to the team flow
 python3 tools/agents/tests/test_hooks.py
 node --test tools/agents/tests/test_opencode.mjs
 python3 tools/loops/tests/test_loops.py
@@ -85,7 +86,7 @@ claude plugin install native-lsp@aeion-local --scope project
 
 ## Git flow
 
-The team flow below is the default. In local mode (`git config factory.mode local`), commit on
+The team flow below is the default. In local mode (`git config aeion.mode local`), commit on
 `main` locally; pushing is the user's call, and the safety guards still apply. Only the user
 switches the mode.
 

@@ -36,7 +36,7 @@ A local baseline is strongly recommended and never installed automatically. An a
 user before running `tools/architecture/setup`, says what it installs (below), and asks whether the
 machine is a work computer whose policy restricts installs. On a yes, run setup, then
 `tools/architecture/refresh --target HEAD`. Without a baseline the launchers warn and continue;
-CI still runs the analysis on GitHub. Setup creates a virtual environment in `.factory/integrations/`,
+CI still runs the analysis on GitHub. Setup creates a virtual environment in `.aeion/integrations/`,
 downloads the reviewed Graphify revision and its pinned packages into it, and clones the pinned
 Archify package there. Git, Python 3.12+ (excluding 3.14.1), Node 18+ and Chrome/Chromium are
 required. Dependencies and browser execution are explicit; there is no global plugin install.
@@ -62,8 +62,8 @@ completeness. Refresh validates source anchors (one to three per node, Archify's
 and runs Archify `finalize` for every view, including browser checks. A browser/gate failure
 is not success. Automated gates cannot prove semantic correctness or visual quality.
 
-Outputs live in `.factory/analysis/<sha>/`: graph, report, coverage/source manifest, diagrams,
-Archify receipts, and a Factory `receipt.json`. Publication uses a lock and atomic final receipt.
+Outputs live in `.aeion/analysis/<sha>/`: graph, report, coverage/source manifest, diagrams,
+Archify receipts, and an Æion Factory `receipt.json`. Publication uses a lock and atomic final receipt.
 Archify renders at its permanent target path because moving its HTML invalidates native path
 provenance. Incomplete attempts have no PASS receipt; invalid prior attempts are retained aside.
 A same-SHA successful rerun verifies artifact hashes and all gate summaries before reuse.
@@ -76,13 +76,13 @@ Archify path provenance in a different location, run a new local baseline for th
 Use `--base <sha>` to record the complete changed/removed path set and validate spec coverage.
 PR diffs use the merge base of the supplied base/head, so independently advancing main does
 not reject a valid branch; the immutable baseline receipt records its original requested base SHA and effective merge base.
-Every invocation also writes `.factory/analysis/comparisons/<target>/<requested-base-or-initial>.json`
+Every invocation also writes `.aeion/analysis/comparisons/<target>/<requested-base-or-initial>.json`
 with the current comparison and baseline-receipt hash. This preserves graph reuse without reporting
 an earlier changed-path set as the current comparison.
 Missing refs fail. With no base this is a full initial baseline, not an implicit empty diff.
 The workflow supplies the PR base or push's previous SHA; an all-zero initial-push base means
 a full baseline. Paths outside the declared scope are listed, never silently marked extracted.
-When adopting Factory, update both the scope/views and the project architecture spec first.
+When adopting Æion Factory, update both the scope/views and the project architecture spec first.
 
 Commands: `python3 tools/architecture/tests/test_refresh.py` and the real refresh command above.
 Release/ship checks must wait for the exact merged SHA's analysis check. A rerun retries that

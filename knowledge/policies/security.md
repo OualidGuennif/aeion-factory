@@ -71,10 +71,10 @@ credentials. Loops never deploy, restart, migrate data or change a setting.
 
 ## Read-only loop commands
 
-Read-only loop jobs set `FACTORY_LOOP_READ_ONLY=1`. The shared guard restricts Bash to exact
+Read-only loop jobs set `AEION_LOOP_READ_ONLY=1`. The shared guard restricts Bash to exact
 checker/Git reads and named issue/review operations; it refuses writer-capable tool wildcards,
 arbitrary Git arguments and shell composition. A published body file must be a regular file under
-`.factory/loop-bodies/` (the jobs' only Write scope), given as its own word, and `--recover` is refused: issue text cannot
+`.aeion/loop-bodies/` (the jobs' only Write scope), given as its own word, and `--recover` is refused: issue text cannot
 make a loop post a local file such as a CLI credential store. A production read must match the configured
 single trusted command. These are accidental-command controls, not OS-level isolation.
 

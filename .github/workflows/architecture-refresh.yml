@@ -33,7 +33,7 @@ jobs:
         with:
           name: factory-analysis-${{ github.event.pull_request.head.sha || github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
-            .factory/analysis/${{ github.event.pull_request.head.sha || github.sha }}/
-            .factory/analysis/comparisons/${{ github.event.pull_request.head.sha || github.sha }}/
+            .aeion/analysis/${{ github.event.pull_request.head.sha || github.sha }}/
+            .aeion/analysis/comparisons/${{ github.event.pull_request.head.sha || github.sha }}/
           retention-days: 14
           if-no-files-found: error

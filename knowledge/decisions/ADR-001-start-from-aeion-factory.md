@@ -19,7 +19,7 @@ Agents work best with short, routed instructions, docs bound to code, and fast f
 should not have to review every change by hand.
 
 ## Decision
-The repository uses the Factory's structure: `AGENTS.md` as a router, `knowledge/` in the OKF
+The repository uses Æion Factory's structure: `AGENTS.md` as a router, `knowledge/` in the OKF
 format with links to code checked by `doc-links`, skills and hooks in `.claude/`, the branch + PR +
 review flow, and the scheduled read-only outer loop. The Decisions API and the memory service are
 off until a human turns them on.

@@ -4,7 +4,11 @@ env.local
 .env.*
 !.env.example
 # Generated and local state.
-.factory/
+.aeion/
+# .factory/ belongs to Factory's Droid; only its config is tracked, older local state stays ignored.
+.factory/*
+!.factory/settings.json
+!.factory/README.md
 # Active local recovery files; durable facts remain in knowledge/.
 work/handovers/
 /state_of_the_art research/

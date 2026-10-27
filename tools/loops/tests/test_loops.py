@@ -43,7 +43,7 @@ class LoopTests(unittest.TestCase):
         for job in ('outer','docs','security','middle'):
             tools=[line for line in self.call(job,'--dry-run').stderr.splitlines() if line.startswith('tools=')][0]
             writes=[tool for tool in tools[6:].split(',') if tool.startswith(('Write','Edit'))]
-            self.assertEqual(writes,['Write(.factory/loop-bodies/**)'],job)
+            self.assertEqual(writes,['Write(.aeion/loop-bodies/**)'],job)
             self.assertIn('Bash(tools/knowledge/doc-links --for *)',tools)
 
     def test_enabled_high_severity_routes_model_and_supplies_turn_cap(self):

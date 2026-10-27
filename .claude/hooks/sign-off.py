@@ -6,7 +6,7 @@ Input: the Stop event on stdin. Only the files this session edited count (after-
 them). When one of them is code whose covering doc did not change (tools/knowledge/doc-links L3),
 work/current.md did not change, or it opened a new top-level folder without AGENTS.md changing, it
 blocks with the findings not shown yet in this session; a second stop always passes. Local mode
-(git config factory.mode local) always passes.
+(git config aeion.mode local) always passes.
 """
 import hashlib
 import json
@@ -26,8 +26,8 @@ def git(*args):
 event = json.load(sys.stdin)
 if event.get("stop_hook_active"):
     sys.exit(0)
-# Local play (git config factory.mode local) has no task-closure ritual to remind of.
-if git("config", "--get", "factory.mode").stdout.strip() == "local":
+# Local play (git config aeion.mode local) has no task-closure ritual to remind of.
+if git("config", "--get", "aeion.mode").stdout.strip() == "local":
     sys.exit(0)
 session = event.get("session_id", "none")
 edited_log = Path(tempfile.gettempdir()) / f"claude-edited-{session}"

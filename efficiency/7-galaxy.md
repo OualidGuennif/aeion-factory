@@ -41,7 +41,7 @@ them — human or agent decisions with their reasons — that loops can read bef
 - **The contract** (`loops/decisions-api/README.md`): `GET /decisions?topic=...` returns the
   current decision and its reason; `POST /decisions` records a proposed one for a human to approve.
   Every call carries `Authorization: Bearer $DECISION_API_SECRET`.
-- **JEV is the example** in the Factory: an external decision service your loops can consult. Any
+- **JEV is the example** in Æion Factory: an external decision service your loops can consult. Any
   service with that contract fits.
 - **Off by default** (`DECISION_API_ENABLED=false`): the client refuses to run until it is turned
   on, and the secret lives only in the local env file, never in the repository or a prompt.

@@ -1,9 +1,9 @@
 # Æion Factory
 
-**A repository template for Claude Code, Codex, OpenCode and Devin: shared instructions, linked
+**A repository template for Claude Code, Codex, OpenCode, Devin and Factory's Droid: shared instructions, linked
 specs, reusable skills and automatic checks.**
 
-Factory organizes the work around **plan → change → test → review → merge**. Your project's
+Æion Factory organizes the work around **plan → change → test → review → merge**. Your project's
 existing instructions and the owner's decisions take precedence.
 
 | Part | Purpose |
@@ -12,7 +12,8 @@ existing instructions and the owner's decisions take precedence.
 | [Knowledge](knowledge/index.md) | Canonical policies, component specs and decisions |
 | `work/current.md` | Open tasks only |
 | `.claude/skills/` | Maintained skill bodies; `.agents/skills/` exposes them to Codex and Devin |
-| `.claude/`, `.codex/`, `.opencode/`, `.devin/` | Native configuration/adapters for each agent |
+| `.claude/`, `.codex/`, `.opencode/`, `.devin/`, `.factory/` | Native configuration/adapters for each agent (`.factory/` is Droid's) |
+| `.aeion/` (ignored) | Æion Factory's local state: analysis, context checkpoints, loop bodies |
 | `tools/` and GitHub CI | Documentation checks, tests and source-backed architecture |
 
 ## Requirements
@@ -24,8 +25,10 @@ PR workflow and your chosen agent separately:
 
 - [Claude Code](https://code.claude.com/docs/en/setup)
 - [Codex](https://learn.chatgpt.com/docs/cli)
-- [OpenCode V2](https://opencode.ai/v2/docs/) — 2.1.4+ for Factory's native plugin
+- [OpenCode V2](https://opencode.ai/v2/docs/) — 2.1.4+ for Æion Factory's native plugin
 - [Devin CLI](https://docs.devin.ai/cli/extensibility) — reads `.devin/`, `AGENTS.md` and `.agents/skills`
+- [Droid](https://docs.factory.ai/cli/configuration/hooks-guide), the CLI of Factory (factory.ai), a separate
+  product — reads `.factory/settings.json`, `AGENTS.md` and `.agents/skills`
 
 Keep authentication, provider and model choices in the agent's native user settings. Never
 commit credentials to the project.
@@ -34,14 +37,14 @@ commit credentials to the project.
 
 ```bash
 git clone https://github.com/OualidGuennif/aeion-factory.git && cd aeion-factory
-git config factory.mode local   # optional: play on main, no branch/PR/CI ritual
+git config aeion.mode local   # optional: play on main, no branch/PR/CI ritual
 tools/agents/run claude         # or: codex, opencode (2.1.4+), devin
 ```
 
 The launcher applies each agent's checked profile; the hooks and skills load from the repository,
 and nothing is installed. The safety guards (secrets,
 Git hook and force-push bypasses, large dumps) stay on in local mode. `git config --unset
-factory.mode` returns to the team flow. The agent recommends the architecture baseline and asks
+aeion.mode` returns to the team flow. The agent recommends the architecture baseline and asks
 before installing it: on a work computer, check your company's policy first.
 
 ## How to: new project
@@ -56,11 +59,12 @@ before installing it: on a work computer, check your company's policy first.
    codex        # Codex
    opencode     # OpenCode V2
    devin        # Devin CLI
+   droid        # Droid (factory.ai)
    ```
 
 3. Give the agent this setup request:
 
-   > Read AGENTS.md, README.md and efficiency/00-EFFICIENCY.md. Prepare Factory for this new
+   > Read AGENTS.md, README.md and efficiency/00-EFFICIENCY.md. Prepare Æion Factory for this new
    > project: describe the project and owner, add its actual build/test commands, adapt the
    > architecture spec and analysis scope/views, and configure my chosen agent's native setup.
    > Run the checks. Ask me before enabling the Git pre-commit checks and before installing the
@@ -70,7 +74,7 @@ before installing it: on a work computer, check your company's policy first.
 
 4. Complete the native workspace/project trust prompts. In Codex, also review and enable the
    project hooks in `/hooks`, then restart the session. For OpenCode, connect your provider
-   through its native interface. For Devin, approve the project hooks if it asks.
+   through its native interface. For Devin and Droid, approve the project hooks if asked.
 5. Confirm setup and start normal work through the managed launcher below. Configure
    [GitHub main protection](knowledge/operations/github-protection.md) in the new repository;
    GitHub settings are not copied by templates.
@@ -79,7 +83,7 @@ before installing it: on a work computer, check your company's policy first.
 
 1. Open your **existing project folder** with Claude Code, Codex or OpenCode. Keep its current
    instructions, configuration, tests and Git history.
-2. Make a local reference copy of Factory, or point the agent at a reference folder you already
+2. Make a local reference copy of Æion Factory, or point the agent at a reference folder you already
    have:
 
    ```bash
@@ -90,7 +94,7 @@ before installing it: on a work computer, check your company's policy first.
 
    > Read ../aeion-factory-reference/AGENTS.md, efficiency/00-EFFICIENCY.md and the adopt skill.
    > Inspect this project's existing instructions, docs, CI, skills and hooks first. Propose the
-   > smallest adoption plan, one phase at a time. Merge useful Factory pieces into what exists;
+   > smallest adoption plan, one phase at a time. Merge useful Æion Factory pieces into what exists;
    > preserve my project's authority, conventions and working tools. Include native setup for my
    > agent, linked specs and relevant checks; offer the recommended architecture baseline and ask
    > me before installing anything. Wait for my approval before changing files.
@@ -109,6 +113,7 @@ Run these from the repository root. Additional arguments are native CLI argument
 | Codex | `tools/agents/run codex` | Trusted `.codex/config.toml` / `hooks.json`, shared `.agents/skills` |
 | OpenCode | `tools/agents/run opencode` | Root `opencode.json`, native V2 plugin in `.opencode/plugins/factory/` |
 | Devin CLI | `tools/agents/run devin` | `.devin/hooks.v1.json` and `config.json`, `AGENTS.md`, shared `.agents/skills` |
+| Droid (factory.ai) | `tools/agents/run droid` | `.factory/settings.json` hooks, `AGENTS.md`, shared `.agents/skills` |
 
 The launchers enter the project root and check the architecture baseline for the current commit;
 without one they recommend it and continue. The original Claude entry point, `tools/context/run`,
@@ -124,8 +129,8 @@ also remains available.
 | `tools/knowledge/doc-links --diff origin/main --worktree` | Check affected docs for committed and local changes |
 | `tools/knowledge/doc-links --for path/to/file` | Find the docs covering a file |
 | `tools/repo-health/repo-health --json` | Show repository size/comment/structure checks |
-| `git config factory.mode local` | Local play: commit on main, no PR/CI ritual (`--unset` to undo) |
-| `python3 tools/architecture/setup` | Install pinned Graphify/Archify into `.factory/` (only on your yes) |
+| `git config aeion.mode local` | Local play: commit on main, no PR/CI ritual (`--unset` to undo) |
+| `python3 tools/architecture/setup` | Install pinned Graphify/Archify into `.aeion/` (only on your yes) |
 | `tools/architecture/refresh --target HEAD` | Build the recommended initial/updated source baseline |
 | `tools/architecture/refresh --target HEAD --base origin/main` | Analyze the committed change and its comparison |
 | `tools/architecture/refresh --check --target HEAD` | Verify the persisted baseline and artifact hashes |
@@ -142,12 +147,12 @@ configured. Enabled local jobs default to 30 turns and a 900-second deadline.
 ## Available skills
 
 Ask the agent to use a named skill; Claude Code also supports `/name`, and Codex supports `$name`.
-OpenCode loads skills through its native skill tool; Devin reads `.agents/skills`. Any agent can
+OpenCode loads skills through its native skill tool; Devin and Droid read `.agents/skills`. Any agent can
 open `.agents/skills/<name>/SKILL.md` directly.
 
 | Skills | Use them for |
 | --- | --- |
-| `adopt` | Introduce Factory into an existing project |
+| `adopt` | Introduce Æion Factory into an existing project |
 | `plan`, `spec` | Inspect and approve a change, then define its contract |
 | `build`, `test`, `debug` | Implement, verify and investigate failures |
 | `okf-update`, `sign-off` | Maintain Knowledge and finish a task with evidence |
@@ -175,7 +180,7 @@ current and wait for the exact merged commit's analysis before declaring deliver
 [context safety](knowledge/operations/context-safety.md) ·
 [architecture maintenance](knowledge/operations/architecture-maintenance.md).
 
-Factory works independently. Optional [Æion modules](https://github.com/OualidGuennif/aeion-spaceship/blob/main/docs/modules.md)
+Æion Factory works independently. Optional [Æion modules](https://github.com/OualidGuennif/aeion-spaceship/blob/main/docs/modules.md)
 cover security, audit, observability and integration.
 
 License: [MIT](LICENSE) · [Credits](CREDITS.md) · [Security](SECURITY.md).

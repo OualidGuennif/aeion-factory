@@ -15,8 +15,8 @@ A fresh context catches what the author's context hides. One comment, one verdic
 4. Verify every finding yourself; drop what you cannot confirm.
    Trace suggestions against the code/spec before implementing them; disagree with an unsupported
    fix. For context/architecture work, verify claimed guarantees and exact-SHA artifact coverage.
-5. Write the verdict to `.factory/loop-bodies/review-<n>.md` (ignored; the only body path read-only
-   loops may publish) and post it with `gh pr comment <n> --body-file .factory/loop-bodies/review-<n>.md`:
+5. Write the verdict to `.aeion/loop-bodies/review-<n>.md` (ignored; the only body path read-only
+   loops may publish) and post it with `gh pr comment <n> --body-file .aeion/loop-bodies/review-<n>.md`:
    ```
    Review: OK            (or)   Review: NOT OK
    - <high|medium|low> path:line -- the finding (at most five)

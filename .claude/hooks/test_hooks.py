@@ -127,7 +127,7 @@ for path in ["/repo/.env", "/repo/env.local", "/x/server.pem", "/h/auth.json", "
 for pattern in [".env", ".e*", "**/.env*", ".{e,x}nv", "*.pem"]:
     expect(f"path deny: Grep glob {pattern}",
            run_hook("guard-path.py", {"pattern": "x", "glob": pattern, "path": "/repo"}, tool_name="Grep"), 2)
-for pattern in ["id_*", "cred*", "[^x]d_*", ".*rc", "env.*", "i[[:lower:]]_*"]:
+for pattern in ["id_*", "cred*", "[^x]d_*", ".*rc", "env.*", "i[[:lower:]]_*", "*2"]:
     expect(f"path deny: Grep glob {pattern}",
            run_hook("guard-path.py", {"pattern": "x", "glob": pattern, "path": "/repo"}, tool_name="Grep"), 2)
 for pattern in ["*.py", "*.{ts,tsx}", "**/*.md", ".github/**", "!.env", "*.json", "*.kts", "k*", ".*"]:
@@ -178,7 +178,8 @@ for command in ["head $X/id_*", "head $(pwd)/k/cred*", "cat id_*", "head auth*",
                 "echo x # '\nhead -n 3 $X/id_*\n# '", "echo $'\\'' ; head -n 3 $X/id_* ; echo $'\\''",
                 "awk 'BEGIN{system(\"head $X/id_*\")}'", "echo 'head $X/id_*' > f; rg --pre sh x f",
                 "echo 'head $X/id_*' | sort --compress-program=sh -S 1", "cat <(echo 'head $X/id_*') | grep x",
-                "echo 'head $X/id_*' > >(sh)"]:
+                "echo 'head $X/id_*' > >(sh)", "watch -n1 head -n3 '$X/.e*'", "watch head -n3 '$X/id_*'",
+                "watch 'head -n3 $X/.e*; /bin/echo'"]:
     expect(f"bash deny named glob: {command}", run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 2)
 # A quoted pattern is a regex or prose the shell never expands.
 for command in ["ls *", "head *.md", "grep x *.json", "ls c*", "ls *_*", "wc -l *.py", "ls -d .*", "head k*", "wc -l *.kts",

@@ -11,13 +11,6 @@ Status: ACTIVE, WAITING-OWNER, MEASURING, BLOCKED, BACKLOG.
 - Blocker: neither CLI is in the agent's container.
 - Evidence: knowledge/operations/agent-compatibility.md
 
-## Review fixes: secrets, closure, hooks, pins — ACTIVE
-- Owner decision: 2026-10-27, apply all findings of the full repository review.
-- State: task/review-fixes: one secret list with glob resolution, closure parse and local-mode checkpoint, MultiEdit/NotebookEdit hooks, sign-off input, hash-pinned requirements, doc fixes.
-- Next: PR #15; review 1 NOT OK (glob after cd/$VAR, braces, aeion.mode) fixed; re-review, merge after PR #14 (who: agent).
-- Blocker: none; codeload.github.com returns 403 here, so the hash-checked install is proven in CI.
-- Evidence: knowledge/policies/security.md; knowledge/operations/context-safety.md
-
 ## Main branch protection — WAITING-OWNER
 - Owner decision: 2026-10-27, protect main as knowledge/operations/github-protection.md describes.
 - State: the agent's GitHub tools cannot change branch protection; the settings must be applied by the owner.

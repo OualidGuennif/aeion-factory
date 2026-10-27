@@ -13,7 +13,7 @@ import re
 import shlex
 import sys
 from pathlib import Path, PurePosixPath
-from secret_names import is_secret
+from secret_names import brace_variants, dotfile_secrets, is_secret
 
 READERS = {"cat", "less", "more", "head", "tail", "grep", "rg", "awk", "sed", "strings", "base64",
            "xxd", "od", "source", ".", "cp", "scp", "rsync", "jq", "python3", "python", "node", "vim", "nano"}
@@ -35,39 +35,15 @@ def ask(reason):
     sys.exit(0)
 
 
-BRACES = re.compile(r"\{[^{}]*(,|\.\.)[^{}]*\}")
-VARIABLE = re.compile(r"\$\{?[A-Za-z_]")
-
-
-def brace_variants(word):
-    """The words bash brace expansion makes of word; a sequence ({a..z}) widens to a wildcard."""
-    match = BRACES.search(word)
-    if not match:
-        return [word]
-    inner = match.group(0)[1:-1]
-    options = inner.split(",") if "," in inner else ["*"]
-    variants = [v for option in options for v in brace_variants(word[:match.start()] + option + word[match.end():])]
-    if len(variants) > 256:
-        raise ValueError("too many brace variants to verify")
-    return variants
-
-
 def directories(command, base):
-    """The directories a glob in the command may expand in: its own and each one a cd moves to.
-
-    None when a move cannot be followed (a variable, cd -)."""
+    """The directories a glob in the command may expand in: its own and each literal one a cd moves to."""
     current, found = base, [base]
     for words in simple_commands(command):
         words = program(words)
         if words and words[0] == "<script>":
-            nested = directories(words[1], current)
-            if nested is None:
-                return None
-            found += nested
+            found += directories(words[1], current)
         elif words and PurePosixPath(words[0]).name in ("cd", "pushd"):
-            target = next((w for w in words[1:] if w == "-" or not w.startswith("-")), "~")
-            if target == "-" or VARIABLE.search(target):
-                return None
+            target = next((w for w in words[1:] if not w.startswith("-")), "~")
             current = os.path.join(current, os.path.expanduser(target))
             found.append(current)
     return found
@@ -82,9 +58,9 @@ def mentioned_secrets(tokens, shell_tokens, bases):
             if is_secret(name):
                 names.add(name)
             elif any(char in word for char in "*?["):
-                # A glob names the files the shell would expand it to (dotfiles only for a leading dot, as in bash).
-                if bases is None or VARIABLE.search(word):
-                    raise ValueError("the directory a glob expands in is unknown")
+                # A dotfile glob is judged by its name wherever it expands, since a variable, a command
+                # substitution or a cd can hide its directory; any other glob by the files it expands to.
+                names |= dotfile_secrets(name)
                 pattern = os.path.expanduser(word)
                 for base in bases:
                     matches = glob.glob(pattern, root_dir=None if os.path.isabs(pattern) else base)
@@ -393,7 +369,8 @@ def git_bypass(command):
                     return hooks_reason
             # Local mode relaxes the sign-off and the closure checkpoint, so only the user switches it.
             modes = [i for i, a in enumerate(positional) if a.lower() == "aeion.mode"]
-            if modes and (positional[modes[0] + 1:] or "unset" in positional[:modes[0]]
+            reads = {"get", "--get", "--get-all", "--get-regexp"} & set(args)
+            if modes and not reads and (positional[modes[0] + 1:] or "unset" in positional[:modes[0]]
                           or any(a.startswith("--unset") for a in args)):
                 return "aeion.mode is the user's switch between team and local flow; the user sets it."
         value_next = False
@@ -510,7 +487,9 @@ TOKEN_SPLIT = r"[\s'\"=;&|<>()`]+"
 tokens = [t for t in re.split(TOKEN_SPLIT, command) if t]
 workdir = event.get("tool_input", {}).get("workdir", event.get("tool_input", {}).get("cwd", event.get("cwd", ".")))
 try:
-    shell_tokens = [t for t in re.split(TOKEN_SPLIT, without_inert_heredocs(command)) if t]
+    # Quotes join a shell word (sub/'.e'*), so they are dropped rather than split on.
+    shell_text = re.sub(r"['\"]", "", without_inert_heredocs(command))
+    shell_tokens = [t for t in re.split(r"[\s=;&|<>()`]+", shell_text) if t]
     secrets = mentioned_secrets(tokens, shell_tokens, directories(command, workdir if isinstance(workdir, str) else "."))
 except (OSError, ValueError, RecursionError):
     deny("the files a glob names could not be verified; name the files explicitly.")

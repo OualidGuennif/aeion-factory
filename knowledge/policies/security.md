@@ -31,10 +31,11 @@ Requirements for a change, not claims about what production already satisfies.
 - One list names secret files for the guards, doc-links, the context fingerprint and the
   architecture scope: `.claude/hooks/secret_names.py` (dotenv files, `env.local`, credential and
   `auth.json` files, SSH keys, `.netrc`, `.npmrc`, `.pypirc`, `.pgpass`, `.envrc`, `*.pem`, `*.key`,
-  `*.p12`, `*.pfx`; templates such as `.env.example` stay allowed). A shell glob is judged by the
-  files it expands to from the command's directory and every directory a `cd` or `pushd` in it
-  moves to, dotfiles only for a leading dot, as in bash; brace alternatives are expanded first. A
-  glob whose directory is unknown (a variable in it or in the `cd`, `cd -`) is refused.
+  `*.p12`, `*.pfx`; templates such as `.env.example` stay allowed). In a Bash command, quotes are
+  joined and brace alternatives expanded first. A glob for a dotfile (`.e*`, `.[e]nv`) is judged
+  by its name against the dotfile secrets, wherever it expands; any other glob by the files it
+  expands to from the command's directory and each literal directory a `cd` or `pushd` moves to.
+  The Grep tool's `glob` filter is refused when it names a secret the same way.
   A read of a secret name is refused even as a search pattern; search names with the Grep tool.
 - The Bash guard refuses skipping Git hooks or force-pushing in its common spellings: `-n` in a
   commit cluster, any unambiguous prefix of `--no-verify`, a `core.hooksPath` override (`-c`,

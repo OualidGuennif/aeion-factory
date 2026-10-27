@@ -4,7 +4,7 @@
 import json
 import sys
 from pathlib import Path, PurePosixPath
-from secret_names import is_secret
+from secret_names import brace_variants, dotfile_secrets, is_secret
 
 MAX_INTAKE_BYTES, MAX_INTAKE_LINES = 65536, 400
 MAX_SCAN_BYTES = 1024 * 1024
@@ -79,5 +79,15 @@ if is_secret(name):
     print(f"Blocked by .claude/hooks/guard-path.py: {name} holds secrets and is never opened "
           f"(knowledge/policies/security.md).", file=sys.stderr)
     sys.exit(2)
+# Grep's glob filter picks the files it reads, so a glob that names a secret is a read of it.
+if event.get("tool_name") == "Grep" and tool_input.get("glob") is not None:
+    if not isinstance(tool_input["glob"], str):
+        deny("the Grep glob must be a string")
+    try:
+        names = [PurePosixPath(p).name for p in brace_variants(tool_input["glob"])]
+    except ValueError:
+        deny("the Grep glob could not be verified; name the files explicitly")
+    if any(is_secret(n) or dotfile_secrets(n) for n in names):
+        deny("the Grep glob names a secret file, which is never opened")
 check_intake(path, event.get("tool_name", "Read"), tool_input)
 sys.exit(0)

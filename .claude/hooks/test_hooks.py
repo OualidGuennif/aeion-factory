@@ -84,7 +84,7 @@ for command in ["git status --short", "git commit -m 'the environment check'",
                 "git commit -m 'use head -n 5'", "git commit -am wip", "git commit -mnew", "git push -u origin task/x",
                 "git push -n origin main", "git -C repo status", "git commit -m -n", "git commit -am -n",
                 "git push --follow-tags origin task/x", "git log --no-verbose",
-                "git config core.hooksPath tools/git-hooks", "git config --get core.hooksPath", "git config --get aeion.mode",
+                "git config core.hooksPath tools/git-hooks", "git config --get core.hooksPath", "git config --get aeion.mode", "git config --get aeion.mode local",
                 "grep -rn core.hooksPath README.md", "git commit -m 'document core.hooksPath setup'"]:
     result = run_hook("guard-bash.py", {"command": command})
     expect(f"bash allow: {command}", result, 0)
@@ -121,6 +121,12 @@ with tempfile.TemporaryDirectory() as loop_dir:
 for path in ["/repo/.env", "/repo/env.local", "/x/server.pem", "/h/auth.json", "/h/.netrc", "/h/.ssh/id_ecdsa",
              "/x/client.p12", "/repo/.envrc", "/h/.npmrc"]:
     expect(f"path deny: {path}", run_hook("guard-path.py", {"file_path": path}), 2)
+for pattern in [".env", ".e*", "**/.env*", ".{e,x}nv", "*.pem"]:
+    expect(f"path deny: Grep glob {pattern}",
+           run_hook("guard-path.py", {"pattern": "x", "glob": pattern, "path": "/repo"}, tool_name="Grep"), 2)
+for pattern in ["*.py", "*.{ts,tsx}", "**/*.md", ".github/**", "!.env"]:
+    expect(f"path allow: Grep glob {pattern}",
+           run_hook("guard-path.py", {"pattern": "x", "glob": pattern, "path": "/repo"}, tool_name="Grep"), 0)
 expect("path deny: MultiEdit on a secret", run_hook("guard-path.py", {"file_path": "/repo/.env"}, tool_name="MultiEdit"), 2)
 expect("path deny: NotebookEdit names its file notebook_path",
        run_hook("guard-path.py", {"notebook_path": "/repo/.env"}, tool_name="NotebookEdit"), 2)
@@ -141,8 +147,14 @@ for command in ["ls *", "head *.md", "grep -r x .", "wc -l .x*", "rg 'x.*y$' .",
 (glob_dir / "sub").mkdir()
 (glob_dir / "sub/.env").write_text("KEY=x\n")
 for command in ["cd sub && head .e*", "bash -c 'cd sub; tail .e*'", "head sub/.{e,x}nv", "head .{e,x}nv",
-                "head $PWD/sub/.e*", "cd $HOME && head .e*", "cd - && head *.md"]:
+                "head $PWD/sub/.e*", "cd $HOME && head .e*", 'head "$PWD"/sub/.e*', "head sub/'.e'*",
+                'cd sub && head .e""*', "head $(pwd)/sub/.e*", "head `pwd`/sub/.e*", "head ~+/sub/.e*",
+                "sh -c 'head $1/.e*' _ sub", "env -C sub sh -c 'head .[e]nv'"]:
     expect(f"bash deny glob: {command}", run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 2)
+for command in ["grep -rn '$HOME/.*' .", "sed -i \"s/$OLD.*/$NEW/\" a.py", "jq --arg k x '.items[$k]' f.json",
+                'cd "$REPO" && ls *.py', "ls ${DIR}/*.py", 'git commit -m "fix $PWD/*.py glob"',
+                "cd - && head *.md", "sed -n 's/.*=//p' a.cfg"]:
+    expect(f"bash allow: {command}", run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 0)
 expect("bash allow: a glob in a heredoc fed to a program is text",
        run_hook("guard-bash.py", {"command": "git commit -F - <<'EOF'\nfix head $PWD/sub/.e*\nEOF", "workdir": str(glob_dir)}), 0)
 expect("bash deny: a glob in a heredoc fed to a shell",

@@ -52,7 +52,8 @@ Before any compaction, fill `work/handovers/<session-id>.md`, update `work/curre
 docs, and run `python3 tools/context/budget.py checkpoint --session <id> --base <git-ref> --verify`.
 The command runs knowledge/link/health checks and binds readiness to the current source diff
 and handover hash. Later edits invalidate it. Compaction is refused without a current receipt.
-The hook creates the handover skeleton at startup; replace each TODO. Keep outcomes, remaining
+The skeleton appears only when closure needs it (the 250k alert, the observed stop, a refused
+compaction or the first checkpoint command), so ordinary sessions and subagents leave none; replace each TODO. Keep outcomes, remaining
 work, constraints and evidence concise. These local handovers are ignored by Git; durable facts
 belong in Knowledge. After compaction the same file is the recovery pointer.
 

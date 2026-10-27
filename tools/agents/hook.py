@@ -72,7 +72,7 @@ def handle(root, provider, event):
     normalized = {**event, 'session_id': session}
     with budget.locked(root, session) as file:
         state = json.loads(file.read_text()) if file.exists() else {'epoch': 0, 'state': 'RUNNING', 'profile': provider}
-        handover = budget.ensure_handover(root, session)
+        handover = budget.handover_path(root, session)
         if state.get('state') == 'STOPPED':
             return fail(name, 'Factory session is stopped; use its handover in a new session.')
         if name == 'SessionStart' and event.get('source') == 'compact':
@@ -81,7 +81,8 @@ def handle(root, provider, event):
         budget.atomic(file, json.dumps(state, sort_keys=True) + '\n')
         if name == 'PreCompact':
             if not budget.ready(root, session, state):
-                return fail(name, 'Verify the handover/docs before compaction: '
+                budget.ensure_handover(root, session)
+                return fail(name, f'Fill {handover.relative_to(root)} and verify the docs before compaction: '
                             f'python3 tools/context/budget.py checkpoint --session {session} --base origin/main --verify')
             if provider == 'opencode':
                 state.pop('checkpoint', None)

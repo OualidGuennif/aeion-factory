@@ -68,9 +68,12 @@ class HookTests(unittest.TestCase):
 
     def test_before_compaction_refuses_missing_and_changed_checkpoint(self):
         for provider in ('codex','opencode'):
+            key=hook.key(provider,self.event)
+            self.call(provider)
+            self.assertFalse(hook.budget.handover_path(self.root,key).exists())
             result=self.call(provider,hook_event_name='PreCompact')
             self.assertFalse(result['continue'])
-            key=hook.key(provider,self.event)
+            self.assertIn(f'work/handovers/{key}.md',result['stopReason'])
             state_file=self.root/'.factory/context'/f'{key}.json'
             state=json.loads(state_file.read_text())
             handover=hook.budget.handover_path(self.root,key)

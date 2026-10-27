@@ -71,6 +71,10 @@
             "anchor": "\"PreToolUse\": ["
           },
           {
+            "path": ".devin/hooks.v1.json",
+            "anchor": "\"PreToolUse\": ["
+          },
+          {
             "path": ".opencode/plugins/factory/index.js",
             "anchor": "ctx.tool.hook('execute.before'"
           }

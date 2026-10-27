@@ -19,7 +19,11 @@ under its heading: `- <preference> (<source>, YYYY-MM-DD)`.
 
 ## Workflow
 
-- (none yet)
+- Never install Graphify/Archify (or anything outside the repository's existing tools) without the
+  user's explicit yes; say the baseline is strongly recommended and ask whether the machine is a
+  work computer first. This replaces the Factory's mandatory pre-run baseline (chat, 2026-10-27)
+- Colleagues may play locally without a Git/CI cycle: local mode commits on `main` (chat, 2026-10-27)
+- Devin is a supported agent alongside Claude Code, Codex and OpenCode (chat, 2026-10-27)
 
 ## Engineering
 

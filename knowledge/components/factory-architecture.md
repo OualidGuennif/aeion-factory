@@ -40,8 +40,10 @@ structural facts; fresh review establishes the verdict; GitHub records PR/merge/
 There is no application server, broker, production database or deployed Factory control plane.
 Adopting projects keep their existing instructions and architecture.
 
-Claude Code retains its native hooks. Codex and OpenCode load the same instructions and skills,
-with narrow adapters to the existing secret guards, edit checks and handover checkpoints.
+Claude Code retains its native hooks. Codex, OpenCode and Devin load the same instructions and
+skills, with narrow adapters to the existing secret guards, edit checks and handover checkpoints
+(Devin has no compaction checkpoint). A per-clone flow mode selects the team flow (PR, review, CI)
+or local play (commits on main, no sign-off reminder); the safety guards run in both.
 Their native token/compaction interfaces differ; compatibility is not a claim of identical
 enforcement. See [agent compatibility](../operations/agent-compatibility.md).
 
@@ -147,7 +149,8 @@ latest pointer, graph database, shared writable cache or exactly-once delivery a
 
 Scripts never execute model-produced commands. Only fixed closure commands and validated Git
 arguments pass to subprocesses. Tool installations are project-local and pinned; normal analysis
-requires no LLM credential. CI uses a read-only token and never sends source to a model. A local
+requires no LLM credential; agents ask before installing them. CI uses a read-only token and
+never sends source to a model. A local
 agent/runtime still needs its existing account. Raw CLI sessions outside the managed launcher
 and deliberately modified local hooks are outside the enforcement claim.
 
@@ -165,7 +168,8 @@ the graph never substitutes an earlier base or changed-path set for the current 
 Pre-commit/CI retain Knowledge, doc-link, health and security gates. Architecture runs on PRs
 and every main push, including docs-only and multi-commit pushes, records changed/removed paths,
 and uploads immutable outputs. It cannot undo a merge: a failed round prevents release and
-completed-work claims until corrected. Adoption requires a baseline before managed execution.
+completed-work claims until corrected. A local baseline is recommended before managed execution
+and installed only on the user's yes; launchers warn without one.
 Rendering uses its permanent SHA directory; an atomic final receipt publishes success only
 after every gate passes. Moving Archify HTML would invalidate its native path provenance.
 

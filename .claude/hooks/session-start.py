@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Spec: knowledge/operations/build-and-test.md
-"""SessionStart hook: at most 25 lines of facts — uncommitted changes, recent commits, open tasks,
-and the health scorecard — so a new or resumed session starts from evidence."""
+"""SessionStart hook: at most 25 lines of facts — the flow mode, uncommitted changes, recent commits,
+open tasks and the health scorecard — so a new or resumed session starts from evidence."""
 import subprocess
 from pathlib import Path
 
@@ -15,6 +15,12 @@ def out(*command):
 lines = []
 lines += ["Bounded intake: full reads/dumps above 64 KiB or 400 lines are refused.",
           "Use targeted Read ranges, limited searches and summaries; see knowledge/policies/bounded-intake.md."]
+# The flow mode decides whether a task ends in a pull request or a local commit.
+if out("git", "config", "--get", "factory.mode") == ["local"]:
+    lines.append("Factory mode: local (commits on main, no PR/CI/task-state ritual; safety guards stay on). "
+                 "Team flow: git config --unset factory.mode")
+else:
+    lines.append("Factory mode: team (branch, PR, review, green CI). Local play: git config factory.mode local")
 # Uncommitted changes: one you cannot explain is not yours.
 status = out("git", "status", "--short")
 lines.append(f"git status: {len(status)} changed path(s)" if status else "git status: clean")

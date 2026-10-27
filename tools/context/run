@@ -14,9 +14,11 @@ if any(value.startswith("--autocompact") for value in arguments):
     sys.exit("Factory owns --autocompact; use the 250000-token checkpoint profile.")
 if os.environ.get("DISABLE_AUTO_COMPACT") or os.environ.get("DISABLE_COMPACT"):
     sys.exit("Factory requires native compaction; remove the disabling environment override.")
+# The baseline needs local installs, which the user approves; its absence is a warning, not a refusal.
 result = subprocess.run([str(root / "tools/architecture/refresh"), "--check", "--target", "HEAD"], cwd=root)
 if result.returncode:
-    sys.exit("A verified Graphify/Archify baseline is required before a managed run. See command.md.")
+    print("Factory: no verified Graphify/Archify baseline for this commit. It is strongly recommended and never "
+          "installed automatically; see knowledge/operations/architecture-maintenance.md. Continuing.", file=sys.stderr)
 os.environ["CLAUDE_CODE_AUTO_COMPACT_WINDOW"] = "250000"
 os.chdir(root)
 os.execvp("claude", ["claude", "--autocompact", "250000", *arguments])

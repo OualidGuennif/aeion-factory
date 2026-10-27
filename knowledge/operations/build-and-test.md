@@ -31,7 +31,7 @@ Rebuild it with `tools/efficiency/bundle` after editing those sources.
 | Health regressions | `python3 tools/repo-health/tests/test_repo_health.py` | the root |
 | Context and analysis regressions | `python3 tools/context/tests/test_budget.py`, `python3 tools/architecture/tests/test_refresh.py` | the root |
 | Agent adapters and loop boundaries | `python3 tools/agents/tests/test_hooks.py`, `node --test tools/agents/tests/test_opencode.mjs`, `python3 tools/loops/tests/test_loops.py` | root; Node 18+ |
-| Mandatory source analysis | `tools/architecture/refresh --target HEAD --base origin/main` after committing | pinned tools, Node and Chrome required |
+| Source analysis (CI on every main update; local run recommended) | `tools/architecture/refresh --target HEAD --base origin/main` after committing | pinned tools installed on the user's yes, Node and Chrome required |
 | Your code | add your build, lint and test commands here, copied from CI | |
 
 The pre-commit (`git config core.hooksPath tools/git-hooks`) runs the first three; CI runs all of
@@ -54,7 +54,12 @@ before capture pipes are drained, so ordinary descendants do not keep working af
 
 The same hook suite tests [bounded intake](../policies/bounded-intake.md), including file/range
 thresholds, misleading limiters and preserved native edit/range fields. SessionStart adds two
-short intake instructions within its existing 25-line cap.
+short intake instructions and the flow mode within its existing 25-line cap.
+
+The flow mode is a per-clone Git setting. The default team flow ends a task in a pull request
+with review and green CI. `git config factory.mode local` selects local play: commits go to
+`main` directly, the Stop sign-off reminder is silent, and the safety guards (secrets, Git hook
+and force-push bypasses, large dumps) stay on. `git config --unset factory.mode` restores the team flow.
 
 ## Language servers
 

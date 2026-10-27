@@ -11,7 +11,7 @@ existing instructions and the owner's decisions take precedence.
 | [AGENTS.md](AGENTS.md) | Project instructions, authority and workflow |
 | [Knowledge](knowledge/index.md) | Canonical policies, component specs and decisions |
 | `work/current.md` | Open tasks only |
-| `.claude/skills/` | Maintained skill bodies; `.agents/skills/` exposes them to Codex and Devin |
+| `.claude/skills/` | Maintained skill bodies; `.agents/skills/` exposes them to Codex, Devin and Droid |
 | `.claude/`, `.codex/`, `.opencode/`, `.devin/`, `.factory/` | Native configuration/adapters for each agent (`.factory/` is Droid's) |
 | `.aeion/` (ignored) | Æion Factory's local state: analysis, context checkpoints, loop bodies |
 | `tools/` and GitHub CI | Documentation checks, tests and source-backed architecture |
@@ -37,8 +37,8 @@ commit credentials to the project.
 
 ```bash
 git clone https://github.com/OualidGuennif/aeion-factory.git && cd aeion-factory
-git config aeion.mode local   # optional: play on main, no branch/PR/CI ritual
-tools/agents/run claude         # or: codex, opencode (2.1.4+), devin
+git config aeion.mode local    # optional: play on main, no branch/PR/CI ritual
+tools/agents/run claude        # or: codex, opencode (2.1.4+), devin, droid
 ```
 
 The launcher applies each agent's checked profile; the hooks and skills load from the repository,
@@ -134,7 +134,7 @@ also remains available.
 | `tools/architecture/refresh --target HEAD` | Build the recommended initial/updated source baseline |
 | `tools/architecture/refresh --target HEAD --base origin/main` | Analyze the committed change and its comparison |
 | `tools/architecture/refresh --check --target HEAD` | Verify the persisted baseline and artifact hashes |
-| `tools/agents/run <claude\|codex\|opencode\|devin>` | Start a managed native agent |
+| `tools/agents/run <claude\|codex\|opencode\|devin\|droid>` | Start a managed native agent |
 | `python3 tools/context/budget.py checkpoint --session <id> --base origin/main --verify` | Verify handover, docs and source state before compaction |
 | `loops/orchestrator.sh <job> --dry-run` | Inspect loop settings without launching an agent |
 | `loops/orchestrator.sh inner --issue <n>` | Run one approved `agent-ready` issue when loops are enabled |

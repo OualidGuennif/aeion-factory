@@ -27,7 +27,7 @@ HEADER_RE = re.compile(r'\A(?:\s+|\#[^\n]*|//[^\n]*|--[^\n]*|;[^\n]*|/\*.*?\*/|<
                        r"'''.*?''')*", re.DOTALL)
 SPEC_LINE_RE = re.compile(r"^\s*(?:\#|//|/\*|\*|--|;|<!--)\s*Spec:\s*knowledge/[\w./-]+\.md\s*(?:\*/|-->)?\s*$")
 HEADER_BYTES = 8192
-EXCLUDED_PARTS = {"vendor", "node_modules", ".aeion", ".factory", ".venv", "__pycache__", ".git", ".aws", ".ssh"}
+EXCLUDED_PARTS = {"vendor", "node_modules", ".aeion", ".venv", "__pycache__", ".git", ".aws", ".ssh"}
 TEMPLATES = {".env.example", ".env.sample", ".env.template", ".env.dist", "env.example.local"}
 SECRET_NAMES = {"auth.json", "credentials", "credentials.json", "id_rsa", "id_ed25519", "env.local"}
 SKIP_PREFIXES = ()

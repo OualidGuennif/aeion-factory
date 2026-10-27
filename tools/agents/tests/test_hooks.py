@@ -222,6 +222,11 @@ class HookTests(unittest.TestCase):
             self.call('droid',tool_name='ApplyPatch',tool_input={'input':'*** Add File: .env\n+x'})
         self.assertEqual(self.call('droid',tool_name='Execute',tool_input={'command':'git status --short'}),{})
 
+    def test_droid_tools_outside_the_map_still_reach_the_shell_guard(self):
+        for tool in ('Shell','execute','Bash'):
+            with self.assertRaisesRegex(hook.GuardRefusal,'secret'):
+                self.call('droid',tool_name=tool,tool_input={'command':'cat .env'})
+
     def test_droid_refusal_uses_the_claude_shaped_deny(self):
         event={**self.event,'tool_name':'Execute','tool_input':{'command':'cat .env'}}
         result=subprocess.run(['python3',str(ROOT/'tools/agents/hook.py'),'droid'],input=json.dumps(event),capture_output=True,text=True)

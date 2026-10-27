@@ -85,8 +85,14 @@ def handle(root, provider, event):
             tool = 'exec'
         if tool in DEVIN_TOOLS or tool == 'apply_patch':
             event = {**event, 'tool_name': DEVIN_TOOLS.get(tool, tool)}
-    if provider == 'droid' and event.get('tool_name') in DROID_TOOLS:
-        event = {**event, 'tool_name': DROID_TOOLS[event['tool_name']]}
+    if provider == 'droid':
+        tool = event.get('tool_name')
+        data = event.get('tool_input')
+        # Droid's tool names are not live-verified, so an unknown tool carrying a command string is a shell call.
+        if tool not in DROID_TOOLS and tool != 'Bash' and isinstance(data, dict) and isinstance(data.get('command'), str):
+            tool = 'Execute'
+        if tool in DROID_TOOLS:
+            event = {**event, 'tool_name': DROID_TOOLS[tool]}
     name = event.get('hook_event_name')
     if name not in {'SessionStart', 'PreToolUse', 'PostToolUse', 'PreCompact', 'Stop'}:
         raise ValueError('unsupported adapter event')

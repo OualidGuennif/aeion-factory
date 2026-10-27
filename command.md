@@ -45,8 +45,8 @@ tools/agents/run opencode                           # native plugin, shared skil
 tools/agents/run opencode --isolated                # separate local profile on database conflict
 tools/agents/run devin                              # Devin CLI: .devin/ hooks, shared skills
 tools/agents/run droid                              # Droid (factory.ai): .factory/ hooks, shared skills
-git config aeion.mode local                       # local play: commits on main, no PR/CI ritual
-git config --unset aeion.mode                     # back to the team flow
+git config aeion.mode local                         # local play: commits on main, no PR/CI ritual
+git config --unset aeion.mode                       # back to the team flow
 python3 tools/agents/tests/test_hooks.py
 node --test tools/agents/tests/test_opencode.mjs
 python3 tools/loops/tests/test_loops.py

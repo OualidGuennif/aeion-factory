@@ -1,8 +1,8 @@
 # Agent instructions
 
-This repository was started from **Æion Factory**: a repository prepared for agentic development
-(rules, knowledge, skills, hooks, loops). Replace this paragraph with what *your* project is and
-who decides.
+Payment Ledger Lite is a local fake-payment ledger owned by the workspace operator, built on
+**Æion Factory** guidance. Read `POLICY.md` first: standard-library-only, offline, loopback-only,
+no git or installs. These constraints override the template workflows below.
 
 **Precedence.** Instructions that existed in this repository before the Factory, and anything the
 owner says, win over the Factory's defaults. When they conflict, keep theirs and note it in
@@ -10,9 +10,17 @@ owner says, win over the Factory's defaults. When they conflict, keep theirs and
 
 **Plan first.** For any non-trivial task, enter plan mode, propose, and wait for a yes.
 
+**Token-saving internal JSON.** Do not think out loud or narrate your intermediate reasoning in
+natural language in the chat. While working, either emit tool calls with no text or, if you output
+any intermediate note to yourself, write a single-line compact JSON object only (e.g.
+`{"s":"test","n":"fix"}`). Use natural language only for the short final answer to the user.
+
 ## Repository map
 
 ```
+app.py, ledger.py, db.py   HTTP entry point, domain logic and SQLite storage
+static/       single-file local UI; tests/ contains unittest acceptance checks
+data/         generated local SQLite ledger; fake data only
 efficiency/   the seven-phase guide (read 00-EFFICIENCY.md first)
 knowledge/    canonical knowledge (index.md first): policies, components, decisions, operations
 work/         current.md, the state of open tasks only
@@ -23,6 +31,7 @@ tools/        knowledge/link/health checks, agent adapters, architecture and loc
 .claude/      original hooks, maintained skills, path-scoped rules, hookify examples
 .codex/       Codex native config/hooks; .agents/skills links to the maintained skills
 .opencode/    OpenCode native plugin; root opencode.json selects shared skills/compaction
+.devin/       Devin native config, rules and hook adapter to the maintained .claude/hooks
 ```
 
 ## Build and test
@@ -38,7 +47,10 @@ tools/architecture/refresh --target HEAD --base origin/main  # after committing
 loops/orchestrator.sh outer --dry-run        # shows the command a loop would run, runs nothing
 ```
 
-Add your project's own build and test commands here, copied from CI.
+App: `python3 app.py` (Ctrl+C stops); tests: `python3 -m unittest discover -s tests -v`.
+Startup/restart smoke: `python3 tests/smoke_local.py` (upgrades real local data, adds no payments, stops servers).
+No build step. Run only policy-compatible checks above; skip git-dependent tools and installs.
+App design and contract: `knowledge/components/payment-ledger.md` and `APP_SPEC.md`.
 
 ## Load by task
 

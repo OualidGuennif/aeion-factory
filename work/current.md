@@ -11,12 +11,12 @@ Status: ACTIVE, WAITING-OWNER, MEASURING, BLOCKED, BACKLOG.
 - Blocker: neither CLI is in the agent's container.
 - Evidence: knowledge/operations/agent-compatibility.md
 
-## Main branch protection vs. its doc — WAITING-OWNER
-- Owner decision: pending; a direct push to main was accepted on 2026-10-27.
-- State: knowledge/operations/github-protection.md says pull requests are required, enforced for admins.
-- Next: owner checks Settings → Branches/Rulesets, then re-enables the rule or the doc is corrected (who: owner).
-- Blocker: the owner's choice.
-- Evidence: knowledge/operations/github-protection.md; audit fixes merged through PR #10
+## Main branch protection — WAITING-OWNER
+- Owner decision: 2026-10-27, protect main as knowledge/operations/github-protection.md describes.
+- State: the agent's GitHub tools cannot change branch protection; the settings must be applied by the owner.
+- Next: owner applies the rule in Settings → Rules/Branches and reads it back with the API (who: owner).
+- Blocker: no branch-protection access from the agent session.
+- Evidence: knowledge/operations/github-protection.md
 
 ## Native strict context admission — BLOCKED
 - Owner decision: 2026-10-26, attempt native 300k qualification using paid OpenCode Go DeepSeek V4.1 Flash.

@@ -138,6 +138,10 @@ class BudgetTests(unittest.TestCase):
         with patch.object(budget.subprocess, 'run', side_effect=run):
             with self.assertRaisesRegex(ValueError, 'work/current.md'):
                 budget.checkpoint(self.root, 'test-session', 'HEAD')
+            # Local play keeps no task entry, so its checkpoint does not ask for one.
+            budget.git(self.root, 'config', 'aeion.mode', 'local')
+            budget.checkpoint(self.root, 'test-session', 'HEAD')
+            budget.git(self.root, 'config', '--unset', 'aeion.mode')
             current.write_text('# Current work\nTask updated.\n')
             budget.checkpoint(self.root, 'test-session', 'HEAD')
 
@@ -187,7 +191,7 @@ class BudgetTests(unittest.TestCase):
         self.observe(250000)
         self.assertNotIn("permissionDecision", self.call(tool_input={"file_path": str(self.root / "knowledge/policy.md")}).get("hookSpecificOutput", {}))
         for command in ("tools/knowledge/doc-links; touch /tmp/unsafe", "python3 -c 'print(1)'",
-                        "git status --short && echo unsafe", "tools/knowledge/doc-links\nrm -rf x"):
+                        "git status --short && echo unsafe", "tools/knowledge/doc-links\nrm -rf x", "echo 'unterminated"):
             self.assertEqual(self.call(tool_name="Bash", tool_input={"command": command})["hookSpecificOutput"]["permissionDecision"], "deny")
         self.assertEqual(self.call(tool_name="Bash", tool_input={"command": "tools/knowledge/doc-links"}), {})
 

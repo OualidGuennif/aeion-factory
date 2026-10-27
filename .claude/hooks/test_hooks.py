@@ -69,7 +69,8 @@ for command in ["cat .env", "cat env.local", "printenv", "cat /proc/1/environ", 
                 "GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=core.hooksPath GIT_CONFIG_VALUE_0=/dev/null git commit -m x",
                 "git config core.hooksPath /dev/null", "git push --force-with origin main", "git push --force-with-lease=main origin main",
                 "git config --unset core.hooksPath", "git config --local core.hooksPath .git/hooks", "export GIT_CONFIG_KEY_0=core.hooksPath",
-                "git --config-env core.hooksPath=PWD commit -m x", "git push --mirror origin"]:
+                "git --config-env core.hooksPath=PWD commit -m x", "git push --mirror origin",
+                "git config aeion.mode local", "git config --unset aeion.mode", "git config set aeion.mode local"]:
     expect(f"bash deny: {command}", run_hook("guard-bash.py", {"command": command}), 2)
 expect("bash ask: mentions a secret", run_hook("guard-bash.py", {"command": "ls -la .env"}), 0, '"ask"')
 for command in ["git status --short", "git commit -m 'the environment check'",
@@ -83,7 +84,7 @@ for command in ["git status --short", "git commit -m 'the environment check'",
                 "git commit -m 'use head -n 5'", "git commit -am wip", "git commit -mnew", "git push -u origin task/x",
                 "git push -n origin main", "git -C repo status", "git commit -m -n", "git commit -am -n",
                 "git push --follow-tags origin task/x", "git log --no-verbose",
-                "git config core.hooksPath tools/git-hooks", "git config --get core.hooksPath",
+                "git config core.hooksPath tools/git-hooks", "git config --get core.hooksPath", "git config --get aeion.mode", "git config --get aeion.mode local",
                 "grep -rn core.hooksPath README.md", "git commit -m 'document core.hooksPath setup'"]:
     result = run_hook("guard-bash.py", {"command": command})
     expect(f"bash allow: {command}", result, 0)
@@ -117,8 +118,51 @@ with tempfile.TemporaryDirectory() as loop_dir:
         expect(f"read-only deny: {command}", run_read_only(command, loop), 2)
 
 # guard-path: secrets refused, templates allowed.
-for path in ["/repo/.env", "/repo/env.local", "/x/server.pem", "/h/auth.json"]:
+for path in ["/repo/.env", "/repo/env.local", "/x/server.pem", "/h/auth.json", "/h/.netrc", "/h/.ssh/id_ecdsa",
+             "/x/client.p12", "/repo/.envrc", "/h/.npmrc"]:
     expect(f"path deny: {path}", run_hook("guard-path.py", {"file_path": path}), 2)
+for pattern in [".env", ".e*", "**/.env*", ".{e,x}nv", "*.pem"]:
+    expect(f"path deny: Grep glob {pattern}",
+           run_hook("guard-path.py", {"pattern": "x", "glob": pattern, "path": "/repo"}, tool_name="Grep"), 2)
+for pattern in ["*.py", "*.{ts,tsx}", "**/*.md", ".github/**", "!.env"]:
+    expect(f"path allow: Grep glob {pattern}",
+           run_hook("guard-path.py", {"pattern": "x", "glob": pattern, "path": "/repo"}, tool_name="Grep"), 0)
+expect("path deny: MultiEdit on a secret", run_hook("guard-path.py", {"file_path": "/repo/.env"}, tool_name="MultiEdit"), 2)
+expect("path deny: NotebookEdit names its file notebook_path",
+       run_hook("guard-path.py", {"notebook_path": "/repo/.env"}, tool_name="NotebookEdit"), 2)
+expect("sign-off ignores a session id that is a path", run_hook("sign-off.py", {}, session_id="../../etc/x"), 0)
+expect("sign-off ignores unreadable input", subprocess.run([sys.executable, str(HOOKS / "sign-off.py")], input="{",
+                                                           capture_output=True, text=True), 0)
+
+# A glob is judged by the files it expands to, as the shell would expand it.
+glob_dir = Path(tempfile.mkdtemp())
+(glob_dir / ".env").write_text("KEY=x\n")
+(glob_dir / "notes.md").write_text("x\n")
+for command in ["head .env*", "grep -r . .e*", "base64 .en?", "tail .[e]nv", f"head {glob_dir}/.e*"]:
+    expect(f"bash deny glob: {command}", run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 2)
+expect("bash ask: a glob that names a secret", run_hook("guard-bash.py", {"command": "ls .e*", "workdir": str(glob_dir)}), 0, '"ask"')
+for command in ["ls *", "head *.md", "grep -r x .", "wc -l .x*", "rg 'x.*y$' .", "ls src/{a,b}.py"]:
+    expect(f"bash allow glob: {command}", run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 0)
+# The glob follows a cd, braces expand, and an unknown directory refuses.
+(glob_dir / "sub").mkdir()
+(glob_dir / "sub/.env").write_text("KEY=x\n")
+for command in ["cd sub && head .e*", "bash -c 'cd sub; tail .e*'", "head sub/.{e,x}nv", "head .{e,x}nv",
+                "head $PWD/sub/.e*", "cd $HOME && head .e*", 'head "$PWD"/sub/.e*', "head sub/'.e'*",
+                'cd sub && head .e""*', "head $(pwd)/sub/.e*", "head `pwd`/sub/.e*", "head ~+/sub/.e*",
+                "sh -c 'head $1/.e*' _ sub", "env -C sub sh -c 'head .[e]nv'"]:
+    expect(f"bash deny glob: {command}", run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 2)
+for command in ["grep -rn '$HOME/.*' .", "sed -i \"s/$OLD.*/$NEW/\" a.py", "jq --arg k x '.items[$k]' f.json",
+                'cd "$REPO" && ls *.py', "ls ${DIR}/*.py", 'git commit -m "fix $PWD/*.py glob"',
+                "cd - && head *.md", "sed -n 's/.*=//p' a.cfg"]:
+    expect(f"bash allow: {command}", run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 0)
+expect("bash allow: a glob in a heredoc fed to a program is text",
+       run_hook("guard-bash.py", {"command": "git commit -F - <<'EOF'\nfix head $PWD/sub/.e*\nEOF", "workdir": str(glob_dir)}), 0)
+expect("bash deny: a glob in a heredoc fed to a shell",
+       run_hook("guard-bash.py", {"command": "bash <<'EOF'\nhead $PWD/sub/.e*\nEOF", "workdir": str(glob_dir)}), 2)
+expect("bash allow: a cd with a plain glob", run_hook("guard-bash.py", {"command": "cd sub && ls *.md", "workdir": str(glob_dir)}), 0)
+expect("bash deny names the Grep tool for searches", run_hook("guard-bash.py", {"command": "grep -rn id_rsa tools"}), 2,
+       stderr_has="Grep tool")
+shutil.rmtree(glob_dir)
 for path in ["/repo/.env.example", "/repo/env.example.local", str(ROOT / "AGENTS.md")]:
     expect(f"path allow: {path}", run_hook("guard-path.py", {"file_path": path}), 0)
 
@@ -213,6 +257,9 @@ for label, body, code, diagnostic in [
         failures.append(f"after-edit {label}: missing diagnostic")
     if len(result.stderr.splitlines()) > 15:
         failures.append(f"after-edit {label}: diagnostic exceeds 15 lines")
+fake_check(checker, "import sys\nprint('synthetic failure', file=sys.stderr)\nraise SystemExit(1)\n")
+expect("after-edit: NotebookEdit's notebook_path is checked", run_hook("after-edit.py", {"notebook_path": str(document)},
+       cwd=after, session_id=after_session), 2, stderr_has="synthetic failure")
 heartbeat = after / "heartbeat"
 child = (f"from pathlib import Path\nimport time\npath = Path({str(heartbeat)!r})\n"
          "for number in range(200):\n    path.write_text(str(number))\n    time.sleep(0.05)\n")
@@ -252,7 +299,7 @@ shutil.rmtree(after)
 
 # sign-off: in a throwaway repo, a code change without its doc blocks once, then passes.
 tmp = Path(tempfile.mkdtemp())
-for rel in (".claude/hooks/sign-off.py", "tools/knowledge/doc-links"):
+for rel in (".claude/hooks/sign-off.py", ".claude/hooks/secret_names.py", "tools/knowledge/doc-links"):
     (tmp / rel).parent.mkdir(parents=True, exist_ok=True)
     shutil.copy(ROOT / rel, tmp / rel)
 (tmp / "knowledge/components").mkdir(parents=True)

@@ -23,13 +23,19 @@ def git(*args):
     return subprocess.run(["git", *args], cwd=ROOT, capture_output=True, text=True, check=False)
 
 
-event = json.load(sys.stdin)
-if event.get("stop_hook_active"):
+# A reminder, not a guard: unreadable input or an unusable session id has nothing recorded to check.
+try:
+    event = json.load(sys.stdin)
+except (ValueError, OSError):
+    sys.exit(0)
+if not isinstance(event, dict) or event.get("stop_hook_active"):
     sys.exit(0)
 # Local play (git config aeion.mode local) has no task-closure ritual to remind of.
 if git("config", "--get", "aeion.mode").stdout.strip() == "local":
     sys.exit(0)
 session = event.get("session_id", "none")
+if not isinstance(session, str) or not session or any(char in session for char in "/\\\0"):
+    sys.exit(0)
 edited_log = Path(tempfile.gettempdir()) / f"claude-edited-{session}"
 edited = set(edited_log.read_text().splitlines()) if edited_log.exists() else set()
 if not edited:

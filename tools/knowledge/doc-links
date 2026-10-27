@@ -18,6 +18,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / ".claude/hooks"))
+from secret_names import is_secret  # noqa: E402
 RESOURCE_RE = re.compile(r"^\s*resource:\s*\"?([^\"\n]+?)\"?\s*$", re.MULTILINE)
 FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---\n", re.DOTALL)
 SPEC_RE = re.compile(r"\bSpec:\s*(knowledge/[\w./-]+\.md)")
@@ -28,8 +30,6 @@ HEADER_RE = re.compile(r'\A(?:\s+|\#[^\n]*|//[^\n]*|--[^\n]*|;[^\n]*|/\*.*?\*/|<
 SPEC_LINE_RE = re.compile(r"^\s*(?:\#|//|/\*|\*|--|;|<!--)\s*Spec:\s*knowledge/[\w./-]+\.md\s*(?:\*/|-->)?\s*$")
 HEADER_BYTES = 8192
 EXCLUDED_PARTS = {"vendor", "node_modules", ".aeion", ".venv", "__pycache__", ".git", ".aws", ".ssh"}
-TEMPLATES = {".env.example", ".env.sample", ".env.template", ".env.dist", "env.example.local"}
-SECRET_NAMES = {"auth.json", "credentials", "credentials.json", "id_rsa", "id_ed25519", "env.local"}
 SKIP_PREFIXES = ()
 
 
@@ -76,8 +76,7 @@ def tracked_headers():
         parts = Path(rel).parts
         if not rel or parts[0] == "knowledge" or path.suffix.lower() == ".md" or EXCLUDED_PARTS.intersection(parts):
             continue
-        if any(part not in TEMPLATES and (part in SECRET_NAMES or re.fullmatch(r"\.env(\..+)?", part)
-                                         or part.endswith((".pem", ".key"))) for part in parts):
+        if any(is_secret(part) for part in parts):
             continue
         if path.is_symlink() or not path.is_file() or path.resolve() != path:
             continue
@@ -109,8 +108,7 @@ def base_coverage(base, changed):
         parts = Path(rel).parts
         if rel not in changed or mode not in {"100644", "100755"} or rel.endswith(".md") or EXCLUDED_PARTS.intersection(parts):
             continue
-        if any(part not in TEMPLATES and (part in SECRET_NAMES or re.fullmatch(r"\.env(\..+)?", part)
-                                         or part.endswith((".pem", ".key"))) for part in parts):
+        if any(is_secret(part) for part in parts):
             continue
         with subprocess.Popen(["git", "cat-file", "blob", object_id], cwd=ROOT,
                               stdout=subprocess.PIPE, stderr=subprocess.DEVNULL) as process:

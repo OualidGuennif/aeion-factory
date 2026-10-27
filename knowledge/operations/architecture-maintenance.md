@@ -49,7 +49,8 @@ The workflow uploads one immutable artifact per SHA and run; it has no write per
 cannot commit generated output. A failed post-merge round blocks closure/release, not history.
 
 Each refresh freezes the target into a temporary clean Git clone, scans only the manifest's
-allowed tracked text, excludes secret names and symlinks, and invokes pinned Graphify's native
+allowed tracked text, excludes secret names (the shared list in `.claude/hooks/secret_names.py`)
+and symlinks, and invokes pinned Graphify's native
 structural code/Markdown/config extractors. Each round rebuilds the small complete corpus so
 deletions and renames cannot leave old nodes. Required code/Markdown with no extracted node
 fails coverage. Other files are explicitly listed as inventory-only. PDF/image semantics and

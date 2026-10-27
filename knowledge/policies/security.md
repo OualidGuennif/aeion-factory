@@ -10,6 +10,8 @@ sources:
   - id: owasp
     resource: https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html
     title: "OWASP: secrets management"
+  - resource: ../../.claude/hooks/secret_names.py
+    title: "The shared secret file names"
 ---
 
 # Security
@@ -26,10 +28,20 @@ Requirements for a change, not claims about what production already satisfies.
 - A guard that cannot parse its event or validate its path returns exit 2 without logging the
   input. Policy PreToolUse hooks block on command failure or timeout (Claude Code 2.1.295+).
   Basename guards are an accidental-read safeguard, not resolved-path or runtime isolation.
+- One list names secret files for the guards, doc-links, the context fingerprint and the
+  architecture scope: `.claude/hooks/secret_names.py` (dotenv files, `env.local`, credential and
+  `auth.json` files, SSH keys, `.netrc`, `.npmrc`, `.pypirc`, `.pgpass`, `.envrc`, `*.pem`, `*.key`,
+  `*.p12`, `*.pfx`; templates such as `.env.example` stay allowed). In a Bash command, quotes are
+  joined and brace alternatives expanded first. A glob for a dotfile (`.e*`, `.[e]nv`) is judged
+  by its name against the dotfile secrets, wherever it expands; any other glob by the files it
+  expands to from the command's directory and each literal directory a `cd` or `pushd` moves to.
+  The Grep tool's `glob` filter is refused when it names a secret the same way.
+  A read of a secret name is refused even as a search pattern; search names with the Grep tool.
 - The Bash guard refuses skipping Git hooks or force-pushing in its common spellings: `-n` in a
   commit cluster, any unambiguous prefix of `--no-verify`, a `core.hooksPath` override (`-c`,
   `--config-env`, `GIT_CONFIG_*`, or `git config` set to anything but `tools/git-hooks`; reading it
-  stays allowed), `-f`/`--force*`/`--mirror`/`+refspec` on push. CI repeats
+  stays allowed), `-f`/`--force*`/`--mirror`/`+refspec` on push. It also refuses setting or
+  unsetting `aeion.mode`: local mode relaxes the sign-off and checkpoint, so the user switches it. CI repeats
   the checks, so it stays the gate a deliberate local bypass cannot pass.
 
 The same PreToolUse hooks also apply [bounded intake](bounded-intake.md) to recognized large

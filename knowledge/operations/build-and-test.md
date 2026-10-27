@@ -44,7 +44,9 @@ base. A valid empty change set remains successful; an unavailable check is never
 
 Header traceability is extension-independent and bounded; see the discovery scope in
 [specs-first](../policies/specs-first.md). The Stop reminder preserves spaces/Unicode in edited
-paths and reports an unavailable link check once. `repo-health --json` exposes its source suffix
+paths and reports an unavailable link check once; unreadable input or a session id shaped like a
+path has nothing recorded and passes. The path guard and after-edit also cover MultiEdit and
+NotebookEdit (`notebook_path`). `repo-health --json` exposes its source suffix
 set and selected file count; its caps are not language-aware lint or security coverage.
 
 Policy hooks require Claude Code 2.1.295+ for `onFailure: block`; the Bash/path guard command timeout is three

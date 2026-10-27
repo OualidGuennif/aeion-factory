@@ -42,6 +42,8 @@ if provider == 'opencode':
         sys.exit('Æion Factory requires OpenCode 2.1.4+ native V2 hooks; older skill discovery does not prove hook support.')
 if provider == 'codex':
     sys.exit(subprocess.run(['codex', *arguments], cwd=root, shell=False).returncode)
-if provider in {'devin', 'droid'}:
-    sys.exit(subprocess.run([provider, *arguments], cwd=root, shell=False).returncode)
+if provider == 'devin':
+    sys.exit(subprocess.run(['devin', *arguments], cwd=root, shell=False).returncode)
+if provider == 'droid':
+    sys.exit(subprocess.run(['droid', *arguments], cwd=root, shell=False).returncode)
 sys.exit(subprocess.run(['opencode', *arguments], cwd=root, shell=False).returncode)

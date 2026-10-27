@@ -51,8 +51,9 @@ directory does not establish loaded hooks or identical runtime guarantees.
   `.devin/hooks.v1.json` sends SessionStart, PreToolUse, PostToolUse and Stop (no matchers) to
   `tools/agents/hook.py devin`. The adapter maps the tool names (also `bash`, `shell`, `grep`, in
   any case) to the shared guards; an unknown tool carrying a `command` string goes through the
-  shell guard. A refused tool call gets Devin's `{"decision": "block", "reason": ...}`; a failed
-  Stop or SessionStart gets `continue: false`, because Devin's block on Stop means "keep going".
+  shell guard, and through the path guard too if it names a file. A refused tool call gets
+  Devin's `{"decision": "block", "reason": ...}`; a failed Stop or SessionStart gets
+  `continue: false`, because Devin's block on Stop means "keep going".
   A payload without `session_id` uses one key per clone, so sign-off reminders are shared across
   that clone's Devin sessions. Devin has no Æion Factory compaction checkpoint or token stop.
 - Droid, the CLI of Factory (factory.ai, a product separate from Æion Factory), reads `AGENTS.md`,
@@ -61,8 +62,9 @@ directory does not establish loaded hooks or identical runtime guarantees.
   PreToolUse, PostToolUse and Stop to `tools/agents/hook.py droid`. Droid payloads and decisions
   are Claude-shaped; the adapter maps `Execute`, `Create` and `ApplyPatch` (patch text in
   `command`, `patchText`, `patch` or `input`) to the shared guards; a tool outside the known
-  names carrying a `command` string goes through the shell guard. It refuses with
-  `permissionDecision: deny`. Droid has no Æion Factory compaction checkpoint or token stop.
+  names carrying a `command` string goes through the shell guard (and the path guard for a
+  file). It refuses with `permissionDecision: deny`. Droid has no Æion Factory compaction
+  checkpoint or token stop.
 - Managed CLI launchers enter the repository root and check the exact-HEAD architecture baseline;
   its absence is a warning, because installing the integrations needs the user's yes.
 - Raw command/MCP paths, host-managed/cloud orchestration and deliberate local modification are

@@ -135,6 +135,9 @@ def handle(root, provider, event):
             result = script(root, 'guard-bash.py', normalized)
             if result.get('hookSpecificOutput', {}).get('permissionDecision') == 'ask':
                 return fail(provider, name, 'This command requires an explicit human decision; the adapter does not auto-approve it.')
+            # An unknown tool routed here may also name a file; that path still meets the path guard.
+            for path in edit_paths(event):
+                script(root, 'guard-path.py', {'tool_name': 'Edit', 'tool_input': {**data, 'file_path': path}})
             return result
         paths = edit_paths(event)
         if not paths and event.get('tool_name') == 'Grep':

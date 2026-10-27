@@ -231,6 +231,9 @@ class HookTests(unittest.TestCase):
         for tool,data in (('Read',{'file_path':path}),('Edit',{'file_path':path}),('Grep',{'path':path,'pattern':'x'})):
             with self.assertRaisesRegex(hook.GuardRefusal,'secret'):
                 self.call('droid',tool_name=tool,tool_input={**data,'command':'ls'})
+        for provider,tool in (('droid','read'),('devin','run_command')):
+            with self.assertRaisesRegex(hook.GuardRefusal,'secret'):
+                self.call(provider,tool_name=tool,tool_input={'file_path':path,'command':'ls'})
 
     def test_droid_refusal_uses_the_claude_shaped_deny(self):
         event={**self.event,'tool_name':'Execute','tool_input':{'command':'cat .env'}}

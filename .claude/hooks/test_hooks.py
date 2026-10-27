@@ -179,7 +179,8 @@ for command in ["head $X/id_*", "head $(pwd)/k/cred*", "cat id_*", "head auth*",
                 "awk 'BEGIN{system(\"head $X/id_*\")}'", "echo 'head $X/id_*' > f; rg --pre sh x f",
                 "echo 'head $X/id_*' | sort --compress-program=sh -S 1", "cat <(echo 'head $X/id_*') | grep x",
                 "echo 'head $X/id_*' > >(sh)", "watch -n1 head -n3 '$X/.e*'", "watch head -n3 '$X/id_*'",
-                "watch 'head -n3 $X/.e*; /bin/echo'"]:
+                "watch 'head -n3 $X/.e*; /bin/echo'",
+                "echo -n - > c; echo -pre=sh >> c; echo 'head -n3 $X/id_*' > f; RIPGREP_CONFIG_PATH=c rg x f"]:
     expect(f"bash deny named glob: {command}", run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 2)
 # A quoted pattern is a regex or prose the shell never expands.
 for command in ["ls *", "head *.md", "grep x *.json", "ls c*", "ls *_*", "wc -l *.py", "ls -d .*", "head k*", "wc -l *.kts",

@@ -441,12 +441,15 @@ QUOTE_SAFE = {"grep", "egrep", "fgrep", "rg", "jq", "head", "tail", "wc", "uniq"
 def quotes_inert(command):
     """Whether the shell keeps quoted text literal: no substitution, escape, comment, ANSI-C quote or
     here-string can reopen a quote, and every program is a known reader that runs no shell (an
-    unknown one, like env or awk's system(), might; watch runs its words with sh -c, rg with --pre)."""
+    unknown one, like env or awk's system(), might; watch runs its words with sh -c, rg with --pre).
+    An assignment can configure a reader to run one (RIPGREP_CONFIG_PATH holding --pre)."""
     if re.search(r"\$[({']|`|\\|#|<<|[<>]\(|--pre", command):
         return False
     for words in simple_commands(command):
         run = program(words)
-        if "watch" in (PurePosixPath(w).name for w in words) or not run or PurePosixPath(run[0]).name not in QUOTE_SAFE:
+        if any(re.match(r"[A-Za-z_]\w*=", w) for w in words) or "watch" in (PurePosixPath(w).name for w in words):
+            return False
+        if not run or PurePosixPath(run[0]).name not in QUOTE_SAFE:
             return False
     return True
 
@@ -508,7 +511,7 @@ try:
 except Exception:
     deny("the hook input could not be read; refusing rather than guessing.")
 TOKEN_SPLIT = r"[\s'\"=;&|<>()`]+"
-tokens =[t for t in re.split(TOKEN_SPLIT, command) if t]
+tokens = [t for t in re.split(TOKEN_SPLIT, command) if t]
 workdir = event.get("tool_input", {}).get("workdir", event.get("tool_input", {}).get("cwd", event.get("cwd", ".")))
 try:
     # Quotes join a shell word (sub/'.e'*), so they are dropped rather than split on.

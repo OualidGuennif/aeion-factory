@@ -83,8 +83,9 @@ directory does not establish loaded hooks or identical runtime guarantees.
   `StartLine`/`EndLine` become the intake window; `grep_search` with `MatchPerLine: false` lists
   names only. Any tool with a `CommandLine` goes through the
   shell guard, as does a `command` or `commandLine` argument in any case; a call with two is
-  refused. `Cwd` or `workdir` in any case is the shell's directory; two, a non-string one, or a
-  shell call naming another directory argument (`working_directory`, `directory`) are refused.
+  refused. `Cwd` or `workdir` in any case (a `file:` URI decoded) is the shell's directory; two
+  or a non-string one are refused. On a shell call any other argument must be a flag or a
+  number, since the guard cannot tell which one a tool runs in; a text, list or object is refused.
   The guards see only fields the adapter derives, never a raw `limit` or output mode from the
   model. A pre-tool payload without `toolCall` is refused. A pre-tool answer is always an
   explicit `{"decision": "allow"}` or `{"decision": "deny", "reason": ...}`, since Antigravity

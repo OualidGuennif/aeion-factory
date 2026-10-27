@@ -28,7 +28,6 @@ ANTIGRAVITY_TOOLS = {'run_command': 'Bash', 'view_file': 'Read', 'write_to_file'
 ANTIGRAVITY_PATH_KEY = re.compile(r'(paths?|files?|dirs?|directory|directories|uris?)$')
 # view_code_item's NodePaths are code symbols (Cache.key), not files.
 ANTIGRAVITY_SYMBOL_KEYS = {'nodepath', 'nodepaths'}
-ANTIGRAVITY_DIR_KEY = re.compile(r'(cwd|dir|directory|folder)$')
 
 
 class GuardRefusal(ValueError):
@@ -138,11 +137,12 @@ def antigravity_event(event):
     if workdirs and not isinstance(workdirs[0], str):
         raise ValueError('the Antigravity working directory must be a string')
     if workdirs:
-        data['workdir'] = workdirs[0]
-    # A shell call whose directory hides under another name would be sized at the root instead.
-    if command is not None and any(ANTIGRAVITY_DIR_KEY.search(argument_name(key)) and argument_name(key) not in {'cwd', 'workdir'}
-                                   for key in args):
-        raise ValueError('the Antigravity shell call names its directory under an unknown argument')
+        data['workdir'] = unquote(urlsplit(workdirs[0]).path) if workdirs[0][:5].lower() == 'file:' else workdirs[0]
+    # The guard cannot know which other argument a shell tool runs in, so on a shell call every argument
+    # besides the command and its directory must be a flag or a number (run_command's Blocking, WaitMsBeforeAsync).
+    if command is not None and any(argument_name(key) not in {'commandline', 'command', 'cwd', 'workdir'}
+                                   and not isinstance(value, (bool, int, float)) for key, value in args.items()):
+        raise ValueError('the Antigravity shell call carries an argument the guards cannot place')
     # Every path-like argument meets the guards, not only the first: one call can name several files.
     paths = antigravity_paths(args)
     # view_file windows by StartLine/EndLine; the intake guard reads the same window as offset/limit.

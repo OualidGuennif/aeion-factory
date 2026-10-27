@@ -265,7 +265,7 @@ class HookTests(unittest.TestCase):
         cases=(('run_command',{'CommandLine':'cat .env','Cwd':str(self.root)}),('view_file',{'AbsolutePath':path}),
                ('write_to_file',{'TargetFile':path,'CodeContent':'x'}),('replace_file_content',{'TargetFile':path}),
                ('grep_search',{'SearchPath':path,'Query':'x'}),('future_tool',{'FilePath':path}),
-               ('future_shell',{'CommandLine':'ls','FilePath':path}),('view_code_item',{'File':path}),
+               ('view_code_item',{'File':path}),
                ('future_tool',{'FilePath':None,'Path':path}),('future_tool',{'TargetFile':'a.md','SearchPath':path}),
                ('future_tool',{'TargetFiles':['a.md',path]}),('mcp_read_file',{'path':path}),
                ('mcp_read_file',{'file_path':path}),('future_tool',{'Options':{'AbsolutePath':path}}),
@@ -304,10 +304,15 @@ class HookTests(unittest.TestCase):
         # A directory under another name, or not a string, is refused rather than sized at the root.
         for args in ({'command':'cat big.log','working_directory':str(sub)},{'command':'cat big.log','WorkingDirectory':str(sub)},
                      {'command':'cat big.log','directory':str(sub)},{'command':'cat big.log','cwd':[str(sub)]},
-                     {'CommandLine':'cat big.log','Cwd':{'path':str(sub)}}):
+                     {'CommandLine':'cat big.log','Cwd':{'path':str(sub)}},{'command':'cat big.log','dir_path':str(sub)},
+                     {'command':'cat big.log','options':{'cwd':str(sub)}},{'command':'cat big.log','description':'x'},
+                     {'CommandLine':'ls','FilePath':str(self.root/('.'+'env'))}):
             with self.assertRaises(ValueError,msg=str(args)):
                 self.agy('mcp_shell',args)
         self.assertEqual(self.agy('run_command',{'CommandLine':'ls','Cwd':str(sub),'Blocking':True,'SafeToAutoRun':True,'WaitMsBeforeAsync':0}),{})
+        # A file: URI directory is decoded like any other path.
+        with self.assertRaisesRegex(hook.GuardRefusal,'intake|Bounded'):
+            self.agy('mcp_shell',{'command':'cat big.log','cwd':sub.as_uri()})
         for name,args in (('view_file',{'AbsolutePath':str(long)}),('grep_search',{'SearchPath':str(long),'Query':'x'}),
                           ('view_file',{'AbsolutePath':str(long),'limit':10}),
                           ('grep_search',{'SearchPath':str(long),'Query':'x','output_mode':'files_with_matches','head_limit':5})):

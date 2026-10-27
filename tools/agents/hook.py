@@ -8,6 +8,7 @@ import re
 import subprocess
 import sys
 import tempfile
+from urllib.parse import unquote, urlsplit
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools/context'))
@@ -25,6 +26,8 @@ DROID_KNOWN = {*DROID_TOOLS, 'Bash', 'Read', 'Edit', 'MultiEdit', 'Write', 'Grep
 ANTIGRAVITY_TOOLS = {'run_command': 'Bash', 'view_file': 'Read', 'write_to_file': 'Write',
                      'replace_file_content': 'Edit', 'multi_replace_file_content': 'Edit', 'grep_search': 'Grep'}
 ANTIGRAVITY_PATH_KEY = re.compile(r'(paths?|files?|dirs?|directory|directories|uris?)$')
+# view_code_item's NodePaths are code symbols (Cache.key), not files.
+ANTIGRAVITY_SYMBOL_KEYS = {'nodepath', 'nodepaths'}
 
 
 class GuardRefusal(ValueError):
@@ -87,18 +90,24 @@ def edit_paths(event, provider=None):
     return paths
 
 
+def argument_name(key):
+    return re.sub(r'[_-]', '', str(key)).lower()
+
+
 def antigravity_paths(value, named=False):
     # A string is a path only under a path-like name; nested objects and lists are walked.
     if isinstance(value, dict):
         paths = []
         for key, item in value.items():
-            name = re.sub(r'[_-]', '', str(key)).lower()
-            paths += antigravity_paths(item, named or ANTIGRAVITY_PATH_KEY.search(name) is not None)
+            name = argument_name(key)
+            path_like = ANTIGRAVITY_PATH_KEY.search(name) is not None and name not in ANTIGRAVITY_SYMBOL_KEYS
+            paths += antigravity_paths(item, named or path_like)
         return paths
     if isinstance(value, list):
         return [path for item in value for path in antigravity_paths(item, named)]
     if named and isinstance(value, str) and value:
-        return [value.removeprefix('file://')]
+        # A file URI may carry a fragment, a query or percent-encoding; only its decoded path names the file.
+        return [unquote(urlsplit(value).path) if value.startswith('file:') else value]
     return []
 
 
@@ -113,16 +122,21 @@ def antigravity_event(event):
         raise ValueError('the Antigravity toolCall requires an args object')
     args = call['args']
     data = dict(args)
-    if 'CommandLine' in args:
-        data['command'] = args['CommandLine']
+    # A command line under any case (CommandLine, command_line, command) is a shell call, as for Devin and Droid.
+    command = next((value for key, value in args.items() if argument_name(key) in {'commandline', 'command'}), None)
+    if command is not None:
+        data['command'] = command
     # Every path-like argument meets the guards, not only the first: one call can name several files.
     paths = antigravity_paths(args)
     # view_file windows by StartLine/EndLine; the intake guard reads the same window as offset/limit.
     if type(args.get('StartLine')) is int and type(args.get('EndLine')) is int:
         data['offset'], data['limit'] = args['StartLine'], args['EndLine'] - args['StartLine'] + 1
+    # grep_search with MatchPerLine false lists file names only, which needs no intake limit.
+    if args.get('MatchPerLine') is False:
+        data['output_mode'] = 'files_with_matches'
     tool = ANTIGRAVITY_TOOLS.get(call.get('name'), call.get('name'))
     # Any tool carrying a command line is a shell call; a file path in it still meets the path guard.
-    if 'CommandLine' in args:
+    if command is not None:
         tool = 'Bash'
     return {**event, 'tool_name': tool, 'tool_input': data, 'antigravity_paths': paths}
 

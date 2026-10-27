@@ -76,10 +76,13 @@ directory does not establish loaded hooks or identical runtime guarantees.
   `replace_file_content`/`multi_replace_file_content` to Edit and `grep_search` to Grep. For any
   tool, including MCP tools, every nonempty string at any depth under an argument whose name,
   ignoring case and `_`/`-`, ends in path, file, dir, directory or uri, or their plurals
-  (`AbsolutePath`, `TargetDirectories`, `file_path`, `Uri`; a `file://` prefix is dropped), goes
-  through the path guard. A mapped file tool with none is refused; other names (`target`) are
-  not recognized. `view_file`'s `StartLine`/`EndLine` become the intake window. Any tool with a `CommandLine` goes through the
-  shell guard. A pre-tool payload without `toolCall` is refused. A pre-tool answer is always an
+  (`AbsolutePath`, `TargetDirectories`, `file_path`, `Uri`; a `file:` URI is decoded to its path),
+  goes through the path guard; `view_code_item`'s `NodePaths` are code symbols and are skipped. A
+  mapped file tool with none is refused. Not recognized: other names (`target`, `Url`), text typed
+  into a running command (`send_command_input`) and Windows paths. `view_file`'s
+  `StartLine`/`EndLine` become the intake window; `grep_search` with `MatchPerLine: false` lists
+  names only. Any tool with a `CommandLine` goes through the
+  shell guard, as does a `command` or `commandLine` argument in any case. A pre-tool payload without `toolCall` is refused. A pre-tool answer is always an
   explicit `{"decision": "allow"}` or `{"decision": "deny", "reason": ...}`, since Antigravity
   reads an empty answer as a refusal. No compaction checkpoint or token stop.
 - Managed CLI launchers enter the repository root and check the exact-HEAD architecture baseline;

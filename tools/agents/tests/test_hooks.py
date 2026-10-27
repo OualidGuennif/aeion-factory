@@ -269,17 +269,22 @@ class HookTests(unittest.TestCase):
                ('future_tool',{'FilePath':None,'Path':path}),('future_tool',{'TargetFile':'a.md','SearchPath':path}),
                ('future_tool',{'TargetFiles':['a.md',path]}),('mcp_read_file',{'path':path}),
                ('mcp_read_file',{'file_path':path}),('future_tool',{'Options':{'AbsolutePath':path}}),
-               ('codebase_search',{'TargetDirectories':[path]}),('future_tool',{'Uri':'file://'+path}))
+               ('codebase_search',{'TargetDirectories':[path]}),('future_tool',{'Uri':'file://'+path}),
+               ('view_file',{'AbsolutePath':'file://'+path.replace('.env','%2E'+'.env'[1:])}),
+               ('future_tool',{'uri':'file://'+path+'#L10'}),('future_tool',{'Uri':'file://'+path+'?x=1'}),
+               ('mcp_shell',{'commandLine':'cat .env'}),('mcp_shell',{'command':'cat .env'}))
         for name,args in cases:
             with self.assertRaisesRegex(hook.GuardRefusal,'secret',msg=(name,args)):
                 self.agy(name,args)
         self.assertEqual(self.agy('run_command',{'CommandLine':'git status --short'}),{})
         self.assertEqual(self.agy('search_web',{'Query':'antigravity hooks'}),{})
+        self.assertEqual(self.agy('view_code_item',{'File':str(self.root/'notes.md'),'NodePaths':['Cache.key','credentials']}),{})
         self.assertEqual(self.agy('grep_search',{'SearchPath':str(self.root),'Query':'x','ExcludePath':''}),{})
         # A windowed view of a long file is a bounded read; the whole file is not.
         long=self.root/'long.md'
         long.write_text('x\n'*500)
         self.assertEqual(self.agy('view_file',{'AbsolutePath':str(long),'StartLine':1,'EndLine':20}),{})
+        self.assertEqual(self.agy('grep_search',{'SearchPath':str(long),'Query':'x','MatchPerLine':False}),{})
         for name,args in (('view_file',{'AbsolutePath':str(long)}),('grep_search',{'SearchPath':str(long),'Query':'x'})):
             with self.assertRaisesRegex(hook.GuardRefusal,'intake|Bounded',msg=name):
                 self.agy(name,args)

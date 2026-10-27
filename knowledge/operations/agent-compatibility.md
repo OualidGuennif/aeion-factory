@@ -31,8 +31,8 @@ generated:
 
 AGENTS.md, Knowledge, task state, checker commands and the reviewed PR workflow are shared.
 Claude Code remains the original integration. Codex, OpenCode, Devin and Droid use their
-documented native configuration and small adapters to the existing guards/checkpoints; copying a directory
-does not establish loaded hooks or identical runtime guarantees.
+documented native configuration and small adapters to the existing guards/checkpoints; copying a
+directory does not establish loaded hooks or identical runtime guarantees.
 
 ## Contract
 
@@ -60,8 +60,8 @@ does not establish loaded hooks or identical runtime guarantees.
   `.aeion/` and only Droid's config is tracked in `.factory/`. Its hooks send SessionStart,
   PreToolUse, PostToolUse and Stop to `tools/agents/hook.py droid`. Droid payloads and decisions
   are Claude-shaped; the adapter maps `Execute`, `Create` and `ApplyPatch` (patch text in
-  `command`, `patchText`, `patch` or `input`) to the shared guards; an unknown tool carrying a
-  `command` string goes through the shell guard. It refuses with
+  `command`, `patchText`, `patch` or `input`) to the shared guards; a tool outside the known
+  names carrying a `command` string goes through the shell guard. It refuses with
   `permissionDecision: deny`. Droid has no Æion Factory compaction checkpoint or token stop.
 - Managed CLI launchers enter the repository root and check the exact-HEAD architecture baseline;
   its absence is a warning, because installing the integrations needs the user's yes.

@@ -226,6 +226,11 @@ class HookTests(unittest.TestCase):
         for tool in ('Shell','execute','Bash'):
             with self.assertRaisesRegex(hook.GuardRefusal,'secret'):
                 self.call('droid',tool_name=tool,tool_input={'command':'cat .env'})
+        # A known file tool keeps its path guard even when its input also carries a command.
+        path=str(self.root/'.env')
+        for tool,data in (('Read',{'file_path':path}),('Edit',{'file_path':path}),('Grep',{'path':path,'pattern':'x'})):
+            with self.assertRaisesRegex(hook.GuardRefusal,'secret'):
+                self.call('droid',tool_name=tool,tool_input={**data,'command':'ls'})
 
     def test_droid_refusal_uses_the_claude_shaped_deny(self):
         event={**self.event,'tool_name':'Execute','tool_input':{'command':'cat .env'}}

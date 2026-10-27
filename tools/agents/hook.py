@@ -18,6 +18,7 @@ DEVIN_TOOLS = {'exec': 'Bash', 'bash': 'Bash', 'shell': 'Bash', 'read': 'Read', 
                'edit': 'Edit', 'write': 'Write'}
 # Factory's Droid sends Claude-shaped payloads with its own names for the shell, create and patch tools.
 DROID_TOOLS = {'Execute': 'Bash', 'Create': 'Write', 'ApplyPatch': 'apply_patch'}
+DROID_KNOWN = {*DROID_TOOLS, 'Bash', 'Read', 'Edit', 'MultiEdit', 'Write', 'Grep', 'Glob', 'LS'}
 
 
 class GuardRefusal(ValueError):
@@ -89,7 +90,7 @@ def handle(root, provider, event):
         tool = event.get('tool_name')
         data = event.get('tool_input')
         # Droid's tool names are not live-verified, so an unknown tool carrying a command string is a shell call.
-        if tool not in DROID_TOOLS and tool != 'Bash' and isinstance(data, dict) and isinstance(data.get('command'), str):
+        if tool not in DROID_KNOWN and isinstance(data, dict) and isinstance(data.get('command'), str):
             tool = 'Execute'
         if tool in DROID_TOOLS:
             event = {**event, 'tool_name': DROID_TOOLS[tool]}

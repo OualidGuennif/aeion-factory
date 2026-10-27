@@ -91,14 +91,17 @@ class BudgetTests(unittest.TestCase):
         self.transcript.write_text("")
         self.call(hook_event_name="SessionStart", source="startup")
         self.assertEqual(self.call(hook_event_name="UserPromptSubmit"), {})
-        self.assertFalse(self.call()["continue"])
+        # The tool call is denied, but the agent keeps running so it can retry the call.
+        self.assertEqual(self.call()["hookSpecificOutput"]["permissionDecision"], "deny")
+        self.assertNotIn("continue", self.call())
+        self.assertEqual(self.call(hook_event_name="PostToolUse"), {})
         self.observe(1000)
         self.assertEqual(self.call(), {})
 
     def test_delayed_usage_after_compaction_can_recover_without_new_prompt(self):
         self.call(hook_event_name="SessionStart", source="compact")
         self.transcript.write_text(json.dumps({"type": "system", "subtype": "compact_boundary"}) + "\n")
-        self.assertFalse(self.call()["continue"])
+        self.assertEqual(self.call()["hookSpecificOutput"]["permissionDecision"], "deny")
         self.observe(1000)
         self.assertEqual(self.call(), {})
 
@@ -229,7 +232,7 @@ class BudgetTests(unittest.TestCase):
         self.assertEqual(parent["state"], "HANDOVER_REQUIRED")
 
     def test_missing_child_transcript_refuses_child_without_stopping_parent(self):
-        self.assertFalse(self.call(agent_id="missing-child")["continue"])
+        self.assertEqual(self.call(agent_id="missing-child")["hookSpecificOutput"]["permissionDecision"], "deny")
         self.assertEqual(self.call(), {})
 
 

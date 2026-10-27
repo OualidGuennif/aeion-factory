@@ -237,7 +237,12 @@ def handle(root, event):
             if usage is None and name == "UserPromptSubmit" and not state.get("bootstrapped"):
                 state["bootstrapped"] = True
             elif usage is None:
-                result = stop(name, "Factory native usage temporarily unavailable; work is blocked. Retry after transcript persistence; no terminal stop was latched.")
+                reason = "Factory native usage temporarily unavailable; work is blocked. Retry after transcript persistence; no terminal stop was latched."
+                # Transcripts persist asynchronously: deny only this call so the agent can retry it, not stop the agent.
+                if name == "PreToolUse":
+                    result = {"hookSpecificOutput": {"hookEventName": name, "permissionDecision": "deny", "permissionDecisionReason": reason}}
+                elif name != "PostToolUse":
+                    result = stop(name, reason)
             elif usage >= LIMIT:
                 state["state"] = "STOPPED"
                 ensure_handover(root, session)

@@ -127,6 +127,27 @@ check("a plain folder without git passes", outside, [], 0, "PASS")
 (outside / "src/app.ts").write_text(f"// {TAG} knowledge/components/missing.md\n")
 check("a plain folder still gets L1", outside, [], 1, "RULE L1 src/app.ts:1")
 
+# A project nested in this one (its own AGENTS.md and knowledge/) points at its own knowledge/, not ours.
+t = repo()
+(t / "demo/copy/knowledge/components").mkdir(parents=True)
+(t / "demo/copy/AGENTS.md").write_text("# Nested\n")
+(t / "demo/copy/knowledge/index.md").write_text("# Index\n")
+(t / "demo/copy/knowledge/components/nested.md").write_text(DOC.replace("../../src/app.ts", "../../app.ts"))
+(t / "demo/copy/app.ts").write_text(f"// {TAG} knowledge/components/nested.md\nexport const n = 1;\n")
+(t / "demo/lone").mkdir()
+(t / "demo/lone/knowledge").mkdir()
+(t / "demo/lone/knowledge/index.md").write_text("# Not a project: no AGENTS.md\n")
+(t / "demo/lone/app.ts").write_text(f"// {TAG} knowledge/components/nested.md\n")
+sh(t, "git", "add", ".")
+check("a folder without AGENTS.md is not a nested project", t, [], 1, "RULE L1 demo/lone/app.ts:1")
+(t / "demo/lone/app.ts").unlink()
+sh(t, "git", "add", "-A")
+check("a nested project's pointers are its own", t, [], 0, "PASS")
+commit(t, "nested project")
+(t / "demo/copy/app.ts").write_text(f"// {TAG} knowledge/components/nested.md\nexport const n = 2;\n")
+commit(t, "nested change")
+check("a nested project's change asks nothing of this root", t, ["--diff", "HEAD~1"], 0, "PASS")
+
 # Metadata discovery is independent of source language and Git's human-readable path quoting.
 t = repo()
 paths = ["src/header" + suffix for suffix in (".py", ".ts", ".tsx", ".jsx", ".mts", ".go", ".rs", ".vue", ".svelte")]

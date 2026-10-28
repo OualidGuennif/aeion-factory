@@ -6,6 +6,10 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+### Fixed
+- `doc-links` skips a project nested in this one (its own `AGENTS.md` and `knowledge/`), whose `Spec:`
+  pointers name its own knowledge; a demo copy no longer fails the parent's L1 and L3.
+
 ## [1.3.0] - 2026-10-28
 
 ### Added

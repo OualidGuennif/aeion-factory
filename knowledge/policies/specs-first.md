@@ -46,6 +46,9 @@ before its code is written, has these sections in this order:
 - Git enumeration, history and diff failures return nonzero with a short diagnostic. An unreadable
   repository (a `.git` git cannot read) or missing comparison base is not an empty change set and
   never produces PASS. A plain folder without git is walked from disk (L1/L2 only; `--diff` needs git).
+- A project nested in this one (a folder with its own `AGENTS.md` and `knowledge/index.md`, such as a
+  demo copy) owns its `Spec:` pointers: they name its own `knowledge/`, so this root skips its files
+  in L1 and L3, and the nested project's own `doc-links` checks them.
 - Paths are read from Git (or the disk walk) verbatim, including spaces and Unicode. Explicit relative `sources`
   work for any file format; only a path beginning with `./` or `../` may contain whitespace.
 - Header discovery reads at most 8 KiB of leading comments/docstrings in tracked regular UTF-8

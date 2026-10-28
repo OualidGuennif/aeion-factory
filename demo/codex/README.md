@@ -37,3 +37,4 @@ Codex builds the same Idea Board from [`../plan/`](../plan/00-start.md) as the
 | 03 | SSR page and progressive form | 33 passed | 0 failed; smoke and factory checks PASS | 0 | existing authorization | none new |
 | 04 | Votes and sorting | 40 passed | 0 failed; smoke and factory checks PASS | 0 | existing authorization | none new |
 | 05 | Tags filters and bounded search | 49 passed | 0 failed; smoke and factory checks PASS | 0 | existing authorization | none new |
+| 06 | Docker runtime and persistent volume | 49 passed | 0 failed; smoke and factory checks PASS | 0 | existing authorization | none new |

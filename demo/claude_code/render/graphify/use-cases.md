@@ -141,3 +141,24 @@ of 23 source files name their spec. The five without one are the Fresh scaffold 
 `store/ideas.ts` (how it is kept), `api/app.ts` (the API over it), then `pages/home.tsx` (the
 page). `testing.ts` ranks third because every page test goes through it; it is the place to learn
 how to test a handler on an in-memory KV.
+
+## After: the same questions with `tools/architecture/ask`
+Replayed on 2026-10-28 with Graphify 0.9.97 and the skill `graph`, on the whole workspace (172 files,
+1,217 nodes; first build about 2 s, then about 0.1 s per question). No script, no LLM, no server:
+
+```bash
+ask() { tools/architecture/ask --root demo/claude_code/workspace "$@"; }
+```
+
+| Question | Before (round 07) | After |
+| --- | --- | --- |
+| 1. What breaks if I change the store? | `explain` listed 9 direct importers, mixed with its own symbols | `ask rdeps app/store/ideas.ts --depth 2`: 9 direct importers, then 9 files at depth 2 (the routes and the tests through `app.ts` and `testing.ts`), each with `file:line` |
+| 2. How does `POST /api/ideas` reach KV? | four `graphify path` calls, one of them silently matched to a different node | `ask path "app/routes/api/[...path].ts" app/store/kv.ts`: `[...path].ts:4` → `shared.ts:4` → `kv.ts`; the `ideas.create()` hop stays a method call: the skill sends it to the language server |
+| 3. What has no test? | a 60-line script | `ask untested`: 8 app files reached by no test (the route wiring, `main.ts`, `serve.ts`, `shared.ts`, `kv.ts`, `container_check.sh`); `ask tests app/store/kv.ts` says "no test reaches" it. The three Fresh scaffold files have no symbol, so `status` lists them instead |
+| 4. Which spec covers this file? | the graph linked 6 files, from body names only; FB-010 | `ask spec` reads both sides: `kv.ts` and `filters.ts` are `[both]`; `ask files idea-board-runtime.md` finds `serve.ts [frontmatter only]`: the runtime spec claims it, while its header names the API spec, a real disagreement to settle |
+| 5. Where to start? | the top nodes, with test files and `deno.json` keys | `ask hubs`: `store/ideas.ts` (used by 9 files), `testing.ts` (8), `utils.ts` (7), `api/app.ts` (5), `domain/idea.ts` (5); tests and configuration left out |
+
+Exact names changed the failure mode. `graphify path` answered with a near match. `ask` answers
+exit 3 with the candidates (`ask deps main`) or exit 4, and nothing is guessed. `deno info` drew 54 exact
+imports, all already in Graphify's graph, so on this app the imports were complete; the gaps were
+the spec contract, the test reach and the noise, which the answers above now close.

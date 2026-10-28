@@ -173,6 +173,45 @@ class BudgetTests(unittest.TestCase):
             current.write_text('# Current work\nTask updated.\n')
             budget.checkpoint(self.root, 'test-session', 'HEAD')
 
+    def test_checkpoint_command_names_develop_when_it_exists(self):
+        self.assertIn('--base origin/main --verify', budget.checkpoint_command(self.root, 'test-session'))
+        budget.git(self.root, 'update-ref', 'refs/remotes/origin/develop', 'HEAD')
+        self.assertIn('--base origin/develop --verify', budget.checkpoint_command(self.root, 'test-session'))
+        plain = tempfile.TemporaryDirectory()
+        self.addCleanup(plain.cleanup)
+        self.assertNotIn('--base', budget.checkpoint_command(Path(plain.name), 'test-session'))
+
+    def test_plain_folder_checkpoints_without_git_or_base(self):
+        # Many users have no git: the fingerprint is the files on disk and no diff check runs.
+        plain = tempfile.TemporaryDirectory()
+        self.addCleanup(plain.cleanup)
+        root = Path(plain.name)
+        (root / 'app.py').write_text('value = 1\n')
+        (root / 'node_modules').mkdir()
+        (root / 'node_modules/dep.js').write_text('x\n')
+        before = budget.fingerprint(root)
+        (root / 'node_modules/dep.js').write_text('y\n')
+        self.assertEqual(budget.fingerprint(root), before)
+        (root / 'app.py').write_text('value = 2\n')
+        self.assertNotEqual(budget.fingerprint(root), before)
+        budget.handle(root, {**self.event, 'transcript_path': str(self.transcript)})
+        handover = budget.ensure_handover(root, 'test-session')
+        handover.write_text(handover.read_text().replace('TODO', 'Fixture evidence'))
+        commands = []
+        actual_run = subprocess.run
+
+        def run(command, **options):
+            commands.append(command)
+            return actual_run(command, **options) if command[0] == 'git' else subprocess.CompletedProcess(command, 0)
+
+        with patch.object(budget.subprocess, 'run', side_effect=run):
+            budget.checkpoint(root, 'test-session', None)
+        self.assertFalse(any('--diff' in command for command in commands))
+        # A folder that has a .git git cannot read is a broken repository, never a plain folder.
+        (root / '.git').write_text('gitdir: /nonexistent\n')
+        with self.assertRaises(subprocess.CalledProcessError):
+            budget.fingerprint(root)
+
     def test_launcher_enters_its_project_before_executing_runtime(self):
         launcher = MODULE.parent / "run"
         fake = self.root / "claude"
@@ -245,6 +284,16 @@ class BudgetTests(unittest.TestCase):
         result = subprocess.run(["python3", str(adapter)], input="invalid", capture_output=True, text=True)
         self.assertEqual(result.returncode, 0)
         self.assertFalse(json.loads(result.stdout)["continue"])
+
+    def test_workflow_child_transcript_is_found_without_its_path(self):
+        # Workflow agents write under subagents/workflows/<run>/ and their events may name only the parent.
+        self.observe(1000)
+        self.call()
+        child = self.root / "test-session/subagents/workflows/wf_run-1/agent-child2.jsonl"
+        child.parent.mkdir(parents=True)
+        usage = {**dict.fromkeys(budget.FIELDS, 0), "input_tokens": 100}
+        child.write_text(json.dumps({"type": "assistant", "message": {"usage": usage}}) + "\n")
+        self.assertEqual(self.call(agent_id="child2", hook_event_name="PreToolUse"), {})
 
     def test_child_uses_own_usage_and_cannot_stop_or_inherit_parent_budget(self):
         self.observe(250000)

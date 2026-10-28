@@ -8,6 +8,7 @@ sources:
   - resource: ../../.claude/hooks/guard-bash.py
   - resource: ../../.claude/hooks/session-start.py
   - resource: ../../tools/agents/hook.py
+  - resource: ../../.claude/hooks/token-feedback.py
 ---
 
 # Bounded tool intake
@@ -36,6 +37,15 @@ and `more` calls, dynamic/glob dumps and `find -exec cat` are refused without a 
 pipeline. Use `head -n 80`, `head -c 65536`, `tail -n 80` or a summary such as `wc -l`.
 Keep the bounded pipeline separate from unrelated shell commands. Use `cp` for file copies.
 Tests remain runnable; quiet/fail-fast flags and error summaries are guidance in this version.
+
+Token feedback (`.claude/hooks/token-feedback.py`) never refuses. After a tool call it adds one line
+of context, at most once per turn, when the turn holds prose before or between tool calls (allowed:
+one-line JSON notes, one status line of at most 100 characters, the final answer), and names a
+Write that resent 200+ lines of an existing file where Edit would send only the change. Stop records
+each turn's narration in `.aeion/context/narration-<session>.json`. It reads Claude Code and Codex
+transcript shapes from a bounded tail, never through a symlink; any other shape or error is silence.
+A measured session spent 2% of its transcript on narration and 65% on tool inputs and results, so
+the rewrite note and the read limits above carry most of the saving.
 
 ## Invariants
 

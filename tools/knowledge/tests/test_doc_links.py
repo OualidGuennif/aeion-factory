@@ -120,7 +120,12 @@ check("a valid empty diff passes", t, ["--diff", "HEAD"], 0, "PASS")
 check("a missing diff base fails", t, ["--diff", "missing-test-ref"], 1)
 outside = Path(tempfile.mkdtemp())
 check("an invalid repository fails", outside, ["--diff", "HEAD"], 1)
-check("enumeration outside a repository fails", outside, [], 1)
+check("a plain folder without git passes", outside, [], 0, "PASS")
+(outside / "knowledge/components").mkdir(parents=True)
+(outside / "knowledge/components/example.md").write_text(DOC)
+(outside / "src").mkdir()
+(outside / "src/app.ts").write_text(f"// {TAG} knowledge/components/missing.md\n")
+check("a plain folder still gets L1", outside, [], 1, "RULE L1 src/app.ts:1")
 
 # Metadata discovery is independent of source language and Git's human-readable path quoting.
 t = repo()

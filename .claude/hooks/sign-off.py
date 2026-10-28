@@ -16,6 +16,9 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / ".claude/hooks"))
+from project_files import git_active  # noqa: E402 - the shared repository test, beside this hook.
+
 DOC_PREFIXES = ("knowledge/", "work/", ".claude/", "tech-watch/")
 
 
@@ -30,6 +33,13 @@ except (ValueError, OSError):
     sys.exit(0)
 if not isinstance(event, dict) or event.get("stop_hook_active"):
     sys.exit(0)
+# A plain folder, even one nested in another repository, has no branch to compare; a broken one is
+# reported by session-start, and this reminder must not send the agent after a check that cannot run.
+try:
+    if not git_active(ROOT):
+        sys.exit(0)
+except (OSError, subprocess.SubprocessError):
+    sys.exit(0)
 # Local play (git config aeion.mode local) has no task-closure ritual to remind of.
 if git("config", "--local", "--get", "aeion.mode").stdout.strip() == "local":
     sys.exit(0)
@@ -41,8 +51,8 @@ edited = set(edited_log.read_text().splitlines()) if edited_log.exists() else se
 if not edited:
     sys.exit(0)
 
-# The base is where this branch left main; on main itself only uncommitted work counts.
-base = next((git("merge-base", "HEAD", ref).stdout.strip() for ref in ("origin/main", "main")
+# The base is where this branch left develop (or main without one); on it, only unpushed work counts.
+base = next((git("merge-base", "HEAD", ref).stdout.strip() for ref in ("origin/develop", "develop", "origin/main", "main")
              if git("rev-parse", "--verify", "--quiet", ref).returncode == 0), "")
 if not base:
     sys.exit(0)
@@ -64,6 +74,9 @@ if links.returncode and not any(line.startswith("RULE L") for line in links.stdo
     findings.append("doc-links could not verify this change: run it directly and resolve the check error.")
 if "work/current.md" not in changed:
     findings.append("work/current.md did not change: update the task's entry, or delete it if the task is done.")
+# The release notes are written as the work lands, not reconstructed at release time.
+if (ROOT / "CHANGELOG.md").exists() and "CHANGELOG.md" not in changed:
+    findings.append("CHANGELOG.md did not change: add a line under '## [Unreleased]' for what users will notice.")
 base_top = {p.split("/")[0] for p in git("ls-tree", "--name-only", "-z", base).stdout.split("\0") if p}
 new_top = sorted({p.split("/")[0] for p in code if "/" in p} - base_top)
 if new_top and "AGENTS.md" not in changed:
@@ -80,7 +93,7 @@ if not fresh:
     sys.exit(0)
 with seen_log.open("a") as f:
     f.write("".join(digest(l) + "\n" for l in fresh))
-reason = ("Sign-off before stopping: " + str(len(code)) + " code file(s) you edited changed since main.\n"
+reason = ("Sign-off before stopping: " + str(len(code)) + " code file(s) you edited changed since the base branch.\n"
           + "\n".join(fresh[:10])
           + "\nUpdate them (skill okf-update), or say in your answer why no documented fact changed.")
 print(json.dumps({"decision": "block", "reason": reason}))

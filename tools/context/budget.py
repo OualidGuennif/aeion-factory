@@ -18,6 +18,7 @@ import time
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / ".claude/hooks"))
 from secret_names import is_secret  # noqa: E402
+from project_files import git_active, project_files  # noqa: E402
 WARNING = 250_000
 LIMIT = 300_000
 MAX_TAIL = 4 * 1024 * 1024
@@ -54,8 +55,12 @@ def identity(event):
     key = "agent-" + hashlib.sha256(f"{parent}/{agent}".encode()).hexdigest()[:40]
     transcript = Path(event.get("agent_transcript_path") or event["transcript_path"])
     stem = "agent-" + agent.removeprefix("agent-")
+    subagents = Path(event.get("transcript_path") or transcript).parent / parent / "subagents"
     if transcript.stem == parent:
-        transcript = transcript.parent / parent / "subagents" / f"{stem}.jsonl"
+        transcript = subagents / f"{stem}.jsonl"
+    # A workflow's agents write under subagents/workflows/<run>/; without that path every call is denied.
+    if not transcript.exists():
+        transcript = next(iter(sorted(subagents.glob(f"workflows/*/{stem}.jsonl"))), transcript)
     if transcript.stem not in {agent, stem}:
         raise ValueError("subagent usage must not reuse its parent's transcript")
     return key, str(transcript), transcript.stem
@@ -128,13 +133,25 @@ def git(root, *args):
     return subprocess.run(["git", *args], cwd=root, capture_output=True, check=True).stdout
 
 
+def checkpoint_command(root, session):
+    """The closure command for this folder: work merges into develop when it exists, else main; no git, no base."""
+    command = f"python3 tools/context/budget.py checkpoint --session {session}"
+    try:
+        if not git_active(root):
+            return command + " --verify"
+    except subprocess.SubprocessError:
+        pass
+    develop = subprocess.run(["git", "rev-parse", "--verify", "--quiet", "origin/develop"], cwd=root,
+                             capture_output=True, check=False).returncode == 0
+    return command + f" --base {'origin/develop' if develop else 'origin/main'} --verify"
+
+
 def fingerprint(root):
     # Include untracked task files and tracked bytes, without following symlinks.
-    paths = set(git(root, "ls-files", "-z").split(b"\0"))
-    paths |= set(git(root, "ls-files", "--others", "--exclude-standard", "-z").split(b"\0"))
-    digest = hashlib.sha256(git(root, "rev-parse", "HEAD"))
-    for raw in sorted(paths - {b""}):
-        rel = os.fsdecode(raw)
+    # A plain folder has no HEAD: its files alone make the fingerprint.
+    digest = hashlib.sha256(git(root, "rev-parse", "HEAD") if git_active(root) else b"no-git")
+    for rel in project_files(root, untracked=True):
+        raw = os.fsencode(rel)
         if rel.startswith(("work/handovers/", ".aeion/")):
             continue
         name = Path(rel).name
@@ -266,7 +283,7 @@ def handle(root, event):
                 if name == "PreCompact":
                     if not ready(root, session, state):
                         ensure_handover(root, session)
-                        result = stop(name, f"Fill {handover.relative_to(root)}, then create a verified checkpoint before compaction: python3 tools/context/budget.py checkpoint --session {session} --base origin/main --verify")
+                        result = stop(name, f"Fill {handover.relative_to(root)}, then create a verified checkpoint before compaction: {checkpoint_command(root, session)}")
                 elif state["state"] == "HANDOVER_REQUIRED":
                     ensure_handover(root, session)
                     first = state.pop("warning_pending", False)
@@ -287,7 +304,12 @@ def handle(root, event):
 
 
 def checkpoint(root, session, base):
-    base = git(root, "rev-parse", "--verify", "--end-of-options", f"{base}^{{commit}}").decode().strip()
+    # Without git there is no base to diff, no task state ritual and no commit to compare.
+    repository = git_active(root)
+    if repository and base is None:
+        raise ValueError("--base is required in a git repository")
+    if repository:
+        base = git(root, "rev-parse", "--verify", "--end-of-options", f"{base}^{{commit}}").decode().strip()
     with locked(root, session) as file:
         state = json.loads(file.read_text())
         if state["state"] == "STOPPED":
@@ -297,13 +319,14 @@ def checkpoint(root, session, base):
         if "TODO" in text or any(f"## {key}\n" not in text for key in ("Scope", "Completed", "Remaining", "Constraints", "Evidence")):
             raise ValueError("complete all handover sections first")
         before = fingerprint(root)
-        for command in (*CHECKS, ("tools/knowledge/doc-links", "--diff", base, "--worktree")):
+        diff = (("tools/knowledge/doc-links", "--diff", base, "--worktree"),) if repository else ()
+        for command in (*CHECKS, *diff):
             subprocess.run(command, cwd=root, check=True, timeout=30, stdout=subprocess.DEVNULL)
-        changed = set(git(root, "diff", "--name-only", "-z", base).decode().split("\0")) - {""}
-        changed |= {os.fsdecode(path) for path in git(root, "ls-files", "--others", "--exclude-standard", "-z").split(b"\0")
+        changed = set() if not repository else set(git(root, "diff", "--name-only", "-z", base).decode().split("\0")) - {""}
+        changed |= {os.fsdecode(path) for path in (git(root, "ls-files", "--others", "--exclude-standard", "-z") if repository else b"").split(b"\0")
                     if path and not os.fsdecode(path).startswith((".aeion/", "work/handovers/"))}
         # Local play (git config aeion.mode local) keeps no work/current.md entry.
-        local = subprocess.run(["git", "config", "--local", "--get", "aeion.mode"], cwd=root, capture_output=True, text=True).stdout.strip() == "local"
+        local = not repository or subprocess.run(["git", "config", "--local", "--get", "aeion.mode"], cwd=root, capture_output=True, text=True).stdout.strip() == "local"
         if changed and not local and "work/current.md" not in changed:
             raise ValueError("update work/current.md before checkpointing")
         if fingerprint(root) != before:
@@ -316,7 +339,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=["checkpoint"])
     parser.add_argument("--session", required=True, type=session_id)
-    parser.add_argument("--base", required=True)
+    parser.add_argument("--base", help="the branch this work merges into; required under git")
     parser.add_argument("--verify", action="store_true", required=True)
     args = parser.parse_args()
     try:

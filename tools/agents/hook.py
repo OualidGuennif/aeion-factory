@@ -58,6 +58,14 @@ def fail(provider, name, reason):
     return {'continue': False, 'stopReason': reason, 'systemMessage': reason}
 
 
+def advisory(root, event):
+    """Token feedback reads the transcript when the harness passes a known shape; it may fail, never stop work."""
+    try:
+        return script(root, 'token-feedback.py', event)
+    except Exception:  # noqa: BLE001 - a timeout or crash here must not become a continue: false.
+        return {}
+
+
 def script(root, name, event):
     result = subprocess.run([sys.executable, str(root / '.claude/hooks' / name)], cwd=root,
                             input=json.dumps(event), capture_output=True, text=True, timeout=4)
@@ -213,7 +221,7 @@ def handle(root, provider, event):
             if not budget.ready(root, session, state):
                 budget.ensure_handover(root, session)
                 return fail(provider, name, f'Fill {handover.relative_to(root)} and verify the docs before compaction: '
-                            f'python3 tools/context/budget.py checkpoint --session {session} --base origin/main --verify')
+                            + budget.checkpoint_command(root, session))
             if provider == 'opencode':
                 state.pop('checkpoint', None)
                 budget.atomic(file, json.dumps(state, sort_keys=True) + '\n')
@@ -250,9 +258,10 @@ def handle(root, provider, event):
             data = {**event['tool_input'], 'file_path': path}
             script(root, 'guard-path.py', {'tool_name': tool, 'tool_input': data})
         return {}
-    if name == 'PostToolUse' and event.get('tool_name') in {'apply_patch', 'Edit', 'Write'}:
+    if name == 'PostToolUse':
         messages = []
-        for raw in edit_paths(event, provider):
+        edited = edit_paths(event, provider) if event.get('tool_name') in {'apply_patch', 'Edit', 'Write'} else []
+        for raw in edited:
             path = Path(raw)
             path = (root / path).resolve() if not path.is_absolute() else path.resolve()
             if not path.is_relative_to(root):
@@ -263,8 +272,12 @@ def handle(root, provider, event):
             context = result.get('hookSpecificOutput', {}).get('additionalContext')
             if context:
                 messages.append(context)
+        context = advisory(root, normalized).get('hookSpecificOutput', {}).get('additionalContext')
+        if context:
+            messages.append(context)
         return {'hookSpecificOutput': {'hookEventName': name, 'additionalContext': '\n'.join(messages)}} if messages else {}
     if name == 'Stop':
+        advisory(root, normalized)
         return script(root, 'sign-off.py', normalized)
     return {}
 

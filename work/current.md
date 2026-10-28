@@ -4,6 +4,13 @@ Task state only. One entry per open task, newest first. At most 150 lines, 10 pe
 Finished tasks are deleted: the commit message and knowledge/ keep what matters.
 Status: ACTIVE, WAITING-OWNER, MEASURING, BLOCKED, BACKLOG.
 
+## Release v1.3.0 — ACTIVE
+- Owner decision: 2026-10-28, merge commits allowed and linear history off on main (applied via gh api).
+- State: PR #19 has Review OK, green CI and a clean Claude Security scan; not merged yet.
+- Next: merge #19 with a merge commit, wait for Architecture refresh on main, tag v1.3.0, gh release, fast-forward develop (who: agent).
+- Blocker: none.
+- Evidence: knowledge/operations/github-protection.md; .claude/skills/ship/SKILL.md
+
 ## Live Devin, Droid and Antigravity hook qualification — WAITING-OWNER
 - Owner decision: 2026-10-27, support Devin, Droid and Antigravity; adapters use documented, not live-run, payloads.
 - State: Devin merged in #12, Droid in #13, Antigravity in task/antigravity; no live run of any yet.

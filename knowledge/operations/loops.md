@@ -37,7 +37,7 @@ admission remains unqualified. See [context safety](context-safety.md) and
 | `middle` | every 30 min on working hours | review comments only |
 | `watch` | monthly | a `tech-watch/pending/` package by pull request |
 | `retro` | weekly | a pull request of hook rules, skills and preferences |
-| `inner --issue N` | on demand or after triage | a branch and a pull request for one `agent-ready` issue |
+| `inner --issue N` | on demand or after triage | a branch and a pull request into `develop` for one `agent-ready` issue |
 
 Schedulers: `loops/schedules/crontab.example`, the launchd plist, or
 `.github/workflows/outer-loop.yml` (off until the repository variable `OUTER_LOOP_ENABLED` is

@@ -16,19 +16,17 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE = {".py", ".ts", ".tsx", ".js", ".mjs", ".java", ".go", ".rs", ".kt", ".swift", ".rb", ".php", ".cs", ".sh"}
 COMMENT = re.compile(r"^\s*(//|#|\*|/\*|--)")
+sys.path.insert(0, str(ROOT / ".claude/hooks"))
+from project_files import project_files  # noqa: E402
 
 
 def tracked():
     try:
-        result = subprocess.run(["git", "ls-files", "-z"], cwd=ROOT, capture_output=True, text=True,
-                                errors="surrogateescape", check=False)
-    except OSError as error:
-        print(f"FAIL Git enumeration could not run: {error.strerror}", file=sys.stderr)
+        files = project_files(ROOT)
+    except (OSError, subprocess.SubprocessError) as error:
+        print(f"FAIL file enumeration failed: {error}", file=sys.stderr)
         sys.exit(1)
-    if result.returncode:
-        print(f"FAIL Git enumeration failed (exit {result.returncode}); check the repository.", file=sys.stderr)
-        sys.exit(1)
-    return [ROOT / p for p in result.stdout.split("\0") if p and (ROOT / p).is_file()]
+    return [ROOT / p for p in files if (ROOT / p).is_file()]
 
 
 def is_source(path):

@@ -47,12 +47,14 @@ discards system messages. Only closure work
 300k it returns `continue: false`; a Stop reminder cannot override this decision. The session
 state and active handover survive restart. Each session has its own file lock and atomic state.
 Tool events carrying `agent_id` use a separate parent/agent key and that child's transcript,
-including the documented nested `subagents/agent-<id>.jsonl` layout. Missing child usage refuses
+including the documented nested `subagents/agent-<id>.jsonl` layout and a workflow's
+`subagents/workflows/<run>/agent-<id>.jsonl`. Missing child usage refuses
 the child; it never reads the parent's counters or changes the parent's stop state. Child
 handover/checkpoint commands use the separate key printed by the guard.
 
 Before any compaction, fill `work/handovers/<session-id>.md`, update `work/current.md` and affected
-docs, and run `python3 tools/context/budget.py checkpoint --session <id> --base <git-ref> --verify`.
+docs, and run `python3 tools/context/budget.py checkpoint --session <id> --base <git-ref> --verify`
+(`--base` only under git; a plain folder skips the diff and task-state checks).
 The command runs knowledge/link/health checks and binds readiness to the current source diff
 and handover hash. Later edits invalidate it. Compaction is refused without a current receipt.
 Local mode (`git config aeion.mode local`, read with `--local` so includes and the global config

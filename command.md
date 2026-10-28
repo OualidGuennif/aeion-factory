@@ -28,7 +28,7 @@ Everything you can run here, grouped by loop. Skills are invoked by name in a Cl
 ```bash
 tools/knowledge/knowledge-check                       # the knowledge base: frontmatter, links, caps
 tools/knowledge/doc-links                             # docs <-> code links resolve (L1, L2)
-tools/knowledge/doc-links --diff origin/main --worktree   # also: code changed without its doc (L3)
+tools/knowledge/doc-links --diff origin/develop --worktree   # also: code changed without its doc (L3)
 tools/knowledge/doc-links --for path/to/file          # the docs covering a file
 tools/repo-health/repo-health [--json]                # comment blocks, file sizes, AGENTS.md and work caps
 python3 tools/knowledge/tests/test_doc_links.py       # tool tests
@@ -53,7 +53,7 @@ node --test tools/agents/tests/test_opencode.mjs
 python3 tools/loops/tests/test_loops.py
 tools/context/run                                    # original Claude entry, native compact at 250k
 tools/context/run --strict                           # refuses: strict pre-request control unqualified
-python3 tools/context/budget.py checkpoint --session <id> --base origin/main --verify
+python3 tools/context/budget.py checkpoint --session <id> --base origin/develop --verify
 ```
 
 ## Loops (`loops/orchestrator.sh`)
@@ -88,12 +88,13 @@ claude plugin install native-lsp@aeion-local --scope project
 ## Git flow
 
 The team flow below is the default. In local mode (`git config aeion.mode local`), commit on
-`main` locally; pushing is the user's call, and the safety guards still apply. Only the user
-switches the mode.
+`main` locally; pushing is the user's call (pre-push lets it through), and the safety guards still
+apply. Only the user switches the mode.
 
 ```bash
-git switch -c task/<slug> origin/main
+git switch develop
 git commit -m "<what changed and why>"            # the pre-commit runs the checks
-gh pr create --fill
-# then, in a session: run the skill pr-review
+# in a session: run the skill pr-review, which records Review: OK for HEAD
+git push origin develop                           # pre-push refuses it without that verdict
+# release: skill ship (pull request develop -> main, merge commit, tag vX.Y.Z)
 ```

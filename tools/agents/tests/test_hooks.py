@@ -43,6 +43,64 @@ class HookTests(unittest.TestCase):
     def call(self,provider='codex',**changes):
         return hook.handle(self.root,provider,{**self.event,**changes})
 
+    def test_token_feedback_reaches_every_harness_without_breaking_it(self):
+        prose = 'I will now read the adapter, then the settings, then compare both with the documented payloads. ' * 2
+        rollout = self.root / 'rollout.jsonl'
+        rollout.write_text(''.join(json.dumps(r) + '\n' for r in (
+            {'type': 'response_item', 'payload': {'type': 'message', 'role': 'user',
+                                                  'content': [{'type': 'input_text', 'text': 'fix it'}]}},
+            {'type': 'response_item', 'payload': {'type': 'message', 'role': 'assistant',
+                                                  'content': [{'type': 'output_text', 'text': prose}]}},
+            {'type': 'response_item', 'payload': {'type': 'function_call', 'name': 'shell', 'arguments': '{}'}})))
+        # Codex passes its rollout: the narration note reaches the model as PostToolUse context.
+        # The once-per-turn state lives in the temp folder: a fresh session id keeps runs independent.
+        result = self.call('codex', hook_event_name='PostToolUse', transcript_path=str(rollout),
+                           session_id=f'feedback-codex-{os.getpid()}-{id(self)}')
+        self.assertIn('narration:', result['hookSpecificOutput']['additionalContext'])
+        # Harnesses with no readable transcript stay silent and keep working, on PostToolUse and Stop.
+        for provider in ('devin', 'droid', 'opencode'):
+            event = {**self.event, 'session_id': f'feedback-{provider}', 'hook_event_name': 'PostToolUse'}
+            self.assertEqual(hook.handle(self.root, provider, event), {}, provider)
+            stopped = hook.handle(self.root, provider, {**event, 'hook_event_name': 'Stop'})
+            self.assertNotIn('Æion Factory adapter verification unavailable', json.dumps(stopped), provider)
+
+    def test_a_failing_token_feedback_never_stops_the_harness(self):
+        (self.root / '.claude/hooks/token-feedback.py').write_text('import time\ntime.sleep(10)\n')
+        event = {**self.event, 'session_id': 'feedback-timeout', 'hook_event_name': 'PostToolUse'}
+        self.assertEqual(hook.handle(self.root, 'codex', event), {})
+        (self.root / '.claude/hooks/token-feedback.py').write_text('raise SystemExit(1)\n')
+        stopped = hook.handle(self.root, 'codex', {**event, 'hook_event_name': 'Stop'})
+        self.assertNotIn('continue', stopped)
+
+    def test_harness_commands_find_the_adapter_in_a_plain_folder(self):
+        # Without git, `git rev-parse` prints nothing; every command must fall back to the folder itself.
+        plain = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, plain)
+        (plain / 'tools/agents').mkdir(parents=True)
+        (plain / 'tools/agents/hook.py').write_text('import sys\nprint("adapter", sys.argv[1])\n')
+        commands = []
+
+        def collect(value):
+            if isinstance(value, dict):
+                commands.extend([value['command']] if isinstance(value.get('command'), str) else [])
+                for item in value.values():
+                    collect(item)
+            elif isinstance(value, list):
+                for item in value:
+                    collect(item)
+
+        for config in ('.codex/hooks.json', '.devin/hooks.v1.json', '.factory/settings.json', '.agents/hooks.json'):
+            collect(json.loads((ROOT / config).read_text()))
+        self.assertGreaterEqual(len(commands), 16)
+        environment = {key: value for key, value in os.environ.items()
+                       if key not in {'DEVIN_PROJECT_DIR', 'FACTORY_PROJECT_DIR'}}
+        environment['GIT_CEILING_DIRECTORIES'] = str(plain.parent)
+        for command in commands:
+            result = subprocess.run(['sh', '-c', command], cwd=plain, capture_output=True, text=True,
+                                    input='{}', env=environment, timeout=10)
+            self.assertEqual(result.returncode, 0, f'{command}: {result.stderr}')
+            self.assertIn('adapter', result.stdout, command)
+
     def test_secret_bash_is_denied_by_real_guard(self):
         for provider in ('codex','opencode'):
             with self.assertRaises(ValueError):

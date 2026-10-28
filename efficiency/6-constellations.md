@@ -45,7 +45,8 @@ local edit-build-test cycle, the outer loop the integration, review and release 
   Checks: CI <state>; doc-links <result>; tests <what ran>
   ```
 
-- **Merge after `Review: OK` and a green CI** (squash). A change that needs a deploy or a human
+- **Merge after `Review: OK` and a green CI**: a task pull request may squash; a release pull request
+  (`develop → main`) is merged with a merge commit, never squashed. A change that needs a deploy or a human
   decision (money, risk, data deletion, a policy) waits for that human.
 - **Taste:** the skill `pr-taste` reads the owner's pull-request comments and keeps the durable
   ones — architecture, naming, style, security, UI — in `knowledge/policies/owner-preferences.md`,

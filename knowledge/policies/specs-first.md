@@ -40,12 +40,13 @@ before its code is written, has these sections in this order:
   (`resource: ../../src/area/file.ts`). A directory source is checked for existence only.
 - **Code to doc:** a described file carries one header line `Spec: knowledge/<doc>.md`.
 - `tools/knowledge/doc-links` fails when a pointer or a source does not resolve, and with
-  `--diff origin/main` when a file changed while a doc covering it did not. Updating the doc, or a
+  `--diff origin/develop` (or `origin/main` without develop) when a file changed while a doc covering it did not. Updating the doc, or a
   commit trailer `Docs-Checked: knowledge/<doc>.md -- <why no documented fact changed>`, passes.
 - A link is a pointer, never copied content.
 - Git enumeration, history and diff failures return nonzero with a short diagnostic. An unreadable
-  repository or missing comparison base is not an empty change set and never produces PASS.
-- Paths are read from Git verbatim, including spaces and Unicode. Explicit relative `sources`
+  repository (a `.git` git cannot read) or missing comparison base is not an empty change set and
+  never produces PASS. A plain folder without git is walked from disk (L1/L2 only; `--diff` needs git).
+- Paths are read from Git (or the disk walk) verbatim, including spaces and Unicode. Explicit relative `sources`
   work for any file format; only a path beginning with `./` or `../` may contain whitespace.
 - Header discovery reads at most 8 KiB of leading comments/docstrings in tracked regular UTF-8
   text files, regardless of suffix. It excludes Markdown, `knowledge/`, vendored/dependency/cache

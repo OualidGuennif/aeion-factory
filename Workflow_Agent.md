@@ -24,7 +24,8 @@ invariants and their tests, acceptance checks). The spec is the source of truth.
 
 ## 3. Branch
 
-`git switch -c task/<slug> origin/main`. One task, one branch.
+Work on `develop` (`git switch develop`); a parallel session uses a worktree on `task/<slug>` cut from
+`develop` and merges back locally. Without git, skip sections 3, 6 and 7.
 
 ## 4. Build in thin slices (skills `build`, `test`)
 
@@ -38,19 +39,20 @@ Codex/OpenCode have their own native pre-compaction checkpoint adapters; see
 
 ## 5. Sign off (skill `sign-off`)
 
-Tests for what changed; `tools/knowledge/doc-links --diff origin/main --worktree`; the docs the
+Tests for what changed; `tools/knowledge/doc-links --diff origin/develop --worktree`; the docs the
 change touches (skill `okf-update`); `work/current.md`; `AGENTS.md` if the map or a command
 changed; `/claude-security` on a sensitive diff. The `Stop` hook reminds you once of anything left.
 
-## 6. Pull request and review (skill `pr-review`)
+## 6. Review and push (skill `pr-review`)
 
-`gh pr create` with what, why and the checks run. A fresh reviewer reviews; every finding is
-verified; one comment: `Review: OK` or `Review: NOT OK`. Fix and repeat until OK.
+Before each push of `develop`, a fresh reviewer reviews `origin/develop..HEAD`; every finding is
+verified; the verdict `Review: OK` or `Review: NOT OK` is recorded for the exact commit. Fix and repeat
+until OK, then push: `tools/git-hooks/pre-push` refuses `develop` without it.
 
-## 7. Merge
+## 7. Release (skill `ship`)
 
-After `Review: OK` and a green CI, squash-merge. Anything that needs a deploy or a human decision
-waits for that human.
+A pull request `develop → main`, reviewed again, merged with a merge commit after a green CI, then
+tagged `vX.Y.Z`. Anything that needs a deploy or a human decision waits for that human.
 Wait for Graphify/Archify's analysis round on the exact merged SHA, even for docs-only merges.
 Keep the complete architecture spec current; failed analysis leaves the work incomplete.
 

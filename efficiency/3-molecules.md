@@ -58,7 +58,7 @@ deleted — the commit message and the knowledge base keep what matters.
   For formats without comments, use `sources`. This does not install language tools or validate syntax.
 - **`tools/knowledge/doc-links`** (shipped with Æion Factory, Python standard library only):
   - **L1** a `Spec:` pointer resolves; **L2** every `sources` path exists;
-  - **L3** with `--diff origin/main`: a file changed while a doc covering it did not. Updating the
+  - **L3** with `--diff <base>` (`origin/develop`, else `origin/main`): a file changed while a doc covering it did not. Updating the
     doc passes, and so does a commit trailer
     `Docs-Checked: knowledge/<doc>.md -- <why no documented fact changed>`. A diff that only adds or
     removes `Spec:` lines moves no fact and passes.

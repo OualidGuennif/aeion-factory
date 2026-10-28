@@ -47,18 +47,30 @@ story goes in the commit message.
 extensionless files that start with a shebang (`#!`), excluding `test_*` files. Its JSON scorecard reports that set and how many files were checked. This is a
 structural scorecard; each project's build, linter and tests provide language-specific validation.
 
-## Branch, pull request, review
+## Branch, review, release
 
-This is the team flow. In local mode (`git config aeion.mode local`, see
-[build and test](../operations/build-and-test.md)) commits go to `main` directly, without a pull
-request, CI or a `work/current.md` entry; tests for what changed still run.
+This is the team flow, under git only. In a plain folder there is no branch, review, CI or tag: the
+tests for what changed and the `CHANGELOG.md` line are the whole ritual. In local mode
+(`git config aeion.mode local`, see [build and test](../operations/build-and-test.md)) commits stay
+local, without review, CI or a `work/current.md` entry, and pre-push lets the user's own push through;
+tests for what changed still run.
 
-- One branch per task, `task/<slug>`, from an up-to-date default branch; small commits.
-- `gh pr create` with what, why and the checks run (skill `sign-off`).
-- The skill `pr-review`: a fresh subagent reviews; every finding is verified; one comment:
-  `Review: OK` or `Review: NOT OK` with at most five findings.
-- Merge after `Review: OK` and a green CI. A deploy or a human decision waits for that human.
-- The owner's comments become preferences (skill `pr-taste`).
+- Daily work is committed on `develop`; a parallel session uses a worktree on `task/<slug>` cut from
+  `develop` and merges back locally. Small commits, each with its `CHANGELOG.md` line under Unreleased.
+- Before each push of `develop`, the skill `pr-review` reviews `origin/develop..HEAD` with a fresh
+  subagent, verifies every finding and records `Review: OK` or `Review: NOT OK` (at most five findings)
+  for the exact commit in `.aeion/reviews/<sha>.md`, then posts it on the commit. The hook
+  `tools/git-hooks/pre-push` (`git config core.hooksPath tools/git-hooks`) refuses a push of `develop`
+  without `Review: OK` and any direct push to `main`. CI runs only for `main` and for pull requests,
+  so pushes stay free. A loop's pull request into `develop` merges after its `Review: OK` comment and a
+  green CI; then the local `develop` pulls it before new commits.
+- A release (skill `ship`): `tools/release/release <part>` bumps `VERSION` (SemVer) and dates the
+  changelog; a pull request `develop → main` is reviewed again and merged with a merge commit after a
+  green CI; the merged commit is tagged `vX.Y.Z` with its changelog section as release notes.
+- A deploy or a human decision waits for that human. The owner's comments become preferences
+  (skill `pr-taste`).
+- Limit: the review record is written by the agent that ran the review; the hook checks that one
+  exists for the exact commit, not how it was produced.
 
 ## Before changing code
 

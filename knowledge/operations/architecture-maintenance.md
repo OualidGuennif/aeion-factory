@@ -36,7 +36,8 @@ A local baseline is strongly recommended and never installed automatically. An a
 user before running `tools/architecture/setup`, says what it installs (below), and asks whether the
 machine is a work computer whose policy restricts installs. On a yes, run setup, then
 `tools/architecture/refresh --target HEAD`. Without a baseline the launchers warn and continue;
-CI still runs the analysis on GitHub. Setup creates a virtual environment in `.aeion/integrations/`,
+CI still runs the analysis on GitHub, for the release pull request `develop → main` and every main
+update; pushes to `develop` run none. Setup creates a virtual environment in `.aeion/integrations/`,
 downloads the reviewed Graphify revision and its pinned packages into it, and clones the pinned
 Archify package there. Git, Python 3.12+ (excluding 3.14.1), Node 18+ and Chrome/Chromium are
 required. Dependencies and browser execution are explicit; there is no global plugin install.

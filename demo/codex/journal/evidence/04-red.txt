@@ -1,0 +1,70 @@
+$ deno test -A store/votes_test.ts api/votes_test.ts
+Check store/votes_test.ts
+Check api/votes_test.ts
+TS2353 [ERROR]: Object literal may only specify known properties, and 'vote' does not exist in type '{ create(input: IdeaInput): Promise<Idea>; get(id: string): Promise<Idea | null>; list(options: ListOptions): Promise<...>; }'.
+    at file:///Users/wallseven/Desktop/aeion-factory/demo/codex/workspace/app/api/votes_test.ts:10:128
+
+    The expected type comes from property 'store' which is declared here on type '{ store?: { create(input: IdeaInput): Promise<Idea>; get(id: string): Promise<Idea | null>; list(options: ListOptions): Promise<...>; } | undefined; }'
+    export function createApi(deps: { store?: IdeasStore }) {
+                                      ~~~~~
+        at file:///Users/wallseven/Desktop/aeion-factory/demo/codex/workspace/app/api/app.ts:6:35
+
+TS2339 [ERROR]: Property 'vote' does not exist on type '{ create(input: IdeaInput): Promise<Idea>; get(id: string): Promise<Idea | null>; list(options: ListOptions): Promise<...>; }'.
+    at file:///Users/wallseven/Desktop/aeion-factory/demo/codex/workspace/app/store/votes_test.ts:5:167
+
+TS2339 [ERROR]: Property 'vote' does not exist on type '{ create(input: IdeaInput): Promise<Idea>; get(id: string): Promise<Idea | null>; list(options: ListOptions): Promise<...>; }'.
+    at file:///Users/wallseven/Desktop/aeion-factory/demo/codex/workspace/app/store/votes_test.ts:6:140
+
+TS2339 [ERROR]: Property 'vote' does not exist on type '{ create(input: IdeaInput): Promise<Idea>; get(id: string): Promise<Idea | null>; list(options: ListOptions): Promise<...>; }'.
+ const results=await Promise.all(Array.from({length:25},()=>s.vote(i.id)));
+                                                              ~~~~
+    at file:///Users/wallseven/Desktop/aeion-factory/demo/codex/workspace/app/store/votes_test.ts:9:63
+
+TS7006 [ERROR]: Parameter 'r' implicitly has an 'any' type.
+ assertEquals(results.every(r=>r!==null&&r!=="busy"),true);assertEquals((await s.get(i.id))?.votes,25);
+                            ^
+    at file:///Users/wallseven/Desktop/aeion-factory/demo/codex/workspace/app/store/votes_test.ts:10:29
+
+TS2339 [ERROR]: Property 'vote' does not exist on type '{ create(input: IdeaInput): Promise<Idea>; get(id: string): Promise<Idea | null>; list(options: ListOptions): Promise<...>; }'.
+ await s.vote(first.id);await s.vote(second.id);assertEquals((await s.list({sort:"votes"})).map(i=>i.id),[second.id,first.id]);
+         ~~~~
+    at file:///Users/wallseven/Desktop/aeion-factory/demo/codex/workspace/app/store/votes_test.ts:15:10
+
+TS2339 [ERROR]: Property 'vote' does not exist on type '{ create(input: IdeaInput): Promise<Idea>; get(id: string): Promise<Idea | null>; list(options: ListOptions): Promise<...>; }'.
+ await s.vote(first.id);await s.vote(second.id);assertEquals((await s.list({sort:"votes"})).map(i=>i.id),[second.id,first.id]);
+                                ~~~~
+    at file:///Users/wallseven/Desktop/aeion-factory/demo/codex/workspace/app/store/votes_test.ts:15:33
+
+TS2353 [ERROR]: Object literal may only specify known properties, and 'sort' does not exist in type 'ListOptions'.
+ await s.vote(first.id);await s.vote(second.id);assertEquals((await s.list({sort:"votes"})).map(i=>i.id),[second.id,first.id]);
+                                                                            ~~~~
+    at file:///Users/wallseven/Desktop/aeion-factory/demo/codex/workspace/app/store/votes_test.ts:15:77
+
+TS2339 [ERROR]: Property 'vote' does not exist on type '{ create(input: IdeaInput): Promise<Idea>; get(id: string): Promise<Idea | null>; list(options: ListOptions): Promise<...>; }'.
+ await s.vote(first.id);assertEquals((await s.list({sort:"votes"}))[0].id,first.id);
+         ~~~~
+    at file:///Users/wallseven/Desktop/aeion-factory/demo/codex/workspace/app/store/votes_test.ts:16:10
+
+TS2353 [ERROR]: Object literal may only specify known properties, and 'sort' does not exist in type 'ListOptions'.
+ await s.vote(first.id);assertEquals((await s.list({sort:"votes"}))[0].id,first.id);
+                                                    ~~~~
+    at file:///Users/wallseven/Desktop/aeion-factory/demo/codex/workspace/app/store/votes_test.ts:16:53
+
+TS2345 [ERROR]: Argument of type '{ get: <T = unknown>(key: Deno.KvKey, options?: { consistency?: Deno.KvConsistencyLevel; }) => Promise<Deno.KvEntryMaybe<T>>; list: <T = unknown>(selector: Deno.KvListSelector, options?: Deno.KvListOptions) => Deno.KvListIterator<T>; atomic: () => Deno.AtomicOperation; }' is not assignable to parameter of type 'Kv'.
+  Type '{ get: <T = unknown>(key: KvKey, options?: { consistency?: KvConsistencyLevel | undefined; } | undefined) => Promise<KvEntryMaybe<T>>; list: <T = unknown>(selector: KvListSelector, options?: KvListOptions | undefined) => KvListIterator<...>; atomic: () => AtomicOperation; }' is missing the following properties from type 'Kv': getMany, set, delete, enqueue, and 5 more.
+    at file:///Users/wallseven/Desktop/aeion-factory/demo/codex/workspace/app/store/votes_test.ts:20:27
+
+TS2339 [ERROR]: Property 'vote' does not exist on type '{ create(input: IdeaInput): Promise<Idea>; get(id: string): Promise<Idea | null>; list(options: ListOptions): Promise<...>; }'.
+ assertEquals(await s.vote(idea.id),"busy");assertEquals(attempts,10);assertEquals((await base.get(idea.id))?.votes,0);
+                      ~~~~
+    at file:///Users/wallseven/Desktop/aeion-factory/demo/codex/workspace/app/store/votes_test.ts:21:23
+
+Found 12 errors.
+
+error: Type checking failed.
+
+  [33minfo:[39m The program failed type-checking, but it still might work correctly.
+  [36mhint:[39m Re-run with [4m--no-check[24m to skip type-checking.
+
+Exit: 1
+Elapsed seconds: 0.4

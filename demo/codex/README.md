@@ -35,3 +35,5 @@ To fill in as the rounds are done.
 | 00 | Setup checks passed; round 01 awaits approval | 743 passed, 2 skipped; hook battery 10 passed, 5 informational; factory checks PASS | 0 during work; 5 expected battery denials | 0 during setup; commit approval requested separately | none new |
 
 Round 00: [journal and retained output](journal/00-setup.md).
+
+| 01 | Scaffold Fresh and Hono | 3 passed | 0 failed; smoke and factory checks PASS | 1 (FB-001) | existing authorization | FB-001 |

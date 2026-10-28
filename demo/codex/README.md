@@ -29,12 +29,31 @@ Codex builds the same Idea Board from [`../plan/`](../plan/00-start.md) as the
 
 ## Results by round
 
+All rounds are complete locally. The owner authorized rounds 01–07 together; no push.
+The application is retained in `workspace/app/` (git-ignored), and the gallery opens offline.
+The ordinary archive/reset step is deferred so these deliverables remain available for review.
+
+- [Run the app](workspace/app/README.md)
+- [Open the architecture gallery](render/index.html)
+- [Read the five graph investigations](render/graphify/use-cases.md)
+- [Final round journal and evidence](journal/07-architecture.md)
+
 | Round | Result | Tests | Guard refusals | Human help | Feedback |
 | --- | --- | --- | --- | --- | --- |
-| 00 | Setup checks passed; round 01 awaits approval | 743 passed, 2 skipped; hook battery 10 passed, 5 informational; factory checks PASS | 0 during work; 5 expected battery denials | 0 during setup; commit approval requested separately | none new |
-| 01 | Scaffold Fresh and Hono | 3 passed | 0 failed; smoke and factory checks PASS | 1 (FB-001) | existing authorization | FB-001 |
-| 02 | Ideas API and KV persistence | 28 passed | 0 failed; smoke and factory checks PASS | 0 | existing authorization | none new |
-| 03 | SSR page and progressive form | 33 passed | 0 failed; smoke and factory checks PASS | 0 | existing authorization | none new |
-| 04 | Votes and sorting | 40 passed | 0 failed; smoke and factory checks PASS | 0 | existing authorization | none new |
-| 05 | Tags filters and bounded search | 49 passed | 0 failed; smoke and factory checks PASS | 0 | existing authorization | none new |
-| 06 | Docker runtime and persistent volume | 49 passed | 0 failed; smoke and factory checks PASS | 0 | existing authorization | none new |
+| 00 | Workspace and hooks qualified | 743 factory assertions/tests; 2 skips; 10 hook cases pass, 5 informational | 5 expected synthetic denials; 0 during work | 0 | none new |
+| 01 | Fresh and Hono scaffold | 3 pass; app/build/HTTP/factory gates pass | 1 false positive | 1 shared authorization for all rounds | FB-001 |
+| 02 | Validated ideas API and KV | 28 pass; app/build/HTTP/factory gates pass | 0 | 0 additional | none new |
+| 03 | SSR and enhanced creation | 33 pass; app/build/HTTP/Chrome/factory gates pass | 0 | 0 additional | none new |
+| 04 | Atomic votes and sorting | 40 pass; app/build/HTTP/Chrome/factory gates pass | 0 | 0 additional | none new |
+| 05 | Indexed tags and bounded search | 49 pass; app/build/HTTP/Chrome/factory gates pass | 0 | 0 additional | none new |
+| 06 | Locked non-root Docker and durable volume | 49 pass; build/health/persistence/audit/factory gates pass | 1 false positive | 0 additional | FB-002 |
+| 07 | Source-checked graph report and 14 diagrams; API startup regression fixed | 50 pass; 14 validate/render/browser checks; offline gallery, app and rebuilt Docker gates pass | 1 sandbox refusal | 0 additional | FB-003 |
+
+Final validation: formatting, lint, types, 50 app tests and production build pass. Phone/desktop
+checks pass in light and dark; unique enhanced creation and vote readbacks pass. Final Docker
+readback preserved the exact idea across down/up, ran as UID 1993 and became healthy in 5.52 seconds.
+Only the isolated test container/network/volume were removed. No running demo service is left.
+
+Three open framework frictions are documented in [feedback](feedback_for_aeion/README.md).
+No base-factory fixes, new global tools, remote CI or push were part of this run. The final journal
+states the security/review limits; the workspace remains local, as the brief requires.

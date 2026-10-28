@@ -19,6 +19,11 @@ Acceptance commands were run from workspace/app; factory checks from workspace.
 - [doc-links](evidence/06/doc-links.log)
 - [repo-health](evidence/06/repo-health.log)
 
+- [Docker persistence and non-root readback](evidence/06/container-acceptance.log)
+- [Frozen-lock negative build](evidence/06/frozen-lock-negative.log)
+- [Dependency audit](evidence/06/dependency-audit.log)
+- [Security review and limits](evidence/06/security-review.md)
+
 [Source checksums](evidence/06/source-sha256.txt) identify the local, git-ignored application.
 No base-factory change, global tool install or push.
 
@@ -26,8 +31,8 @@ No base-factory change, global tool install or push.
 Result:          done
 Tests:           49 passed | 0 failed; production smoke PASS
 Factory checks:  knowledge-check, doc-links, repo-health: PASS
-Guard refusals:  0 during this round
-Human help:      all-round authorization; sandbox permission requests where required
-Feedback:        none new
+Guard refusals:  1 documentation false positive; see FB-002
+Human help:      0 additional owner actions; rounds 01–07 already authorized
+Feedback:        FB-002 new
 Elapsed:         3 minutes (rounded, first retained evidence through sign-off)
 ```

@@ -28,7 +28,7 @@ Result:          done
 Tests:           3 passed | 0 failed; production smoke PASS
 Factory checks:  knowledge-check, doc-links, repo-health: PASS
 Guard refusals:  1 false positive; see FB-001
-Human help:      all-round authorization; sandbox permission requests where required
+Human help:      1 shared owner authorization for rounds 01–07; no additional manual action
 Feedback:        FB-001 new
-Elapsed:         see timestamps in the retained evidence and git commit
+Elapsed:         1 minutes (rounded, earliest retained round evidence to commit; excludes any earlier work)
 ```

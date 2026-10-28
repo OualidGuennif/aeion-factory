@@ -52,6 +52,8 @@ directory does not establish loaded hooks or identical runtime guarantees.
   to the current folder, so the adapters run where the agent starts. Limit: a plain folder started
   from a subfolder, or nested in another repository, does not find `tools/agents/hook.py`; Codex and
   Antigravity then refuse every tool call (fail closed). Start the agent at the project root.
+  Inside a git repository a subfolder such as `demo/` works: the hook commands resolve the git root,
+  and OpenCode's plugin uses the nearest folder above its start folder that has `tools/agents/hook.py`.
 - Both adapters enforce supported Bash/path refusals, edit feedback and a verified handover
   before compaction; the first refused compaction creates the skeleton to fill. Native token stops and strict pre-request 300k admission are unqualified.
 - Devin CLI reads `AGENTS.md` and `.agents/skills` natively. By default it also imports

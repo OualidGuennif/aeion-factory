@@ -29,6 +29,8 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 - Release source archives leave out `demo/` (`.gitattributes` export-ignore); a release test checks it.
 
 ### Fixed
+- OpenCode started in a subfolder (`demo/`) finds the project's hooks in the nearest folder above that has
+  them, instead of refusing every tool call.
 - `doc-links` skips a project nested in this one (its own `AGENTS.md` and `knowledge/`), whose `Spec:`
   pointers name its own knowledge; a demo copy no longer fails the parent's L1 and L3.
 - The Bash guard's bounded-intake refusal names its cause (oversized file, variable or glob path, a

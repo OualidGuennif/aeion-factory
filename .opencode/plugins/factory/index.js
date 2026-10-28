@@ -1,6 +1,7 @@
 // Spec: knowledge/operations/agent-compatibility.md
 import { spawnSync } from 'node:child_process';
-import { resolve } from 'node:path';
+import { existsSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
 
 function invoke(root, event) {
   const result = spawnSync('python3', [resolve(root, 'tools/agents/hook.py'), 'opencode'], {
@@ -11,6 +12,14 @@ function invoke(root, event) {
   const reason = output.stopReason || (output.decision === 'block' && output.reason)
     || (output.hookSpecificOutput?.permissionDecision === 'deny' && output.hookSpecificOutput.permissionDecisionReason);
   return { output, reason };
+}
+
+// OpenCode may start in a subfolder (demo/), so the hooks live in the nearest folder above that has them.
+function projectRoot(directory) {
+  for (let folder = resolve(directory); ; folder = dirname(folder)) {
+    if (existsSync(resolve(folder, 'tools/agents/hook.py'))) return folder;
+    if (dirname(folder) === folder) return directory;
+  }
 }
 
 function toolEvent(event, name) {
@@ -25,7 +34,7 @@ function toolEvent(event, name) {
 export default {
   id: 'aeion.factory',
   async setup(ctx) {
-    const root = ctx.location.directory;
+    const root = projectRoot(ctx.location.directory);
     await ctx.session.hook('prompt', async (event) => {
       const { reason } = invoke(root, { session_id: event.sessionID, hook_event_name: 'SessionStart', source: 'startup' });
       if (reason) throw new Error(reason);

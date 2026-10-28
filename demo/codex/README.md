@@ -8,8 +8,8 @@ Codex builds the same Idea Board from [`../plan/`](../plan/00-start.md) as the
   `tools/architecture/ask` with `ask callers`, and the skill `graph`.
 - **Command:** `git archive HEAD -- . ':(exclude)demo'`. The copy has no `.git`, holds 163 files and
   no app yet.
-- **Inherited state:** this copy was made before `tools/release/release --new-project`; Codex reset its
-  `work/current.md` by hand (its FB-001, like FB-003 of run 1).
+- **Fresh state:** `tools/release/release --new-project` reset the copy (FB-003 of run 1, FB-001 of
+  Codex): `VERSION` 0.1.0, an empty changelog, and only the "Adapt" task in `work/current.md`.
 
 | Folder | What goes there |
 | --- | --- |

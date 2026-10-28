@@ -392,6 +392,7 @@ for rel in (".claude/hooks/sign-off.py", ".claude/hooks/secret_names.py", ".clau
 (tmp / "knowledge/components/x.md").write_text("---\ntype: Component\nsources:\n  - id: c\n    resource: ../../src/a.ts\n---\n")
 (tmp / "src/a.ts").write_text("export const a = 1;\n")
 (tmp / "work/current.md").write_text("# Current work\n")
+(tmp / "CHANGELOG.md").write_text("# Changelog\n\n## [Unreleased]\n")
 git = ["git", "-c", "user.name=t", "-c", "user.email=t@example.invalid"]
 for args in (["init", "-q", "-b", "main"], ["add", "."], ["commit", "-qm", "base"], ["switch", "-qc", "task/x"]):
     subprocess.run(git + args, cwd=tmp, capture_output=True)
@@ -411,6 +412,7 @@ with (Path(tempfile.gettempdir()) / f"claude-edited-busy-{RUN}").open("a") as f:
 first = stop("busy")
 expect("sign-off: code without its doc blocks", first, 0, '"decision": "block"')
 expect("sign-off: names the doc", first, 0, "knowledge/components/x.md")
+expect("sign-off: asks for the changelog line", first, 0, "CHANGELOG.md did not change")
 if '"block"' in stop("busy").stdout:
     failures.append("sign-off blocked twice on the same findings")
 

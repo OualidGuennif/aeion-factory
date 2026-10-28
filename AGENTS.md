@@ -37,10 +37,10 @@ tools/        knowledge/link/health checks, agent adapters, architecture and loc
 ```bash
 tools/knowledge/knowledge-check && tools/knowledge/doc-links && tools/repo-health/repo-health
 python3 tools/knowledge/tests/test_doc_links.py && python3 .claude/hooks/test_hooks.py
-python3 tools/repo-health/tests/test_repo_health.py
+python3 tools/repo-health/tests/test_repo_health.py && python3 tools/git-hooks/tests/test_pre_push.py
 python3 tools/context/tests/test_budget.py && python3 tools/architecture/tests/test_refresh.py
 python3 tools/agents/tests/test_hooks.py && node --test tools/agents/tests/test_opencode.mjs
-python3 tools/loops/tests/test_loops.py
+python3 tools/loops/tests/test_loops.py && python3 tools/release/tests/test_release.py
 tools/architecture/refresh --target HEAD --base origin/main  # after committing
 loops/orchestrator.sh outer --dry-run        # shows the command a loop would run, runs nothing
 ```
@@ -90,28 +90,28 @@ never the history; no abstraction without two real users; a spec before the code
 
 ## How a task flows
 
-The session start names the mode (`git config aeion.mode`).
+The session start names the mode. Without git (a plain folder) there is no branch, review, CI or
+tag: done means the tests for what changed pass, and `CHANGELOG.md` still gets its line.
 
-- **Team (default).** One branch per task (`task/<slug>`), small commits, `gh pr create`, then the
-  skill `pr-review`: a fresh subagent reviews and posts `Review: OK` or `Review: NOT OK` on the pull
-  request. Merge after that comment and a green CI. Nothing is pushed to the default branch directly.
-- **Local** (`git config aeion.mode local`, set by the user only). Someone trying the repository
-  on their machine: commit on `main` locally (pushing is the user's call), no pull request, CI or
-  `work/current.md` entry. Done means the tests for what changed pass; every critical rule applies.
+- **Team (default).** Work and commit on `develop` (`task/<slug>` worktrees merge into it locally).
+  Before each push of `develop`, the skill `pr-review` reviews `origin/develop..HEAD` and records
+  `Review: OK`; `tools/git-hooks/pre-push` refuses a push without it. CI runs only for `main`.
+  A release is a pull request `develop → main`, reviewed again, merged with a merge commit after a
+  green CI, then tagged (skill `ship`). Nothing is pushed to `main` directly.
+- **Local** (`git config aeion.mode local`, user only): local commits, no review/CI/task entry.
 
 ## Feedback you get
 
-Hooks check every edit (and name the doc that covers the file), refuse secret reads, and sign off
-a task once before you stop; `tools/git-hooks/pre-commit` and CI run the same checks. An `exit 2`
-names the rule and its fix.
+Hooks check every edit (naming the doc that covers it), refuse secret reads and sign off once before
+you stop; `tools/git-hooks/` and CI run the same checks. An `exit 2` names the rule and its fix.
 
 ## Definition of done
 
-- The project's tests for what changed pass.
-- The docs the change touches are updated, with their links (`tools/knowledge/doc-links --diff
-  origin/main` passes); `work/current.md` is updated or its entry deleted (skill `sign-off`).
-- The pull request carries the `pr-review` comment, and its CI is green.
-- The exact merged main SHA has a passing Graphify/Archify round in CI and its architecture spec is current.
+- The project's tests for what changed pass; `CHANGELOG.md` has its `Unreleased` line.
+- Docs the change touches are updated with their links (`tools/knowledge/doc-links --diff
+  origin/develop` passes); `work/current.md` is updated or its entry deleted (skill `sign-off`).
+- Under git: `develop` is pushed with `Review: OK`; a release PR has its review and a green CI, and
+  the merged main SHA a passing Graphify/Archify round with a current architecture spec.
 
 ## What not to do
 

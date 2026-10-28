@@ -213,7 +213,7 @@ def handle(root, provider, event):
             if not budget.ready(root, session, state):
                 budget.ensure_handover(root, session)
                 return fail(provider, name, f'Fill {handover.relative_to(root)} and verify the docs before compaction: '
-                            f'python3 tools/context/budget.py checkpoint --session {session} --base origin/main --verify')
+                            + budget.checkpoint_command(root, session))
             if provider == 'opencode':
                 state.pop('checkpoint', None)
                 budget.atomic(file, json.dumps(state, sort_keys=True) + '\n')

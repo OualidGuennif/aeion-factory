@@ -28,6 +28,11 @@ under its heading: `- <preference> (<source>, YYYY-MM-DD)`.
   company's harness. Its Droid CLI owns `.factory/`; Æion state lives in `.aeion/`, the mode switch
   is `aeion.mode` and internal variables use `AEION_` (chat, 2026-10-27)
 - Google Antigravity is a supported agent as well (chat, 2026-10-27)
+- Work on `develop`: a review before every push of it, another on the release PR `develop → main`;
+  CI only for `main`. Replaces Æion Factory's one-branch-and-PR-per-task flow (chat, 2026-10-28)
+- Versioned releases: SemVer `VERSION`, `CHANGELOG.md`, tags `vX.Y.Z`, first release v1.3.0 (chat, 2026-10-28)
+- Many people use Æion Factory without git: every git step applies only when git is active (chat, 2026-10-28)
+- No narration between tool calls: a hook warns, never blocks (chat, 2026-10-28)
 
 ## Engineering
 

@@ -12,10 +12,10 @@ Thin vertical slices: each one compiles, passes its tests and is committed. Rule
 After `plan` (and `spec` when behaviour changes). Not before a yes.
 
 ## Process
-1. Branch: `git switch -c task/<slug> origin/main`.
+1. Under git, work on `develop` (`git switch develop && git pull --ff-only`); a parallel session uses a worktree on `task/<slug>` from `develop` and merges back locally.
 2. Pick the smallest slice that moves toward the plan; write its test first when practical.
 3. Edit; read the diagnostics and hook output after each edit; fix before moving on.
-4. Run the slice's tests; commit with a message that says what and why.
+4. Run the slice's tests; commit with a message that says what and why, and add its `CHANGELOG.md` line.
 5. Repeat. Stop and re-plan if the plan turns out wrong.
 
 ## Rationalizations

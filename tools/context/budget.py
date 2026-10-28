@@ -129,6 +129,19 @@ def git(root, *args):
     return subprocess.run(["git", *args], cwd=root, capture_output=True, check=True).stdout
 
 
+def checkpoint_command(root, session):
+    """The closure command for this folder: work merges into develop when it exists, else main; no git, no base."""
+    command = f"python3 tools/context/budget.py checkpoint --session {session}"
+    try:
+        if not git_active(root):
+            return command + " --verify"
+    except subprocess.SubprocessError:
+        pass
+    develop = subprocess.run(["git", "rev-parse", "--verify", "--quiet", "origin/develop"], cwd=root,
+                             capture_output=True, check=False).returncode == 0
+    return command + f" --base {'origin/develop' if develop else 'origin/main'} --verify"
+
+
 def fingerprint(root):
     # Include untracked task files and tracked bytes, without following symlinks.
     # A plain folder has no HEAD: its files alone make the fingerprint.
@@ -266,7 +279,7 @@ def handle(root, event):
                 if name == "PreCompact":
                     if not ready(root, session, state):
                         ensure_handover(root, session)
-                        result = stop(name, f"Fill {handover.relative_to(root)}, then create a verified checkpoint before compaction: python3 tools/context/budget.py checkpoint --session {session} --base origin/main --verify")
+                        result = stop(name, f"Fill {handover.relative_to(root)}, then create a verified checkpoint before compaction: {checkpoint_command(root, session)}")
                 elif state["state"] == "HANDOVER_REQUIRED":
                     ensure_handover(root, session)
                     first = state.pop("warning_pending", False)

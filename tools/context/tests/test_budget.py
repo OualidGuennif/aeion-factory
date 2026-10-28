@@ -173,6 +173,14 @@ class BudgetTests(unittest.TestCase):
             current.write_text('# Current work\nTask updated.\n')
             budget.checkpoint(self.root, 'test-session', 'HEAD')
 
+    def test_checkpoint_command_names_develop_when_it_exists(self):
+        self.assertIn('--base origin/main --verify', budget.checkpoint_command(self.root, 'test-session'))
+        budget.git(self.root, 'update-ref', 'refs/remotes/origin/develop', 'HEAD')
+        self.assertIn('--base origin/develop --verify', budget.checkpoint_command(self.root, 'test-session'))
+        plain = tempfile.TemporaryDirectory()
+        self.addCleanup(plain.cleanup)
+        self.assertNotIn('--base', budget.checkpoint_command(Path(plain.name), 'test-session'))
+
     def test_plain_folder_checkpoints_without_git_or_base(self):
         # Many users have no git: the fingerprint is the files on disk and no diff check runs.
         plain = tempfile.TemporaryDirectory()

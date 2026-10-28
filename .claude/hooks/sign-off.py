@@ -41,8 +41,8 @@ edited = set(edited_log.read_text().splitlines()) if edited_log.exists() else se
 if not edited:
     sys.exit(0)
 
-# The base is where this branch left main; on main itself only uncommitted work counts.
-base = next((git("merge-base", "HEAD", ref).stdout.strip() for ref in ("origin/main", "main")
+# The base is where this branch left develop (or main without one); on it, only unpushed work counts.
+base = next((git("merge-base", "HEAD", ref).stdout.strip() for ref in ("origin/develop", "develop", "origin/main", "main")
              if git("rev-parse", "--verify", "--quiet", ref).returncode == 0), "")
 if not base:
     sys.exit(0)
@@ -64,6 +64,9 @@ if links.returncode and not any(line.startswith("RULE L") for line in links.stdo
     findings.append("doc-links could not verify this change: run it directly and resolve the check error.")
 if "work/current.md" not in changed:
     findings.append("work/current.md did not change: update the task's entry, or delete it if the task is done.")
+# The release notes are written as the work lands, not reconstructed at release time.
+if (ROOT / "CHANGELOG.md").exists() and "CHANGELOG.md" not in changed:
+    findings.append("CHANGELOG.md did not change: add a line under '## [Unreleased]' for what users will notice.")
 base_top = {p.split("/")[0] for p in git("ls-tree", "--name-only", "-z", base).stdout.split("\0") if p}
 new_top = sorted({p.split("/")[0] for p in code if "/" in p} - base_top)
 if new_top and "AGENTS.md" not in changed:
@@ -80,7 +83,7 @@ if not fresh:
     sys.exit(0)
 with seen_log.open("a") as f:
     f.write("".join(digest(l) + "\n" for l in fresh))
-reason = ("Sign-off before stopping: " + str(len(code)) + " code file(s) you edited changed since main.\n"
+reason = ("Sign-off before stopping: " + str(len(code)) + " code file(s) you edited changed since the base branch.\n"
           + "\n".join(fresh[:10])
           + "\nUpdate them (skill okf-update), or say in your answer why no documented fact changed.")
 print(json.dumps({"decision": "block", "reason": reason}))

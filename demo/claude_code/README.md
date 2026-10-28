@@ -21,9 +21,9 @@ Claude Code builds the same Idea Board again from [`../plan/`](../plan/00-start.
 | `workspace/` | the factory copy; the app goes in `workspace/app/` |
 
 ## Starting Claude Code
-1. Open Claude Code at the repository root or in `demo/` ([`../plan/00-start.md`](../plan/00-start.md)
-   says why both work). The project hooks in `.claude/settings.json` run from the root either way.
-2. Paste [`START.md`](START.md) as the first message.
+1. Open Claude Code in `demo/`: the first message's paths start there. Setup and the hook check are in
+   [`../start/README.md`](../start/README.md).
+2. Paste [`../start/claude_code/START.md`](../start/claude_code/START.md) as the first message.
 
 ## Results by round
 To fill in as the rounds are done.

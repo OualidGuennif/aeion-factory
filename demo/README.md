@@ -18,7 +18,7 @@ on `develop`, each with a test, so the next harness starts from a better factory
 2. Create `journal/`, `feedback_for_aeion/` and `render/` beside it. The layout is in
    [`plan/00-start.md`](plan/00-start.md).
 3. Open the agent at the repository root or in `demo/` ([why both work](plan/00-start.md)). Give it the
-   harness's `START.md` as its first message (`claude_code/START.md`, `codex/START.md`, `opencode/START.md`, `pi/START.md`), then one round
+   harness's `START.md` as its first message from [`start/`](start/README.md), which also says how to set up each harness's skills and hooks, then one round
    at a time.
 4. Every round's journal ends with the same record block, so the runs can be compared.
 

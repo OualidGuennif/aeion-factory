@@ -27,7 +27,7 @@ Pi builds the same Idea Board from [`../plan/`](../plan/00-start.md) as the
    ```
    The extension finds `tools/agents/hook.py` by walking up from `demo/`. Started at the repository
    root, `tools/agents/run pi` loads it on its own once the project is trusted.
-2. Paste [`START.md`](START.md) as the first message.
+2. Paste [`../start/pi/START.md`](../start/pi/START.md) as the first message.
 
 ## Results by round
 To fill in as the rounds are done.

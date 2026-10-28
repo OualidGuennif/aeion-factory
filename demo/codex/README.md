@@ -24,7 +24,7 @@ Codex builds the same Idea Board from [`../plan/`](../plan/00-start.md) as the
    `knowledge/operations/agent-compatibility.md`.
 2. Open Codex in `demo/` (or at the repository root; [`../plan/00-start.md`](../plan/00-start.md) says
    why both work). Codex loads the root `AGENTS.md` from the git root down.
-3. Paste [`START.md`](START.md) as the first message. Its sandbox writes only below `demo/`, so it asks
+3. Paste [`../start/codex/START.md`](../start/codex/START.md) as the first message. Its sandbox writes only below `demo/`, so it asks
    before each `git commit`: approve it.
 
 ## Results by round

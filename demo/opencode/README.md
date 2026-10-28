@@ -25,7 +25,7 @@ OpenCode builds the same Idea Board from [`../plan/`](../plan/00-start.md) as th
    `demo/`, which is the root one: `demo/` has none of its own on purpose.
 2. Open OpenCode in `demo/` (or at the repository root; [`../plan/00-start.md`](../plan/00-start.md)
    says why both work).
-3. Paste [`START.md`](START.md) as the first message.
+3. Paste [`../start/opencode/START.md`](../start/opencode/START.md) as the first message.
 
 ## Results by round
 To fill in as the rounds are done.

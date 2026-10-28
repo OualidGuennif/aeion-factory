@@ -6,6 +6,8 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-10-28
+
 ### Added
 - A `develop` branch for daily work: `tools/git-hooks/pre-push` refuses a push of `develop` without a
   recorded `Review: OK` for the exact commit, and any direct push to `main`.

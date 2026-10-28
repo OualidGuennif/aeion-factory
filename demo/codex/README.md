@@ -28,18 +28,12 @@ Codex builds the same Idea Board from [`../plan/`](../plan/00-start.md) as the
    before each `git commit`: approve it.
 
 ## Results by round
-To fill in as the rounds are done.
 
 | Round | Result | Tests | Guard refusals | Human help | Feedback |
 | --- | --- | --- | --- | --- | --- |
 | 00 | Setup checks passed; round 01 awaits approval | 743 passed, 2 skipped; hook battery 10 passed, 5 informational; factory checks PASS | 0 during work; 5 expected battery denials | 0 during setup; commit approval requested separately | none new |
-
-Round 00: [journal and retained output](journal/00-setup.md).
-
 | 01 | Scaffold Fresh and Hono | 3 passed | 0 failed; smoke and factory checks PASS | 1 (FB-001) | existing authorization | FB-001 |
-
 | 02 | Ideas API and KV persistence | 28 passed | 0 failed; smoke and factory checks PASS | 0 | existing authorization | none new |
-
 | 03 | SSR page and progressive form | 33 passed | 0 failed; smoke and factory checks PASS | 0 | existing authorization | none new |
-
 | 04 | Votes and sorting | 40 passed | 0 failed; smoke and factory checks PASS | 0 | existing authorization | none new |
+| 05 | Tags filters and bounded search | 49 passed | 0 failed; smoke and factory checks PASS | 0 | existing authorization | none new |

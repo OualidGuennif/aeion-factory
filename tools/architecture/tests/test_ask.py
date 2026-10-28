@@ -169,9 +169,10 @@ with open({str(self.builds)!r}, "a") as count:
         _, out, _ = self.run_ask("spec", "pkg/app.py")
         self.assertEqual(out.splitlines(), ["knowledge/app.md  [both]"])
         _, out, _ = self.run_ask("spec", "pkg/util.py")
-        self.assertEqual(out.splitlines(), ["knowledge/app.md  [frontmatter only]"])
+        self.assertEqual(out.splitlines(), ["knowledge/app.md  [in the spec's sources; no Spec: line (gap)]"])
         _, out, _ = self.run_ask("files", "knowledge/app.md")
-        self.assertEqual(out.splitlines(), ["pkg/app.py  [both]", "pkg/util.py  [frontmatter only]"])
+        self.assertEqual(out.splitlines(), ["pkg/app.py  [both]",
+                                            "pkg/util.py  [in the spec's sources; no Spec: line (gap)]"])
         _, out, _ = self.run_ask("spec", "pkg/store.py")
         self.assertEqual(out.splitlines(), ["no spec names pkg/store.py, and it names none"])
 
@@ -207,16 +208,27 @@ class ExtractionTests(unittest.TestCase):
             root = Path(tmp)
             (root / "knowledge").mkdir()
             (root / "tools/tests").mkdir(parents=True)
-            (root / "knowledge/tool.md").write_text("---\ntitle: Tool\n---\n\n# Tool\n")
+            (root / "knowledge/tool.md").write_text("---\ntitle: Tool\nsources:\n  - id: image\n"
+                                                    "    resource: ../tools/Dockerfile\n  - id: owner\n"
+                                                    "    resource: owner-message:2026-10-28\n---\n\n# Tool\n")
+            (root / "knowledge/notes.md").write_text("# Notes\n\nA file says `Spec: knowledge/missing.md` here.\n")
             (root / "tools/tool.py").write_text("# Spec: knowledge/tool.md\ndef go():\n    return 1\n")
+            # No extractor reads a Dockerfile: it still gets a node, so the spec that lists it resolves.
+            (root / "tools/Dockerfile").write_text("# Spec: knowledge/tool.md\nFROM scratch\n")
             (root / "tools/tests/test_tool.py").write_text(
                 "import subprocess\n\n\ndef test_go():\n    subprocess.run(['python3', 'tools/tool.py'])\n")
             out = io.StringIO()
             with contextlib.redirect_stdout(out):
                 self.assertEqual(ask.main(["--root", str(root), "tests", "tools/tool.py"]), 0)
                 self.assertEqual(ask.main(["--root", str(root), "spec", "tools/tool.py"]), 0)
-            self.assertEqual(out.getvalue().splitlines(), ["tools/tests/test_tool.py  named",
-                                                           "knowledge/tool.md  [Spec: line only]"])
+                self.assertEqual(ask.main(["--root", str(root), "spec", "tools/Dockerfile"]), 0)
+            self.assertEqual(out.getvalue().splitlines(), [
+                "tools/tests/test_tool.py  named",
+                "knowledge/tool.md  [Spec: line; missing from the spec's sources (gap)]",
+                "knowledge/tool.md  [both]"])
+            coverage = json.loads((root / ".aeion/graph/coverage.json").read_text())
+            # Prose that quotes "Spec:" and a non-path resource are not unresolved pointers.
+            self.assertEqual((coverage["unresolved_spec_lines"], coverage["unresolved_spec_sources"]), ([], []))
             shutil.rmtree(root / ".aeion")
 
 

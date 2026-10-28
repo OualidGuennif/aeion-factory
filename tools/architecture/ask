@@ -329,21 +329,38 @@ def spec_pairs(graph):
     return pairs
 
 
-def describe(origins):
-    return "both" if len(origins) == 2 else f"{next(iter(origins))} only"
+def describe(graph, pairs, source, doc):
+    """How a file and a spec name each other. Only `no Spec: line` and `missing from the spec's sources`
+    are gaps to fix; a file two specs list, whose header names one of them, is shared, not in conflict."""
+    origins = pairs[(source, doc)]
+    if len(origins) == 2:
+        return "both"
+    if "frontmatter" in origins:
+        named = sorted(other for (path, other), found in pairs.items() if path == source and "Spec: line" in found)
+        if named:
+            return f"in the spec's sources; its Spec: line names {', '.join(Path(n).name for n in named)}"
+        kind = graph.nodes[graph.files[source]].get("file_type") if source in graph.files else ""
+        return "in the spec's sources; no Spec: line (gap)" if kind == "code" else "in the spec's sources"
+    if is_test(source):
+        return "test, Spec: line"
+    return "Spec: line; missing from the spec's sources (gap)"
 
 
 def cmd_spec(graph, coverage, args):
     path = graph.file(graph.resolve(args.name))
-    rows = [(f"{doc}  [{describe(origins)}]", {"spec": doc, "origins": sorted(origins)})
-            for (source, doc), origins in sorted(spec_pairs(graph).items()) if source == path]
+    pairs = spec_pairs(graph)
+    rows = [(f"{doc}  [{describe(graph, pairs, source, doc)}]",
+             {"spec": doc, "origins": sorted(origins), "note": describe(graph, pairs, source, doc)})
+            for (source, doc), origins in sorted(pairs.items()) if source == path]
     return rows or [(f"no spec names {path}, and it names none", {"spec": None})]
 
 
 def cmd_files(graph, coverage, args):
     doc = graph.file(graph.resolve(args.name))
-    rows = [(f"{source}  [{describe(origins)}]", {"file": source, "origins": sorted(origins)})
-            for (source, spec), origins in sorted(spec_pairs(graph).items()) if spec == doc]
+    pairs = spec_pairs(graph)
+    rows = [(f"{source}  [{describe(graph, pairs, source, spec)}]",
+             {"file": source, "origins": sorted(origins), "note": describe(graph, pairs, source, spec)})
+            for (source, spec), origins in sorted(pairs.items()) if spec == doc]
     return rows or [(f"{doc} covers no file", {"file": None})]
 
 

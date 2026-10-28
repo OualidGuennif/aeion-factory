@@ -12,7 +12,8 @@ import shutil
 import subprocess
 import sys
 
-SPEC_RE = re.compile(r"\bSpec:\s*(knowledge/[\w./-]+\.md)")
+# A comment line that holds only the pointer, as doc-links reads it; prose quoting "Spec:" is not one.
+SPEC_LINE = re.compile(r"^\s*(?:#|//|/\*|\*|--|;|<!--)\s*Spec:\s*(knowledge/[\w./-]+\.md)\s*(?:\*/|-->)?\s*$")
 TEST_NAME = re.compile(r"(^|/)(tests?/|test_[^/]*$|[^/]*[._]test\.[^/]+$|[^/]*\.spec\.[^/]+$)")
 DENO_SOURCES = (".ts", ".tsx", ".js", ".jsx", ".mts")
 
@@ -51,8 +52,9 @@ def spec_source_edges(nodes):
         doc = str(data["source_file"])
         for item in sources:
             resource = item.get("resource") if isinstance(item, dict) else None
-            # Only a relative path names a file in this corpus; a URL is evidence elsewhere.
-            if not isinstance(resource, str) or "://" in resource or resource.startswith("/"):
+            # Only a relative path names a file in this corpus; a URL or another scheme (owner-message:)
+            # is evidence elsewhere.
+            if not isinstance(resource, str) or re.match(r"[A-Za-z][\w+.-]*:", resource) or resource.startswith("/"):
                 continue
             path = posixpath.normpath(posixpath.join(posixpath.dirname(doc), resource))
             if path in files:
@@ -71,12 +73,12 @@ def head(path, lines=20):
 
 
 def spec_line_edges(nodes, root):
-    """file -> doc `specified_by` edges from a `Spec:` line in a file's first 20 lines, the other half
+    """file -> doc `specified_by` edges from a `Spec:` comment line in a file's first 20 lines, the other half
     of the spec contract; a named doc missing from the graph is returned as unresolved."""
     files, edges, unresolved = file_nodes(nodes), [], []
     for source, node_id in sorted(files.items()):
         for number, text in enumerate(head(root / source), 1):
-            for doc in SPEC_RE.findall(text):
+            for doc in SPEC_LINE.findall(text):
                 if doc in files and doc != source:
                     edges.append((node_id, files[doc], edge("specified_by", "spec_line", source, number)))
                 elif doc not in files:
@@ -192,6 +194,12 @@ def main():
     if missing:
         raise ValueError(f"Graphify coverage missing {len(missing)} required files: {', '.join(missing[:8])}")
     graph = build([extraction], directed=True, dedup=False, root=root)
+    # A file no extractor reads (a Dockerfile, a stylesheet) still gets a node, so a spec that lists it
+    # or a test that names it resolves instead of being reported missing.
+    present = {str(data.get("source_file", "")) for _, data in graph.nodes(data=True)}
+    for rel in sorted({item["path"] for item in manifest} - present):
+        graph.add_node(f"file:{rel}", label=posixpath.basename(rel), source_file=rel, source_location="L1",
+                       file_type="inventory")
     nodes = list(graph.nodes(data=True))
     spec_edges, unresolved = spec_source_edges(nodes)
     line_edges, unresolved_lines = spec_line_edges(nodes, root)

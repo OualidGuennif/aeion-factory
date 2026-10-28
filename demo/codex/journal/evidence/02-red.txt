@@ -1,0 +1,94 @@
+$ deno test -A domain/idea_test.ts store/ideas_test.ts api/ideas_test.ts
+Check domain/idea_test.ts
+Check store/ideas_test.ts
+Check api/ideas_test.ts
+TS2307 [ERROR]: Cannot find module 'file:///Users/wallseven/Desktop/aeion-factory/demo/codex/workspace/app/domain/idea.ts'.
+    at file:///Users/wallseven/Desktop/aeion-factory/demo/codex/workspace/app/domain/idea_test.ts:3:30
+
+TS2307 [ERROR]: Cannot find module 'file:///Users/wallseven/Desktop/aeion-factory/demo/codex/workspace/app/store/ideas.ts'.
+    at file:///Users/wallseven/Desktop/aeion-factory/demo/codex/workspace/app/store/ideas_test.ts:3:34
+
+TS2551 [ERROR]: Property 'openKv' does not exist on type 'typeof Deno'. Did you mean 'open'? 'Deno.openKv' is an unstable API. Did you mean 'open'? If not, try changing the 'lib' compiler option to include 'deno.unstable' or add a triple-slash directive to the top of your entrypoint (main file): /// <reference lib="deno.unstable" />
+ using kv=await Deno.openKv(":memory:");const api=createApi({store:createIdeasStore(kv)});
+                     ~~~~~~
+    at file:///Users/wallseven/Desktop/aeion-factory/demo/codex/workspace/app/api/ideas_test.ts:6:22
+
+    'open' is declared here.
+      export function open(
+                      ~~~~
+        at asset:///lib.deno.ns.d.ts:1991:19
+
+TS2322 [ERROR]: Type 'any' is not assignable to type 'never'.
+ using kv=await Deno.openKv(":memory:");const api=createApi({store:createIdeasStore(kv)});
+                                                             ~~~~~
+    at file:///Users/wallseven/Desktop/aeion-factory/demo/codex/workspace/app/api/ideas_test.ts:6:62
+
+TS2551 [ERROR]: Property 'openKv' does not exist on type 'typeof Deno'. Did you mean 'open'? 'Deno.openKv' is an unstable API. Did you mean 'open'? If not, try changing the 'lib' compiler option to include 'deno.unstable' or add a triple-slash directive to the top of your entrypoint (main file): /// <reference lib="deno.unstable" />
+ using kv=await Deno.openKv(":memory:");const store=createIdeasStore(kv);const api=createApi({store});
+                     ~~~~~~
+    at file:///Users/wallseven/Desktop/aeion-factory/demo/codex/workspace/app/api/ideas_test.ts:22:22
+
+    'open' is declared here.
+      export function open(
+                      ~~~~
+        at asset:///lib.deno.ns.d.ts:1991:19
+
+TS2322 [ERROR]: Type 'any' is not assignable to type 'never'.
+ using kv=await Deno.openKv(":memory:");const store=createIdeasStore(kv);const api=createApi({store});
+                                                                                              ~~~~~
+    at file:///Users/wallseven/Desktop/aeion-factory/demo/codex/workspace/app/api/ideas_test.ts:22:95
+
+TS2551 [ERROR]: Property 'openKv' does not exist on type 'typeof Deno'. Did you mean 'open'? 'Deno.openKv' is an unstable API. Did you mean 'open'? If not, try changing the 'lib' compiler option to include 'deno.unstable' or add a triple-slash directive to the top of your entrypoint (main file): /// <reference lib="deno.unstable" />
+ using kv=await Deno.openKv(":memory:");const api=createApi({store:createIdeasStore(kv)});
+                     ~~~~~~
+    at file:///Users/wallseven/Desktop/aeion-factory/demo/codex/workspace/app/api/ideas_test.ts:27:22
+
+    'open' is declared here.
+      export function open(
+                      ~~~~
+        at asset:///lib.deno.ns.d.ts:1991:19
+
+TS2322 [ERROR]: Type 'any' is not assignable to type 'never'.
+ using kv=await Deno.openKv(":memory:");const api=createApi({store:createIdeasStore(kv)});
+                                                             ~~~~~
+    at file:///Users/wallseven/Desktop/aeion-factory/demo/codex/workspace/app/api/ideas_test.ts:27:62
+
+TS2551 [ERROR]: Property 'openKv' does not exist on type 'typeof Deno'. Did you mean 'open'? 'Deno.openKv' is an unstable API. Did you mean 'open'? If not, try changing the 'lib' compiler option to include 'deno.unstable' or add a triple-slash directive to the top of your entrypoint (main file): /// <reference lib="deno.unstable" />
+ using kv = await Deno.openKv(":memory:"); const store=createIdeasStore(kv);
+                       ~~~~~~
+    at file:///Users/wallseven/Desktop/aeion-factory/demo/codex/workspace/app/store/ideas_test.ts:5:24
+
+    'open' is declared here.
+      export function open(
+                      ~~~~
+        at asset:///lib.deno.ns.d.ts:1991:19
+
+TS2551 [ERROR]: Property 'openKv' does not exist on type 'typeof Deno'. Did you mean 'open'? 'Deno.openKv' is an unstable API. Did you mean 'open'? If not, try changing the 'lib' compiler option to include 'deno.unstable' or add a triple-slash directive to the top of your entrypoint (main file): /// <reference lib="deno.unstable" />
+ using kv=await Deno.openKv(":memory:");const store=createIdeasStore(kv);
+                     ~~~~~~
+    at file:///Users/wallseven/Desktop/aeion-factory/demo/codex/workspace/app/store/ideas_test.ts:11:22
+
+    'open' is declared here.
+      export function open(
+                      ~~~~
+        at asset:///lib.deno.ns.d.ts:1991:19
+
+TS2551 [ERROR]: Property 'openKv' does not exist on type 'typeof Deno'. Did you mean 'open'? 'Deno.openKv' is an unstable API. Did you mean 'open'? If not, try changing the 'lib' compiler option to include 'deno.unstable' or add a triple-slash directive to the top of your entrypoint (main file): /// <reference lib="deno.unstable" />
+Deno.test("missing id is null", async () => {using kv=await Deno.openKv(":memory:");assertEquals(await createIdeasStore(kv).get("missing"),null);});
+                                                                 ~~~~~~
+    at file:///Users/wallseven/Desktop/aeion-factory/demo/codex/workspace/app/store/ideas_test.ts:16:66
+
+    'open' is declared here.
+      export function open(
+                      ~~~~
+        at asset:///lib.deno.ns.d.ts:1991:19
+
+Found 11 errors.
+
+error: Type checking failed.
+
+  [33minfo:[39m The program failed type-checking, but it still might work correctly.
+  [36mhint:[39m Re-run with [4m--no-check[24m to skip type-checking.
+
+Exit: 1
+Elapsed seconds: 0.38

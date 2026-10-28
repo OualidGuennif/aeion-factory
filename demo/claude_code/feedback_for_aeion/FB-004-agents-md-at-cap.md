@@ -28,3 +28,10 @@ The owner asked to map the new top-level `demo/` folder, and the sign-off hook a
 also at 120 lines, so a line had to go first: the two-line `loops/` entry became one line and lost
 the list of loop names (that list lives in `knowledge/operations/loops.md`). Each new map line costs
 an existing one.
+
+## Seen again (round 06, the copy)
+Adding the Docker commands to the copy's build line made `AGENTS.md` 121 lines, and both
+`knowledge-check` and `repo-health` failed. The two app lines became one, and `deno task build &&
+deno task start` moved to `app/README.md`, which the line now points to. This is the third time a
+real, small addition had to evict something; a project's own build and test commands are exactly
+what the template asks to add there ("Add your project's own build and test commands here").

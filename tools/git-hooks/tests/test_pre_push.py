@@ -64,6 +64,13 @@ class PrePushTests(unittest.TestCase):
         self.assertEqual(self.push("refs/tags/v1.3.0", sha).returncode, 0)
         self.assertEqual(self.push("refs/heads/task/x", sha).returncode, 0)
 
+    def test_local_mode_pushes_main_without_the_team_flow(self):
+        sha = self.commit("play")
+        self.git("config", "aeion.mode", "local")
+        self.assertEqual(self.push("refs/heads/main", sha).returncode, 0)
+        self.git("config", "--unset", "aeion.mode")
+        self.assertEqual(self.push("refs/heads/main", sha).returncode, 1)
+
     def test_a_symlinked_review_is_not_a_verdict(self):
         sha = self.commit("work")
         target = Path(self.tmp.name) / "elsewhere.md"

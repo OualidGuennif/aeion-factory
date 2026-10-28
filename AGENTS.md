@@ -95,7 +95,7 @@ tag: done means the tests for what changed pass, and `CHANGELOG.md` still gets i
 
 - **Team (default).** Work and commit on `develop` (`task/<slug>` worktrees merge into it locally).
   Before each push of `develop`, the skill `pr-review` reviews `origin/develop..HEAD` and records
-  `Review: OK`; `tools/git-hooks/pre-push` refuses a push without it. CI runs only for `main`.
+  `Review: OK`; `tools/git-hooks/pre-push` refuses a push without it. CI runs for `main` and pull requests.
   A release is a pull request `develop → main`, reviewed again, merged with a merge commit after a
   green CI, then tagged (skill `ship`). Nothing is pushed to `main` directly.
 - **Local** (`git config aeion.mode local`, user only): local commits, no review/CI/task entry.

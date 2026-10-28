@@ -285,6 +285,16 @@ class BudgetTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0)
         self.assertFalse(json.loads(result.stdout)["continue"])
 
+    def test_workflow_child_transcript_is_found_without_its_path(self):
+        # Workflow agents write under subagents/workflows/<run>/ and their events may name only the parent.
+        self.observe(1000)
+        self.call()
+        child = self.root / "test-session/subagents/workflows/wf_run-1/agent-child2.jsonl"
+        child.parent.mkdir(parents=True)
+        usage = {**dict.fromkeys(budget.FIELDS, 0), "input_tokens": 100}
+        child.write_text(json.dumps({"type": "assistant", "message": {"usage": usage}}) + "\n")
+        self.assertEqual(self.call(agent_id="child2", hook_event_name="PreToolUse"), {})
+
     def test_child_uses_own_usage_and_cannot_stop_or_inherit_parent_budget(self):
         self.observe(250000)
         self.call()

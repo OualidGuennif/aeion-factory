@@ -170,7 +170,7 @@ the graph never substitutes an earlier base or changed-path set for the current 
 
 Pre-commit/CI retain Knowledge, doc-link, health and security gates; CI also fails when the
 efficiency bundle drifts from its sources. Daily work lands on `develop`, whose pre-push hook
-requires a recorded review of the exact commit; CI and architecture run only for `main`: on the
+requires a recorded review of the exact commit; CI runs for `main` and pull requests, architecture for `main`: on the
 release PR `develop → main` (merged with a merge commit, then tagged `vX.Y.Z`)
 and every main push, including docs-only and multi-commit pushes, records changed/removed paths,
 and uploads immutable outputs. It cannot undo a merge: a failed round prevents release and

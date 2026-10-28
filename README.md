@@ -128,10 +128,10 @@ also remains available.
 
 | Command | What it does |
 | --- | --- |
-| `git config core.hooksPath tools/git-hooks` | Enable local pre-commit checks |
+| `git config core.hooksPath tools/git-hooks` | Enable local pre-commit and pre-push checks (pre-push: develop needs `Review: OK`; main only by release PR, except in local mode) |
 | `tools/knowledge/knowledge-check` | Validate Knowledge format, public links and task-state limits |
 | `tools/knowledge/doc-links` | Validate documentation/code links |
-| `tools/knowledge/doc-links --diff origin/main --worktree` | Check affected docs for committed and local changes |
+| `tools/knowledge/doc-links --diff origin/develop --worktree` | Check affected docs for committed and local changes |
 | `tools/knowledge/doc-links --for path/to/file` | Find the docs covering a file |
 | `tools/repo-health/repo-health --json` | Show repository size/comment/structure checks |
 | `git config aeion.mode local` | Local play in this clone's local config: commit on main, no PR/CI ritual (`--unset` to undo) |
@@ -140,7 +140,7 @@ also remains available.
 | `tools/architecture/refresh --target HEAD --base origin/main` | Analyze the committed change and its comparison |
 | `tools/architecture/refresh --check --target HEAD` | Verify the persisted baseline and artifact hashes |
 | `tools/agents/run <claude\|codex\|opencode\|devin\|droid\|antigravity>` | Start a managed native agent |
-| `python3 tools/context/budget.py checkpoint --session <id> --base origin/main --verify` | Verify handover, docs and source state before compaction |
+| `python3 tools/context/budget.py checkpoint --session <id> --base origin/develop --verify` | Verify handover, docs and source state before compaction |
 | `loops/orchestrator.sh <job> --dry-run` | Inspect loop settings without launching an agent |
 | `loops/orchestrator.sh inner --issue <n>` | Run one approved `agent-ready` issue when loops are enabled |
 | `tools/efficiency/bundle` | Rebuild the portable seven-phase guide |

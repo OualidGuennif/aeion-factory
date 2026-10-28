@@ -55,8 +55,12 @@ def identity(event):
     key = "agent-" + hashlib.sha256(f"{parent}/{agent}".encode()).hexdigest()[:40]
     transcript = Path(event.get("agent_transcript_path") or event["transcript_path"])
     stem = "agent-" + agent.removeprefix("agent-")
+    subagents = Path(event.get("transcript_path") or transcript).parent / parent / "subagents"
     if transcript.stem == parent:
-        transcript = transcript.parent / parent / "subagents" / f"{stem}.jsonl"
+        transcript = subagents / f"{stem}.jsonl"
+    # A workflow's agents write under subagents/workflows/<run>/; without that path every call is denied.
+    if not transcript.exists():
+        transcript = next(iter(sorted(subagents.glob(f"workflows/*/{stem}.jsonl"))), transcript)
     if transcript.stem not in {agent, stem}:
         raise ValueError("subagent usage must not reuse its parent's transcript")
     return key, str(transcript), transcript.stem

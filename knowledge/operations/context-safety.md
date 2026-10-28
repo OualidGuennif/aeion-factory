@@ -47,7 +47,8 @@ discards system messages. Only closure work
 300k it returns `continue: false`; a Stop reminder cannot override this decision. The session
 state and active handover survive restart. Each session has its own file lock and atomic state.
 Tool events carrying `agent_id` use a separate parent/agent key and that child's transcript,
-including the documented nested `subagents/agent-<id>.jsonl` layout. Missing child usage refuses
+including the documented nested `subagents/agent-<id>.jsonl` layout and a workflow's
+`subagents/workflows/<run>/agent-<id>.jsonl`. Missing child usage refuses
 the child; it never reads the parent's counters or changes the parent's stop state. Child
 handover/checkpoint commands use the separate key printed by the guard.
 

@@ -52,7 +52,8 @@ structural scorecard; each project's build, linter and tests provide language-sp
 This is the team flow, under git only. In a plain folder there is no branch, review, CI or tag: the
 tests for what changed and the `CHANGELOG.md` line are the whole ritual. In local mode
 (`git config aeion.mode local`, see [build and test](../operations/build-and-test.md)) commits stay
-local, without review, CI or a `work/current.md` entry; tests for what changed still run.
+local, without review, CI or a `work/current.md` entry, and pre-push lets the user's own push through;
+tests for what changed still run.
 
 - Daily work is committed on `develop`; a parallel session uses a worktree on `task/<slug>` cut from
   `develop` and merges back locally. Small commits, each with its `CHANGELOG.md` line under Unreleased.

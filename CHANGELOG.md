@@ -18,6 +18,9 @@ dates them at release time. Spec: knowledge/policies/engineering.md
   session-start summary work on the files on disk.
 
 ### Changed
+- Local mode (`git config aeion.mode local`) pushes `main` without the pre-push team gate.
+- The context guard finds a workflow agent's transcript under `subagents/workflows/<run>/`, so
+  workflow agents (such as a Claude Security scan) are no longer refused every tool call.
 - Releases reach `main` through a reviewed `develop → main` pull request merged with a merge commit.
 - Sign-off and the checkpoint compare against `origin/develop` when it exists.
 - CI also runs on pull requests into `develop` (loop pull requests); pushes of `develop` run none.

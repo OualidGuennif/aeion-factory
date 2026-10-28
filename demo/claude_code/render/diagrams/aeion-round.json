@@ -1,0 +1,193 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "The Æion round that built each feature",
+    "output": "diagrams/aeion-round.html",
+    "animation": "trace",
+    "quality_profile": "showcase"
+  },
+  "lanes": [
+    {
+      "id": "owner",
+      "label": "Owner"
+    },
+    {
+      "id": "agent",
+      "label": "Agent"
+    },
+    {
+      "id": "checks",
+      "label": "Checks and hooks"
+    },
+    {
+      "id": "repo",
+      "label": "Parent repository"
+    },
+    {
+      "id": "friction",
+      "label": "Friction",
+      "variant": "exception"
+    }
+  ],
+  "phases": [
+    {
+      "id": "think",
+      "label": "Plan + spec",
+      "fromCol": 0,
+      "toCol": 1
+    },
+    {
+      "id": "make",
+      "label": "Tests + build",
+      "fromCol": 2,
+      "toCol": 3,
+      "variant": "emphasis"
+    },
+    {
+      "id": "prove",
+      "label": "Prove + record",
+      "fromCol": 4,
+      "toCol": 5,
+      "variant": "dashed"
+    }
+  ],
+  "mainPath": [
+    "brief",
+    "plan",
+    "tests",
+    "build",
+    "batteries",
+    "journal",
+    "approve"
+  ],
+  "nodes": [
+    {
+      "id": "brief",
+      "lane": "owner",
+      "col": 0,
+      "type": "external",
+      "label": "Brief",
+      "sublabel": "demo/plan/0N"
+    },
+    {
+      "id": "plan",
+      "lane": "agent",
+      "col": 1,
+      "type": "frontend",
+      "label": "Plan + spec",
+      "sublabel": "skills plan, spec"
+    },
+    {
+      "id": "tests",
+      "lane": "agent",
+      "col": 2,
+      "type": "backend",
+      "label": "Tests",
+      "sublabel": "first"
+    },
+    {
+      "id": "build",
+      "lane": "agent",
+      "col": 3,
+      "type": "backend",
+      "label": "Build slices",
+      "sublabel": "skill build"
+    },
+    {
+      "id": "batteries",
+      "lane": "checks",
+      "col": 4,
+      "type": "security",
+      "label": "Batteries",
+      "sublabel": "fmt, lint, test, smoke"
+    },
+    {
+      "id": "journal",
+      "lane": "repo",
+      "col": 5,
+      "type": "database",
+      "label": "Journal + commit",
+      "sublabel": "develop, local"
+    },
+    {
+      "id": "approve",
+      "lane": "owner",
+      "col": 5,
+      "type": "external",
+      "label": "Visual yes",
+      "sublabel": "screenshots"
+    },
+    {
+      "id": "hook",
+      "lane": "checks",
+      "col": 3,
+      "type": "security",
+      "label": "Edit hooks",
+      "sublabel": "guard, doc-links"
+    },
+    {
+      "id": "fb",
+      "lane": "friction",
+      "col": 4,
+      "type": "messagebus",
+      "label": "FB-0NN",
+      "sublabel": "feedback_for_aeion"
+    }
+  ],
+  "edges": [
+    {
+      "from": "brief",
+      "to": "plan"
+    },
+    {
+      "from": "plan",
+      "to": "tests"
+    },
+    {
+      "from": "tests",
+      "to": "build"
+    },
+    {
+      "from": "build",
+      "to": "batteries"
+    },
+    {
+      "from": "batteries",
+      "to": "journal"
+    },
+    {
+      "from": "journal",
+      "to": "approve"
+    },
+    {
+      "from": "build",
+      "to": "hook",
+      "label": "every edit",
+      "variant": "dashed"
+    },
+    {
+      "from": "hook",
+      "to": "fb",
+      "label": "refusal",
+      "variant": "dashed",
+      "role": "error"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Seven rounds",
+      "items": [
+        "Scaffold, API, page, votes, tags + search, Docker, this gallery"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Friction is output",
+      "items": [
+        "Each blocked step became a feedback file for the factory"
+      ]
+    }
+  ]
+}

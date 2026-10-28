@@ -38,6 +38,11 @@ Two more items for the fix:
 - Admit the edit tools on a file the session edited in the last turn, so a half-applied change can
   be completed (or reverted) before the closure.
 
+## Seen again (round 07)
+The alert came while the Bash working directory was `demo/claude_code/render`; the owner ran the
+checkpoint from the root a third time. After compaction, the first tool calls were refused with
+"native usage temporarily unavailable" until a retry.
+
 ## Proposed fix
 - At the alert, admit the checkpoint in any form that resolves to **this root's** `budget.py`: an
   absolute path, a `cd <root> &&` prefix, or a run from any working directory. Also admit a bare

@@ -1,0 +1,166 @@
+[
+ {
+  "path": "app/api/app.ts",
+  "required": true
+ },
+ {
+  "path": "app/api/app_test.ts",
+  "required": true
+ },
+ {
+  "path": "app/api/ideas_test.ts",
+  "required": true
+ },
+ {
+  "path": "app/api/search_test.ts",
+  "required": true
+ },
+ {
+  "path": "app/api/votes_test.ts",
+  "required": true
+ },
+ {
+  "path": "app/assets/styles.css",
+  "required": false
+ },
+ {
+  "path": "app/client.ts",
+  "required": true
+ },
+ {
+  "path": "app/components/IdeaFormFields.tsx",
+  "required": true
+ },
+ {
+  "path": "app/compose.yaml",
+  "required": false
+ },
+ {
+  "path": "app/deno.json",
+  "required": false
+ },
+ {
+  "path": "app/domain/filters.ts",
+  "required": true
+ },
+ {
+  "path": "app/domain/filters_test.ts",
+  "required": true
+ },
+ {
+  "path": "app/domain/form.ts",
+  "required": true
+ },
+ {
+  "path": "app/domain/form_test.ts",
+  "required": true
+ },
+ {
+  "path": "app/domain/idea.ts",
+  "required": true
+ },
+ {
+  "path": "app/domain/idea_test.ts",
+  "required": true
+ },
+ {
+  "path": "app/islands/NewIdeaForm.tsx",
+  "required": true
+ },
+ {
+  "path": "app/islands/VoteButton.tsx",
+  "required": true
+ },
+ {
+  "path": "app/main.ts",
+  "required": true
+ },
+ {
+  "path": "app/pages/home.tsx",
+  "required": true
+ },
+ {
+  "path": "app/pages/home_test.tsx",
+  "required": true
+ },
+ {
+  "path": "app/pages/vote.ts",
+  "required": true
+ },
+ {
+  "path": "app/pages/vote_test.ts",
+  "required": true
+ },
+ {
+  "path": "app/routes/_app.tsx",
+  "required": true
+ },
+ {
+  "path": "app/routes/api/[...path].ts",
+  "required": true
+ },
+ {
+  "path": "app/routes/ideas/[id]/vote.ts",
+  "required": true
+ },
+ {
+  "path": "app/routes/index.tsx",
+  "required": true
+ },
+ {
+  "path": "app/serve.ts",
+  "required": true
+ },
+ {
+  "path": "app/store/ideas.ts",
+  "required": true
+ },
+ {
+  "path": "app/store/ideas_test.ts",
+  "required": true
+ },
+ {
+  "path": "app/store/kv.ts",
+  "required": true
+ },
+ {
+  "path": "app/store/search_test.ts",
+  "required": true
+ },
+ {
+  "path": "app/store/shared.ts",
+  "required": true
+ },
+ {
+  "path": "app/store/votes_test.ts",
+  "required": true
+ },
+ {
+  "path": "app/testing.ts",
+  "required": true
+ },
+ {
+  "path": "app/utils.ts",
+  "required": true
+ },
+ {
+  "path": "app/version.ts",
+  "required": true
+ },
+ {
+  "path": "app/vite.config.ts",
+  "required": true
+ },
+ {
+  "path": "knowledge/components/idea-board-api.md",
+  "required": true
+ },
+ {
+  "path": "knowledge/components/idea-board-page.md",
+  "required": true
+ },
+ {
+  "path": "knowledge/components/idea-board-runtime.md",
+  "required": true
+ }
+]

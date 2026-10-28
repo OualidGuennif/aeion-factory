@@ -1,0 +1,191 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Sequence: filter by tag and search",
+    "output": "diagrams/sequence-filter-search.html",
+    "animation": "trace",
+    "quality_profile": "showcase",
+    "column_fit": "spread"
+  },
+  "participants": [
+    {
+      "id": "browser",
+      "type": "external",
+      "label": "Browser",
+      "sublabel": "GET form"
+    },
+    {
+      "id": "home",
+      "type": "backend",
+      "label": "Home handler",
+      "sublabel": "lenient"
+    },
+    {
+      "id": "filters",
+      "type": "security",
+      "label": "parseFilters",
+      "sublabel": "tag, q"
+    },
+    {
+      "id": "store",
+      "type": "backend",
+      "label": "Idea store",
+      "sublabel": "filtered()"
+    },
+    {
+      "id": "kv",
+      "type": "database",
+      "label": "Deno KV",
+      "sublabel": "ideas_by_tag"
+    }
+  ],
+  "segments": [
+    {
+      "from": 148,
+      "to": 236,
+      "label": "Parse"
+    },
+    {
+      "from": 244,
+      "to": 396,
+      "label": "Read at most 500"
+    },
+    {
+      "from": 404,
+      "to": 460,
+      "label": "Render"
+    }
+  ],
+  "messages": [
+    {
+      "id": "m0",
+      "from": "browser",
+      "to": "home",
+      "y": 160,
+      "label": "GET /?tag=ui&q=dark&sort=votes",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m1",
+      "from": "home",
+      "to": "filters",
+      "y": 192,
+      "label": "each filter alone",
+      "variant": "security"
+    },
+    {
+      "id": "m2",
+      "from": "filters",
+      "to": "home",
+      "y": 224,
+      "label": "valid ones kept",
+      "variant": "return"
+    },
+    {
+      "id": "m3",
+      "from": "home",
+      "to": "store",
+      "y": 256,
+      "label": "list({tag, q, sort})",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m4",
+      "from": "store",
+      "to": "kv",
+      "y": 288,
+      "label": "list ideas_by_tag/ui, 500",
+      "variant": "default"
+    },
+    {
+      "id": "m5",
+      "from": "kv",
+      "to": "store",
+      "y": 320,
+      "label": "ids",
+      "variant": "return"
+    },
+    {
+      "id": "m6",
+      "from": "store",
+      "to": "kv",
+      "y": 352,
+      "label": "getMany in tens",
+      "variant": "default"
+    },
+    {
+      "id": "m7",
+      "from": "kv",
+      "to": "store",
+      "y": 384,
+      "label": "candidates",
+      "variant": "return"
+    },
+    {
+      "id": "m8",
+      "from": "store",
+      "to": "home",
+      "y": 416,
+      "label": "Idea[]",
+      "variant": "return"
+    },
+    {
+      "id": "m9",
+      "from": "home",
+      "to": "browser",
+      "y": 448,
+      "label": "HTML, filters kept in every link",
+      "variant": "return"
+    }
+  ],
+  "activations": [
+    {
+      "participant": "home",
+      "from": 154,
+      "to": 454,
+      "type": "backend"
+    },
+    {
+      "participant": "filters",
+      "from": 186,
+      "to": 230,
+      "type": "security"
+    },
+    {
+      "participant": "store",
+      "from": 250,
+      "to": 422,
+      "type": "backend"
+    },
+    {
+      "participant": "kv",
+      "from": 282,
+      "to": 390,
+      "type": "database"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "rose",
+      "title": "Never a regex",
+      "items": [
+        "q is a plain substring: '.*' matches only those two characters"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Bounded",
+      "items": [
+        "A filtered read looks at the 500 newest candidates, then sorts them"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Page vs API",
+      "items": [
+        "The page drops an invalid filter; the API answers 400"
+      ]
+    }
+  ]
+}

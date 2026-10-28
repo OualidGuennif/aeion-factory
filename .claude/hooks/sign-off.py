@@ -16,6 +16,9 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / ".claude/hooks"))
+from project_files import git_active  # noqa: E402 - the shared repository test, beside this hook.
+
 DOC_PREFIXES = ("knowledge/", "work/", ".claude/", "tech-watch/")
 
 
@@ -29,6 +32,13 @@ try:
 except (ValueError, OSError):
     sys.exit(0)
 if not isinstance(event, dict) or event.get("stop_hook_active"):
+    sys.exit(0)
+# A plain folder, even one nested in another repository, has no branch to compare; a broken one is
+# reported by session-start, and this reminder must not send the agent after a check that cannot run.
+try:
+    if not git_active(ROOT):
+        sys.exit(0)
+except (OSError, subprocess.SubprocessError):
     sys.exit(0)
 # Local play (git config aeion.mode local) has no task-closure ritual to remind of.
 if git("config", "--local", "--get", "aeion.mode").stdout.strip() == "local":

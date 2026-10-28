@@ -7,9 +7,10 @@ import subprocess
 from pathlib import Path
 
 # Never walked without git, at any depth: version control, installed dependencies, caches and local state.
-SKIPPED = {".git", ".aeion", "node_modules", ".venv", "venv", "__pycache__", ".mypy_cache", ".pytest_cache", ".tox"}
+SKIPPED = {".git", ".aeion", "node_modules", ".venv", "venv", "__pycache__", ".mypy_cache", ".pytest_cache", ".tox",
+           ".terraform"}
 # Skipped at the project root only: build output and vendored code there, a source folder of that name deeper.
-TOP_SKIPPED = {"vendor", "dist", "build", "target", ".next", ".cache", ".gradle"}
+TOP_SKIPPED = {"vendor", "dist", "build", "target", "out", "coverage", "htmlcov", "env", ".next", ".cache", ".gradle"}
 # Files the desktop rewrites on its own: listed, they would change the project between two reads.
 SKIPPED_FILES = {".DS_Store", "Thumbs.db", "desktop.ini"}
 

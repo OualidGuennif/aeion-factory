@@ -447,6 +447,24 @@ expect("sign-off: local mode passes", local_result, 0)
 if '"block"' in local_result.stdout:
     failures.append("sign-off blocked in local mode")
 
+# A plain project nested in another repository has no branch to compare: the reminder stays silent.
+parent = Path(tempfile.mkdtemp())
+subprocess.run(git + ["init", "-q", "-b", "main"], cwd=parent, capture_output=True, check=True)
+(parent / "seed").write_text("x\n")
+subprocess.run(git + ["add", "seed"], cwd=parent, capture_output=True, check=True)
+subprocess.run(git + ["commit", "-qm", "parent"], cwd=parent, capture_output=True, check=True)
+nested = parent / "sub/af"
+shutil.copytree(tmp, nested, ignore=shutil.ignore_patterns(".git"))
+with (Path(tempfile.gettempdir()) / f"claude-edited-nested-{RUN}").open("a") as f:
+    f.write("src/a.ts\n")
+nested_result = subprocess.run([sys.executable, str(nested / ".claude/hooks/sign-off.py")], cwd=nested,
+                               capture_output=True, text=True,
+                               input=json.dumps({"session_id": f"nested-{RUN}", "stop_hook_active": False}))
+expect("sign-off: a plain folder nested in a repository passes", nested_result, 0)
+if '"block"' in nested_result.stdout:
+    failures.append("sign-off blocked a plain folder nested in a repository")
+shutil.rmtree(parent)
+
 # session-start: at most 25 lines, and it names the flow mode.
 # The mode is read from the repository's local config, so each run gets a throwaway repository.
 def session_start(mode, global_mode=None, git=True):

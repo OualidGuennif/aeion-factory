@@ -22,6 +22,22 @@ admits only these 8 words: `python3 tools/context/budget.py checkpoint --session
 
 After the fix to the heading, the owner's run printed `Checkpoint: PASS`, and compaction went through.
 
+## Seen again (round 05)
+1. The alert came in the middle of a two-part edit of `app/store/ideas.ts`. The first part was
+   applied; the second was refused, because only closure tools pass at the alert. The file did not
+   compile until after compaction. The handover had to carry the exact missing lines.
+2. The Bash working directory was `demo/claude_code/workspace/app`, so the admitted relative
+   checkpoint command could not run from the session. The owner ran it again from the root.
+3. That run printed only
+   `Checkpoint refused: Command ('tools/knowledge/doc-links', '--diff', …, '--worktree') returned non-zero exit status 1`.
+   The cause, `RULE L3 AGENTS.md changed, knowledge/components/factory-architecture.md did not`,
+   appeared only when the owner ran `doc-links` by hand.
+
+Two more items for the fix:
+- On a failed sub-check, print its own output, or at least its `RULE` lines, in the refusal.
+- Admit the edit tools on a file the session edited in the last turn, so a half-applied change can
+  be completed (or reverted) before the closure.
+
 ## Proposed fix
 - At the alert, admit the checkpoint in any form that resolves to **this root's** `budget.py`: an
   absolute path, a `cd <root> &&` prefix, or a run from any working directory. Also admit a bare

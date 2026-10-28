@@ -109,6 +109,7 @@ from another source; analysis refuses mismatched package provenance or a dirty A
 | Analysis wrapper | Freeze Git, Graphify, evidence validation and Archify finalization | Ignored `.aeion/analysis/<sha>/` and immutable receipts |
 | GitHub workflows | PR checks and post-main analysis; artifact retention | Read-only checkout/job permissions; no generated-source push |
 | Native language servers | Editor diagnostics for their registered language | Local processes; explicit plugin enablement |
+| Demo playground | An agent builds a real app on a git-less copy of the factory and files feedback for the base | `demo/plan/` briefs; per harness a tracked journal and `feedback_for_aeion/`, an ignored `workspace/` copy |
 
 Normal task: read -> approved plan -> component spec -> thin changes/tests -> docs/current task
 update -> fresh review -> authorized PR merge -> exact-merged-SHA analysis -> closure/release.

@@ -1,0 +1,147 @@
+{
+  "schema_version": 3,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "Lifecycle of an idea",
+    "output": "diagrams/idea-lifecycle.html",
+    "animation": "trace",
+    "quality_profile": "showcase"
+  },
+  "mainPath": [
+    "draft",
+    "validating",
+    "stored",
+    "listed"
+  ],
+  "states": [
+    {
+      "id": "draft",
+      "type": "start",
+      "label": "Draft",
+      "sublabel": "form or JSON",
+      "tag": "entry",
+      "step": "01"
+    },
+    {
+      "id": "validating",
+      "type": "decision",
+      "label": "Validating",
+      "sublabel": "validateNewIdea",
+      "tag": "check",
+      "step": "02"
+    },
+    {
+      "id": "stored",
+      "type": "active",
+      "label": "Stored",
+      "sublabel": "votes 0, indexed",
+      "tag": "KV",
+      "step": "03"
+    },
+    {
+      "id": "listed",
+      "type": "success",
+      "label": "Listed",
+      "sublabel": "sort, tag, search",
+      "tag": "visible",
+      "step": "04"
+    },
+    {
+      "id": "refused",
+      "type": "failure",
+      "label": "Refused",
+      "sublabel": "400 field + reason",
+      "tag": "nothing written"
+    },
+    {
+      "id": "voting",
+      "type": "active",
+      "label": "Vote in flight",
+      "sublabel": "optimistic commit",
+      "tag": "retry ≤ 10"
+    },
+    {
+      "id": "busy",
+      "type": "waiting",
+      "label": "Busy",
+      "sublabel": "503 after 10 tries",
+      "tag": "rare"
+    }
+  ],
+  "transitions": [
+    {
+      "id": "t1",
+      "from": "draft",
+      "to": "validating",
+      "label": "submit"
+    },
+    {
+      "id": "t2",
+      "from": "validating",
+      "to": "stored",
+      "label": "valid"
+    },
+    {
+      "id": "t3",
+      "from": "stored",
+      "to": "listed",
+      "label": "GET /"
+    },
+    {
+      "id": "t4",
+      "from": "validating",
+      "to": "refused",
+      "label": "invalid",
+      "variant": "security"
+    },
+    {
+      "id": "t5",
+      "from": "refused",
+      "to": "draft",
+      "label": "fix the field",
+      "variant": "dashed"
+    },
+    {
+      "id": "t6",
+      "from": "listed",
+      "to": "voting",
+      "label": "vote"
+    },
+    {
+      "id": "t7",
+      "from": "voting",
+      "to": "listed",
+      "label": "votes + 1"
+    },
+    {
+      "id": "t8",
+      "from": "voting",
+      "to": "busy",
+      "label": "10 conflicts",
+      "variant": "security"
+    },
+    {
+      "id": "t9",
+      "from": "busy",
+      "to": "voting",
+      "label": "vote again",
+      "variant": "dashed"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "No end state",
+      "items": [
+        "Ideas are never edited or deleted in this version"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Refusals write nothing",
+      "items": [
+        "A refused draft never reaches KV"
+      ]
+    }
+  ]
+}

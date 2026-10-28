@@ -19,6 +19,14 @@ test('OpenCode V2 shell/read payloads refuse secrets before execution', async ()
   await hooks['tool.execute.before']({ tool: 'shell', sessionID, input: { command: 'git status --short' } });
 });
 
+test('OpenCode V2 started in a subfolder finds the project hooks', async () => {
+  const nested = {};
+  const record = (domain) => async (name, callback) => { nested[`${domain}.${name}`] = callback; };
+  await plugin.setup({ location: { directory: `${root}/demo` }, tool: { hook: record('tool') }, session: { hook: record('session') } });
+  await nested['tool.execute.before']({ tool: 'shell', sessionID, input: { command: 'git status --short' } });
+  await assert.rejects(nested['tool.execute.before']({ tool: 'shell', sessionID, input: { command: 'cat .env' } }), /secret/);
+});
+
 test('OpenCode V2 compaction refuses a missing checkpoint', async () => {
   const event = { sessionID, system: [] };
   await assert.rejects(hooks['session.compaction'](event), /checkpoint/);

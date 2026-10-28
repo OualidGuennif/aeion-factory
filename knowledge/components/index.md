@@ -17,3 +17,4 @@ Start from [the template](_template.md).
 | --- | --- | --- |
 | [Integration choices](context-and-architecture.md) | stable | scoped upstream adoption and runtime qualification boundaries |
 | [Æion Factory architecture](factory-architecture.md) | stable | complete spec with maintained source-backed diagrams |
+| [Code graph queries](graph-queries.md) | draft | `tools/architecture/ask`: exact structural answers from a fresh working graph |

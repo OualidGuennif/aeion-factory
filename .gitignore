@@ -18,3 +18,5 @@ __pycache__/
 .DS_Store
 node_modules/
 .venv/
+# demo/: everything is tracked except each harness's working copy of the factory.
+/demo/*/workspace/

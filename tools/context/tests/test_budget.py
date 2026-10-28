@@ -262,6 +262,42 @@ class BudgetTests(unittest.TestCase):
             self.assertEqual(self.call(tool_name="Bash", tool_input={"command": command})["hookSpecificOutput"]["permissionDecision"], "deny")
         self.assertEqual(self.call(tool_name="Bash", tool_input={"command": "tools/knowledge/doc-links"}), {})
 
+    def test_checkpoint_is_admitted_from_any_folder_and_only_for_this_root(self):
+        # A shell left in a subfolder at the alert must still reach this root's checkpoint.
+        self.observe(250000)
+        self.call()
+        root = self.root.resolve()
+        (root / "demo/copy").mkdir(parents=True)
+        tail = "checkpoint --session test-session --base origin/develop --verify"
+        allowed = [(f"python3 tools/context/budget.py {tail}", root),
+                   (f"python3 {root}/tools/context/budget.py {tail}", root / "demo/copy"),
+                   (f"cd {root} && python3 tools/context/budget.py {tail}", root / "demo/copy"),
+                   (f"cd ../.. && python3 tools/context/budget.py {tail}", root / "demo/copy"),
+                   ("python3 tools/context/budget.py checkpoint --session test-session --verify", root),
+                   (f"cd {root}", root / "demo/copy")]
+        for command, cwd in allowed:
+            self.assertEqual(self.call(tool_name="Bash", tool_input={"command": command}, cwd=str(cwd)), {}, command)
+        refused = [(f"python3 tools/context/budget.py {tail}", root / "demo/copy"),
+                   (f"cd /tmp && python3 {root}/tools/context/budget.py {tail}", root),
+                   (f"cd {root} && python3 tools/context/budget.py {tail} && rm -rf x", root),
+                   (f"cd {root}; python3 tools/context/budget.py {tail}", root),
+                   (f"python3 tools/context/budget.py checkpoint --session other-session --verify", root),
+                   (f"python3 tools/context/budget.py checkpoint --session test-session --base 'a;b' --verify", root),
+                   ("cd /tmp", root)]
+        for command, cwd in refused:
+            result = self.call(tool_name="Bash", tool_input={"command": command}, cwd=str(cwd))
+            self.assertEqual(result["hookSpecificOutput"]["permissionDecision"], "deny", command)
+
+    def test_checkpoint_refusal_names_the_faulty_heading(self):
+        handover = budget.ensure_handover(self.root, "test-session")
+        self.call()
+        handover.write_text(handover.read_text().replace("TODO", "Fixture").replace("## Completed\n", "## Completed (commits)\n"))
+        with self.assertRaisesRegex(ValueError, r"missing heading: ## Completed \(exact line\)$"):
+            budget.checkpoint(self.root, "test-session", "HEAD")
+        handover.write_text(handover.read_text().replace("## Completed (commits)\n", "## Completed\n").replace("Fixture", "TODO", 1))
+        with self.assertRaisesRegex(ValueError, "a section still reads TODO"):
+            budget.checkpoint(self.root, "test-session", "HEAD")
+
     def test_sessions_are_isolated(self):
         self.observe(300000)
         self.call()

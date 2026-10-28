@@ -4,26 +4,19 @@ Task state only. One entry per open task, newest first. At most 150 lines, 10 pe
 Finished tasks are deleted: the commit message and knowledge/ keep what matters.
 Status: ACTIVE, WAITING-OWNER, MEASURING, BLOCKED, BACKLOG.
 
-## Release v1.3.0 — ACTIVE
-- Owner decision: 2026-10-28, merge commits allowed and linear history off on main (applied via gh api).
-- State: PR #19 has Review OK, green CI and a clean Claude Security scan; not merged yet.
-- Next: merge #19 with a merge commit, wait for Architecture refresh on main, tag v1.3.0, gh release, fast-forward develop (who: agent).
+## demo/ Idea Board run and feedback for Æion — ACTIVE
+- Owner decision: 2026-10-28, Claude Code builds the Idea Board in a git-less copy (demo/claude_code/workspace), journals each round, files feedback, fixes small ones in the base.
+- State: briefs in demo/plan/; rounds 00–02 done (2396a52, 64a466b); FB-006 fixed in 2c2fb1d; only demo/<harness>/workspace/ is git-ignored (FB-001–009); rounds 03–04 done and visually approved (page + island; votes); round 05 done and approved (tags, search, 72 tests); round 06 done (Docker, 5 container checks); round 07 done (Graphify, 14 Archify diagrams, gallery; FB-010); base fixes FB-002/004/005/007/008/009/010 committed (9d4f78c..87a27b0); READMEs, app snapshot (result/), demo/codex/ ready (ce7c8c6); docs/diagrams.html (cdd6991).
+- Next: finish ask callers and the Pi adapter (uncommitted), add demo/pi/, push develop, release develop → main with clean branches (who: agent; owner asked); then owner runs Codex, OpenCode and Pi from demo/ with each START.md (who: owner).
 - Blocker: none.
-- Evidence: knowledge/operations/github-protection.md; .claude/skills/ship/SKILL.md
+- Evidence: work/handovers/35c6f26d-3a08-48c8-8457-2cb97c7285df.md
 
-## Live Devin, Droid and Antigravity hook qualification — WAITING-OWNER
-- Owner decision: 2026-10-27, support Devin, Droid and Antigravity; adapters use documented, not live-run, payloads.
-- State: Devin merged in #12, Droid in #13, Antigravity in task/antigravity; no live run of any yet.
-- Next: run the qualification steps with Devin CLI, Droid and agy and record the result (who: owner).
+## Live Devin, Droid, Antigravity and Pi hook qualification — WAITING-OWNER
+- Owner decision: 2026-10-27, support Devin, Droid and Antigravity; 2026-10-28, Pi 1.4.0; adapters use documented, not live-run, payloads.
+- State: Devin merged in #12, Droid in #13, Antigravity in task/antigravity, Pi on develop; no live run of any yet.
+- Next: run the qualification steps with Devin CLI, Droid, agy and Pi and record the result (who: owner).
 - Blocker: neither CLI is in the agent's container.
 - Evidence: knowledge/operations/agent-compatibility.md
-
-## Main branch protection — WAITING-OWNER
-- Owner decision: 2026-10-27, protect main as knowledge/operations/github-protection.md describes.
-- State: the agent's GitHub tools cannot change branch protection; the settings must be applied by the owner.
-- Next: owner applies the rule in Settings → Rules/Branches and reads it back with the API (who: owner).
-- Blocker: no branch-protection access from the agent session.
-- Evidence: knowledge/operations/github-protection.md
 
 ## Native strict context admission — BLOCKED
 - Owner decision: 2026-10-26, attempt native 300k qualification using paid OpenCode Go DeepSeek V4.1 Flash.

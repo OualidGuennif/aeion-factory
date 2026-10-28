@@ -1,0 +1,8 @@
+# Spec: knowledge/components/idea-board-runtime.md
+# Secrets, local data and build output never enter the image; the image installs and builds its own.
+.env
+.env.*
+data/
+node_modules/
+_fresh/
+.DS_Store

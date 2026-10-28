@@ -1,0 +1,134 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Sequence: health check in the container",
+    "output": "diagrams/sequence-health.html",
+    "animation": "trace",
+    "quality_profile": "showcase",
+    "column_fit": "spread"
+  },
+  "participants": [
+    {
+      "id": "operator",
+      "type": "external",
+      "label": "Operator",
+      "sublabel": "compose ps"
+    },
+    {
+      "id": "docker",
+      "type": "cloud",
+      "label": "Docker engine",
+      "sublabel": "healthcheck"
+    },
+    {
+      "id": "probe",
+      "type": "security",
+      "label": "deno eval",
+      "sublabel": "inside the container"
+    },
+    {
+      "id": "api",
+      "type": "backend",
+      "label": "Hono API",
+      "sublabel": "/api/health"
+    }
+  ],
+  "segments": [
+    {
+      "from": 148,
+      "to": 204,
+      "label": "Probe"
+    },
+    {
+      "from": 212,
+      "to": 268,
+      "label": "Answer"
+    },
+    {
+      "from": 276,
+      "to": 332,
+      "label": "Report"
+    }
+  ],
+  "messages": [
+    {
+      "id": "m0",
+      "from": "docker",
+      "to": "probe",
+      "y": 160,
+      "label": "every 5 s, timeout 3 s",
+      "variant": "default"
+    },
+    {
+      "id": "m1",
+      "from": "probe",
+      "to": "api",
+      "y": 192,
+      "label": "fetch 127.0.0.1:8000/api/health",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m2",
+      "from": "api",
+      "to": "probe",
+      "y": 224,
+      "label": "200 {status: ok, version}",
+      "variant": "return"
+    },
+    {
+      "id": "m3",
+      "from": "probe",
+      "to": "docker",
+      "y": 256,
+      "label": "exit 0; 5 failures: unhealthy",
+      "variant": "return"
+    },
+    {
+      "id": "m4",
+      "from": "operator",
+      "to": "docker",
+      "y": 288,
+      "label": "docker compose ps",
+      "variant": "default"
+    },
+    {
+      "id": "m5",
+      "from": "docker",
+      "to": "operator",
+      "y": 320,
+      "label": "healthy",
+      "variant": "return"
+    }
+  ],
+  "activations": [
+    {
+      "participant": "docker",
+      "from": 154,
+      "to": 326,
+      "type": "cloud"
+    },
+    {
+      "participant": "probe",
+      "from": 154,
+      "to": 262,
+      "type": "security"
+    },
+    {
+      "participant": "api",
+      "from": 186,
+      "to": 230,
+      "type": "backend"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "No curl in the image",
+      "items": [
+        "The probe is the app's own runtime",
+        "Healthy 6 s after up"
+      ]
+    }
+  ]
+}

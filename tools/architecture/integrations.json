@@ -2,14 +2,14 @@
   "schema_version": 1,
   "graphify": {
     "repository": "https://github.com/Graphify-Labs/graphify.git",
-    "revision": "92741d162b2094ffc2fed58cfbd8ee823e9da62c",
-    "version": "0.9.95",
-    "archive_url": "https://codeload.github.com/Graphify-Labs/graphify/tar.gz/92741d162b2094ffc2fed58cfbd8ee823e9da62c",
-    "archive_sha256": "b4bc34d33b48ca6e9b981809d104eaffcf4e53c9dfffc34bb317294863e4f2ec"
+    "revision": "0a8cd4e1e342235fe53e881fb5d591bf0460071f",
+    "version": "0.9.97",
+    "archive_url": "https://codeload.github.com/Graphify-Labs/graphify/tar.gz/0a8cd4e1e342235fe53e881fb5d591bf0460071f",
+    "archive_sha256": "5991696931ab1995f412dcd0fbb4b4caa96ac040e32bd8ba3996c8277f35e14f"
   },
   "archify": {
     "repository": "https://github.com/tt-a1i/archify.git",
-    "revision": "81c6be8d87090670c45d08a8f97f9d29c5af0bec"
+    "revision": "208acba8d412335185b2056fedf54b3405df43fb"
   },
   "scope": [
     ".agents/**",
@@ -18,6 +18,7 @@
     ".factory/README.md",
     ".factory/settings.json",
     ".opencode/**",
+    ".pi/**",
     ".claude/**",
     ".github/**",
     "AGENTS.md",

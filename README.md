@@ -1,6 +1,6 @@
 # Æion Factory
 
-**A repository template for Claude Code, Codex, OpenCode, Devin, Factory's Droid and Google
+**A repository template for Claude Code, Codex, OpenCode, Pi, Devin, Factory's Droid and Google
 Antigravity: shared instructions, linked specs, reusable skills and automatic checks.**
 
 Æion Factory organizes the work around **plan → change → test → review → merge**. Your project's
@@ -12,7 +12,7 @@ existing instructions and the owner's decisions take precedence.
 | [Knowledge](knowledge/index.md) | Canonical policies, component specs and decisions |
 | `work/current.md` | Open tasks only |
 | `.claude/skills/` | Maintained skill bodies; `.agents/skills/` exposes them to Codex, Devin, Droid and Antigravity |
-| `.claude/`, `.codex/`, `.opencode/`, `.devin/`, `.factory/`, `.agents/hooks.json` | Native configuration/adapters for each agent (`.factory/` is Droid's, `.agents/hooks.json` Antigravity's) |
+| `.claude/`, `.codex/`, `.opencode/`, `.pi/`, `.devin/`, `.factory/`, `.agents/hooks.json` | Native configuration/adapters for each agent (`.factory/` is Droid's, `.agents/hooks.json` Antigravity's) |
 | `.aeion/` (ignored) | Æion Factory's local state: analysis, context checkpoints, loop bodies |
 | `tools/` and GitHub CI | Documentation checks, tests and source-backed architecture |
 
@@ -26,6 +26,7 @@ PR workflow and your chosen agent separately:
 - [Claude Code](https://code.claude.com/docs/en/setup)
 - [Codex](https://learn.chatgpt.com/docs/cli)
 - [OpenCode V2](https://opencode.ai/v2/docs/) — 2.1.4+ for Æion Factory's native plugin
+- [Pi](https://github.com/earendil-works/pi) — 1.4.0+ for Æion Factory's extension
 - [Devin CLI](https://docs.devin.ai/cli/extensibility) — reads `.devin/`, `AGENTS.md` and `.agents/skills`
 - [Droid](https://docs.factory.ai/cli/configuration/hooks-guide), the CLI of Factory (factory.ai), a separate
   product — reads `.factory/settings.json`, `AGENTS.md` and `.agents/skills`
@@ -40,7 +41,7 @@ commit credentials to the project.
 ```bash
 git clone https://github.com/OualidGuennif/aeion-factory.git && cd aeion-factory
 git config aeion.mode local    # optional, this clone's local config: play on main, no PR/CI ritual
-tools/agents/run claude        # or: codex, opencode (2.1.4+), devin, droid, antigravity
+tools/agents/run claude        # or: codex, opencode (2.1.4+), pi (1.4.0+), devin, droid, antigravity
 ```
 
 The launcher applies each agent's checked profile; the hooks and skills load from the repository,
@@ -116,6 +117,7 @@ Run these from the repository root. Additional arguments are native CLI argument
 | Claude Code | `tools/agents/run claude` | Existing `.claude/settings.json`, hooks and skills |
 | Codex | `tools/agents/run codex` | Trusted `.codex/config.toml` / `hooks.json`, shared `.agents/skills` |
 | OpenCode | `tools/agents/run opencode` | Root `opencode.json`, native V2 plugin in `.opencode/plugins/factory/` |
+| Pi | `tools/agents/run pi` | Extension in `.pi/extensions/factory/`, loaded once the project is trusted |
 | Devin CLI | `tools/agents/run devin` | `.devin/hooks.v1.json` and `config.json`, `AGENTS.md`, shared `.agents/skills` |
 | Droid (factory.ai) | `tools/agents/run droid` | `.factory/settings.json` hooks, `AGENTS.md`, shared `.agents/skills` |
 | Google Antigravity | `tools/agents/run antigravity` | `.agents/hooks.json`, `AGENTS.md`, shared `.agents/skills` |
@@ -139,7 +141,7 @@ also remains available.
 | `tools/architecture/refresh --target HEAD` | Build the recommended initial/updated source baseline |
 | `tools/architecture/refresh --target HEAD --base origin/main` | Analyze the committed change and its comparison |
 | `tools/architecture/refresh --check --target HEAD` | Verify the persisted baseline and artifact hashes |
-| `tools/agents/run <claude\|codex\|opencode\|devin\|droid\|antigravity>` | Start a managed native agent |
+| `tools/agents/run <claude\|codex\|opencode\|pi\|devin\|droid\|antigravity>` | Start a managed native agent |
 | `python3 tools/context/budget.py checkpoint --session <id> --base origin/develop --verify` | Verify handover, docs and source state before compaction |
 | `loops/orchestrator.sh <job> --dry-run` | Inspect loop settings without launching an agent |
 | `loops/orchestrator.sh inner --issue <n>` | Run one approved `agent-ready` issue when loops are enabled |
@@ -160,6 +162,7 @@ OpenCode loads skills through its native skill tool; Devin, Droid and Antigravit
 | `adopt` | Introduce Æion Factory into an existing project |
 | `plan`, `spec` | Inspect and approve a change, then define its contract |
 | `build`, `test`, `debug` | Implement, verify and investigate failures |
+| `graph` | Know the code's structure before reading it: `tools/architecture/ask`, exact and without an LLM |
 | `okf-update`, `sign-off` | Maintain Knowledge and finish a task with evidence |
 | `pr-review`, `ship` | Obtain fresh review and deliver behind green checks |
 | `security-scan` | Use native/project security tooling and report its actual coverage |

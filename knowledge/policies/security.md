@@ -52,6 +52,13 @@ Requirements for a change, not claims about what production already satisfies.
   same way. The ordinary-name list is a heuristic: an odd glob such as `*2` matches only a
   certificate name and is refused.
   A read of a secret name is refused even as a search pattern; search names with the Grep tool.
+  One exception, for code: in a heredoc read by an interpreter or git, or written to a file by `cat`
+  or `tee`, an identifier's property directly followed by `)`, `]`, `}`, `;` or `,` (a Deno KV
+  `entry.key)`) is not a file name. The delimiter must be quoted (`<<'EOF'`), because an unquoted body
+  runs `$(…)`. A heredoc fed to a shell, `xargs` or a read loop is never exempt.
+- The Bash guard refuses Graphify commands that call a language model or rewrite agent setup:
+  `extract`, `label`, `provider`, `add`, `clone`, `global`, the installers, and `cluster-only` without
+  `--no-label`. Structural questions go to `tools/architecture/ask`.
 - The Bash guard refuses skipping Git hooks or force-pushing in its common spellings: `-n` in a
   commit cluster, any unambiguous prefix of `--no-verify`, a `core.hooksPath` override (`-c`,
   `--config-env`, `GIT_CONFIG_*`, or `git config` set to anything but `tools/git-hooks`; reading it
@@ -119,7 +126,7 @@ arbitrary Git arguments and shell composition. A published body file must be a r
 make a loop post a local file such as a CLI credential store. A production read must match the configured
 single trusted command. These are accidental-command controls, not OS-level isolation.
 
-Codex/OpenCode adapters normalize their supported native Bash/file/patch payloads to these same
+Codex/OpenCode/Pi adapters normalize their supported native Bash/file/patch payloads to these same
 guards. A known refusal is returned as an explicit native denial; it is never silently converted
 into approval. Native project/hook trust and sandbox controls still apply, and events unsupported
 by the runtime cannot be advertised as enforced. See the compatibility runbook.

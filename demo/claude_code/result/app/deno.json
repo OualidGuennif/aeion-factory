@@ -1,0 +1,72 @@
+{
+  "nodeModulesDir": "manual",
+  "tasks": {
+    "check": "deno fmt --check . && deno lint . && deno check",
+    "dev": "vite",
+    "build": "vite build",
+    "start": "deno run -A serve.ts",
+    "update": "deno run -A -r jsr:@fresh/update .",
+    "test": "deno test -A"
+  },
+  "lint": {
+    "rules": {
+      "tags": [
+        "fresh",
+        "recommended"
+      ]
+    }
+  },
+  "exclude": [
+    "**/_fresh/*",
+    "data/"
+  ],
+  "imports": {
+    "@/": "./",
+    "@std/path": "jsr:@std/path@1.1.6",
+    "fresh": "jsr:@fresh/core@^2.3.3",
+    "preact": "npm:preact@^10.29.8",
+    "@preact/signals": "npm:@preact/signals@^2.11.4",
+    "@fresh/plugin-vite": "jsr:@fresh/plugin-vite@^1.1.2",
+    "vite": "npm:vite@^7.3.7",
+    "@types/babel__core": "npm:@types/babel__core@^7.20.5",
+    "@hono/hono": "jsr:@hono/hono@^4.13.14",
+    "@std/assert": "jsr:@std/assert@^1.0.19",
+    "@std/ulid": "jsr:@std/ulid@^1.0.0"
+  },
+  "compilerOptions": {
+    "lib": [
+      "dom",
+      "dom.asynciterable",
+      "dom.iterable",
+      "deno.ns",
+      "deno.unstable"
+    ],
+    "jsx": "precompile",
+    "jsxImportSource": "preact",
+    "jsxPrecompileSkipElements": [
+      "a",
+      "img",
+      "source",
+      "body",
+      "html",
+      "head",
+      "title",
+      "meta",
+      "script",
+      "link",
+      "style",
+      "base",
+      "noscript",
+      "template"
+    ],
+    "types": [
+      "vite/client"
+    ]
+  },
+  "unstable": [
+    "kv"
+  ],
+  "fmt": {
+    "lineWidth": 120
+  }
+}

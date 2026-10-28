@@ -6,7 +6,7 @@ description: Verifies security evidence for a sensitive change or periodic audit
 # Security scan
 
 ## Overview
-Codex/OpenCode use the section below instead of the Claude plugin steps.
+Codex/OpenCode/Pi use the section below instead of the Claude plugin steps.
 
 The `claude-security` plugin maps the code, searches each component, and has separate verifiers try to disprove every finding; only survivors are reported. Policy: `knowledge/policies/security.md`.
 
@@ -23,7 +23,7 @@ Running it on every diff (it costs tokens); treating a skipped scan as a pass.
 ## Verification
 - [ ] The scan's summary is quoted in the PR or the issue.
 
-## Codex and OpenCode
+## Codex, OpenCode and Pi
 
 Claude plugin slash commands do not run in these harnesses. Run the repository security commands
 and inspect secret/dependency/SAST CI on the exact commit, then perform an independent sensitive

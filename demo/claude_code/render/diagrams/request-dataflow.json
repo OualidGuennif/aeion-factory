@@ -1,0 +1,164 @@
+{
+  "schema_version": 1,
+  "diagram_type": "dataflow",
+  "meta": {
+    "title": "Request data flow: from a form to KV",
+    "output": "diagrams/request-dataflow.html",
+    "animation": "trace",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1080,
+      620
+    ],
+    "visual_preset": "signal-flow"
+  },
+  "stages": [
+    {
+      "label": "Input"
+    },
+    {
+      "label": "Parse"
+    },
+    {
+      "label": "Validate"
+    },
+    {
+      "label": "Store"
+    },
+    {
+      "label": "Answer"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "form",
+      "type": "frontend",
+      "label": "HTML form",
+      "sublabel": "urlencoded",
+      "stage": 0,
+      "row": 0,
+      "tag": "no JS"
+    },
+    {
+      "id": "json",
+      "type": "frontend",
+      "label": "Island JSON",
+      "sublabel": "fetch",
+      "stage": 0,
+      "row": 2,
+      "tag": "enhanced"
+    },
+    {
+      "id": "parse_form",
+      "type": "backend",
+      "label": "parseIdeaForm",
+      "sublabel": "split tags",
+      "stage": 1,
+      "row": 0
+    },
+    {
+      "id": "parse_json",
+      "type": "backend",
+      "label": "Hono body",
+      "sublabel": "bodyLimit",
+      "stage": 1,
+      "row": 2
+    },
+    {
+      "id": "validate",
+      "type": "security",
+      "label": "validateNewIdea",
+      "sublabel": "one rule set",
+      "stage": 2,
+      "row": 1,
+      "tag": "shared"
+    },
+    {
+      "id": "kv",
+      "type": "database",
+      "label": "Deno KV",
+      "sublabel": "atomic commit",
+      "stage": 3,
+      "row": 1
+    },
+    {
+      "id": "page",
+      "type": "frontend",
+      "label": "303 or 400 page",
+      "sublabel": "message by field",
+      "stage": 4,
+      "row": 0
+    },
+    {
+      "id": "api_out",
+      "type": "frontend",
+      "label": "201 or 400 JSON",
+      "sublabel": "{error, field, reason}",
+      "stage": 4,
+      "row": 2
+    }
+  ],
+  "flows": [
+    {
+      "from": "form",
+      "to": "parse_form",
+      "label": "FormData",
+      "variant": "emphasis",
+      "route": "straight"
+    },
+    {
+      "from": "json",
+      "to": "parse_json",
+      "label": "JSON",
+      "variant": "emphasis",
+      "route": "straight"
+    },
+    {
+      "from": "parse_form",
+      "to": "validate",
+      "label": "values",
+      "variant": "emphasis"
+    },
+    {
+      "from": "parse_json",
+      "to": "validate",
+      "label": "body",
+      "variant": "emphasis"
+    },
+    {
+      "from": "validate",
+      "to": "kv",
+      "label": "valid draft",
+      "classification": "Idea",
+      "variant": "emphasis",
+      "route": "straight"
+    },
+    {
+      "from": "kv",
+      "to": "page",
+      "label": "redirect"
+    },
+    {
+      "from": "kv",
+      "to": "api_out",
+      "label": "idea"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "rose",
+      "title": "One rule set",
+      "items": [
+        "Both entry points meet at validateNewIdea",
+        "A refusal skips KV and answers at once"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Same contract",
+      "items": [
+        "The page message and the API reason come from one list"
+      ]
+    }
+  ]
+}

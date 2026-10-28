@@ -40,7 +40,7 @@ structural facts; fresh review establishes the verdict; GitHub records PR/merge/
 There is no application server, broker, production database or deployed Æion Factory control plane.
 Adopting projects keep their existing instructions and architecture.
 
-Claude Code retains its native hooks. Codex, OpenCode, Devin, Droid (factory.ai) and Google
+Claude Code retains its native hooks. Codex, OpenCode, Pi, Devin, Droid (factory.ai) and Google
 Antigravity load the same instructions and skills, with narrow adapters to the existing secret
 guards, edit checks and handover checkpoints (Devin, Droid and Antigravity have no compaction
 checkpoint). Droid owns `.factory/`, so
@@ -89,7 +89,13 @@ Only allowed tracked text enters extraction. Secret paths (one list for the guar
 the context fingerprint, `.claude/hooks/secret_names.py`) refuse analysis, symlinks
 are excluded, and unsupported formats remain explicitly inventory-only. Tool versions are pinned.
 The graph includes code and native Markdown structure/frontmatter/links; semantic inference by
-an LLM is outside the baseline. This keeps the default independent of model credentials.
+an LLM is outside the baseline. Each doc's frontmatter `sources` adds a `specifies` edge to the file
+it names (Graphify alone links only code names written in a body); `coverage.json` lists any
+`resource` that names no file in the corpus. `refresh` runs only on a root that is its own git
+repository; a plain folder nested in another one is refused before any git call. This keeps the default independent of model credentials.
+`graph.py` also adds `specified_by` edges from `Spec:` lines, `names_file` edges from tests that name a
+file, and exact `imports` from `deno info` in a Deno project. For day-to-day questions on the working
+tree, [`tools/architecture/ask`](graph-queries.md) keeps its own graph in `.aeion/graph/`, apart from the baselines.
 Setup stamps Graphify's commit archive URL and SHA-256, including replacement of a same-version wheel
 from another source; analysis refuses mismatched package provenance or a dirty Archify checkout.
 
@@ -109,6 +115,7 @@ from another source; analysis refuses mismatched package provenance or a dirty A
 | Analysis wrapper | Freeze Git, Graphify, evidence validation and Archify finalization | Ignored `.aeion/analysis/<sha>/` and immutable receipts |
 | GitHub workflows | PR checks and post-main analysis; artifact retention | Read-only checkout/job permissions; no generated-source push |
 | Native language servers | Editor diagnostics for their registered language | Local processes; explicit plugin enablement |
+| Demo playground | An agent builds a real app on a git-less copy of the factory and files feedback for the base | `demo/plan/` briefs; per harness a tracked journal and `feedback_for_aeion/`, an ignored `workspace/` copy |
 
 Normal task: read -> approved plan -> component spec -> thin changes/tests -> docs/current task
 update -> fresh review -> authorized PR merge -> exact-merged-SHA analysis -> closure/release.
@@ -190,7 +197,8 @@ No production migration, rollback command or availability/SLO is applicable to t
 2. 249,999/250,000 and 299,999/300,000 observations have explicit boundaries; stopped state is
    not reset by resume; unavailable usage is refused (`tools/context/tests/test_budget.py`).
 3. Compaction readiness binds the handover and exact source state; later edits invalidate it
-   (`test_budget.py`, checkpoint/compaction tests).
+   (`test_budget.py`, checkpoint/compaction tests). At the alert the checkpoint is admitted only when
+   its path resolves to this root's `budget.py`, from any working directory.
 4. Source evidence belongs to the target SHA; missing/ambiguous anchors, secret paths and nodes
    outside Archify's one-to-three sources fail
    (`tools/architecture/tests/test_refresh.py` and real Archify gates).
@@ -225,5 +233,7 @@ runtime admission control, and automatically enabling additional agents or Super
 
 Native adapters validate line endings and required path/command fields before guard dispatch.
 OpenCode uses the V2 directory id/setup entrypoint and native prompt/tool/compaction callbacks;
-its pre-compaction receipt is consumed per attempt. Loop cancellation terminates the ordinary
+its pre-compaction receipt is consumed per attempt. Pi's extension maps `tool_call`,
+`tool_result`, `before_agent_start` and `session_before_compact` to the same guards and cancels a
+compaction without a verified handover. Loop cancellation terminates the ordinary
 child process group as well as enforcing deadlines. No SDK dependency is bundled for the plugin.

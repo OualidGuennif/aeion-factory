@@ -19,6 +19,9 @@ from process import run
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / ".claude/hooks"))
 from secret_names import is_secret  # noqa: E402
+from project_files import git_active  # noqa: E402
+PLAIN_FOLDER = ("needs its own git repository; in a plain folder run tools/architecture/graph.py and "
+                "archify render directly (knowledge/operations/architecture-maintenance.md)")
 CODE = {".py", ".sh", ".js", ".mjs", ".ts", ".tsx", ".go", ".rs", ".java"}
 
 
@@ -171,6 +174,9 @@ def toolchain(root, config):
 
 
 def refresh(root, target, base=None, check=False):
+    # Nested in another repository, git would answer for the parent and analyse a tree that is not this one.
+    if not git_active(root):
+        raise ValueError(PLAIN_FOLDER)
     target = revision(root, target)
     config = json.loads((root / "tools/architecture/integrations.json").read_text())
     analysis = root / ".aeion/analysis"
@@ -238,6 +244,27 @@ def refresh(root, target, base=None, check=False):
     return destination
 
 
+def write_listing(root, analysis):
+    """`.aeion/analysis/index.html`: one stable page linking every PASS baseline, newest commit first.
+    It is rebuilt from the receipts each time, never moved like a pointer, so a slow older job cannot
+    send a reader back to an older baseline."""
+    rows = []
+    for receipt in analysis.glob("*/receipt.json"):
+        try:
+            data = json.loads(receipt.read_text())
+            when, subject = git(root, "show", "-s", "--format=%cI%x00%s", data["target"]).decode().strip().split("\0", 1)
+        except (ValueError, KeyError, OSError, subprocess.SubprocessError):
+            continue
+        if data.get("status") == "PASS" and data["target"] == receipt.parent.name:
+            rows.append((when, data["target"], subject))
+    links = "".join(f'<li><a href="{sha}/index.html">{sha[:12]}</a> {html.escape(when[:10])} {html.escape(subject)}</li>'
+                    for when, sha, subject in sorted(rows, reverse=True))
+    page = analysis / ".index.tmp"
+    page.write_text('<!doctype html><meta charset="utf-8"><title>Architecture baselines</title>'
+                    f'<h1>Architecture baselines</h1><p>Newest commit first.</p><ul>{links}</ul>\n')
+    os.replace(page, analysis / "index.html")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--target", required=True)
@@ -245,7 +272,8 @@ def main():
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
     try:
-        refresh(ROOT, args.target, args.base, args.check)
+        destination = refresh(ROOT, args.target, args.base, args.check)
+        write_listing(ROOT, destination.parent)
     except (ValueError, OSError, subprocess.SubprocessError) as error:
         parser.exit(1, f"Architecture refresh: FAILED ({error})\n")
 

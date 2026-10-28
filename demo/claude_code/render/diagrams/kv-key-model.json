@@ -1,0 +1,129 @@
+{
+  "schema_version": 1,
+  "diagram_type": "erd",
+  "meta": {
+    "title": "Deno KV key model",
+    "output": "diagrams/kv-key-model.html",
+    "animation": "trace",
+    "quality_profile": "showcase"
+  },
+  "layout": {
+    "mode": "grid",
+    "gapY": 38,
+    "gapX": 72
+  },
+  "entities": [
+    {
+      "id": "ideas",
+      "label": "[\"ideas\", id] → Idea",
+      "tag": "primary",
+      "row": 0,
+      "col": 1,
+      "width": 270,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "ULID (monotonic)",
+          "key": "pk"
+        },
+        {
+          "name": "title",
+          "type": "string 3–80"
+        },
+        {
+          "name": "description",
+          "type": "string ≤ 500"
+        },
+        {
+          "name": "tags",
+          "type": "string[] ≤ 5"
+        },
+        {
+          "name": "votes",
+          "type": "number"
+        },
+        {
+          "name": "createdAt",
+          "type": "ISO date"
+        }
+      ]
+    },
+    {
+      "id": "by_votes",
+      "label": "[\"ideas_by_votes\", votes, id] → id",
+      "tag": "index",
+      "row": 0,
+      "col": 0,
+      "width": 300,
+      "attributes": [
+        {
+          "name": "votes",
+          "type": "number",
+          "key": "pk"
+        },
+        {
+          "name": "id",
+          "type": "ULID",
+          "key": "fk",
+          "references": "ideas.id"
+        }
+      ]
+    },
+    {
+      "id": "by_tag",
+      "label": "[\"ideas_by_tag\", tag, id] → id",
+      "tag": "index",
+      "row": 1,
+      "col": 0,
+      "width": 290,
+      "attributes": [
+        {
+          "name": "tag",
+          "type": "[a-z0-9-]",
+          "key": "pk"
+        },
+        {
+          "name": "id",
+          "type": "ULID",
+          "key": "fk",
+          "references": "ideas.id"
+        }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "id": "votes_idea",
+      "from": "by_votes",
+      "to": "ideas",
+      "label": "one per idea",
+      "fromCardinality": "one",
+      "toCardinality": "one"
+    },
+    {
+      "id": "tag_idea",
+      "from": "by_tag",
+      "to": "ideas",
+      "label": "one per tag",
+      "fromCardinality": "many",
+      "toCardinality": "one"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Keys are the indexes",
+      "items": [
+        "Listing a prefix in reverse gives newest or most voted first",
+        "A ULID orders ties newest first"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Moved together",
+      "items": [
+        "A vote deletes the old votes key and writes the new one in the same commit"
+      ]
+    }
+  ]
+}

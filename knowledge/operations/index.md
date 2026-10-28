@@ -18,5 +18,5 @@ generated:
 | [Build and test](build-and-test.md) | stable | every gate, and the language servers |
 | [The loops](loops.md) | stable | inner, middle, outer: jobs, schedules, safety |
 
-- [Claude Code, Codex and OpenCode](agent-compatibility.md)
+- [Claude Code, Codex, OpenCode, Pi and other agents](agent-compatibility.md)
 - [GitHub main protection](github-protection.md)

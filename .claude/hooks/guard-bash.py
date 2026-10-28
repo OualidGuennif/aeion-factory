@@ -175,6 +175,44 @@ def without_inert_heredocs(command):
     return "\n".join(out)
 
 
+# In code, `entry.key)` reads a property, not a file: a name directly followed by ) ] } ; or , and not
+# preceded by a path character is masked, and only in a quoted heredoc that is code or text: read by an
+# interpreter (which can open any file anyway) or git (a message), or written to a file by cat or tee.
+# A bare "server.key" may still be a path; a heredoc fed to a shell, xargs or a read loop names files,
+# so it is never masked.
+ACCESSOR = re.compile(r"(?<![\w$./-])([A-Za-z_$][\w$]*)\.(key|pem|p12|pfx)(?=[)\]};,])")
+CODE_READERS = {"python3", "python", "node", "deno", "bun", "tsx", "ts-node", "ruby", "perl", "git"}
+
+
+def text_heredoc(before, after):
+    """Whether a heredoc's body is code or text: its own simple command is an interpreter or git, or
+    cat or tee writing to a file."""
+    command = re.split(r"[;&|(]", before)[-1] + re.split(r"[;&|]", after)[0]
+    words = command.split()
+    if not words:
+        return False
+    name = PurePosixPath(words[0]).name
+    return name in CODE_READERS or name in {"cat", "tee"} and ">" in command
+
+
+def without_code_accessors(command):
+    out, end, masked = [], None, False
+    for line in command.split("\n"):
+        if end is not None:
+            if line.strip() == end:
+                end = None
+            elif masked:
+                line = ACCESSOR.sub(r"\1_\2", line)
+            out.append(line)
+            continue
+        out.append(line)
+        m = HEREDOC.search(line)
+        if m:
+            # An unquoted delimiter lets the shell run $(…) in the body, so only a quoted one is plain text.
+            end, masked = m.group(2), bool(m.group(1)) and text_heredoc(line[:m.start()], line[m.end():])
+    return "\n".join(out)
+
+
 def tokens_of(text):
     try:
         lexer = shlex.shlex(text, posix=True, punctuation_chars=";&|()<>\n")
@@ -389,6 +427,33 @@ def docker_inspect_dump(command):
         if fmt is None or INSPECT_DUMP_FORMAT.search(fmt):
             return True
     return False
+
+
+GRAPHIFY_LLM = {"extract": "runs semantic LLM extraction", "label": "names communities with an LLM",
+                "provider": "configures LLM providers", "add": "fetches a URL into the corpus",
+                "clone": "clones a repository for LLM extraction", "global": "writes the global graph in ~/.graphify"}
+GRAPHIFY_INSTALLERS = {"install", "uninstall", "hook"}
+
+
+def graphify_command(command):
+    """Graphify stays structural and read-only here: no LLM call, no rewrite of agent instructions."""
+    for words in simple_commands(command):
+        words = program(words)
+        if words and words[0] == "<script>":
+            reason = graphify_command(words[1])
+            if reason:
+                return reason
+            continue
+        if not words or PurePosixPath(words[0]).name != "graphify" or len(words) < 2:
+            continue
+        sub, rest = words[1], words[2:]
+        if sub in GRAPHIFY_LLM:
+            return f"graphify {sub} {GRAPHIFY_LLM[sub]}"
+        if sub == "cluster-only" and "--no-label" not in rest:
+            return "graphify cluster-only names communities with an LLM unless --no-label is given"
+        if sub in GRAPHIFY_INSTALLERS or rest[:1] in (["install"], ["uninstall"]):
+            return f"graphify {' '.join(words[1:3])} rewrites agent instructions or git hooks"
+    return ""
 
 
 GIT_VALUE_FLAGS = {"-C", "-c", "--config-env", "--git-dir", "--work-tree", "--namespace"}
@@ -606,8 +671,10 @@ def quotes_inert(command):
 
 
 def intake_dump(command, base, changed_directory=False):
+    """Why the command dumps a file it cannot size, or "" when it does not; the reason names the cause,
+    so a refusal for a variable path or a cd does not read like a missing limiter."""
     if bounded_pipeline(command):
-        return False
+        return ""
     for words in simple_commands(command):
         words = program(words)
         if not words:
@@ -616,42 +683,43 @@ def intake_dump(command, base, changed_directory=False):
         if name == "cd":
             changed_directory = True
         if name == "<script>":
-            if intake_dump(words[1], base, changed_directory):
-                return True
+            reason = intake_dump(words[1], base, changed_directory)
+            if reason:
+                return reason
             continue
         if name == "find" and {"-exec", "-execdir"} & set(words) and {"cat", "less", "more"} & {PurePosixPath(w).name for w in words}:
-            return True
+            return "find -exec cat dumps every file it finds"
         if name not in {"cat", "less", "more"}:
             continue
         if changed_directory:
-            return True
+            return f"cannot size {name} after a cd (the path depends on the new directory); use head -n 80 <path>"
         paths = [w for w in words[1:] if not w.startswith("-")]
         if not paths:
             # Small literal heredocs construct prompt/body text; unknown stdin is not sized.
             if HEREDOC.search(command) and len(command.encode()) <= MAX_INTAKE_BYTES and len(command.splitlines()) <= MAX_INTAKE_LINES:
                 continue
-            return True
+            return f"cannot size {name}'s standard input"
         total, lines = 0, 0
         for raw in paths:
             path = Path(raw)
             path = path if path.is_absolute() else base / path
             if not path.exists():
                 if any(char in raw for char in "$*?["):
-                    return True
+                    return f'cannot size "{raw}" (a variable or glob path); use head -n 80 or a literal path'
                 continue
             if not path.is_file():
-                return True
+                return f'"{raw}" is not a regular file'
             if total + path.stat().st_size > MAX_INTAKE_BYTES:
-                return True
+                return f'"{raw}" is over {MAX_INTAKE_BYTES} bytes'
             with path.open("rb") as stream:
                 data = stream.read(MAX_INTAKE_BYTES - total + 1)
             total += len(data)
             if total > MAX_INTAKE_BYTES:
-                return True
+                return f'"{raw}" is over {MAX_INTAKE_BYTES} bytes'
             lines += data.count(b"\n") + bool(data and not data.endswith(b"\n"))
             if lines > MAX_INTAKE_LINES:
-                return True
-    return False
+                return f'"{raw}" is over {MAX_INTAKE_LINES} lines'
+    return ""
 
 
 try:
@@ -663,6 +731,7 @@ except Exception:
     deny("the hook input could not be read; refusing rather than guessing.")
 TOKEN_SPLIT = r"[\s'\"=;&|<>()`]+"
 tokens = [t for t in re.split(TOKEN_SPLIT, command) if t]
+secret_tokens = [t for t in re.split(TOKEN_SPLIT, without_code_accessors(command)) if t]
 workdir = event.get("tool_input", {}).get("workdir", event.get("tool_input", {}).get("cwd", event.get("cwd", ".")))
 try:
     # Quotes join a shell word (sub/'.e'*), so they are dropped rather than split on.
@@ -673,7 +742,7 @@ try:
         inert = re.sub(r"'[^']*'|\"[^\"]*\"", lambda m: m.group(0).translate(QUOTED_GLOB), inert)
     marked = shell_words(inert)
     unquoted_globs = [any(char in t for char in "*?[") for t in marked]
-    secrets = mentioned_secrets(tokens, shell_tokens, directories(command, workdir if isinstance(workdir, str) else "."),
+    secrets = mentioned_secrets(secret_tokens, shell_tokens, directories(command, workdir if isinstance(workdir, str) else "."),
                                 unquoted_globs)
 except (OSError, ValueError, RecursionError):
     deny("the files a glob names could not be verified; name the files explicitly.")
@@ -724,6 +793,12 @@ if refuses(docker_inspect_dump, command):
 if refuses(compose_config, command):
     deny("docker compose config prints the configuration with the secrets filled in.")
 
+# The code graph is deterministic: tools/architecture/ask answers structural questions without an LLM.
+graphify_reason = refuses(graphify_command, command)
+if graphify_reason:
+    deny((graphify_reason if isinstance(graphify_reason, str) else "the graphify command is nested too deeply to verify")
+         + "; use tools/architecture/ask (skill graph), which stays structural and calls no model.")
+
 # History and checks are not bypassed.
 if re.search(r"\bgit\s+push\b", command) and re.search(r"\s(-f|--force|--force-with-lease)(\s|=|$)", command):
     deny("force-pushing rewrites shared history.")
@@ -737,8 +812,11 @@ if written:
     deny(written if isinstance(written, str) else "the command is nested too deeply to verify.")
 try:
     base = event["tool_input"].get("workdir", event["tool_input"].get("cwd", event.get("cwd", ".")))
-    if intake_dump(command, Path(base)):
-        deny(INTAKE_REASON)
+    reason = intake_dump(command, Path(base))
+    if reason:
+        # A limiter counts only when the whole command is one pipeline, so say which file failed and why.
+        deny(f"bounded intake: {reason}. A limiter counts only when the whole command is one pipeline; "
+             + INTAKE_REASON.removeprefix("bounded intake: "))
 except (OSError, TypeError, RecursionError):
     deny("the dump size could not be verified; " + INTAKE_REASON)
 sys.exit(0)

@@ -6,6 +6,56 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-10-28
+
+### Added
+- `tools/architecture/ask callers <file>:<name or line>`: who calls a symbol, resolved by type through the
+  project's own language server (`deno lsp`, or a TypeScript 7 `tsc --lsp`), in any harness. Installs
+  nothing; without a server it exits 1 with the search to run instead.
+- The Pi harness (1.4.0+): `.pi/extensions/factory/` sends Pi's tool, start and compaction events to the
+  shared guards, `tools/agents/run pi` checks the version, and `demo/pi/` opens it in the playground.
+- `tools/architecture/ask` and the skill `graph`: exact, deterministic answers from a Graphify graph of the
+  working tree, rebuilt only when a file changed (`find`, `deps`, `rdeps`, `path`, `tests`, `untested`,
+  `spec`, `files`, `hubs`, `status`). Names match exactly (exit 3 ambiguous, 4 none), and a call Graphify
+  inferred by name alone counts only when the files import each other. No server and no LLM.
+- `graph.py` adds `specified_by` edges from `Spec:` lines, `names_file` edges from tests that name a file
+  they run, and exact `imports` from `deno info` in a Deno project; `coverage.json` counts each.
+- The Bash guard refuses Graphify's LLM and installer commands (`extract`, `label`, `provider`, `add`,
+  `clone`, `global`, `install`, `cluster-only` without `--no-label`).
+- `docs/diagrams.html` links every Archify diagram; `tools/architecture/refresh` rebuilds
+  `.aeion/analysis/index.html`, a listing of the PASS baselines, newest commit first.
+- `demo/`, a playground where an agent builds a real app on a copy of the factory: briefs in
+  `demo/plan/`; each `demo/<harness>/` keeps its journal and `feedback_for_aeion/`, and only its `workspace/` is local.
+
+- `tools/factory-tests` runs every factory test suite, as CI now does; `AGENTS.md` names it in one line
+  instead of five, so a project has room under the 120-line cap for its own build commands.
+
+### Changed
+- Graphify is pinned to the 0.9.97 release and Archify to the v3.2.0 release tag (was 0.9.95 and 13
+  commits past v3.2.0); only optional extras changed upstream, so the hashed requirements are unchanged.
+- Release source archives leave out `demo/` (`.gitattributes` export-ignore); a release test checks it.
+
+### Fixed
+- OpenCode started in a subfolder (`demo/`) finds the project's hooks in the nearest folder above that has
+  them, instead of refusing every tool call.
+- `doc-links` skips a project nested in this one (its own `AGENTS.md` and `knowledge/`), whose `Spec:`
+  pointers name its own knowledge; a demo copy no longer fails the parent's L1 and L3.
+- The Bash guard's bounded-intake refusal names its cause (oversized file, variable or glob path, a
+  `cat` after a `cd`) instead of always asking for a limiter.
+- The Bash guard no longer reads a code property such as Deno KV's `entry.key)` as a key file, in a
+  quoted heredoc read by an interpreter or git or written by `cat`/`tee`; unquoted, shell, `xargs`
+  and read-loop heredocs stay strict.
+- The Graphify graph links each spec to the files its frontmatter `sources` name (`specifies` edges),
+  so "which spec covers this file" is answered; unresolved resources are listed in `coverage.json`.
+  `graph.py` also accepts a relative root.
+- `tools/architecture/refresh` refuses a root that is not its own git repository before any git call,
+  instead of analysing the enclosing repository; the doc gives the plain-folder commands.
+- Without git, the file walk honours each folder's simple `.gitignore` rules, so build output such as
+  Fresh's `app/_fresh/` no longer fails `repo-health` in a plain folder.
+- At the 250k alert the checkpoint is admitted from any working directory (relative, absolute or
+  `cd <root> &&`), and without `--base` in a plain folder, which could not close before; a refused
+  checkpoint names the missing heading or the remaining TODO.
+
 ## [1.3.0] - 2026-10-28
 
 ### Added

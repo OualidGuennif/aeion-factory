@@ -1,0 +1,2 @@
+# Release archives (GitHub's source zip and tar.gz, `git archive`) leave out the demo playground.
+/demo export-ignore

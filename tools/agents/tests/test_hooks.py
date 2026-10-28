@@ -58,7 +58,7 @@ class HookTests(unittest.TestCase):
                            session_id=f'feedback-codex-{os.getpid()}-{id(self)}')
         self.assertIn('narration:', result['hookSpecificOutput']['additionalContext'])
         # Harnesses with no readable transcript stay silent and keep working, on PostToolUse and Stop.
-        for provider in ('devin', 'droid', 'opencode'):
+        for provider in ('devin', 'droid', 'opencode', 'pi'):
             event = {**self.event, 'session_id': f'feedback-{provider}', 'hook_event_name': 'PostToolUse'}
             self.assertEqual(hook.handle(self.root, provider, event), {}, provider)
             stopped = hook.handle(self.root, provider, {**event, 'hook_event_name': 'Stop'})
@@ -102,7 +102,7 @@ class HookTests(unittest.TestCase):
             self.assertIn('adapter', result.stdout, command)
 
     def test_secret_bash_is_denied_by_real_guard(self):
-        for provider in ('codex','opencode'):
+        for provider in ('codex','opencode','pi'):
             with self.assertRaises(ValueError):
                 self.call(provider,tool_input={'command':'cat .env'})
         self.assertEqual(self.call(),{})
@@ -118,6 +118,13 @@ class HookTests(unittest.TestCase):
             self.call('opencode',tool_name='Read',tool_input={'filePath':str(self.root/'.env')})
         self.assertEqual(self.call('opencode',tool_name='Read',tool_input={'filePath':'README.md'}),{})
 
+    def test_pi_path_field_is_guarded(self):
+        # Pi's read, edit and write name their file in `path`.
+        for name in ('Read', 'Edit', 'Write'):
+            with self.assertRaises(ValueError):
+                self.call('pi',tool_name=name,tool_input={'path':str(self.root/'.env')})
+        self.assertEqual(self.call('pi',tool_name='Read',tool_input={'path':'README.md'}),{})
+
     def test_crlf_patch_secret_paths_are_normalized_before_guarding(self):
         for kind in ('Add File', 'Update File', 'Delete File', 'Move to'):
             patch_text=f'*** Begin Patch\r\n*** {kind}: .env\r\n*** End Patch\r\n'
@@ -125,7 +132,7 @@ class HookTests(unittest.TestCase):
                 self.call(tool_name='apply_patch',tool_input={'command':patch_text})
 
     def test_before_compaction_refuses_missing_and_changed_checkpoint(self):
-        for provider in ('codex','opencode'):
+        for provider in ('codex','opencode','pi'):
             key=hook.key(provider,self.event)
             self.call(provider)
             self.assertFalse(hook.budget.handover_path(self.root,key).exists())
@@ -203,6 +210,16 @@ class HookTests(unittest.TestCase):
                               env={'PATH':str(native.parent)+os.pathsep+os.defpath,'PWD':str(caller)},capture_output=True,text=True)
         self.assertNotEqual(result.returncode,0)
         self.assertIn('requires OpenCode 2.1.4+',result.stderr)
+        # Pi: the same root and PWD, and a version gate at 1.4.0.
+        pi=native.parent/'pi'
+        pi.write_text(native.read_text().replace('opencode v2.1.3','pi 1.4.0'));pi.chmod(0o755)
+        result=subprocess.run([hook.sys.executable,str(launcher),'pi'],cwd=caller,
+                              env={'PATH':str(native.parent)+os.pathsep+os.defpath,'PWD':str(caller)},capture_output=True,text=True,check=True)
+        self.assertEqual(json.loads(result.stdout),{'cwd':str(self.root),'pwd':str(self.root)})
+        pi.write_text(pi.read_text().replace('pi 1.4.0','pi 1.3.9'))
+        result=subprocess.run([hook.sys.executable,str(launcher),'pi'],cwd=caller,
+                              env={'PATH':str(native.parent)+os.pathsep+os.defpath,'PWD':str(caller)},capture_output=True,text=True)
+        self.assertIn('requires Pi 1.4.0+',result.stderr)
 
     def test_devin_native_tool_names_reach_the_shared_guards(self):
         with self.assertRaises(ValueError):

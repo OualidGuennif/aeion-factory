@@ -39,7 +39,8 @@ machine is a work computer whose policy restricts installs. On a yes, run setup,
 CI still runs the analysis on GitHub, for the release pull request `develop → main` and every main
 update; pushes to `develop` run none. Setup creates a virtual environment in `.aeion/integrations/`,
 downloads the reviewed Graphify revision and its pinned packages into it, and clones the pinned
-Archify package there. Git, Python 3.12+ (excluding 3.14.1), Node 18+ and Chrome/Chromium are
+Archify package there. Both pins are release tags (Graphify 0.9.97, Archify v3.2.0), recorded by commit
+in `tools/architecture/integrations.json`. Git, Python 3.12+ (excluding 3.14.1), Node 18+ and Chrome/Chromium are
 required. Dependencies and browser execution are explicit; there is no global plugin install.
 Setup reinstalls the Graphify source pin even if the same package version was installed from a
 different source; refresh verifies its immutable commit archive URL and SHA-256 before importing it.
@@ -57,6 +58,18 @@ deletions and renames cannot leave old nodes. Required code/Markdown with no ext
 fails coverage. Other files are explicitly listed as inventory-only. PDF/image semantics and
 LLM inference are not claimed. This deterministic baseline needs no model token or secret.
 
+**Plain folder.** `refresh` needs the root to be its own git repository and refuses otherwise, before
+any git call: nested in another repository, git would answer for the parent. In a plain folder, run
+the two steps directly, with the parent's toolchain: `.aeion/integrations/graphify-venv/bin/python
+tools/architecture/graph.py <root> <out> <manifest.json>` (the manifest lists `{path, required}`),
+then `node .aeion/integrations/archify/archify/bin/archify.mjs render <type> <input.json> <out.html>`
+and `browser-check <out.html>`. Archify's evidence links need a git SHA, so a plain folder's diagrams carry none.
+
+**Working graph.** The baselines are immutable per commit. For questions while editing, the skill
+`graph` uses [`tools/architecture/ask`](../components/graph-queries.md): it rebuilds `.aeion/graph/`
+from the working tree when a file changed, in a git repository or a plain folder alike, and answers
+from it without the venv.
+
 The canonical [architecture spec](../components/factory-architecture.md) and `views.json` are
 reviewed source, not generated policy. Runtime/config changes must update the architecture spec
 in the same diff (or carry its existing `Docs-Checked` trailer). Reviewers verify semantic
@@ -71,7 +84,8 @@ provenance. Incomplete attempts have no PASS receipt; invalid prior attempts are
 A same-SHA successful rerun verifies artifact hashes and all gate summaries before reuse.
 There is no shared writable cross-job graph cache.
 `tools/architecture/refresh --check --target HEAD` verifies all artifact hashes at launch.
-No mutable latest pointer can be moved backward by an older finishing job.
+No mutable latest pointer can be moved backward by an older finishing job. Each run instead rebuilds
+`.aeion/analysis/index.html` from the PASS receipts, newest commit first; `docs/diagrams.html` links it.
 Downloaded CI artifacts preserve the original run's evidence and portable hashes. To revalidate
 Archify path provenance in a different location, run a new local baseline for that SHA.
 

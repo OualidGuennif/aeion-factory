@@ -212,10 +212,31 @@ def closure_tool(root, event):
             words = shlex.split(command)
         except ValueError:
             return False
-        return (len(words) == 8 and words[:3] == ["python3", "tools/context/budget.py", "checkpoint"]
-                and words[3] == "--session" and words[4] == event["session_id"] and words[5] == "--base"
-                and re.fullmatch(r"[A-Za-z0-9_./-]+", words[6]) is not None and words[7] == "--verify")
+        return checkpoint_call(root, event, words)
     return False
+
+
+def checkpoint_call(root, event, words):
+    """This root's checkpoint from any working directory, since a shell left in a subfolder must still
+    close: `[cd <root> &&] python3 <its budget.py> checkpoint --session <this session> [--base <ref>]
+    --verify`, or a bare `cd <root>`. Paths are resolved, never trusted by spelling."""
+    here = Path(event.get("cwd") or root)
+    if words[:1] == ["cd"]:
+        if len(words) < 2 or (here / words[1]).resolve() != root:
+            return False
+        if len(words) == 2:
+            return True
+        if words[2] != "&&":
+            return False
+        here, words = root, words[3:]
+    if len(words) < 2 or words[0] != "python3" or (here / words[1]).resolve() != root / "tools/context/budget.py":
+        return False
+    rest = words[2:]
+    if rest[:3] != ["checkpoint", "--session", event["session_id"]] or rest[-1:] != ["--verify"]:
+        return False
+    # A plain folder has no base; a repository names one ref.
+    return len(rest) == 4 or (len(rest) == 6 and rest[3] == "--base"
+                              and re.fullmatch(r"[A-Za-z0-9_./-]+", rest[4]) is not None)
 
 
 def stop(event_name, reason):
@@ -316,8 +337,12 @@ def checkpoint(root, session, base):
             raise ValueError("a stopped run cannot request another closure pass")
         handover = ensure_handover(root, session)
         text = handover.read_text()
-        if "TODO" in text or any(f"## {key}\n" not in text for key in ("Scope", "Completed", "Remaining", "Constraints", "Evidence")):
-            raise ValueError("complete all handover sections first")
+        # Name each fault: a heading spelled `## Completed (commits)` reads as complete to a person.
+        missing = [f"## {key}" for key in ("Scope", "Completed", "Remaining", "Constraints", "Evidence") if f"## {key}\n" not in text]
+        if missing or "TODO" in text:
+            faults = ([f"missing heading{'s' if len(missing) > 1 else ''}: {', '.join(missing)} (exact line)"] if missing else []) \
+                + (["a section still reads TODO"] if "TODO" in text else [])
+            raise ValueError(f"complete all handover sections first: {'; '.join(faults)}")
         before = fingerprint(root)
         diff = (("tools/knowledge/doc-links", "--diff", base, "--worktree"),) if repository else ()
         for command in (*CHECKS, *diff):

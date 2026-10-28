@@ -17,6 +17,7 @@ loader = importlib.machinery.SourceFileLoader("refresh", str(SCRIPT))
 spec = importlib.util.spec_from_loader("refresh", loader)
 refresh = importlib.util.module_from_spec(spec)
 loader.exec_module(refresh)
+import graph
 
 
 class RefreshTests(unittest.TestCase):
@@ -151,6 +152,67 @@ class RefreshTests(unittest.TestCase):
             run([sys.executable, "-c", parent], timeout=0.1)
         time.sleep(0.7)
         self.assertFalse(marker.exists())
+
+
+class PlainFolderTests(unittest.TestCase):
+    def test_a_plain_folder_nested_in_a_repository_is_refused_before_any_git_call(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            parent = Path(tmp).resolve()
+            subprocess.run(["git", "init", "-q", str(parent)], check=True)
+            copy = parent / "demo/workspace"
+            copy.mkdir(parents=True)
+            calls = []
+            original = refresh.revision
+            refresh.revision = lambda *args: calls.append(args) or original(*args)
+            try:
+                with self.assertRaisesRegex(ValueError, "needs its own git repository"):
+                    refresh.refresh(copy, "HEAD")
+            finally:
+                refresh.revision = original
+            self.assertEqual(calls, [])
+            self.assertFalse((copy / ".aeion").exists())
+
+
+class ListingTests(unittest.TestCase):
+    def test_listing_links_pass_baselines_newest_commit_first(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            subprocess.run(["git", "init", "-q", str(root)], check=True)
+            shas = []
+            for day, subject in (("2026-01-01", "older"), ("2026-02-01", "newer <b>")):
+                env = {"GIT_COMMITTER_DATE": f"{day}T00:00:00Z", "GIT_AUTHOR_DATE": f"{day}T00:00:00Z",
+                       "PATH": "/usr/bin:/bin:/usr/local/bin:/opt/homebrew/bin"}
+                subprocess.run(["git", "-C", str(root), "-c", "user.name=T", "-c", "user.email=t@example.invalid",
+                                "commit", "-q", "--allow-empty", "-m", subject], check=True, env=env)
+                shas.append(refresh.git(root, "rev-parse", "HEAD").decode().strip())
+            analysis = root / ".aeion/analysis"
+            for sha, status in ((shas[0], "PASS"), (shas[1], "PASS")):
+                (analysis / sha).mkdir(parents=True)
+                (analysis / sha / "receipt.json").write_text(json.dumps({"status": status, "target": sha}))
+            # A failed attempt and a receipt naming another folder are not listed.
+            (analysis / "incomplete-x").mkdir()
+            (analysis / "incomplete-x/receipt.json").write_text(json.dumps({"status": "PASS", "target": shas[0]}))
+            refresh.write_listing(root, analysis)
+            page = (analysis / "index.html").read_text()
+            self.assertLess(page.index(shas[1]), page.index(shas[0]))
+            self.assertEqual(page.count("<li>"), 2)
+            self.assertIn("newer &lt;b&gt;", page)
+
+
+class SpecSourceTests(unittest.TestCase):
+    def test_frontmatter_sources_become_specifies_edges_and_misses_are_reported(self):
+        # The spec's body names no code: only its frontmatter can link it.
+        nodes = [("spec", {"node_kind": "page", "source_file": "knowledge/components/a.md", "label": "a.md",
+                           "frontmatter": {"sources": [{"resource": "../../app/one.ts"},
+                                                       {"resource": "../../app/two.ts"},
+                                                       {"resource": "../../app/gone.ts"},
+                                                       {"resource": "https://example.invalid/x"}]}}),
+                 ("one", {"source_file": "app/one.ts", "label": "one.ts"}),
+                 ("one_run", {"source_file": "app/one.ts", "label": "run()"}),
+                 ("two", {"source_file": "app/two.ts", "label": "two.ts"})]
+        edges, unresolved = graph.spec_source_edges(nodes)
+        self.assertEqual([(s, t, d["relation"]) for s, t, d in edges], [("spec", "one", "specifies"), ("spec", "two", "specifies")])
+        self.assertEqual(unresolved, ["knowledge/components/a.md: ../../app/gone.ts"])
 
 
 if __name__ == "__main__":

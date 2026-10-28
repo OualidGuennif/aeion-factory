@@ -11,6 +11,7 @@ Everything you can run here, grouped by loop. Skills are invoked by name in a Cl
 | `spec` | a feature or component changes: write its spec sections first |
 | `build` | implement in thin, tested slices |
 | `test` | add or fix tests; never weaken an assertion |
+| `graph` | before changing or tracing code: `knowledge/`, then `tools/architecture/ask`, then the language server |
 | `debug` | reproduce a failure, test one hypothesis, fix its root cause and prove the regression |
 | `sign-off` | end a task: tests, docs and links, task state, security on sensitive diffs |
 | `pr-review` | a pull request is open: fresh reviewer, verified findings, one verdict comment |
@@ -31,6 +32,7 @@ tools/knowledge/doc-links                             # docs <-> code links reso
 tools/knowledge/doc-links --diff origin/develop --worktree   # also: code changed without its doc (L3)
 tools/knowledge/doc-links --for path/to/file          # the docs covering a file
 tools/repo-health/repo-health [--json]                # comment blocks, file sizes, AGENTS.md and work caps
+tools/factory-tests                                   # every factory test suite below, as CI runs them
 python3 tools/knowledge/tests/test_doc_links.py       # tool tests
 python3 .claude/hooks/test_hooks.py                   # hook tests
 python3 tools/context/tests/test_budget.py            # context boundary/recovery regressions
@@ -43,6 +45,7 @@ tools/agents/run claude                             # existing Claude integratio
 tools/agents/run codex                              # trust project/hooks first
 tools/agents/run opencode                           # native plugin, shared skills
 tools/agents/run opencode --isolated                # separate local profile on database conflict
+tools/agents/run pi                                 # Pi 1.4.0+, project extension in .pi/
 tools/agents/run devin                              # Devin CLI: .devin/ hooks, shared skills
 tools/agents/run droid                              # Droid (factory.ai): .factory/ hooks, shared skills
 tools/agents/run antigravity                        # Google Antigravity CLI (agy): .agents/hooks.json
@@ -50,6 +53,7 @@ git config aeion.mode local                         # local play: commits on mai
 git config --unset aeion.mode                       # back to the team flow
 python3 tools/agents/tests/test_hooks.py
 node --test tools/agents/tests/test_opencode.mjs
+node --test tools/agents/tests/test_pi.mjs
 python3 tools/loops/tests/test_loops.py
 tools/context/run                                    # original Claude entry, native compact at 250k
 tools/context/run --strict                           # refuses: strict pre-request control unqualified

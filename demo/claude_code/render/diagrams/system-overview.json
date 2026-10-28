@@ -1,0 +1,214 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Idea Board: system overview",
+    "output": "diagrams/system-overview.html",
+    "animation": "trace",
+    "quality_profile": "showcase",
+    "visual_preset": "blueprint"
+  },
+  "components": [
+    {
+      "id": "browser",
+      "type": "external",
+      "label": "Browser",
+      "sublabel": "HTML first",
+      "pos": [
+        40,
+        300
+      ],
+      "size": [
+        132,
+        60
+      ]
+    },
+    {
+      "id": "islands",
+      "type": "frontend",
+      "label": "Islands",
+      "sublabel": "NewIdeaForm, VoteButton",
+      "pos": [
+        40,
+        470
+      ],
+      "size": [
+        132,
+        60
+      ]
+    },
+    {
+      "id": "fresh",
+      "type": "backend",
+      "label": "Fresh server",
+      "sublabel": "routes, SSR, csrf()",
+      "pos": [
+        260,
+        300
+      ],
+      "size": [
+        132,
+        60
+      ],
+      "tag": "serve.ts"
+    },
+    {
+      "id": "pages",
+      "type": "backend",
+      "label": "Page handlers",
+      "sublabel": "home.tsx, vote.ts",
+      "pos": [
+        480,
+        180
+      ],
+      "size": [
+        132,
+        60
+      ]
+    },
+    {
+      "id": "api",
+      "type": "backend",
+      "label": "Hono API",
+      "sublabel": "/api/* catch-all",
+      "pos": [
+        480,
+        420
+      ],
+      "size": [
+        132,
+        60
+      ]
+    },
+    {
+      "id": "domain",
+      "type": "security",
+      "label": "Domain",
+      "sublabel": "validate, parse filters",
+      "pos": [
+        700,
+        300
+      ],
+      "size": [
+        132,
+        60
+      ]
+    },
+    {
+      "id": "store",
+      "type": "backend",
+      "label": "Idea store",
+      "sublabel": "store/ideas.ts",
+      "pos": [
+        920,
+        300
+      ],
+      "size": [
+        132,
+        60
+      ]
+    },
+    {
+      "id": "kv",
+      "type": "database",
+      "label": "Deno KV",
+      "sublabel": "SQLite file, KV_PATH",
+      "pos": [
+        1140,
+        300
+      ],
+      "size": [
+        132,
+        60
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Deno process",
+      "wraps": [
+        "fresh",
+        "pages",
+        "api",
+        "domain",
+        "store"
+      ],
+      "pad": 20
+    }
+  ],
+  "connections": [
+    {
+      "from": "browser",
+      "to": "fresh",
+      "variant": "emphasis",
+      "label": "GET / and form posts"
+    },
+    {
+      "from": "islands",
+      "to": "fresh",
+      "variant": "dashed",
+      "label": "fetch /api/*"
+    },
+    {
+      "from": "fresh",
+      "to": "pages",
+      "route": "orthogonal-v",
+      "label": "/, /ideas/:id/vote"
+    },
+    {
+      "from": "fresh",
+      "to": "api",
+      "route": "orthogonal-v",
+      "label": "/api/*"
+    },
+    {
+      "from": "pages",
+      "to": "domain",
+      "label": "parse"
+    },
+    {
+      "from": "api",
+      "to": "domain",
+      "label": "validate"
+    },
+    {
+      "from": "domain",
+      "to": "store",
+      "variant": "emphasis",
+      "label": "valid draft"
+    },
+    {
+      "from": "store",
+      "to": "kv",
+      "variant": "emphasis",
+      "label": "atomic commit"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "One process",
+      "items": [
+        "Fresh serves pages and mounts Hono under /api",
+        "Both share one lazily opened store"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "HTML first",
+      "items": [
+        "Forms post without JavaScript",
+        "Islands only enhance: fetch instead of reload"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "One rule set",
+      "items": [
+        "The page and the API call the same validation",
+        "They differ only in what they do with a refusal"
+      ]
+    }
+  ]
+}

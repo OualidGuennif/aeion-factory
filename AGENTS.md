@@ -22,12 +22,13 @@ efficiency/   the seven-phase guide (read 00-EFFICIENCY.md first)
 knowledge/    canonical knowledge (index.md first): policies, components, decisions, operations
 work/         current.md, the state of open tasks only
 tech-watch/   the technical watch: method, and pending dated packages
-loops/        orchestrator.sh (inner, middle, outer, docs, security, watch, retro), prompts, schedules,
-              the issue protocol, the Decisions API client (off)
+loops/        orchestrator.sh and its prompts, schedules, issue protocol, Decisions API client (off)
+demo/         playground: plan/ briefs; per harness a journal, feedback_for_aeion/ and a local workspace/
 tools/        knowledge/link/health checks, agent adapters, architecture and local language servers
 .claude/      original hooks, maintained skills, path-scoped rules, hookify examples
 .codex/       Codex native config/hooks; .agents/ holds skill links and Antigravity's hooks.json
 .opencode/    OpenCode native plugin; root opencode.json selects shared skills/compaction
+.pi/          Pi extension (shared guards, verified handover before compaction)
 .devin/       Devin CLI hooks and import settings (Claude import off; shared adapter)
 .factory/     Droid (factory.ai, another product) hooks only; Æion local state is the ignored .aeion/
 ```
@@ -36,11 +37,7 @@ tools/        knowledge/link/health checks, agent adapters, architecture and loc
 
 ```bash
 tools/knowledge/knowledge-check && tools/knowledge/doc-links && tools/repo-health/repo-health
-python3 tools/knowledge/tests/test_doc_links.py && python3 .claude/hooks/test_hooks.py && python3 .claude/hooks/test_token_feedback.py
-python3 tools/repo-health/tests/test_repo_health.py && python3 tools/git-hooks/tests/test_pre_push.py
-python3 tools/context/tests/test_budget.py && python3 tools/architecture/tests/test_refresh.py
-python3 tools/agents/tests/test_hooks.py && node --test tools/agents/tests/test_opencode.mjs
-python3 tools/loops/tests/test_loops.py && python3 tools/release/tests/test_release.py
+tools/factory-tests                          # the factory's own test suites, as CI runs them
 tools/architecture/refresh --target HEAD --base origin/main  # after committing
 loops/orchestrator.sh outer --dry-run        # shows the command a loop would run, runs nothing
 ```
@@ -57,6 +54,7 @@ open that file and follow it.
 | Agent setup and runtime differences | [Compatibility](knowledge/operations/agent-compatibility.md); README setup |
 | Any change | `knowledge/index.md`, then the doc of the area; `.agents/skills/plan/SKILL.md` |
 | A feature or component | `knowledge/policies/specs-first.md`; `.agents/skills/spec/SKILL.md` |
+| Tracing code before changing it | `.agents/skills/graph/SKILL.md`; `tools/architecture/ask` (no LLM) |
 | A bug or a failing check | `.agents/skills/debug/SKILL.md`, then `.agents/skills/test/SKILL.md` |
 | Finishing a task | `.agents/skills/sign-off/SKILL.md` (team flow) |
 | Security-sensitive code | `knowledge/policies/security.md`; `.agents/skills/security-scan/SKILL.md` |

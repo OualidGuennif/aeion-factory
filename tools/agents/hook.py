@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # Spec: knowledge/operations/agent-compatibility.md
-"""Adapt native Codex/OpenCode/Devin/Droid/Antigravity payloads to existing guards and verified handovers."""
+"""Adapt native Codex/OpenCode/Pi/Devin/Droid/Antigravity payloads to existing guards and verified handovers."""
 import hashlib
 import json
 from pathlib import Path
@@ -183,7 +183,7 @@ def antigravity_event(event):
 
 
 def handle(root, provider, event):
-    if provider not in {'codex', 'opencode', 'devin', 'droid', 'antigravity'} or not isinstance(event, dict):
+    if provider not in {'codex', 'opencode', 'pi', 'devin', 'droid', 'antigravity'} or not isinstance(event, dict):
         raise ValueError('invalid provider or event')
     if provider == 'antigravity':
         event = antigravity_event(event)

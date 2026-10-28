@@ -1,0 +1,189 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Sequence: create an idea",
+    "output": "diagrams/sequence-create-idea.html",
+    "animation": "trace",
+    "quality_profile": "showcase",
+    "column_fit": "spread"
+  },
+  "participants": [
+    {
+      "id": "user",
+      "type": "external",
+      "label": "Contributor",
+      "sublabel": "browser"
+    },
+    {
+      "id": "island",
+      "type": "frontend",
+      "label": "NewIdeaForm",
+      "sublabel": "island"
+    },
+    {
+      "id": "api",
+      "type": "backend",
+      "label": "Hono API",
+      "sublabel": "POST /api/ideas"
+    },
+    {
+      "id": "domain",
+      "type": "security",
+      "label": "Domain",
+      "sublabel": "validateNewIdea"
+    },
+    {
+      "id": "store",
+      "type": "backend",
+      "label": "Idea store",
+      "sublabel": "create()"
+    },
+    {
+      "id": "kv",
+      "type": "database",
+      "label": "Deno KV",
+      "sublabel": "one commit"
+    }
+  ],
+  "segments": [
+    {
+      "from": 148,
+      "to": 204,
+      "label": "Submit"
+    },
+    {
+      "from": 212,
+      "to": 268,
+      "label": "Validate"
+    },
+    {
+      "from": 276,
+      "to": 396,
+      "label": "Store + answer"
+    }
+  ],
+  "messages": [
+    {
+      "id": "m0",
+      "from": "user",
+      "to": "island",
+      "y": 160,
+      "label": "submit form",
+      "variant": "default"
+    },
+    {
+      "id": "m1",
+      "from": "island",
+      "to": "api",
+      "y": 192,
+      "label": "POST JSON (bodyLimit)",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m2",
+      "from": "api",
+      "to": "domain",
+      "y": 224,
+      "label": "validateNewIdea(body)",
+      "variant": "security"
+    },
+    {
+      "id": "m3",
+      "from": "domain",
+      "to": "api",
+      "y": 256,
+      "label": "ok, or field + reason",
+      "variant": "return"
+    },
+    {
+      "id": "m4",
+      "from": "api",
+      "to": "store",
+      "y": 288,
+      "label": "create(draft)",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m5",
+      "from": "store",
+      "to": "kv",
+      "y": 320,
+      "label": "check + set idea, votes, tags",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m6",
+      "from": "kv",
+      "to": "store",
+      "y": 352,
+      "label": "ok",
+      "variant": "return"
+    },
+    {
+      "id": "m7",
+      "from": "api",
+      "to": "island",
+      "y": 384,
+      "label": "201 {idea} (or 400)",
+      "variant": "return"
+    },
+    {
+      "id": "m8",
+      "from": "island",
+      "to": "user",
+      "y": 416,
+      "label": "reset, show list",
+      "variant": "return"
+    }
+  ],
+  "activations": [
+    {
+      "participant": "island",
+      "from": 154,
+      "to": 422,
+      "type": "frontend"
+    },
+    {
+      "participant": "api",
+      "from": 186,
+      "to": 390,
+      "type": "backend"
+    },
+    {
+      "participant": "domain",
+      "from": 218,
+      "to": 262,
+      "type": "security"
+    },
+    {
+      "participant": "store",
+      "from": 282,
+      "to": 358,
+      "type": "backend"
+    },
+    {
+      "participant": "kv",
+      "from": 314,
+      "to": 358,
+      "type": "database"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "rose",
+      "title": "A refusal writes nothing",
+      "items": [
+        "400 names the field and the reason",
+        "The island shows it under the field"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "All or nothing",
+      "items": [
+        "The idea, its votes key and its tag keys land in one atomic commit"
+      ]
+    }
+  ]
+}

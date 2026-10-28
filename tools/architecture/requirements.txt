@@ -1,5 +1,5 @@
 # Reviewed Graphify source and the dependency versions used by the baseline.
-graphifyy @ https://codeload.github.com/Graphify-Labs/graphify/tar.gz/92741d162b2094ffc2fed58cfbd8ee823e9da62c#sha256=b4bc34d33b48ca6e9b981809d104eaffcf4e53c9dfffc34bb317294863e4f2ec
+graphifyy @ https://codeload.github.com/Graphify-Labs/graphify/tar.gz/0a8cd4e1e342235fe53e881fb5d591bf0460071f#sha256=5991696931ab1995f412dcd0fbb4b4caa96ac040e32bd8ba3996c8277f35e14f
 networkx==3.7 \
     --hash=sha256:e3fd2c13a7814cee3746340d8d7f8598a67f16a58bf47fb7f8793fab6efca1b0 \
     --hash=sha256:fd77a511bd90f39f3d016351345b52cf5319b813bdca01de3f755d3cca62e96a

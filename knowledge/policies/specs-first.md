@@ -40,7 +40,7 @@ before its code is written, has these sections in this order:
   (`resource: ../../src/area/file.ts`). A directory source is checked for existence only.
 - **Code to doc:** a described file carries one header line `Spec: knowledge/<doc>.md`.
 - `tools/knowledge/doc-links` fails when a pointer or a source does not resolve, and with
-  `--diff origin/main` when a file changed while a doc covering it did not. Updating the doc, or a
+  `--diff origin/develop` (or `origin/main` without develop) when a file changed while a doc covering it did not. Updating the doc, or a
   commit trailer `Docs-Checked: knowledge/<doc>.md -- <why no documented fact changed>`, passes.
 - A link is a pointer, never copied content.
 - Git enumeration, history and diff failures return nonzero with a short diagnostic. An unreadable

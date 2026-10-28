@@ -379,7 +379,7 @@ deleted — the commit message and the knowledge base keep what matters.
   For formats without comments, use `sources`. This does not install language tools or validate syntax.
 - **`tools/knowledge/doc-links`** (shipped with Æion Factory, Python standard library only):
   - **L1** a `Spec:` pointer resolves; **L2** every `sources` path exists;
-  - **L3** with `--diff origin/main`: a file changed while a doc covering it did not. Updating the
+  - **L3** with `--diff <base>` (`origin/develop`, else `origin/main`): a file changed while a doc covering it did not. Updating the
     doc passes, and so does a commit trailer
     `Docs-Checked: knowledge/<doc>.md -- <why no documented fact changed>`. A diff that only adds or
     removes `Spec:` lines moves no fact and passes.
@@ -641,7 +641,8 @@ local edit-build-test cycle, the outer loop the integration, review and release 
   Checks: CI <state>; doc-links <result>; tests <what ran>
   ```
 
-- **Merge after `Review: OK` and a green CI** (squash). A change that needs a deploy or a human
+- **Merge after `Review: OK` and a green CI**: a task pull request may squash; a release pull request
+  (`develop → main`) is merged with a merge commit, never squashed. A change that needs a deploy or a human
   decision (money, risk, data deletion, a policy) waits for that human.
 - **Taste:** the skill `pr-taste` reads the owner's pull-request comments and keeps the durable
   ones — architecture, naming, style, security, UI — in `knowledge/policies/owner-preferences.md`,

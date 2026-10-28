@@ -26,7 +26,7 @@ it and fails when the committed bundle differs.
 | Layer | Gate | From |
 | --- | --- | --- |
 | Knowledge | `tools/knowledge/knowledge-check` | the root |
-| Docs and code links | `tools/knowledge/doc-links` (`--diff origin/main` on a branch) | the root |
+| Docs and code links | `tools/knowledge/doc-links` (`--diff origin/develop` before a push) | the root |
 | Comments, file size, caps | `tools/repo-health/repo-health` | the root |
 | Hooks and tools | `python3 .claude/hooks/test_hooks.py`, `python3 .claude/hooks/test_token_feedback.py`, `python3 tools/knowledge/tests/test_doc_links.py` | the root |
 | Health, push gate and release regressions | `python3 tools/repo-health/tests/test_repo_health.py`, `python3 tools/git-hooks/tests/test_pre_push.py`, `python3 tools/release/tests/test_release.py` | the root |

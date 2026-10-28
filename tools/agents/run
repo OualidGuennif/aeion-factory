@@ -8,8 +8,8 @@ import subprocess
 import sys
 
 root = Path(__file__).resolve().parents[2]
-if len(sys.argv) < 2 or sys.argv[1] not in {'claude', 'codex', 'opencode', 'pi', 'devin', 'droid', 'antigravity'}:
-    sys.exit('usage: tools/agents/run <claude|codex|opencode|pi|devin|droid|antigravity> [native arguments]')
+if len(sys.argv) < 2 or sys.argv[1] not in {'claude', 'codex', 'opencode', 'pi', 'dsh', 'devin', 'droid', 'antigravity'}:
+    sys.exit('usage: tools/agents/run <claude|codex|opencode|pi|dsh|devin|droid|antigravity> [native arguments]')
 provider, arguments = sys.argv[1], sys.argv[2:]
 if '--strict' in arguments:
     sys.exit('UNSUPPORTED: strict pre-request 300k admission is not qualified for any Æion Factory adapter.')
@@ -50,6 +50,11 @@ if provider == 'pi':
     if result.returncode or not version or tuple(map(int, version.groups())) < (1, 4, 0):
         sys.exit('Æion Factory requires Pi 1.4.0+ for its extension events.')
     sys.exit(subprocess.run(['pi', *arguments], cwd=root, shell=False).returncode)
+if provider == 'dsh':
+    # dsh loads project plugins only from a patch overlay; the profile (tui, web, headless) comes first.
+    profile, rest = (arguments[0], arguments[1:]) if arguments and not arguments[0].startswith('-') else ('tui', arguments)
+    patch = ['--patch', str(root / '.dsh/factory.patch.yml')]
+    sys.exit(subprocess.run(['dsh', '--profile', profile, *patch, *rest], cwd=root, shell=False).returncode)
 if provider == 'codex':
     sys.exit(subprocess.run(['codex', *arguments], cwd=root, shell=False).returncode)
 if provider == 'devin':

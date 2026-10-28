@@ -112,7 +112,8 @@ credentials. Loops never deploy, restart, migrate data or change a setting.
 ## Scans and reviews
 
 - CI runs gitleaks, OSV-Scanner and Semgrep (and Trivy when there are images); a skipped job is
-  not a pass; a real finding is never suppressed to get a green run.
+  not a pass; a real finding is never suppressed to get a green run. A verified false positive goes in
+  `.gitleaksignore` by its exact fingerprint, with a comment saying what the value is.
 - A pull request touching authentication, infrastructure, CI or secret handling gets
   `/claude-security` on its changes (skill `security-scan`); the outer loop scans the codebase
   weekly.

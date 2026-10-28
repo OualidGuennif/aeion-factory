@@ -38,8 +38,9 @@ class GuardRefusal(ValueError):
 
 def key(provider, event):
     value = event.get('session_id')
-    # Devin and Antigravity document no session id; one key per clone keeps the guards on instead of refusing everything.
-    if provider in {'devin', 'antigravity'} and value is None:
+    # Devin, Droid and Antigravity do not all document a session id; one key per clone keeps the guards on instead of
+    # refusing everything.
+    if provider in {'devin', 'droid', 'antigravity'} and value is None:
         return provider + '-local-' + hashlib.sha256(str(ROOT).encode()).hexdigest()[:16]
     if not isinstance(value, str) or not value or len(value) > 200:
         raise ValueError('a bounded native session identifier is required')
@@ -182,8 +183,60 @@ def antigravity_event(event):
     return {**event, 'tool_name': tool, 'tool_input': data, 'antigravity_paths': paths, 'antigravity_globs': globs}
 
 
+# Harnesses that report their context usage share Claude's 250k/300k rule (tools/context/budget.py).
+MEASURED = {'codex', 'opencode', 'pi', 'dsh'}
+
+
+def codex_usage(event):
+    """Codex's context: the newest token_count after the newest compaction in this session's rollout."""
+    if event.get('transcript_path') is None:
+        return None
+    rollout = Path(event['transcript_path'])
+    if rollout.is_symlink() or not rollout.is_file() or not rollout.name.endswith(f"-{event['session_id']}.jsonl"):
+        raise ValueError("usage must come from this session's regular rollout file")
+    usage = None
+    with rollout.open('rb') as stream:
+        size = stream.seek(0, 2)
+        stream.seek(max(0, size - budget.MAX_TAIL))
+        lines = stream.read().splitlines()
+    # A tail read starts mid-record; only whole records count.
+    for line in lines[1:] if size > budget.MAX_TAIL else lines:
+        record = json.loads(line)
+        payload = record.get('payload')
+        if record.get('type') == 'compacted':
+            usage = 0
+        elif record.get('type') == 'event_msg' and isinstance(payload, dict) and payload.get('type') == 'token_count' \
+                and payload.get('info') is not None:
+            last = payload['info']['last_token_usage']
+            values = (last['input_tokens'], last['output_tokens'])
+            if any(type(value) is not int or value < 0 for value in values):
+                raise ValueError('invalid token_count record')
+            usage = sum(values)
+    return usage
+
+
+def observed_usage(provider, event):
+    """The context size the harness measured; None while it has measured nothing yet."""
+    if provider == 'codex':
+        return codex_usage(event)
+    value = event.get('observed_tokens')
+    if value is not None and (type(value) is not int or value < 0):
+        raise ValueError('observed_tokens must be a nonnegative integer')
+    return value
+
+
+def alert(result, measured):
+    """A guard's own answer, plus the context notice and the compaction signal the shared rule added."""
+    result = dict(result)
+    if measured.get('systemMessage'):
+        result['systemMessage'] = measured['systemMessage']
+    if measured.get('aeion'):
+        result['aeion'] = measured['aeion']
+    return result
+
+
 def handle(root, provider, event):
-    if provider not in {'codex', 'opencode', 'pi', 'devin', 'droid', 'antigravity'} or not isinstance(event, dict):
+    if provider not in {'codex', 'opencode', 'pi', 'dsh', 'devin', 'droid', 'antigravity'} or not isinstance(event, dict):
         raise ValueError('invalid provider or event')
     if provider == 'antigravity':
         event = antigravity_event(event)
@@ -215,22 +268,69 @@ def handle(root, provider, event):
             return fail(provider, name, 'Æion Factory session is stopped; use its handover in a new session.')
         if name == 'SessionStart' and event.get('source') == 'compact':
             state.pop('checkpoint', None)
+            state.pop('observed_tokens', None)
             state['epoch'] += 1
+            state['state'] = 'RECOVERING'
+            # A compaction let through before its handover owes the closure first thing after it.
+            if state.pop('closure_owed', None):
+                state['closure_owed'] = 'due'
+                state['state'] = 'HANDOVER_REQUIRED'
+                state['warning_pending'] = True
         budget.atomic(file, json.dumps(state, sort_keys=True) + '\n')
         if name == 'PreCompact':
+            if not budget.ready(root, session, state) and provider == 'codex':
+                # Codex ends its turn on a refused compaction and retries it before every turn, so a refusal
+                # would stall it for good: compaction runs, and the handover and checkpoint come right after.
+                budget.ensure_handover(root, session)
+                state['closure_owed'] = 'pending'
+                budget.atomic(file, json.dumps(state, sort_keys=True) + '\n')
+                return {'systemMessage': f'Æion Factory: compaction before a verified handover; after it, write '
+                                         f'{handover.relative_to(root)} and verify the checkpoint before any other work.'}
             if not budget.ready(root, session, state):
                 budget.ensure_handover(root, session)
                 return fail(provider, name, f'Fill {handover.relative_to(root)} and verify the docs before compaction: '
                             + budget.checkpoint_command(root, session))
+            # A verified compaction owes no closure after it.
+            if state.pop('closure_owed', None):
+                budget.atomic(file, json.dumps(state, sort_keys=True) + '\n')
+            # OpenCode sends no compact SessionStart, so the verified compaction itself ends the closure.
             if provider == 'opencode':
                 state.pop('checkpoint', None)
+                state.pop('observed_tokens', None)
+                state['epoch'] += 1
+                state['state'] = 'RECOVERING'
                 budget.atomic(file, json.dumps(state, sort_keys=True) + '\n')
             return {'systemMessage': f'Æion Factory verified handover: {handover.relative_to(root)}'}
+        measured = {}
+        if provider in MEASURED and name in {'PreToolUse', 'PostToolUse', 'Stop'}:
+            usage = observed_usage(provider, event)
+            # Harnesses report usage after the response that asked for the tool: until then the last count holds.
+            if usage is None:
+                usage = state.get('observed_tokens') or 0
+            # The closure owed since an early compaction ends with its verified handover, without compacting again.
+            if state.get('closure_owed') == 'due' and budget.ready(root, session, state):
+                for field in ('closure_owed', 'checkpoint', 'warning_pending'):
+                    state.pop(field, None)
+                state['state'] = 'RUNNING'
+            # Closure judges a file edit by `file_path`; native tools name it `path`, `filePath` or a patch header.
+            call = normalized
+            if name == 'PreToolUse' and event.get('tool_name') in {'Edit', 'Write', 'apply_patch'}:
+                paths = edit_paths(event, provider)
+                target = str(root / paths[0]) if len(paths) == 1 else ''
+                call = {**normalized, 'tool_name': 'Edit', 'tool_input': {'file_path': target}}
+            measured = budget.apply_usage(root, session, state, name, call, usage)
+            budget.atomic(file, json.dumps(state, sort_keys=True) + '\n')
+            reason = measured.get('stopReason') or measured.get('hookSpecificOutput', {}).get('permissionDecisionReason')
+            if reason:
+                return fail(provider, name, reason)
+            # Pi, OpenCode and dsh start compaction themselves once a closure's checkpoint is verified.
+            if state['state'] in {'HANDOVER_REQUIRED', 'COMPACT_REQUIRED'} and budget.ready(root, session, state):
+                measured['aeion'] = {'compact': True}
     if name == 'SessionStart':
         result = script(root, 'session-start.py', normalized)
         pointer = 'Handover' if handover.is_file() else 'Handover (created at the first refused compaction)'
         context = (f'Æion Factory {provider} checkpoint profile. {pointer}: {handover.relative_to(root)}. '
-                   f'Checkpoint key: {session}. Native token-stop enforcement is unqualified; do not claim a strict 300k cap.')
+                   f'Checkpoint key: {session}. 250k handover/compact, 300k forced handover and compaction; not a strict ceiling.')
         if provider in {'devin', 'droid', 'antigravity'}:
             context = f'Æion Factory {provider} profile: shared guards and edit feedback; no compaction checkpoint or token stop.'
         context += '\n' + result.get('hookSpecificOutput', {}).get('additionalContext', '')
@@ -247,7 +347,7 @@ def handle(root, provider, event):
             # An unknown tool routed here may also name a file; that path still meets the path guard.
             for path in edit_paths(event, provider):
                 script(root, 'guard-path.py', {'tool_name': 'Edit', 'tool_input': {**data, 'file_path': path}})
-            return result
+            return alert(result, measured)
         for pattern in event.get('antigravity_globs', []) if provider == 'antigravity' else []:
             script(root, 'guard-path.py', {'tool_name': 'Grep', 'tool_input': {'glob': pattern}})
         paths = edit_paths(event, provider)
@@ -257,9 +357,9 @@ def handle(root, provider, event):
             tool = 'Edit' if event.get('tool_name') == 'apply_patch' else event.get('tool_name')
             data = {**event['tool_input'], 'file_path': path}
             script(root, 'guard-path.py', {'tool_name': tool, 'tool_input': data})
-        return {}
+        return alert({}, measured)
     if name == 'PostToolUse':
-        messages = []
+        messages = [measured['systemMessage']] if measured.get('systemMessage') else []
         edited = edit_paths(event, provider) if event.get('tool_name') in {'apply_patch', 'Edit', 'Write'} else []
         for raw in edited:
             path = Path(raw)
@@ -275,7 +375,7 @@ def handle(root, provider, event):
         context = advisory(root, normalized).get('hookSpecificOutput', {}).get('additionalContext')
         if context:
             messages.append(context)
-        return {'hookSpecificOutput': {'hookEventName': name, 'additionalContext': '\n'.join(messages)}} if messages else {}
+        return alert({'hookSpecificOutput': {'hookEventName': name, 'additionalContext': '\n'.join(messages)}} if messages else {}, measured)
     if name == 'Stop':
         advisory(root, normalized)
         return script(root, 'sign-off.py', normalized)
@@ -295,9 +395,12 @@ def main():
         print('Æion Factory hook payload invalid or oversized; action refused.', file=sys.stderr)
         return 2
     provider = sys.argv[1] if len(sys.argv) > 1 else None
-    # Antigravity's payload names no hook event, so its registration passes the event as an argument.
+    # Antigravity's payload names no hook event, so its registration passes the event as an argument; Devin and Droid
+    # pass it too, so a payload without one is not refused as an unknown event.
     if provider == 'antigravity':
         event['hook_event_name'] = sys.argv[2] if len(sys.argv) > 2 else None
+    elif 'hook_event_name' not in event and len(sys.argv) > 2:
+        event['hook_event_name'] = sys.argv[2]
     try:
         result = handle(ROOT, provider, event)
         # Antigravity reads a pre-tool answer without a decision as a refusal, so an allowed call says so.

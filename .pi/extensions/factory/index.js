@@ -4,6 +4,7 @@ import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 
 const UNAVAILABLE = 'Æion Factory hook unavailable; action refused.';
+const RESUME = 'Æion Factory: context compacted. Read your handover in work/handovers/ and continue the task.';
 // Pi's built-in tools under the names the shared guards know; find and ls only list paths.
 const TOOLS = { bash: 'Bash', powershell: 'Bash', read: 'Read', edit: 'Edit', write: 'Write', grep: 'Grep', find: 'Glob', ls: 'LS' };
 
@@ -32,6 +33,8 @@ function toolEvent(event, ctx, name) {
   return {
     session_id: ctx.sessionManager.getSessionId(), hook_event_name: name, tool_use_id: event.toolCallId,
     tool_name: shell ? 'Bash' : TOOLS[event.toolName] || event.toolName, tool_input: event.input,
+    // Pi's own context measure feeds the shared 250k/300k rule; null right after a compaction.
+    observed_tokens: ctx.getContextUsage?.()?.tokens ?? null,
   };
 }
 
@@ -64,6 +67,9 @@ export default function (pi) {
   pi.on('tool_result', async (event, ctx) => {
     if (event.isError) return undefined;
     const { reason, output } = invoke(projectRoot(ctx.cwd), toolEvent(event, ctx, 'PostToolUse'));
+    // A verified handover past 250k compacts now, not at Pi's own threshold near the model window.
+    // Compacting aborts the running turn, so the session is told to resume from its handover once it is done.
+    if (output.aeion?.compact) ctx.compact({ onComplete: () => pi.sendUserMessage(RESUME) });
     const message = reason || output.hookSpecificOutput?.additionalContext;
     if (!message) return undefined;
     return { content: [...event.content, { type: 'text', text: `Æion Factory feedback: ${message}` }], structuredContent: event.structuredContent };

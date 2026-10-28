@@ -67,6 +67,10 @@ tests for what changed still run.
 - A release (skill `ship`): `tools/release/release <part>` bumps `VERSION` (SemVer) and dates the
   changelog; a pull request `develop → main` is reviewed again and merged with a merge commit after a
   green CI; the merged commit is tagged `vX.Y.Z` with its changelog section as release notes.
+- A new project or a demo copy starts with `tools/release/release --new-project`: `VERSION` 0.1.0, an
+  empty `Unreleased`, and `work/current.md` holding only the "Adapt Æion Factory to this project" entry,
+  dated today. It refuses in Æion Factory's own clone (origin `OualidGuennif/aeion-factory`), and running
+  it twice changes nothing.
 - A deploy or a human decision waits for that human. The owner's comments become preferences
   (skill `pr-taste`).
 - Limit: the review record is written by the agent that ran the review; the hook checks that one

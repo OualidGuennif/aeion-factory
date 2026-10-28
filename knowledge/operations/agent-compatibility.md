@@ -1,6 +1,6 @@
 ---
 type: Runbook
-title: "Claude Code, Codex, OpenCode, Pi, Devin, Droid and Antigravity"
+title: "Claude Code, Codex, OpenCode, Pi, dsh, Devin, Droid and Antigravity"
 description: "One Æion Factory instruction/skill source, runtime-specific adapters, setup and explicitly bounded guarantees."
 status: stable
 sources:
@@ -18,6 +18,10 @@ sources:
     title: "OpenCode plugin callbacks"
   - resource: ../../.pi/extensions/factory/index.js
     title: "Pi extension events"
+  - resource: ../../.dsh/factory.patch.yml
+    title: "dsh patch overlay"
+  - resource: ../../.dsh/plugins/factory/index.js
+    title: "dsh plugin guard and compaction"
   - resource: ../../.devin/config.json
     title: "Devin import settings"
   - resource: ../../.devin/hooks.v1.json
@@ -34,7 +38,7 @@ generated:
 # Agent compatibility
 
 AGENTS.md, Knowledge, task state, checker commands and the reviewed PR workflow are shared.
-Claude Code remains the original integration. Codex, OpenCode, Pi, Devin, Droid and Antigravity use their
+Claude Code remains the original integration. Codex, OpenCode, Pi, dsh, Devin, Droid and Antigravity use their
 documented native configuration and small adapters to the existing guards/checkpoints; copying a
 directory does not establish loaded hooks or identical runtime guarantees.
 
@@ -43,9 +47,11 @@ directory does not establish loaded hooks or identical runtime guarantees.
 - Keep existing `.claude/skills` as the maintained skill source. Codex discovers symlinked folders
   under `.agents/skills`; OpenCode already discovers the Claude-compatible paths.
 - Codex local trusted projects enable `.codex/config.toml` and `.codex/hooks.json`. Its native
-  auto-compaction threshold is 250000. Its hook transcript format is not a stable token API.
-- OpenCode 2.1.4+ loads root `opencode.json` and `.opencode/plugins/factory/index.js`. Auto-compaction remains
-  native to its selected model; no supported fixed 250k setting is invented.
+  auto-compaction threshold is 250000. Codex has no compaction tool and ends its turn on a refused
+  compaction, so a compaction that comes before the verified handover runs, and closure is owed right
+  after it. Its rollout is not a stable token API.
+- OpenCode 2.1.4+ loads root `opencode.json` and `.opencode/plugins/factory/index.js`. The plugin reads each
+  step's tokens (`session.step.ended`) and compacts itself at 250k once the handover is verified.
 - Pi 1.4.0+ reads `AGENTS.md`/`CLAUDE.md` from its folder and every parent, and project
   `.agents/skills` from its folder or a parent, so the shared rules and skills need no copy. It loads
   `.pi/extensions/factory/index.js` from **its start folder only**, once the project is trusted; started
@@ -56,7 +62,10 @@ directory does not establish loaded hooks or identical runtime guarantees.
   notification without a verified handover) to `tools/agents/hook.py pi`. `bash` and `powershell` are
   Bash, `read`/`edit`/`write`/`grep` name their file in `path`, `find` and `ls` are Glob and LS, and an
   unknown tool carrying a `command` string is a shell call. `tools/agents/run pi` requires 1.4.0+.
-  Compaction stays Pi's own (`compaction.reserveTokens`); no fixed 250k is set. Like OpenCode, Pi has no
+  Its compaction aborts the running turn, so once it is done the extension sends a message that resumes
+  the task from the handover.
+  The extension sends `ctx.getContextUsage()` to the shared rule and calls `ctx.compact()` at 250k once
+  the handover is verified. Like OpenCode, Pi has no
   Stop sign-off: use the skill `sign-off`. Not yet qualified live: the events follow the 1.4.0 docs and
   published type declarations.
 - Token feedback (narration between tools, full-file rewrites; advisory, never blocking) covers
@@ -72,6 +81,19 @@ directory does not establish loaded hooks or identical runtime guarantees.
   `tools/agents/hook.py`.
 - Both adapters enforce supported Bash/path refusals, edit feedback and a verified handover
   before compaction; the first refused compaction creates the skeleton to fill. Native token stops and strict pre-request 300k admission are unqualified.
+- dsh (DeepSeek Harness, CLI `dsh`, 0.2.1-rc.3) reads `AGENTS.md`/`CLAUDE.md` from the project root down
+  to its folder and skills from `.dsh/skills` and `.agents/skills`, so the shared rules and skills need no
+  copy. It loads project plugins only from a patch overlay: `tools/agents/run dsh [tui|web|headless]`
+  passes `--patch .dsh/factory.patch.yml`, which inserts `.dsh/plugins/factory/index.js`. The plugin's
+  `ctx.tools.guard` sends every tool call as PreToolUse to `tools/agents/hook.py dsh` (a returned reason
+  denies it and no later policy can undo that; a call without an agent is refused), with
+  `ctx.tokenMeter.measure(session).totalTokens` as the usage; `tools/post-execute` sends PostToolUse.
+  Once a verified handover asks for compaction, the next `agent/pre-step` sends PreCompact and, when
+  allowed, compacts through `ctx.compaction.compactIfNeeded(agent, 'context-overflow')`, then steers a
+  message that resumes from the handover. `bash` is Bash, `read`/`write`/`edit` name `file_path`,
+  `str_replace_editor` is Edit (Read for `view`), `glob`/`grep` are Glob/Grep. dsh's own pressure
+  compaction (about 55% of a 1M window) is not refused; past 300k only closure runs, so it is reached
+  only if closure never completes. A dsh launched without the patch has no Æion Factory hooks.
 - Devin CLI reads `AGENTS.md` and `.agents/skills` natively. By default it also imports
   `.claude/settings.json` hooks, but its tools are named `exec`, `read`, `edit`, `write` and
   `apply_patch`, so Claude matchers never fire and the matcher-less Claude budget hook reads a
@@ -83,7 +105,9 @@ directory does not establish loaded hooks or identical runtime guarantees.
   Devin's `{"decision": "block", "reason": ...}`; a failed Stop or SessionStart gets
   `continue: false`, because Devin's block on Stop means "keep going".
   A payload without `session_id` uses one key per clone, so sign-off reminders are shared across
-  that clone's Devin sessions. Devin has no Æion Factory compaction checkpoint or token stop.
+  that clone's Devin sessions. Each registration also passes its event name (`hook.py devin
+  PreToolUse`), used when a payload names none, so such a payload is judged as that event instead
+  of stopping the session. Devin has no Æion Factory compaction checkpoint or token stop.
 - Droid, the CLI of Factory (factory.ai, a product separate from Æion Factory), reads `AGENTS.md`,
   `.agents/skills` and `.factory/settings.json`. That is why Æion Factory's local state lives in
   `.aeion/` and only Droid's config is tracked in `.factory/`. Its hooks send SessionStart,
@@ -91,8 +115,9 @@ directory does not establish loaded hooks or identical runtime guarantees.
   are Claude-shaped; the adapter maps `Execute`, `Create` and `ApplyPatch` (patch text in
   `command`, `patchText`, `patch` or `input`) to the shared guards; a tool outside the known
   names carrying a `command` string goes through the shell guard (and the path guard for a
-  file). It refuses with `permissionDecision: deny`. Droid has no Æion Factory compaction
-  checkpoint or token stop.
+  file). It refuses with `permissionDecision: deny`. As for Devin, each registration passes its
+  event name and a payload without `session_id` uses one key per clone, so a missing field refuses
+  nothing by itself. Droid has no Æion Factory compaction checkpoint or token stop.
 - Google Antigravity (the `agy` CLI and the IDE) reads `AGENTS.md` and `.agents/skills`, and
   workspace hooks from `.agents/hooks.json` once the folder is trusted. One `aeion-factory` group
   sends PreToolUse and PostToolUse (matcher `.*`) and Stop to `tools/agents/hook.py antigravity

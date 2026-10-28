@@ -1,51 +1,32 @@
-# The Claude Code run
+# The Claude Code run 2
 
-Claude Code (Opus) built the Idea Board from [`../plan/`](../plan/) in one long session on 2026-10-28.
-It worked in a git-less copy of Æion Factory 1.3.0, taken from `develop` at `fb2af90`. That session had
-no subagents, and the owner approved each round visually.
+Claude Code builds the same Idea Board again from [`../plan/`](../plan/00-start.md) as the
+[first Claude Code run](archive/run-01/SUMMARY.md), so the runs can be compared round by round.
 
-| Folder | What it holds |
+- **Factory copy:** `workspace/` (not tracked), made from `develop` at `578f4f3` (release 1.4.0). It has the base fixes
+  from the Claude Code run (FB-002, 004 to 010), Graphify 0.9.97 and Archify v3.2.0 pins, and
+  `tools/architecture/ask` with `ask callers`, and the skill `graph`. The point of this run is to
+  check that every fix from run 1 holds.
+- **Command:** `git archive HEAD -- . ':(exclude)demo'`. The copy has no `.git`, holds 163 files and
+  no app yet.
+- **Fresh state:** `tools/release/release --new-project` reset the copy (FB-003 of run 1, FB-001 of
+  Codex): `VERSION` 0.1.0, an empty changelog, and only the "Adapt" task in `work/current.md`.
+
+| Folder | What goes there |
 | --- | --- |
-| [`journal/`](journal/) | one file per round: the plan, the commands, the real output, where it got stuck |
-| [`feedback_for_aeion/`](feedback_for_aeion/README.md) | 10 frictions with the factory: 8 fixed in the base, 2 open |
-| [`render/`](render/index.html) | round 07: 14 Archify diagrams in one gallery, Graphify answers |
-| [`result/`](result/AGENTS.md) | the finished app and its three specs, as a snapshot |
-| `workspace/` | the working copy (not tracked) |
+| `journal/` | `00-setup.md`, then one file per round, each ending with the record block of `00-start.md` |
+| `feedback_for_aeion/` | `FB-001-<slug>.md` …, numbered from 001 for this run, plus an index `README.md` |
+| `render/` | round 07: `index.html`, `diagrams/`, `graphify/` |
+| `archive/run-NN/` | after round 07: `SUMMARY.md`, `journal/` and `feedback_for_aeion/`; the rest is reset |
+| `workspace/` | the factory copy; the app goes in `workspace/app/` |
+
+## Starting Claude Code
+1. Open Claude Code in `demo/`: the first message's paths start there. Setup and the hook check are in
+   [`../start/README.md`](../start/README.md).
+2. Paste [`../start/claude_code/START.md`](../start/claude_code/START.md) as the first message.
 
 ## Results by round
+To fill in as the rounds are done.
 
-| Round | Result | Evidence |
-| --- | --- | --- |
-| [00 setup](journal/00-setup.md) | done | the copy's hooks battery reports 0 failures; FB-002 found |
-| [01 scaffold](journal/01-scaffold.md) | done | 5 tests, HTTP smoke test; FB-003 to FB-006 found |
-| [02 ideas API](journal/02-ideas-api.md) | done | 26 tests, HTTP smoke test |
-| [03 ideas page](journal/03-ideas-page.md) | done | 38 tests; screenshots at 375 and 1440 px, light and dark |
-| [04 votes](journal/04-votes.md) | done | 54 tests; 30 concurrent votes give exactly 30 |
-| [05 tags and search](journal/05-tags-search.md) | done | 72 tests |
-| [06 Docker](journal/06-docker.md) | done | healthy in 6 s; 5 container checks pass in 16.5 s |
-| [07 architecture](journal/07-architecture.md) | done | 14 diagrams pass `validate` and `browser-check`; 5 Graphify questions |
-
-The snapshot in `result/app` passes the same 72 tests and `deno task check`.
-
-## What the factory did well
-- Writing the spec first kept every round small. Each code file names its spec in a `Spec:` line,
-  and the factory checks run after every round.
-- The guards stopped real risks: reading `.env`, `cat server.key`, and unbounded dumps of logs and
-  lockfiles.
-
-## Where it got in the way
-- **Closure at the 250k alert** (FB-007). The owner had to run the checkpoint from their own terminal
-  three times. This is fixed now, and the session ran it alone at the fourth alert.
-- **False positives from the guards** (FB-008, FB-009). They cost a detour each time Deno KV code was
-  edited from the shell. Both are fixed, with a few gaps left.
-- **Graphify**: a structural graph alone answers "what depends on what" poorly on a Deno app:
-  - question 2 misses the API's call to the store;
-  - question 3 needed its own reachability script;
-  - five files yield no symbols.
-
-  The spec links are fixed (FB-010). Exact Deno import edges are the next step.
-
-## Human help
-- A visual approval before each next round.
-- Three checkpoint runs at the 250k alert, before the FB-007 fix.
-- The yes for each base fix and for this demo layout.
+| Round | Result | Tests | Guard refusals | Human help | Feedback |
+| --- | --- | --- | --- | --- | --- |

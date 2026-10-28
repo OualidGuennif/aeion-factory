@@ -68,10 +68,12 @@ demo/<harness>/
   feedback_for_aeion/    FB-001-<slug>.md …: severity, evidence, proposed fix, status
   render/                round 07 output: index.html, diagrams/, graphify/
   workspace/             the factory copy without git (git archive HEAD); the app goes in workspace/app/
-  result/                after round 07: a snapshot of workspace/app/ and its idea-board specs
+  archive/run-NN/        after round 07: SUMMARY.md, journal/ and feedback_for_aeion/ of that run
 ```
 
-Only `workspace/` is ignored by the parent repository; everything else is committed.
+Only `workspace/` is ignored by the parent repository; everything else is committed. When a run ends,
+its `README.md` becomes `archive/run-NN/SUMMARY.md` beside its journal and feedback; `render/` and the
+app are dropped (git history keeps them), and the folder is reset for the next run.
 
 Open the agent at the **repository root**, as the Claude Code run did, or in **`demo/`**. Both work
 because `demo/` sits inside the git repository: the agent loads the root `AGENTS.md` (Codex walks from

@@ -33,7 +33,7 @@ its fix on failure; never a hook that loops (the sign-off uses `stop_hook_active
 per-session memory of what it already said); tested (`.claude/hooks/test_hooks.py`).
 The context adapter has a five-second hook deadline and separate tests
 (`tools/context/tests/test_budget.py`). Its strict pre-request ceiling is unqualified; see
-`knowledge/operations/context-safety.md`. Claude and Codex configure native compaction at 250k. OpenCode uses its native model window.
+`knowledge/operations/context-safety.md`. Claude, Codex, OpenCode and Pi share one context rule: a 250k closure alert, a verified handover, then compaction at 250k; 300k forces the handover and compaction again.
 The adapters share guards/checkpoints, with the exact supported events and limits documented in
 `knowledge/operations/agent-compatibility.md`; they do not copy Claude settings blindly.
 

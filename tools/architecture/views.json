@@ -298,7 +298,7 @@
         "title": "Context guarantee",
         "items": [
           "Native compaction is enabled at 250k",
-          "300k stop is observed at hooks; strict admission is unavailable"
+          "300k forces handover and compaction at hooks; strict admission is unavailable"
         ]
       }
     ]
@@ -498,7 +498,7 @@
     "schema_version": 3,
     "diagram_type": "lifecycle",
     "meta": {
-      "title": "Claude context checkpoints",
+      "title": "Context checkpoints (Claude, Codex, OpenCode, Pi, dsh)",
       "quality_profile": "showcase",
       "output": "lifecycle.html"
     },
@@ -559,13 +559,13 @@
       },
       {
         "id": "stopped",
-        "type": "failure",
-        "label": "Stopped",
-        "sublabel": "observed 300k or invalid usage",
+        "type": "active",
+        "label": "Compaction forced",
+        "sublabel": "observed 300k: handover and checkpoint only",
         "sources": [
           {
             "path": "tools/context/budget.py",
-            "anchor": "elif usage >= LIMIT:"
+            "anchor": "if usage >= LIMIT and state[\"state\"] != \"COMPACT_REQUIRED\":"
           }
         ]
       }
@@ -581,33 +581,32 @@
         "id": "verify",
         "from": "handover",
         "to": "checkpoint",
-        "label": "checkpoint command passes"
+        "label": "checkpoint passes"
       },
       {
         "id": "compact",
         "from": "checkpoint",
         "to": "recovering",
-        "label": "native compaction"
+        "label": "compaction"
       },
       {
         "id": "resume",
         "from": "recovering",
         "to": "running",
-        "label": "fresh bounded observation"
+        "label": "fresh observation"
       },
       {
         "id": "limit",
         "from": "handover",
         "to": "stopped",
-        "label": "300k or invalid usage",
+        "label": "300k observed",
         "variant": "security"
       },
       {
-        "id": "unavailable",
-        "from": "running",
-        "to": "stopped",
-        "label": "usage unavailable",
-        "variant": "security"
+        "id": "forced-verify",
+        "from": "stopped",
+        "to": "checkpoint",
+        "label": "checkpoint passes"
       }
     ],
     "cards": [

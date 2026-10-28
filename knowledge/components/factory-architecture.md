@@ -40,10 +40,12 @@ structural facts; fresh review establishes the verdict; GitHub records PR/merge/
 There is no application server, broker, production database or deployed Æion Factory control plane.
 Adopting projects keep their existing instructions and architecture.
 
-Claude Code retains its native hooks. Codex, OpenCode, Pi, Devin, Droid (factory.ai) and Google
-Antigravity load the same instructions and skills, with narrow adapters to the existing secret
-guards, edit checks and handover checkpoints (Devin, Droid and Antigravity have no compaction
-checkpoint). Droid owns `.factory/`, so
+Claude Code retains its native hooks. Codex, OpenCode, Pi, dsh (DeepSeek Harness), Devin, Droid
+(factory.ai) and Google Antigravity load the same instructions and skills, with narrow adapters to
+the existing secret guards, edit checks and handover checkpoints (Devin, Droid and Antigravity have
+no compaction checkpoint). During closure, plain read commands (`cat`, `head`, `sed -n`, `rg` and
+the like, without operators, globs or secret files) are closure tools, because Codex reads only
+through its shell. Droid owns `.factory/`, so
 Æion Factory's local state lives in the ignored `.aeion/`. A per-clone flow mode selects the team flow (PR, review, CI)
 or local play (commits on main, no sign-off reminder); the safety guards run in both.
 Their native token/compaction interfaces differ; compatibility is not a claim of identical
@@ -108,7 +110,7 @@ from another source; analysis refuses mismatched package provenance or a dirty A
 | Instructions and seven-phase guide | Owner precedence, scope and adoption | Markdown links; `CLAUDE.md` points to `AGENTS.md` |
 | Skills | Plan/spec/build/test/review/sign-off/ship and focused procedures | `.claude/skills/*/SKILL.md`; no second task ledger |
 | Hook adapter | Read event JSON and call a bounded local check | stdin/stdout JSON; failure blocks where supported |
-| Context budget | Usage, closure-only state, checkpoint receipt, observed stop | `.aeion/context/<session>.json`; per-session file lock |
+| Context budget | Usage, closure-only state, checkpoint receipt, 300k forced compaction | `.aeion/context/<session>.json`; per-session file lock |
 | Handover | Recovery facts for the current session | Ignored `work/handovers/<session>.md`, created atomically only when closure needs it |
 | Knowledge/link/health checkers | Frontmatter, caps, traceability and diff coverage | Exit code + bounded diagnostics; no provider |
 | Optional loops | Select prompt/model/tools and run a managed headless task | Off unless enabled; outer loop reads production only through its configured read path |

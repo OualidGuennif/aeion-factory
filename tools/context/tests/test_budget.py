@@ -68,12 +68,24 @@ class BudgetTests(unittest.TestCase):
         self.assertIn(str(handover.relative_to(self.root)), self.call(hook_event_name="PreCompact")["reason"])
         self.assertTrue(handover.is_file())
 
-    def test_observed_limit_stops_and_cannot_be_reset_by_resume_or_compact(self):
+    def test_observed_limit_forces_handover_and_compaction_without_stopping(self):
         self.observe(300000)
-        self.assertFalse(self.call()["continue"])
+        first = self.call()
+        self.assertIn("300k", first["systemMessage"])
+        self.assertEqual(first["hookSpecificOutput"]["permissionDecision"], "deny")
+        # At 300k only the handover and its checkpoint remain; task state and docs were 250k's closure.
+        handover = budget.handover_path(self.root, "test-session")
+        self.assertNotIn("hookSpecificOutput", self.call(tool_name="Write", tool_input={"file_path": str(handover)}))
+        tasks = self.call(tool_name="Edit", tool_input={"file_path": str(self.root / "work/current.md")})
+        self.assertEqual(tasks["hookSpecificOutput"]["permissionDecision"], "deny")
+        self.assertFalse(self.call(hook_event_name="Stop")["continue"])
+        self.assertNotIn("continue", self.call(hook_event_name="SessionStart", source="resume"))
+        # Compaction ends the forced closure: the run continues instead of latching a stop.
+        self.call(hook_event_name="SessionStart", source="compact")
         self.observe(1)
-        for source in ("resume", "compact"):
-            self.assertFalse(self.call(hook_event_name="SessionStart", source=source)["continue"])
+        self.assertEqual(self.call(), {})
+        state = json.loads((self.root / ".aeion/context/test-session.json").read_text())
+        self.assertEqual(state["state"], "RUNNING")
 
     def test_cache_counts_once_per_latest_request(self):
         usage = {"input_tokens": 1000, "cache_creation_input_tokens": 4000,
@@ -99,7 +111,7 @@ class BudgetTests(unittest.TestCase):
         self.assertIsNone(budget.native_usage(self.transcript, "test-session"))
         self.observe(300000)
         self.transcript.write_text(self.transcript.read_text() + synthetic)
-        self.assertFalse(self.call()["continue"])
+        self.assertEqual(self.call()["hookSpecificOutput"]["permissionDecision"], "deny")
 
     def test_missing_usage_stops_after_one_prompt_bootstrap(self):
         self.transcript.write_text("")
@@ -262,6 +274,20 @@ class BudgetTests(unittest.TestCase):
             self.assertEqual(self.call(tool_name="Bash", tool_input={"command": command})["hookSpecificOutput"]["permissionDecision"], "deny")
         self.assertEqual(self.call(tool_name="Bash", tool_input={"command": "tools/knowledge/doc-links"}), {})
 
+    def test_plain_shell_reads_are_closure_tools(self):
+        # Codex reads only through its shell, so closure must let it read the handover it has to fill.
+        self.observe(250000)
+        for command in ("sed -n 1,200p work/handovers/x.md", "rg -n TODO work/handovers/x.md", "cat AGENTS.md",
+                        "head -n 40 knowledge/index.md"):
+            result = self.call(tool_name="Bash", tool_input={"command": command})
+            self.assertNotIn("permissionDecision", result.get("hookSpecificOutput", {}), command)
+        secret = "." + "env"
+        for command in (f"cat {secret}", f"cat config/{secret}.local", "cat .e*", "rg --pre=sh x",
+                        "sed -i s/a/b/ AGENTS.md", "sed -n 1w/tmp/x AGENTS.md", "cat AGENTS.md > copy.md",
+                        "cat $HOME/x", "python3 -c 1"):
+            result = self.call(tool_name="Bash", tool_input={"command": command})
+            self.assertEqual(result["hookSpecificOutput"]["permissionDecision"], "deny", command)
+
     def test_checkpoint_is_admitted_from_any_folder_and_only_for_this_root(self):
         # A shell left in a subfolder at the alert must still reach this root's checkpoint.
         self.observe(250000)
@@ -342,7 +368,7 @@ class BudgetTests(unittest.TestCase):
         self.assertEqual(self.call(**event), {})
         usage["input_tokens"] = 300000
         child.write_text(json.dumps({"type": "assistant", "message": {"usage": usage}}) + "\n")
-        self.assertFalse(self.call(**event)["continue"])
+        self.assertEqual(self.call(**event)["hookSpecificOutput"]["permissionDecision"], "deny")
         self.assertFalse(self.call(agent_id="agent-child1", agent_transcript_path=str(child), hook_event_name="SubagentStop")["continue"])
         self.assertEqual(len(list((self.root / ".aeion/context").glob("*.json"))), 2)
         parent = json.loads((self.root / ".aeion/context/test-session.json").read_text())

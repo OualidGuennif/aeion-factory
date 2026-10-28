@@ -1,7 +1,7 @@
 # Æion Factory
 
-**A repository template for Claude Code, Codex, OpenCode, Pi, Devin, Factory's Droid and Google
-Antigravity: shared instructions, linked specs, reusable skills and automatic checks.**
+**A repository template for Claude Code, Codex, OpenCode, Pi, DeepSeek Harness (dsh), Devin,
+Factory's Droid and Google Antigravity: shared instructions, linked specs, reusable skills and automatic checks.**
 
 Æion Factory organizes the work around **plan → change → test → review → merge**. Your project's
 existing instructions and the owner's decisions take precedence.
@@ -27,6 +27,7 @@ PR workflow and your chosen agent separately:
 - [Codex](https://learn.chatgpt.com/docs/cli)
 - [OpenCode V2](https://opencode.ai/v2/docs/) — 2.1.4+ for Æion Factory's native plugin
 - [Pi](https://github.com/earendil-works/pi) — 1.4.0+ for Æion Factory's extension
+- DeepSeek Harness (`dsh`) — 0.2.1+, loads `.dsh/` through `tools/agents/run dsh`
 - [Devin CLI](https://docs.devin.ai/cli/extensibility) — reads `.devin/`, `AGENTS.md` and `.agents/skills`
 - [Droid](https://docs.factory.ai/cli/configuration/hooks-guide), the CLI of Factory (factory.ai), a separate
   product — reads `.factory/settings.json`, `AGENTS.md` and `.agents/skills`
@@ -47,47 +48,62 @@ tools/agents/run claude        # or: codex, opencode (2.1.4+), pi (1.4.0+), devi
 The launcher applies each agent's checked profile; the hooks and skills load from the repository,
 and nothing is installed. The safety guards (secrets,
 Git hook and force-push bypasses, large dumps) stay on in local mode. `git config --unset
-aeion.mode` returns to the team flow. The agent recommends the architecture baseline and asks
-before installing it: on a work computer, check your company's policy first.
+aeion.mode` returns to the team flow. The Git hooks, Graphify and Archify are off by default and
+[strongly recommended](#off-by-default-strongly-recommended); the agent asks before installing them.
 
-## How to: new project
+## Off by default, strongly recommended
+
+Three things stay **off** until you say yes, because they change your machine or your Git workflow:
+
+| What | Why it is recommended | Turn it on |
+| --- | --- | --- |
+| **Git hooks** | The same checks as CI before each commit, and no push of `develop` without a recorded review | `git config core.hooksPath tools/git-hooks` |
+| **Graphify** | A code graph, so the agent answers "what breaks, which tests, which spec" exactly (skill `graph`, `tools/architecture/ask`), with no LLM | `python3 tools/architecture/setup` (a venv and pinned packages in `.aeion/`) |
+| **Archify** | Architecture diagrams checked against the source, rebuilt for each commit | the same setup (an Archify clone in `.aeion/`; needs Node and Chrome) |
+
+Without them the factory still works: the agent hooks, guards and skills are on from the start, and
+`tools/architecture/ask` tells you when the graph is missing. On a work computer, check your company's
+policy before installing. CI analyses every main update either way.
+
+## New project
 
 1. [Create a repository from this template](https://github.com/OualidGuennif/aeion-factory/generate),
    then clone your new repository and open its folder.
-2. Start **one** of the agents below in that folder. These initial sessions prepare the project;
-   use the managed launchers once setup and the baseline are complete.
+   Reset the factory's own history and tasks: `tools/release/release --new-project` (version 0.1.0, an
+   empty changelog, one task: adapt the factory to this project).
+2. Prepare your harness (once), then start it in that folder:
 
-   ```bash
-   claude       # Claude Code
-   codex        # Codex
-   opencode     # OpenCode V2
-   devin        # Devin CLI
-   droid        # Droid (factory.ai)
-   agy          # Google Antigravity CLI
-   ```
+   | Harness | Start | What to do first |
+   | --- | --- | --- |
+   | Claude Code | `claude` | Trust the folder. Hooks (`.claude/settings.json`) and skills load on their own; check with `/hooks`. |
+   | Codex | `codex` | Trust the project, enable its hooks in `/hooks`, then restart Codex. Skills come from `.agents/skills`. |
+   | OpenCode 2.1.4+ | `opencode` | Connect your provider in OpenCode. The root `opencode.json` and `.opencode/plugins/factory/` load on their own; on a database conflict, `tools/agents/run opencode --isolated`. |
+   | Pi 1.4.0+ | `pi` | Accept the trust prompt, so `.pi/extensions/factory/` loads (the startup list names `factory`). Connect your provider in Pi. |
+   | dsh 0.2.1+ | `tools/agents/run dsh` | The launcher adds `--patch .dsh/factory.patch.yml`, which loads the adapter; skills come from `.agents/skills`. Connect your provider in dsh. |
+   | Devin CLI | `devin` | Approve the project hooks (`.devin/`). |
+   | Droid (factory.ai) | `droid` | Approve the project hooks (`.factory/settings.json`). |
+   | Google Antigravity | `agy` | Trust the folder; hooks come from `.agents/hooks.json`. |
 
-3. Give the agent this setup request:
+3. Check the hooks: ask the agent to run `cat .env`. The guard must refuse it and name its rule. If it runs, the hooks are not loaded: redo step 2.
+4. Give the agent this setup request:
 
    > Read AGENTS.md, README.md and efficiency/00-EFFICIENCY.md. Prepare Æion Factory for this new
    > project: describe the project and owner, add its actual build/test commands, adapt the
    > architecture spec and analysis scope/views, and configure my chosen agent's native setup.
-   > Run the checks. Ask me before enabling the Git pre-commit checks and before installing the
-   > recommended Graphify/Archify baseline; tell me what it installs first. Keep one maintained
-   > source for instructions, Knowledge and skills. Report anything that still needs
-   > configuration. Wait for approval before implementing application features.
+   > Run the checks. Ask me before enabling the Git hooks and before installing the recommended
+   > Graphify/Archify baseline; tell me what it installs first. Keep one maintained source for
+   > instructions, Knowledge and skills. Report anything that still needs configuration. Wait for
+   > approval before implementing application features.
 
-4. Complete the native workspace/project trust prompts. In Codex, also review and enable the
-   project hooks in `/hooks`, then restart the session. For OpenCode, connect your provider
-   through its native interface. For Devin, Droid and Antigravity, approve the project hooks or
-   trust the folder if asked.
-5. Confirm setup and start normal work through the managed launcher below. Configure
+5. Say yes to the Git hooks, Graphify and Archify unless your policy forbids them (see above).
+6. From then on, start work with the managed launcher (`tools/agents/run <harness>`, below). Configure
    [GitHub main protection](knowledge/operations/github-protection.md) in the new repository;
    GitHub settings are not copied by templates.
 
-## How to: existing project
+## Existing project
 
-1. Open your **existing project folder** with Claude Code, Codex or OpenCode. Keep its current
-   instructions, configuration, tests and Git history.
+1. Open your **existing project folder** with your harness. Keep its current instructions,
+   configuration, tests and Git history.
 2. Make a local reference copy of Æion Factory, or point the agent at a reference folder you already
    have:
 
@@ -101,11 +117,25 @@ before installing it: on a work computer, check your company's policy first.
    > Inspect this project's existing instructions, docs, CI, skills and hooks first. Propose the
    > smallest adoption plan, one phase at a time. Merge useful Æion Factory pieces into what exists;
    > preserve my project's authority, conventions and working tools. Include native setup for my
-   > agent, linked specs and relevant checks; offer the recommended architecture baseline and ask
-   > me before installing anything. Wait for my approval before changing files.
+   > agent, linked specs and relevant checks; offer the Git hooks and the recommended
+   > Graphify/Archify baseline and ask me before installing anything. Wait for my approval before
+   > changing files.
 
 4. Approve the fitting phases, validate each one and deliver through your project's PR workflow.
-   Use [the adoption guide](efficiency/00-EFFICIENCY.md) and
+   This first session has no Æion Factory hooks yet: they arrive with the phase that copies your
+   harness's native files. Once that phase is merged, restart the harness and do what it needs:
+
+   | Harness | Files the adoption brings | After the merge |
+   | --- | --- | --- |
+   | Claude Code | `.claude/settings.json` hooks, `.claude/skills/` (merged with yours) | Restart; check `/hooks` |
+   | Codex | `.codex/config.toml`, `.codex/hooks.json`, `.agents/skills` links | Trust the project, enable the hooks in `/hooks`, restart |
+   | OpenCode | `opencode.json` (merged with yours), `.opencode/plugins/factory/` | Restart; reconnect the provider if you use `--isolated` |
+   | Pi | `.pi/extensions/factory/`, `.agents/skills` links | Restart from the project root and accept the trust prompt |
+   | dsh | `.dsh/`, `.agents/skills` links | Start with `tools/agents/run dsh [profile]` |
+   | Devin, Droid, Antigravity | `.devin/`, `.factory/`, `.agents/hooks.json` | Approve the project hooks or trust the folder |
+
+5. Check the hooks as in a new project (step 3), then say yes to the Git hooks, Graphify and Archify
+   unless your policy forbids them. Use [the adoption guide](efficiency/00-EFFICIENCY.md) and
    [runtime setup](knowledge/operations/agent-compatibility.md) for exact requirements.
 
 ## Start a prepared project
@@ -118,6 +148,7 @@ Run these from the repository root. Additional arguments are native CLI argument
 | Codex | `tools/agents/run codex` | Trusted `.codex/config.toml` / `hooks.json`, shared `.agents/skills` |
 | OpenCode | `tools/agents/run opencode` | Root `opencode.json`, native V2 plugin in `.opencode/plugins/factory/` |
 | Pi | `tools/agents/run pi` | Extension in `.pi/extensions/factory/`, loaded once the project is trusted |
+| dsh | `tools/agents/run dsh [tui\|web\|headless]` | Plugin in `.dsh/plugins/factory/`, loaded by `.dsh/factory.patch.yml` |
 | Devin CLI | `tools/agents/run devin` | `.devin/hooks.v1.json` and `config.json`, `AGENTS.md`, shared `.agents/skills` |
 | Droid (factory.ai) | `tools/agents/run droid` | `.factory/settings.json` hooks, `AGENTS.md`, shared `.agents/skills` |
 | Google Antigravity | `tools/agents/run antigravity` | `.agents/hooks.json`, `AGENTS.md`, shared `.agents/skills` |
@@ -175,12 +206,12 @@ Shared [intake guards](knowledge/policies/bounded-intake.md) refuse obvious larg
 dumps before execution. Use targeted ranges, limited searches and summaries; no output is rewritten.
 
 Before compaction, complete the active handover, current task and affected docs, then verify the
-checkpoint. Claude and Codex configure native compaction at 250k; OpenCode uses its native model
-window. Only the Claude profile implements the observed 300k stop. An absolute pre-request 300k
+checkpoint. Claude, Codex, OpenCode, Pi and dsh share one rule: a 250k closure, then compaction once the
+handover is verified; 300k forces the handover and compaction again. An absolute pre-request 300k
 ceiling remains unqualified; strict mode refuses rather than claiming it.
 
 Graphify/Archify analyze committed source and documentation in CI after every main update, and
-locally once you approve their install. Generated output stays outside tracked source. Keep the canonical architecture spec
+locally once you approve their install (off by default, strongly recommended). Generated output stays outside tracked source. Keep the canonical architecture spec
 current and wait for the exact merged commit's analysis before declaring delivery complete.
 
 [Agent workflow](Workflow_Agent.md) · [command reference](command.md) ·

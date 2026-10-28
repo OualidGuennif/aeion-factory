@@ -58,6 +58,10 @@ deletions and renames cannot leave old nodes. Required code/Markdown with no ext
 fails coverage. Other files are explicitly listed as inventory-only. PDF/image semantics and
 LLM inference are not claimed. This deterministic baseline needs no model token or secret.
 
+The context lifecycle view follows the shared rule of [context safety](context-safety.md) for all
+four harnesses: 250k closure, verified checkpoint, compaction, and a 300k state that forces the
+handover and compaction again instead of a stop.
+
 **Plain folder.** `refresh` needs the root to be its own git repository and refuses otherwise, before
 any git call: nested in another repository, git would answer for the parent. In a plain folder, run
 the two steps directly, with the parent's toolchain: `.aeion/integrations/graphify-venv/bin/python

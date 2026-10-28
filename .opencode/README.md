@@ -13,5 +13,5 @@ provider through OpenCode's own UI for that separate profile; never copy stored 
 The existing user database and configuration remain yours.
 
 OpenCode 2.1.4+ uses a default id/setup plugin entrypoint and native domain callbacks. It refuses compaction without the verified
-handover and injects its recovery pointer. Use the shared sign-off skill at task completion. OpenCode controls the model's native compaction window; no invented fixed 250k
+handover and injects its recovery pointer. Use the shared sign-off skill at task completion. The plugin feeds each step's tokens to the shared 250k/300k rule and compacts itself; no invented fixed 250k
 setting or strict/observed 300k runtime cap is advertised.

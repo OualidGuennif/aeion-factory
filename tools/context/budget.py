@@ -97,7 +97,14 @@ def native_usage(path, session):
             return None
         if record.get("type") != "assistant":
             continue
-        usage = record.get("message", {}).get("usage")
+        message = record.get("message", {})
+        if not isinstance(message, dict):
+            raise ValueError("invalid transcript record")
+        # API errors and hook stops are written as synthetic assistant records with zero tokens: they
+        # were never sent, so reading them as the latest request would block every later prompt.
+        if message.get("model") == "<synthetic>":
+            continue
+        usage = message.get("usage")
         if usage is None:
             continue
         if not isinstance(usage, dict) or any(type(usage.get(key)) is not int or usage[key] < 0 for key in FIELDS):

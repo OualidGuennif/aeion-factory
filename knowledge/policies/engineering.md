@@ -60,7 +60,9 @@ local, without review, CI or a `work/current.md` entry; tests for what changed s
   subagent, verifies every finding and records `Review: OK` or `Review: NOT OK` (at most five findings)
   for the exact commit in `.aeion/reviews/<sha>.md`, then posts it on the commit. The hook
   `tools/git-hooks/pre-push` (`git config core.hooksPath tools/git-hooks`) refuses a push of `develop`
-  without `Review: OK` and any direct push to `main`. CI runs only for `main`, so pushes stay free.
+  without `Review: OK` and any direct push to `main`. CI runs only for `main` and for pull requests,
+  so pushes stay free. A loop's pull request into `develop` merges after its `Review: OK` comment and a
+  green CI; then the local `develop` pulls it before new commits.
 - A release (skill `ship`): `tools/release/release <part>` bumps `VERSION` (SemVer) and dates the
   changelog; a pull request `develop → main` is reviewed again and merged with a merge commit after a
   green CI; the merged commit is tagged `vX.Y.Z` with its changelog section as release notes.

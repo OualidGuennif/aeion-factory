@@ -42,6 +42,9 @@ def main(argv):
     args = parser.parse_args(argv)
     root = Path(args.root).resolve() if args.root else ROOT
     version_file, changelog_file = root / "VERSION", root / "CHANGELOG.md"
+    if not version_file.is_file() or not changelog_file.is_file():
+        print("FAIL VERSION and CHANGELOG.md must both exist at the project root", file=sys.stderr)
+        return 1
     changelog = changelog_file.read_text(encoding="utf-8")
 
     # Release notes of a version already cut.
@@ -61,6 +64,10 @@ def main(argv):
         print(f"FAIL VERSION holds '{current}', not MAJOR.MINOR.PATCH", file=sys.stderr)
         return 1
     version = bump(current, args.part)
+    # A version already in the changelog (a reverted or repeated run) is never cut twice.
+    if any(line.startswith(f"## [{version}]") for line in changelog.splitlines()):
+        print(f"FAIL CHANGELOG.md already has a section for {version}", file=sys.stderr)
+        return 1
 
     # A release with nothing under Unreleased has nothing to say.
     if UNRELEASED not in changelog or not section(changelog, UNRELEASED).strip():

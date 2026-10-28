@@ -18,3 +18,4 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 ### Changed
 - Releases reach `main` through a reviewed `develop → main` pull request merged with a merge commit.
 - Sign-off and the checkpoint compare against `origin/develop` when it exists.
+- CI also runs on pull requests into `develop` (loop pull requests); pushes of `develop` run none.

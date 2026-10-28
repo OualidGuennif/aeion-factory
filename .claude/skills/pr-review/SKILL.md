@@ -30,6 +30,7 @@ Two targets, same review. **Develop push:** the range `origin/develop..HEAD` (`g
      `gh api repos/{owner}/{repo}/commits/<sha>/comments -F body=@.aeion/reviews/<sha>.md`.
    - Release: save it as `.aeion/loop-bodies/review-<n>.md` (the only body path read-only loops may
      publish) and `gh pr comment <n> --body-file .aeion/loop-bodies/review-<n>.md`.
+   - Loop pull request into `develop`: as a release, on the PR; it merges after Review OK and a green CI.
 6. NOT OK: fix, commit, review again; a new commit needs a new verdict. Release OK and CI green: the
    skill `ship` merges. A human decision waits before the merge; a deploy after it.
 

@@ -50,6 +50,14 @@ class ReleaseTests(unittest.TestCase):
         self.write("v1.2\n", HEAD + "- Fix.\n")
         self.assertIn("not MAJOR.MINOR.PATCH", self.release("patch").stderr)
         self.assertEqual(self.release("--notes", "9.9.9").returncode, 1)
+        # A repeated run never writes a second section for the same version.
+        self.write("1.2.0\n", HEAD + "- Fix.\n\n## [1.3.0] - 2026-10-01\n\n- Cut.\n")
+        self.assertIn("already has a section for 1.3.0", self.release("minor").stderr)
+        self.assertEqual((self.root / "VERSION").read_text(), "1.2.0\n")
+        (self.root / "VERSION").unlink()
+        missing = self.release("minor")
+        self.assertEqual(missing.returncode, 1)
+        self.assertIn("FAIL VERSION and CHANGELOG.md", missing.stderr)
 
 
 if __name__ == "__main__":

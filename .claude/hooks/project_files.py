@@ -6,18 +6,25 @@ import os
 import subprocess
 from pathlib import Path
 
-# Never walked without git: version control, dependencies, caches and local state.
-SKIPPED = {".git", ".aeion", "node_modules", "vendor", ".venv", "venv", "__pycache__", ".mypy_cache", ".pytest_cache"}
+# Never walked without git: version control, dependencies, caches, build output and local state.
+SKIPPED = {".git", ".aeion", "node_modules", "vendor", ".venv", "venv", "__pycache__", ".mypy_cache", ".pytest_cache",
+           "dist", "build", "target", ".next", ".cache", ".tox", ".gradle"}
+# Files the desktop rewrites on its own: listed, they would change the project between two reads.
+SKIPPED_FILES = {".DS_Store", "Thumbs.db", "desktop.ini"}
 
 
 def git_active(root):
-    """True inside a git work tree; a broken repository (a .git git cannot read) is an error, not a plain folder."""
+    """True when the root is its own git work tree; a broken repository (a .git git cannot read) is an error.
+
+    A plain folder nested inside another repository is not that repository: its files are not tracked there,
+    so git would list none of them."""
     try:
-        result = subprocess.run(["git", "rev-parse", "--is-inside-work-tree"], cwd=root, capture_output=True,
+        result = subprocess.run(["git", "rev-parse", "--show-toplevel"], cwd=root, capture_output=True,
                                 text=True, check=False)
     except OSError:
         result = None
-    active = result is not None and result.returncode == 0 and result.stdout.strip() == "true"
+    top = result.stdout.strip() if result is not None and result.returncode == 0 else ""
+    active = bool(top) and Path(top).resolve() == Path(root).resolve()
     if not active and (Path(root) / ".git").exists():
         raise subprocess.CalledProcessError(result.returncode if result else 127, "git rev-parse")
     return active
@@ -43,5 +50,5 @@ def project_files(root, untracked=False):
     for folder, folders, files in os.walk(root):
         folders[:] = [name for name in folders if name not in SKIPPED]
         relative = Path(folder).relative_to(root)
-        paths += [(relative / name).as_posix() for name in files]
+        paths += [(relative / name).as_posix() for name in files if name not in SKIPPED_FILES]
     return sorted(paths)

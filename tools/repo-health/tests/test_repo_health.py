@@ -37,6 +37,28 @@ class RepoHealthTests(unittest.TestCase):
         self.assertIn("big.py", result.stdout)
         self.assertNotIn("huge.js", result.stdout)
 
+    def test_desktop_files_and_build_output_are_not_walked(self):
+        (self.root / ".DS_Store").write_bytes(b"\0" * 10)
+        (self.root / "dist").mkdir()
+        (self.root / "dist/bundle.js").write_text("x\n" * 5000)
+        result = self.check_health("--json")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_folder_nested_in_another_repository_is_walked(self):
+        # A plain project unpacked inside a parent repository is not tracked there: git would list nothing.
+        parent = Path(self.directory.name)
+        subprocess.run(["git", "init", "-q", str(parent)], check=True)
+        nested = parent / "proj"
+        (nested / "tools/repo-health").mkdir(parents=True)
+        (nested / ".claude/hooks").mkdir(parents=True)
+        shutil.copy(TOOL, nested / "tools/repo-health/repo-health")
+        shutil.copy(FILES, nested / ".claude/hooks/project_files.py")
+        (nested / "big.py").write_text("value = 1\n" * 1501)
+        result = subprocess.run([sys.executable, str(nested / "tools/repo-health/repo-health"), "--json"], cwd=nested,
+                                capture_output=True, text=True, timeout=10)
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertIn("big.py", result.stdout)
+
     def test_broken_repository_still_fails(self):
         (self.root / ".git").write_text("gitdir: /nonexistent\n")
         result = self.check_health("--json")

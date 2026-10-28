@@ -49,7 +49,9 @@ directory does not establish loaded hooks or identical runtime guarantees.
   no transcript the hook can read and OpenCode's plugin exposes no assistant text, so they get the
   written rule in `AGENTS.md` only; the adapter stays silent for them and keeps working.
 - In a plain folder without git, every hook command falls back from `git rev-parse --show-toplevel`
-  to the current folder, so the adapters run where the agent starts.
+  to the current folder, so the adapters run where the agent starts. Limit: a plain folder started
+  from a subfolder, or nested in another repository, does not find `tools/agents/hook.py`; Codex and
+  Antigravity then refuse every tool call (fail closed). Start the agent at the project root.
 - Both adapters enforce supported Bash/path refusals, edit feedback and a verified handover
   before compaction; the first refused compaction creates the skeleton to fill. Native token stops and strict pre-request 300k admission are unqualified.
 - Devin CLI reads `AGENTS.md` and `.agents/skills` natively. By default it also imports

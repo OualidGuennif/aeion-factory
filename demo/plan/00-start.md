@@ -73,10 +73,15 @@ demo/<harness>/
 
 Only `workspace/` is ignored by the parent repository; everything else is committed.
 
-Open the agent at the **repository root**, as the Claude Code run did. The agent writes the app under
-`demo/<harness>/workspace/` and its records beside it, and runs the copy's commands from inside the
-copy. Opening the agent inside `workspace/` does not isolate it: the copy has no `.git`, so the agent's
-project discovery and the hook commands (`git rev-parse --show-toplevel`) still resolve to the parent
+Open the agent at the **repository root**, as the Claude Code run did, or in **`demo/`**. Both work
+because `demo/` sits inside the git repository: the agent loads the root `AGENTS.md` (Codex walks from
+the git root down; OpenCode takes the nearest one above, so `demo/` has none of its own), the hook
+commands resolve the root with `git rev-parse --show-toplevel`, and OpenCode's plugin finds
+`tools/agents/hook.py` above it. Opened in `demo/`, the agent's paths start at `demo/`
+(`<harness>/workspace/`), and a sandbox that writes only below its folder asks before a `git commit`.
+The agent writes the app under `demo/<harness>/workspace/` and its records beside it, and runs the
+copy's commands from inside the copy. Opening the agent inside `workspace/` does not isolate it: the
+copy has no `.git`, so the agent's project discovery and the hook commands still resolve to the parent
 repository. Its sandbox may also refuse writes to the `journal/` beside the copy.
 
 Round 00 (setup) checks the factory copy itself before any app code:

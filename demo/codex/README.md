@@ -1,11 +1,12 @@
 # The Codex run
 
 Codex builds the same Idea Board from [`../plan/`](../plan/00-start.md) as the
-[Claude Code run](../claude_code/README.md), so the two can be compared round by round.
+[Claude Code run](../claude_code/README.md), so the runs can be compared round by round.
 
-- **Factory copy:** `workspace/` (not tracked). It was made from `develop` at `bab0e11`, so it already
-  has the eight base fixes from the Claude Code run (FB-002, 004 to 010).
-- **Command:** `git archive HEAD -- . ':(exclude)demo'`. The copy has no `.git`, holds 154 files and
+- **Factory copy:** `workspace/` (not tracked), made from `develop` at `f7bcdab`. It has the base fixes
+  from the Claude Code run (FB-002, 004 to 010), Graphify 0.9.97 and Archify v3.2.0 pins, and
+  `tools/architecture/ask` with the skill `graph`.
+- **Command:** `git archive HEAD -- . ':(exclude)demo'`. The copy has no `.git`, holds 160 files and
   no app yet.
 - **Inherited state:** the copy's `work/current.md` and `CHANGELOG.md` still hold the factory's own
   entries, as they did for the Claude Code run (FB-003).
@@ -19,15 +20,12 @@ Codex builds the same Idea Board from [`../plan/`](../plan/00-start.md) as the
 | `workspace/` | the factory copy; the app goes in `workspace/app/` |
 
 ## Starting Codex
-1. Open Codex at the repository root `aeion-factory/`, not inside `workspace/`. `00-start.md` says why.
-2. Trust the project and enable its hooks (`/hooks`), as in
+1. Trust the project and enable its hooks (`/hooks`), then restart Codex, as in
    `knowledge/operations/agent-compatibility.md`.
-3. Give it this first message:
-
-   > You are the harness `codex` of the demo in `demo/`. Read `demo/README.md` and `demo/plan/00-start.md`.
-   > Work only in `demo/codex/`: the factory copy is `demo/codex/workspace/` (no git), and records go
-   > beside it. Do round 00 now, then stop and wait for my yes before each next round. Commit each
-   > round on `develop` as `demo(codex): round NN …`; never push.
+2. Open Codex in `demo/` (or at the repository root; [`../plan/00-start.md`](../plan/00-start.md) says
+   why both work). Codex loads the root `AGENTS.md` from the git root down.
+3. Paste [`START.md`](START.md) as the first message. Its sandbox writes only below `demo/`, so it asks
+   before each `git commit`: approve it.
 
 ## Results by round
 To fill in as the rounds are done.

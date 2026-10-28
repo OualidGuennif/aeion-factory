@@ -9,7 +9,7 @@ knowledge base.
   git status, recent commits, open tasks.
 - Instructions that existed before Æion Factory, and the owner's words, win.
 - The Graphify/Archify baseline is strongly recommended and installed only on the user's yes
-  (`knowledge/operations/architecture-maintenance.md`). Start through `tools/agents/run <claude|codex|opencode|devin|droid>`; Claude also retains `tools/context/run`.
+  (`knowledge/operations/architecture-maintenance.md`). Start through `tools/agents/run <claude|codex|opencode|devin|droid|antigravity>`; Claude also retains `tools/context/run`.
 
 ## 1. Plan (skill `plan`)
 

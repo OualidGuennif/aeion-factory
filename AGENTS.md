@@ -26,7 +26,7 @@ loops/        orchestrator.sh (inner, middle, outer, docs, security, watch, retr
               the issue protocol, the Decisions API client (off)
 tools/        knowledge/link/health checks, agent adapters, architecture and local language servers
 .claude/      original hooks, maintained skills, path-scoped rules, hookify examples
-.codex/       Codex native config/hooks; .agents/skills links to the maintained skills
+.codex/       Codex native config/hooks; .agents/ holds skill links and Antigravity's hooks.json
 .opencode/    OpenCode native plugin; root opencode.json selects shared skills/compaction
 .devin/       Devin CLI hooks and import settings (Claude import off; shared adapter)
 .factory/     Droid (factory.ai, another product) hooks only; Æion local state is the ignored .aeion/

@@ -1,6 +1,6 @@
 ---
 type: Runbook
-title: "Claude Code, Codex, OpenCode, Devin and Droid"
+title: "Claude Code, Codex, OpenCode, Devin, Droid and Antigravity"
 description: "One Æion Factory instruction/skill source, runtime-specific adapters, setup and explicitly bounded guarantees."
 status: stable
 sources:
@@ -22,6 +22,8 @@ sources:
     title: "Devin hook registrations"
   - resource: ../../.factory/settings.json
     title: "Droid hook registrations"
+  - resource: ../../.agents/hooks.json
+    title: "Antigravity hook registrations"
 generated:
   by: aeion-factory/1.2
   at: 2026-10-25
@@ -30,7 +32,7 @@ generated:
 # Agent compatibility
 
 AGENTS.md, Knowledge, task state, checker commands and the reviewed PR workflow are shared.
-Claude Code remains the original integration. Codex, OpenCode, Devin and Droid use their
+Claude Code remains the original integration. Codex, OpenCode, Devin, Droid and Antigravity use their
 documented native configuration and small adapters to the existing guards/checkpoints; copying a
 directory does not establish loaded hooks or identical runtime guarantees.
 
@@ -65,6 +67,34 @@ directory does not establish loaded hooks or identical runtime guarantees.
   names carrying a `command` string goes through the shell guard (and the path guard for a
   file). It refuses with `permissionDecision: deny`. Droid has no Æion Factory compaction
   checkpoint or token stop.
+- Google Antigravity (the `agy` CLI and the IDE) reads `AGENTS.md` and `.agents/skills`, and
+  workspace hooks from `.agents/hooks.json` once the folder is trusted. One `aeion-factory` group
+  sends PreToolUse and PostToolUse (matcher `.*`) and Stop to `tools/agents/hook.py antigravity
+  <event>`: the payload names no hook event or session, so the event is an argument and the
+  session key is per clone, as for Devin. The adapter reads `toolCall {name, args}`, maps
+  `run_command` (`CommandLine`) to Bash, `view_file` to Read, `write_to_file` to Write and
+  `replace_file_content`/`multi_replace_file_content` to Edit and `grep_search` to Grep. For any
+  tool, including MCP tools, every nonempty string at any depth under an argument whose name,
+  ignoring case and `_`/`-`, ends in path, file, dir, directory or uri, or their plurals
+  (`AbsolutePath`, `TargetDirectories`, `file_path`, `Uri`; a `file:` URI is decoded to its path),
+  goes through the path guard; `view_code_item`'s `NodePaths` are code symbols and are skipped. A
+  mapped file tool with none is refused. Not recognized: other names (`target`, `Url`), text typed
+  into a running command (`send_command_input`) and Windows paths. `view_file`'s
+  `StartLine`/`EndLine` become the intake window; `grep_search` with `MatchPerLine: false` lists
+  names only. For any tool, every string at any depth under an argument whose name ends in
+  include, glob or pattern, or their plurals (`Includes`, `IncludePattern`, `file_pattern`), goes
+  through the same check as Claude's Grep `glob` filter ([security](../policies/security.md)),
+  with its limits; a non-string filter is refused. Any tool with a `CommandLine` goes through the
+  shell guard, as does a `command` or `commandLine` argument in any case; a call with two is
+  refused. `Cwd` or `workdir` in any case (a `file:` URI decoded) is the shell's directory; two
+  or a non-string one are refused. On a shell call any other argument must be a flag or a
+  number, since the guard cannot tell which one a tool runs in; a text, list or object is refused.
+  The guards see only fields the adapter derives, never a raw `limit` or output mode from the
+  model. A pre-tool payload without `toolCall` is refused. A pre-tool answer is always an
+  explicit `{"decision": "allow"}` or `{"decision": "deny", "reason": ...}`, since Antigravity
+  reads an empty answer as a refusal. Unverified until a live run: whether that `allow` also
+  skips Antigravity's own approval prompt (a `run_command` with `SafeToAutoRun: false`); until
+  then, assume it may. No compaction checkpoint or token stop.
 - Managed CLI launchers enter the repository root and check the exact-HEAD architecture baseline;
   its absence is a warning, because installing the integrations needs the user's yes.
 - Raw command/MCP paths, host-managed/cloud orchestration and deliberate local modification are
@@ -92,6 +122,9 @@ qualification and setup commands are recorded below.
 - https://docs.factory.ai/reference/hooks-reference
 - https://docs.factory.ai/cli/configuration/hooks-guide
 - https://docs.factory.ai/cli/configuration/skills
+- https://antigravity.google/docs/hooks
+- https://antigravity.google/docs/rules
+- https://github.com/google-antigravity/antigravity-cli/blob/main/CHANGELOG.md
 
 ## Setup
 
@@ -109,6 +142,8 @@ qualification and setup commands are recorded below.
    hooks if Devin asks. Keep the model/provider choice in Devin's own user settings.
 6. Droid: `droid` or `tools/agents/run droid` from the repository root. Approve the project hooks
    if Droid asks; account and model stay in Droid's user settings (`~/.factory/`).
+7. Antigravity: `agy` or `tools/agents/run antigravity` from the repository root, or open the
+   folder in the IDE. Trust the folder so `.agents/hooks.json` loads; `/hooks` lists it.
 
 The shared guards are basename/command-pattern safeguards. Codex native Bash and apply_patch
 payloads are normalized explicitly, including deleted/moved patch paths. OpenCode maps native
@@ -151,6 +186,15 @@ added it, so the payload shape, tool names and `$FACTORY_PROJECT_DIR` follow sea
 its hooks reference and public Droid hook integrations. Unverified: `ApplyPatch`'s input field
 (an unknown field is refused, failing closed) and whether Droid also loads `.claude/` hooks.
 Qualify it like Devin: `cat .env` refused with the guard's reason, an edit naming its covering doc.
+
+Antigravity is not yet qualified live either; antigravity.google was unreachable from the
+container that added it. The `toolCall` payload, `run_command`'s `CommandLine`, the decisions and
+`.agents/hooks.json` follow the CLI changelog, a CLI issue quoting a real 1.4.4 payload and
+search excerpts of the hooks page. Unverified: the exact case of the file tools' path fields
+(an unknown field on a mapped file tool is refused), whether `StartLine` is 1-based, the Stop answer, and whether the IDE runs
+workspace hooks (a forum report says its PostToolUse did not fire). A hook that crashes or
+times out blocks the call. Qualify it with `agy`: `cat .env` and a view of that file refused
+with the guard's reason, and an edit naming its covering doc; then repeat in the IDE.
 
 OpenCode 2.1.4 is the qualified V2 target. Legacy 1.19.4 can discover skills but does not dispatch
 these V2 callbacks; do not claim its guards are working from discovery alone. The plugin is a

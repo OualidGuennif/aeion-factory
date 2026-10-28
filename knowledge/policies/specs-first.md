@@ -49,8 +49,9 @@ before its code is written, has these sections in this order:
   work for any file format; only a path beginning with `./` or `../` may contain whitespace.
 - Header discovery reads at most 8 KiB of leading comments/docstrings in tracked regular UTF-8
   text files, regardless of suffix. It excludes Markdown, `knowledge/`, vendored/dependency/cache
-  folders and known secret paths. It never follows file symlinks. Use explicit sources for other
-  formats or metadata after executable code; directory sources remain existence-only.
+  folders and secret paths (the shared list in `.claude/hooks/secret_names.py`). It never follows
+  file symlinks. Use explicit sources for other formats or metadata after executable code;
+  directory sources remain existence-only.
 - A documentation-only exemption accepts standalone comment `Spec:` lines and blanks, never
   executable code that happens to contain a pointer.
 

@@ -47,7 +47,8 @@ Adapted material retains its MIT attribution in CREDITS and the accompanying not
 
 [Graphify revision](https://github.com/Graphify-Labs/graphify/tree/92741d162b2094ffc2fed58cfbd8ee823e9da62c) and
 [Archify revision](https://github.com/tt-a1i/archify/tree/81c6be8d87090670c45d08a8f97f9d29c5af0bec).
-Both are mandatory at adoption and after each main update. Use native structural code/Markdown
+CI analyses every main update; locally they are strongly recommended and installed only on
+the user's yes. Use native structural code/Markdown
 extraction, including frontmatter, headings and links, instead of making required CI depend on
 LLM credentials or quotas. Full small-corpus rebuilds avoid stale deletion/rename state and
 shared-cache races; optimize only after measured cost warrants it. This replaces the proposed

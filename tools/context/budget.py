@@ -11,10 +11,13 @@ from pathlib import Path
 import re
 import shlex
 import subprocess
+import sys
 import tempfile
 import time
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / ".claude/hooks"))
+from secret_names import is_secret  # noqa: E402
 WARNING = 250_000
 LIMIT = 300_000
 MAX_TAIL = 4 * 1024 * 1024
@@ -128,9 +131,7 @@ def fingerprint(root):
         if rel.startswith(("work/handovers/", ".aeion/")):
             continue
         name = Path(rel).name
-        if name in {"auth.json", "env.local", "credentials", "credentials.json", "id_rsa", "id_ed25519"} or name.endswith((".key", ".pem")):
-            continue
-        if name == ".env" or name.startswith(".env.") and name not in {".env.example", ".env.sample", ".env.template", ".env.dist"}:
+        if is_secret(name):
             continue
         path = root / rel
         digest.update(raw + b"\0")
@@ -183,7 +184,10 @@ def closure_tool(root, event):
                  "git status --short", "git diff --stat", "git diff --check"}
         if command.strip() in fixed:
             return True
-        words = shlex.split(command)
+        try:
+            words = shlex.split(command)
+        except ValueError:
+            return False
         return (len(words) == 8 and words[:3] == ["python3", "tools/context/budget.py", "checkpoint"]
                 and words[3] == "--session" and words[4] == event["session_id"] and words[5] == "--base"
                 and re.fullmatch(r"[A-Za-z0-9_./-]+", words[6]) is not None and words[7] == "--verify")
@@ -291,7 +295,9 @@ def checkpoint(root, session, base):
         changed = set(git(root, "diff", "--name-only", "-z", base).decode().split("\0")) - {""}
         changed |= {os.fsdecode(path) for path in git(root, "ls-files", "--others", "--exclude-standard", "-z").split(b"\0")
                     if path and not os.fsdecode(path).startswith((".aeion/", "work/handovers/"))}
-        if changed and "work/current.md" not in changed:
+        # Local play (git config aeion.mode local) keeps no work/current.md entry.
+        local = subprocess.run(["git", "config", "--local", "--get", "aeion.mode"], cwd=root, capture_output=True, text=True).stdout.strip() == "local"
+        if changed and not local and "work/current.md" not in changed:
             raise ValueError("update work/current.md before checkpointing")
         if fingerprint(root) != before:
             raise ValueError("files changed during checkpoint validation")

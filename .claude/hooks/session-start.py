@@ -16,11 +16,11 @@ lines = []
 lines += ["Bounded intake: full reads/dumps above 64 KiB or 400 lines are refused.",
           "Use targeted Read ranges, limited searches and summaries; see knowledge/policies/bounded-intake.md."]
 # The flow mode decides whether a task ends in a pull request or a local commit.
-if out("git", "config", "--get", "aeion.mode") == ["local"]:
+if out("git", "config", "--local", "--get", "aeion.mode") == ["local"]:
     lines.append("Æion Factory mode: local (commits on main, no PR/CI/task-state ritual; safety guards stay on). "
                  "Team flow: git config --unset aeion.mode")
 else:
-    lines.append("Æion Factory mode: team (branch, PR, review, green CI). Local play: git config aeion.mode local")
+    lines.append("Æion Factory mode: team (branch, PR, review, green CI). Local play (this clone): git config aeion.mode local")
 # Uncommitted changes: one you cannot explain is not yours.
 status = out("git", "status", "--short")
 lines.append(f"git status: {len(status)} changed path(s)" if status else "git status: clean")

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # Spec: knowledge/operations/build-and-test.md
-"""PostToolUse hook on Edit and Write: the fast checks that apply to the edited file.
+"""PostToolUse hook on Edit, MultiEdit, Write and NotebookEdit: the fast checks that apply to the edited file.
 
 Silent with exit 0 when they pass; exit 2 with at most 15 lines (the rule and its fix) when not.
 It also records the file for the Stop sign-off, and names the doc that covers it, once per session.
@@ -55,7 +55,8 @@ if not isinstance(event, dict) or not isinstance(event.get("tool_input"), dict):
 session = event.get("session_id", "none")
 if not isinstance(session, str) or not session or any(char in session for char in "/\\\0"):
     fail("After-edit requires a valid session identifier.")
-file_path = event["tool_input"].get("file_path")
+# NotebookEdit names its file notebook_path.
+file_path = event["tool_input"].get("file_path", event["tool_input"].get("notebook_path"))
 if not isinstance(file_path, str) or not file_path or "\0" in file_path:
     fail("After-edit requires a nonempty file_path string.")
 path = Path(file_path).resolve()

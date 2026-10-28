@@ -85,7 +85,8 @@ Unavailable child usage stops that child's profile without contaminating the par
 Analysis takes an explicit target commit, optional comparison base and reviewed integration/view
 manifests. A diverged PR uses the effective merge base while preserving its exact requested
 base and target SHAs in the receipt. Main pushes retain their ordinary ancestor comparison.
-Only allowed tracked text enters extraction. Secret paths refuse analysis, symlinks
+Only allowed tracked text enters extraction. Secret paths (one list for the guards, analysis and
+the context fingerprint, `.claude/hooks/secret_names.py`) refuse analysis, symlinks
 are excluded, and unsupported formats remain explicitly inventory-only. Tool versions are pinned.
 The graph includes code and native Markdown structure/frontmatter/links; semantic inference by
 an LLM is outside the baseline. This keeps the default independent of model credentials.

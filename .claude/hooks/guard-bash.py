@@ -6,17 +6,17 @@ Input: the hook event as JSON on stdin; tool_input.command is the command. Outpu
 reason on stderr blocks it; a JSON "ask" decision asks a human; exit 0 lets it run. A seatbelt,
 not a guarantee: the rules are in knowledge/policies/security.md.
 """
+import glob
 import json
 import os
 import re
 import shlex
 import sys
 from pathlib import Path, PurePosixPath
+from secret_names import brace_variants, is_secret, named_secrets, shell_pattern
 
-TEMPLATES = {".env.example", ".env.sample", ".env.template", ".env.dist", "env.example.local"}
 READERS = {"cat", "less", "more", "head", "tail", "grep", "rg", "awk", "sed", "strings", "base64",
            "xxd", "od", "source", ".", "cp", "scp", "rsync", "jq", "python3", "python", "node", "vim", "nano"}
-SECRET_NAMES = {"auth.json", "credentials", "credentials.json", "id_rsa", "id_ed25519", "env.local"}
 MAX_INTAKE_BYTES, MAX_INTAKE_LINES = 65536, 400
 LOOP_BODIES = ".aeion/loop-bodies/"
 INTAKE_REASON = ("bounded intake: replace the dump with head -n 80, head -c 65536, "
@@ -35,10 +35,39 @@ def ask(reason):
     sys.exit(0)
 
 
-def is_secret(name):
-    if name in TEMPLATES:
-        return False
-    return bool(re.fullmatch(r"\.env(\..+)?", name)) or name in SECRET_NAMES or name.endswith((".pem", ".key"))
+def directories(command, base):
+    """The directories a glob in the command may expand in: its own and each literal one a cd moves to."""
+    current, found = base, [base]
+    for words in simple_commands(command):
+        words = program(words)
+        if words and words[0] == "<script>":
+            found += directories(words[1], current)
+        elif words and PurePosixPath(words[0]).name in ("cd", "pushd"):
+            target = next((w for w in words[1:] if not w.startswith("-")), "~")
+            current = os.path.join(current, os.path.expanduser(target))
+            found.append(current)
+    return found
+
+
+def mentioned_secrets(tokens, shell_tokens, bases, unquoted_globs):
+    names = {PurePosixPath(t).name for t in tokens if is_secret(PurePosixPath(t).name)}
+    # Only the shell expands braces and globs; a heredoc body fed to a program is text.
+    for token, unquoted in zip(shell_tokens, unquoted_globs):
+        for word in brace_variants(token):
+            name = PurePosixPath(word).name
+            if is_secret(name):
+                names.add(name)
+            elif any(char in word for char in "*?["):
+                # A glob is judged by the secret it names wherever it expands, since a variable, a command
+                # substitution or a cd can hide its directory; and by the files it expands to here. A
+                # quoted pattern ('key.*') is a regex or prose the shell never expands, so only the files.
+                if unquoted:
+                    names |= named_secrets(name)
+                pattern = shell_pattern(os.path.expanduser(word))
+                for base in bases:
+                    matches = glob.glob(pattern, root_dir=None if os.path.isabs(pattern) else base)
+                    names |= {PurePosixPath(m).name for m in matches if is_secret(PurePosixPath(m).name)}
+    return sorted(names)
 
 
 # Environment dumps hold keys. The command is split into simple commands (newlines, ; & | && || and
@@ -311,7 +340,7 @@ def git_bypass(command):
 
     Covers short clusters, +refspecs, --mirror, git's unique-prefix long options and a
     core.hooksPath override (-c, --config-env, GIT_CONFIG_* variables, or git config setting
-    anything but the repository's hooks). Reading the setting stays allowed."""
+    anything but the repository's hooks), and setting aeion.mode. Reading either stays allowed."""
     hooks_reason = "overriding core.hooksPath skips the pre-commit checks."
     for words in simple_commands(command):
         # GIT_CONFIG_* variables inject configuration into every later git run.
@@ -340,6 +369,16 @@ def git_bypass(command):
                 unset = "unset" in positional[:keys[0]] or any(a.startswith("--unset") for a in args)
                 if unset or values and values[0] != HOOKS_PATH:
                     return hooks_reason
+            # Local mode relaxes the sign-off and the closure checkpoint, so only the user switches it.
+            modes = [i for i, a in enumerate(positional) if a.lower() == "aeion.mode"]
+            reads = {"get", "--get", "--get-all", "--get-regexp"} & set(args)
+            if modes and not reads and (positional[modes[0] + 1:] or "unset" in positional[:modes[0]]
+                          or any(a.startswith("--unset") for a in args)):
+                return "aeion.mode is the user's switch between team and local flow; the user sets it."
+            # Renaming another section to aeion (or removing it) switches the mode without naming the key.
+            sections = {"--rename-section", "rename-section", "--remove-section", "remove-section"}
+            if sections & set(args) and any(a.lower() == "aeion" for a in positional):
+                return "aeion.mode is the user's switch between team and local flow; the user sets it."
         value_next = False
         for arg in args:
             if value_next:
@@ -392,6 +431,28 @@ def bounded_pipeline(command):
     if len(last) != 3 or last[1] not in {"-n", "-c"} or not re.fullmatch(r"[0-9]{1,6}", last[2]):
         return False
     return 0 < int(last[2]) <= (MAX_INTAKE_LINES if last[1] == "-n" else MAX_INTAKE_BYTES)
+
+
+QUOTED_GLOB = str.maketrans("*?[", "\x01\x02\x03")
+# Programs that never hand an argument to a shell, so a quoted pattern given to them stays a pattern.
+QUOTE_SAFE = {"grep", "egrep", "fgrep", "rg", "jq", "head", "tail", "wc", "uniq", "cut", "tr", "ls", "cat", "echo"}
+
+
+def quotes_inert(command):
+    """Whether the shell keeps quoted text literal: no substitution, escape, comment, ANSI-C quote or
+    here-string can reopen a quote, and every program is a known reader that runs no shell (an
+    unknown one, like env or awk's system(), might; watch runs its words with sh -c, rg with --pre).
+    An assignment can configure a reader to run one (RIPGREP_CONFIG_PATH holding --pre)."""
+    if re.search(r"\$[({']|`|\\|#|<<|[<>]\(|--pre", command):
+        return False
+    for words in simple_commands(command):
+        run = program(words)
+        if any(re.match(r"[A-Za-z_]\w*=", w) for w in words) or "watch" in (PurePosixPath(w).name for w in words):
+            return False
+        # A bare name only: ./grep may be any script; a configured rg may run --pre.
+        if not run or run[0] not in QUOTE_SAFE or run[0] == "rg" and os.environ.get("RIPGREP_CONFIG_PATH"):
+            return False
+    return True
 
 
 def intake_dump(command, base, changed_directory=False):
@@ -450,8 +511,23 @@ try:
         raise TypeError("command is not a string")
 except Exception:
     deny("the hook input could not be read; refusing rather than guessing.")
-tokens = [t for t in re.split(r"[\s'\"=;&|<>()`]+", command) if t]
-secrets = sorted({PurePosixPath(t).name for t in tokens if is_secret(PurePosixPath(t).name)})
+TOKEN_SPLIT = r"[\s'\"=;&|<>()`]+"
+tokens = [t for t in re.split(TOKEN_SPLIT, command) if t]
+workdir = event.get("tool_input", {}).get("workdir", event.get("tool_input", {}).get("cwd", event.get("cwd", ".")))
+try:
+    # Quotes join a shell word (sub/'.e'*), so they are dropped rather than split on.
+    shell_text = re.sub(r"['\"]", "", without_inert_heredocs(command))
+    shell_tokens = [t for t in re.split(r"[\s=;&|<>()`]+", shell_text) if t]
+    # The same words with quoted glob characters made inert, only where quotes surely stay quotes.
+    inert = without_inert_heredocs(command)
+    if quotes_inert(command):
+        inert = re.sub(r"'[^']*'|\"[^\"]*\"", lambda m: m.group(0).translate(QUOTED_GLOB), inert)
+    marked = [t for t in re.split(r"[\s=;&|<>()`]+", re.sub(r"['\"]", "", inert)) if t]
+    unquoted_globs = [any(char in t for char in "*?[") for t in marked]
+    secrets = mentioned_secrets(tokens, shell_tokens, directories(command, workdir if isinstance(workdir, str) else "."),
+                                unquoted_globs)
+except (OSError, ValueError, RecursionError):
+    deny("the files a glob names could not be verified; name the files explicitly.")
 
 if os.environ.get("AEION_LOOP_READ_ONLY") == "1":
     fixed = {"git log -5 --oneline", "git diff --stat", "git diff --check", "git status --short",
@@ -487,7 +563,8 @@ if os.environ.get("AEION_LOOP_READ_ONLY") == "1":
 # Secret files: reading one is refused; any other mention is a human's call.
 if secrets:
     if READERS & set(tokens):
-        deny(f"it reads a secret file ({', '.join(secrets)}). Secrets are never read or printed.")
+        deny(f"it reads a secret file ({', '.join(secrets)}). Secrets are never read or printed "
+             "(to search for the name itself, use the Grep tool).")
     ask(f"The command mentions a secret file ({', '.join(secrets)}).")
 
 # Environment dumps hold keys.

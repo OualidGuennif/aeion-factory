@@ -44,7 +44,9 @@ base. A valid empty change set remains successful; an unavailable check is never
 
 Header traceability is extension-independent and bounded; see the discovery scope in
 [specs-first](../policies/specs-first.md). The Stop reminder preserves spaces/Unicode in edited
-paths and reports an unavailable link check once. `repo-health --json` exposes its source suffix
+paths and reports an unavailable link check once; unreadable input or a session id shaped like a
+path has nothing recorded and passes. The path guard and after-edit also cover MultiEdit and
+NotebookEdit (`notebook_path`). `repo-health --json` exposes its source suffix
 set and selected file count; its caps are not language-aware lint or security coverage.
 
 Policy hooks require Claude Code 2.1.295+ for `onFailure: block`; the Bash/path guard command timeout is three
@@ -58,8 +60,10 @@ The same hook suite tests [bounded intake](../policies/bounded-intake.md), inclu
 thresholds, misleading limiters and preserved native edit/range fields. SessionStart adds two
 short intake instructions and the flow mode within its existing 25-line cap.
 
-The flow mode is a per-clone Git setting. The default team flow ends a task in a pull request
-with review and green CI. `git config aeion.mode local` selects local play: commits go to
+The flow mode is a per-clone Git setting, read from the repository's local config only
+(`git config --local`; includes and the global config do not count). The default team flow ends
+a task in a pull request with review and green CI. `git config aeion.mode local` sets local play
+in the repository's local config: commits go to
 `main` directly, the Stop sign-off reminder is silent, and the safety guards (secrets, Git hook
 and force-push bypasses, large dumps) stay on. `git config --unset aeion.mode` restores the team flow.
 

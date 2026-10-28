@@ -7,7 +7,7 @@ Status: ACTIVE, WAITING-OWNER, MEASURING, BLOCKED, BACKLOG.
 ## demo/ Idea Board run and feedback for Æion — ACTIVE
 - Owner decision: 2026-10-28, Claude Code builds the Idea Board in a git-less copy (demo/claude_code/workspace), journals each round, files feedback, fixes small ones in the base.
 - State: briefs in demo/plan/; rounds 00–02 done (2396a52, 64a466b); FB-006 fixed in 2c2fb1d; only demo/<harness>/workspace/ is git-ignored (FB-001–009); rounds 03–04 done and visually approved (page + island; votes); round 05 done and approved (tags, search, 72 tests); round 06 done (Docker, 5 container checks); round 07 done (Graphify, 14 Archify diagrams, gallery; FB-010); base fixes FB-002/004/005/007/008/009/010 committed (9d4f78c..87a27b0); READMEs, app snapshot (result/), demo/codex/ ready (ce7c8c6); docs/diagrams.html (cdd6991).
-- Next: finish ask callers and the Pi adapter (uncommitted), add demo/pi/, push develop, release develop → main with clean branches (who: agent; owner asked); then owner runs Codex, OpenCode and Pi from demo/ with each START.md (who: owner).
+- Next: owner runs Claude Code (run 2, run 1 archived in demo/claude_code/archive/run-01/), Codex, OpenCode and Pi from demo/ with each START.md, all on 1.4.0 copies (who: owner).
 - Blocker: none.
 - Evidence: work/handovers/35c6f26d-3a08-48c8-8457-2cb97c7285df.md
 

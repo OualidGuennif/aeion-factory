@@ -2,7 +2,7 @@
 
 - **Severity:** medium (a normal `deno task build` turns `repo-health` red)
 - **Found in:** round 01
-- **Status:** open
+- **Status:** applied 1c9b82c
 
 ## Evidence
 Without git, `project_files()` walks the disk. That walk skips a fixed list: `node_modules`, `.venv`, and so on, plus `dist`, `build` and others at the root only. It does not read `.gitignore`.

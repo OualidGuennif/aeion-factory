@@ -2,7 +2,7 @@
 
 - **Severity:** low (one retry, and the refusal points at the wrong cause)
 - **Found in:** round 03
-- **Status:** open
+- **Status:** applied 9d4f78c
 
 ## Evidence
 After the smoke test I stopped the server with `kill $(cat $S/serve03.pid)`, where `$S` was the

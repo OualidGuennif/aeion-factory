@@ -2,7 +2,7 @@
 
 - **Severity:** medium (wrong evidence possible, misleading message)
 - **Found in:** round 00
-- **Status:** open
+- **Status:** applied aeda5e0
 
 ## Evidence
 Run from `demo/claude_code/workspace` (no `.git`, nested in this repository):

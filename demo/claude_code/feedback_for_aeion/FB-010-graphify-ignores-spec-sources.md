@@ -2,7 +2,7 @@
 
 - **Severity:** medium (the graph gives a wrong answer to a question the factory's own docs say it answers)
 - **Found in:** round 07
-- **Status:** open
+- **Status:** applied 10cccce
 
 ## Evidence
 `tools/architecture/graph.py` builds the graph with Graphify 0.9.95. Markdown is extracted natively:

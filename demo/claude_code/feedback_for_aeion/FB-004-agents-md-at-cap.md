@@ -2,7 +2,7 @@
 
 - **Severity:** medium (the first adoption step fails two checks)
 - **Found in:** round 01
-- **Status:** open
+- **Status:** applied be08858
 
 ## Evidence
 `AGENTS.md` is exactly 120 lines, and `knowledge-check` and `repo-health` fail above 120. It asks for two edits:

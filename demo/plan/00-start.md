@@ -57,6 +57,39 @@ docker compose -f app/compose.yaml up --build    # container, with a persistent 
 6. Write down what happened: what you did, where you got stuck, what the framework helped with or got
    in the way of. A friction with the framework is a feedback for Æion Factory.
 
+## Harness setup (one folder per agent harness)
+
+Each harness runs the same briefs in its own folder, so the runs can be compared:
+
+```
+demo/<harness>/
+  README.md              the run: factory version, results by round, time, findings
+  journal/               00-setup.md, then one file per round (img/ for screenshots)
+  feedback_for_aeion/    FB-001-<slug>.md …: severity, evidence, proposed fix, status
+  render/                round 07 output: index.html, diagrams/, graphify/
+  workspace/             the factory copy without git (git archive HEAD); the app goes in workspace/app/
+```
+
+Only `workspace/` is ignored by the parent repository; everything else is committed. Start the
+agent with `workspace/` as its working folder, and give it this file and the round's file.
+
+## What every round records (so harnesses compare)
+
+End each round's journal with this block, filled with real values:
+
+```text
+Result:          done | partial | blocked
+Tests:           <n> passed, <n> failed (deno test -A), plus each acceptance command's outcome
+Factory checks:  knowledge-check, doc-links, repo-health: PASS | FAIL (rule)
+Guard refusals:  <n> (each with the command's intent and the rule that refused it)
+Human help:      <n> (each time the owner had to act: approval, terminal command, fix)
+Feedback:        FB-<id> new or seen again
+Elapsed:         <minutes>
+```
+
+A guard refusal is not a failure: it is data. Write down whether it was right (a real risk) or a
+false positive, and how you got past it without weakening the guard.
+
 ## Shared rules for every round
 
 - Validation errors are stable JSON: `{"error": "invalid", "field": "<name>", "reason": "<code>"}`.

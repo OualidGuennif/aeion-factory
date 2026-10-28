@@ -2,7 +2,7 @@
 
 - **Severity:** medium (the session cannot compact without the owner's terminal)
 - **Found in:** round 03
-- **Status:** open
+- **Status:** applied 87a27b0
 
 ## Evidence
 At the 250k alert, `tools/context/budget.py` lets only a closed set of tools through. For Bash it
@@ -42,6 +42,11 @@ Two more items for the fix:
 The alert came while the Bash working directory was `demo/claude_code/render`; the owner ran the
 checkpoint from the root a third time. After compaction, the first tool calls were refused with
 "native usage temporarily unavailable" until a retry.
+
+## After the fix (87a27b0)
+At the next alert, the session ran the checkpoint by absolute path from `demo/claude_code` and got
+`Checkpoint: PASS` without the owner. The first tool calls after compaction were again refused with
+"native usage temporarily unavailable"; the retry passed. That refusal is still open.
 
 ## Proposed fix
 - At the alert, admit the checkpoint in any form that resolves to **this root's** `budget.py`: an

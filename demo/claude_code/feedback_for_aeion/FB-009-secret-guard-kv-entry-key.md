@@ -2,7 +2,7 @@
 
 - **Severity:** medium (a normal Deno KV edit is refused, and the workaround is a detour through a file)
 - **Found in:** round 04
-- **Status:** open
+- **Status:** applied 9d4f78c
 
 ## Evidence
 In Deno KV code, `entry.key` is how you read a key: `kv.list(...)` yields entries with `.key` and
@@ -42,3 +42,11 @@ Refuse a `*.key`-like word only when it can be a file argument:
 `cat server.key` and `cat certs/server.key` stay refused, while `entry.key` in code passes. Add both
 cases to `.claude/hooks/test_hooks.py`. The guard should still fail closed when a path cannot be
 resolved: see FB-008 for the message.
+
+## Left after the fix
+Three gaps were found while testing the fix. None of them was introduced by it:
+- `xargs -d , cat` fed by a heredoc is not seen as a read of the named files.
+- `SHELL_CONSUMER` takes the word `bash` inside a path such as `.claude/hooks/guard-bash.py` for a
+  shell, so a heredoc on that line is refused.
+- The guard's refusals point to a Grep tool. The Claude Code session that ran this demo did not
+  have one, so it used `grep` from a scratch script instead.

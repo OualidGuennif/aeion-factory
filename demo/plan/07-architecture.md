@@ -16,6 +16,15 @@ Then answer real questions with it, and keep each command and its real output in
 | Which spec covers this file, and which file has none? | the Markdown → code links in the graph |
 | Where should a newcomer start? | the most connected nodes |
 
+The manifest is a JSON list of `{"path": "<relative to the root>", "required": true|false}`. The
+graph is structural only: check every answer against the code before trusting it, and say where
+the graph was wrong or silent. The checks that tell a good answer from a lazy one:
+- Question 2: name every hop, including the store method the API calls; if the graph has no edge
+  for a hop, say so instead of skipping it.
+- Question 3: distinguish "a test imports it" from "a test reaches it through other files".
+- Question 4: compare the graph's spec links with each file's `Spec:` header line; the frontmatter
+  `sources` of each spec should appear as `specifies` edges.
+
 ## Part B — Archify gallery (many small diagrams of the whole program)
 One page `index.html` with a card per diagram: title, the question it answers, a live thumbnail,
 a link to the full diagram. Each diagram is small (at most about 10 boxes) and answers one question.
@@ -38,6 +47,9 @@ node <archify>/bin/archify.mjs validate <type> diagrams/<name>.json --quality sh
 node <archify>/bin/archify.mjs render <type> diagrams/<name>.json diagrams/<name>.html --quality showcase
 node <archify>/bin/archify.mjs browser-check diagrams/<name>.html --summary
 ```
+
+`tools/architecture/refresh` needs a git repository and refuses a plain folder: use the two steps
+above directly.
 
 ## Out of scope
 Archify evidence links (`sources`): they need a git revision and a repository URL, which a plain

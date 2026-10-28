@@ -17,6 +17,7 @@ loader = importlib.machinery.SourceFileLoader("refresh", str(SCRIPT))
 spec = importlib.util.spec_from_loader("refresh", loader)
 refresh = importlib.util.module_from_spec(spec)
 loader.exec_module(refresh)
+import graph
 
 
 class RefreshTests(unittest.TestCase):
@@ -151,6 +152,22 @@ class RefreshTests(unittest.TestCase):
             run([sys.executable, "-c", parent], timeout=0.1)
         time.sleep(0.7)
         self.assertFalse(marker.exists())
+
+
+class SpecSourceTests(unittest.TestCase):
+    def test_frontmatter_sources_become_specifies_edges_and_misses_are_reported(self):
+        # The spec's body names no code: only its frontmatter can link it.
+        nodes = [("spec", {"node_kind": "page", "source_file": "knowledge/components/a.md", "label": "a.md",
+                           "frontmatter": {"sources": [{"resource": "../../app/one.ts"},
+                                                       {"resource": "../../app/two.ts"},
+                                                       {"resource": "../../app/gone.ts"},
+                                                       {"resource": "https://example.invalid/x"}]}}),
+                 ("one", {"source_file": "app/one.ts", "label": "one.ts"}),
+                 ("one_run", {"source_file": "app/one.ts", "label": "run()"}),
+                 ("two", {"source_file": "app/two.ts", "label": "two.ts"})]
+        edges, unresolved = graph.spec_source_edges(nodes)
+        self.assertEqual([(s, t, d["relation"]) for s, t, d in edges], [("spec", "one", "specifies"), ("spec", "two", "specifies")])
+        self.assertEqual(unresolved, ["knowledge/components/a.md: ../../app/gone.ts"])
 
 
 if __name__ == "__main__":

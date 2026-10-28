@@ -34,5 +34,7 @@ Tests:           51 passed, 0 failed (deno test -A); 14 diagrams validate/render
 Factory checks:  knowledge-check, doc-links, repo-health: PASS
 Guard refusals:  1 (a `cat` dump after cd — bounded intake; read with head instead)
 Human help:      0 after the pre-authorization
-Feedback:        FB-001 new (ask incremental rebuild missed a frontmatter-only edit)
+Feedback:        FB-001 new (ask incremental rebuild missed a frontmatter-only edit); FB-002 (the
+                 `cat`-after-`cd` refusal shape, seen in rounds 01, 04, 07) and FB-003 (concurrent
+                 writers on the shared working tree) filed when the run closed
 Elapsed:         25 minutes

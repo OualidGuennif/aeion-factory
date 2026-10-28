@@ -35,13 +35,13 @@ Run: 2026-10-28, one OpenCode session, all rounds pre-authorized by the owner. F
 | Round | Result | Tests | Guard refusals | Human help | Feedback |
 | --- | --- | --- | --- | --- | --- |
 | 00 setup | done | 736 factory cases, hook battery 0 failures | 1 (correct: `.env` read refused) | 1 (authorize all rounds) | none |
-| 01 scaffold | done | 3 + build + HTTP/dev smoke | 2 (correct: heredoc/pidfile intake) | 0 | none |
+| 01 scaffold | done | 3 + build + HTTP/dev smoke | 2 (correct: heredoc/pidfile intake) | 0 | FB-002 |
 | 02 ideas API | done | 24 + smoke | 0 | 0 | none |
 | 03 page | done | 31 + smoke | 0 | 0 | none |
-| 04 votes | done | 42 + 25/25 concurrent votes + smoke | 1 (correct: heredoc intake again) | 0 | none |
+| 04 votes | done | 42 + 25/25 concurrent votes + smoke | 1 (correct: heredoc intake again) | 0 | FB-002 |
 | 05 filters/search | done | 51 + smoke | 0 | 1 (mid-round compact request; checkpoint verified) | none |
 | 06 Docker | done | 51 + 5 container checks (healthy, uid 1993, data survives restart, frozen lock) | 0 | 0 | none |
-| 07 architecture | done | 14 diagrams validate/render/browser-check; 5 graph answers | 1 (correct: `cat` dump after cd) | 0 | FB-001 |
+| 07 architecture | done | 14 diagrams validate/render/browser-check; 5 graph answers | 1 (correct: `cat` dump after cd) | 0 | FB-001, FB-002, FB-003 |
 
 Findings worth keeping from this run:
 

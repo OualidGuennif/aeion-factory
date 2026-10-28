@@ -498,7 +498,7 @@
     "schema_version": 3,
     "diagram_type": "lifecycle",
     "meta": {
-      "title": "Context checkpoints (Claude, Codex, OpenCode, Pi)",
+      "title": "Context checkpoints (Claude, Codex, OpenCode, Pi, dsh)",
       "quality_profile": "showcase",
       "output": "lifecycle.html"
     },
@@ -581,19 +581,19 @@
         "id": "verify",
         "from": "handover",
         "to": "checkpoint",
-        "label": "checkpoint command passes"
+        "label": "checkpoint passes"
       },
       {
         "id": "compact",
         "from": "checkpoint",
         "to": "recovering",
-        "label": "native compaction"
+        "label": "compaction"
       },
       {
         "id": "resume",
         "from": "recovering",
         "to": "running",
-        "label": "fresh bounded observation"
+        "label": "fresh observation"
       },
       {
         "id": "limit",
@@ -606,7 +606,7 @@
         "id": "forced-verify",
         "from": "stopped",
         "to": "checkpoint",
-        "label": "checkpoint command passes"
+        "label": "checkpoint passes"
       }
     ],
     "cards": [

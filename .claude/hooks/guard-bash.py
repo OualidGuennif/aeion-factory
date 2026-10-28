@@ -302,8 +302,9 @@ def program(words):
             rest = words[1:]
             while rest and (rest[0].startswith("-") or re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*=.*", rest[0])):
                 flag = rest.pop(0)
-                if flag in ("-S", "--split-string") and rest:
-                    return ["<script>", rest[0]]
+                # -S splits its string into env's own arguments (env -S 'FOO=1' still prints them all).
+                if (flag == "--split-string" or re.fullmatch(r"-[a-zA-Z]*S", flag)) and rest:
+                    return ["<script>", "env " + rest[0] + " " + shlex.join(rest[1:])]
                 if flag in ("-u", "-C", "--unset", "--chdir") and rest:
                     rest.pop(0)
             if not rest:

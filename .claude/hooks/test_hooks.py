@@ -76,7 +76,8 @@ for command in ["cat .env", "cat env.local", "printenv", "cat /proc/1/environ", 
                 # env runs the program after it, so the git checks see through it.
                 "env git config aeion.mode local", "env -i FOO=1 git config core.hooksPath /tmp",
                 "env -u HOME git config aeion.mode local", "env -S 'git config aeion.mode local'",
-                "env FOO=1 sh -c 'echo x > .git/config'"]:
+                "env FOO=1 sh -c 'echo x > .git/config'", "env -iS 'git config aeion.mode local'",
+                "env -S ''", "env -S 'FOO=1'", "env -S '-i'", "env -i -S 'FOO=1 BAR=2'"]:
     expect(f"bash deny: {command}", run_hook("guard-bash.py", {"command": command}), 2)
 for command in ["env FOO=1 npm test", "env -u DEBUG python3 -m pytest -q", "env PATH=/usr/bin git status"]:
     expect(f"bash allow: {command}", run_hook("guard-bash.py", {"command": command}), 0)

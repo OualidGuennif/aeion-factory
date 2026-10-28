@@ -40,9 +40,10 @@ structural facts; fresh review establishes the verdict; GitHub records PR/merge/
 There is no application server, broker, production database or deployed Æion Factory control plane.
 Adopting projects keep their existing instructions and architecture.
 
-Claude Code retains its native hooks. Codex, OpenCode, Devin and Droid (factory.ai) load the same
-instructions and skills, with narrow adapters to the existing secret guards, edit checks and
-handover checkpoints (Devin and Droid have no compaction checkpoint). Droid owns `.factory/`, so
+Claude Code retains its native hooks. Codex, OpenCode, Devin, Droid (factory.ai) and Google
+Antigravity load the same instructions and skills, with narrow adapters to the existing secret
+guards, edit checks and handover checkpoints (Devin, Droid and Antigravity have no compaction
+checkpoint). Droid owns `.factory/`, so
 Æion Factory's local state lives in the ignored `.aeion/`. A per-clone flow mode selects the team flow (PR, review, CI)
 or local play (commits on main, no sign-off reminder); the safety guards run in both.
 Their native token/compaction interfaces differ; compatibility is not a claim of identical

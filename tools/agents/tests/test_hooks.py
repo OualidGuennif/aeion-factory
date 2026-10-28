@@ -197,19 +197,19 @@ class HookTests(unittest.TestCase):
         self.call('devin',hook_event_name='PostToolUse',tool_name='edit',tool_input={'file_path':str(self.root/'a.py')})
         self.assertEqual(set(log.read_text().splitlines()),{'a.py'})
 
-    def test_launch_without_baseline_recommends_it_and_still_starts_devin_and_droid(self):
+    def test_launch_without_baseline_recommends_it_and_still_starts_devin_droid_and_antigravity(self):
         launcher=self.root/'tools/agents/run';launcher.parent.mkdir(parents=True)
         shutil.copy2(ROOT/'tools/agents/run',launcher)
         gate=self.root/'tools/architecture/refresh';gate.parent.mkdir(parents=True)
         gate.write_text('#!/bin/sh\nexit 1\n');gate.chmod(0o755)
         (self.root/'bin').mkdir()
-        for agent in ('devin','droid'):
-            native=self.root/'bin'/agent
-            native.write_text(f'#!{hook.sys.executable}\nimport sys\nprint("{agent}", *sys.argv[1:])\n');native.chmod(0o755)
+        for agent,binary in (('devin','devin'),('droid','droid'),('antigravity','agy')):
+            native=self.root/'bin'/binary
+            native.write_text(f'#!{hook.sys.executable}\nimport sys\nprint("{binary}", *sys.argv[1:])\n');native.chmod(0o755)
             result=subprocess.run([hook.sys.executable,str(launcher),agent,'--version'],cwd=self.root,
                                   env={'PATH':str(native.parent)+os.pathsep+os.defpath},capture_output=True,text=True)
             self.assertEqual(result.returncode,0,result.stderr)
-            self.assertEqual(result.stdout.strip(),f'{agent} --version')
+            self.assertEqual(result.stdout.strip(),f'{binary} --version')
             self.assertIn('strongly recommended',result.stderr)
             self.assertIn('never installed automatically',result.stderr)
 
@@ -256,6 +256,133 @@ class HookTests(unittest.TestCase):
         self.assertEqual(set(hooks),{'SessionStart','PreToolUse','PostToolUse','Stop'})
         for entries in hooks.values():
             self.assertTrue(all(h['command'].endswith('tools/agents/hook.py" droid') for e in entries for h in e['hooks']))
+
+    def agy(self,name,args,event='PreToolUse'):
+        return self.call('antigravity',session_id=None,hook_event_name=event,toolCall={'name':name,'args':args})
+
+    def test_antigravity_tools_reach_the_shared_guards(self):
+        path=str(self.root/'.env')
+        cases=(('run_command',{'CommandLine':'cat .env','Cwd':str(self.root)}),('view_file',{'AbsolutePath':path}),
+               ('write_to_file',{'TargetFile':path,'CodeContent':'x'}),('replace_file_content',{'TargetFile':path}),
+               ('grep_search',{'SearchPath':path,'Query':'x'}),('future_tool',{'FilePath':path}),
+               ('view_code_item',{'File':path}),
+               ('future_tool',{'FilePath':None,'Path':path}),('future_tool',{'TargetFile':'a.md','SearchPath':path}),
+               ('future_tool',{'TargetFiles':['a.md',path]}),('mcp_read_file',{'path':path}),
+               ('mcp_read_file',{'file_path':path}),('future_tool',{'Options':{'AbsolutePath':path}}),
+               ('codebase_search',{'TargetDirectories':[path]}),('future_tool',{'Uri':'file://'+path}),
+               ('view_file',{'AbsolutePath':'file://'+path.replace('.env','%2E'+'.env'[1:])}),
+               ('future_tool',{'uri':'file://'+path+'#L10'}),('future_tool',{'Uri':'file://'+path+'?x=1'}),
+               ('mcp_shell',{'commandLine':'cat .env'}),('mcp_shell',{'command':'cat .env'}),
+               ('view_file',{'AbsolutePath':'FILE://'+path.replace('.env','%2E'+'.env'[1:])}))
+        for name,args in cases:
+            with self.assertRaisesRegex(hook.GuardRefusal,'secret',msg=(name,args)):
+                self.agy(name,args)
+        self.assertEqual(self.agy('run_command',{'CommandLine':'git status --short'}),{})
+        self.assertEqual(self.agy('search_web',{'Query':'antigravity hooks'}),{})
+        # Two command lines in one call cannot hide the second from the shell guard.
+        with self.assertRaises(ValueError):
+            self.agy('run_command',{'command':'echo ok','CommandLine':'cat .env'})
+        self.assertEqual(self.agy('view_code_item',{'File':str(self.root/'notes.md'),'NodePaths':['Cache.key','credentials']}),{})
+        self.assertEqual(self.agy('grep_search',{'SearchPath':str(self.root),'Query':'x','ExcludePath':''}),{})
+        # Include patterns pick the files a search reads, so a pattern naming a secret is refused.
+        for includes in (['.env'],['*.md','id_*'],'.e*'):
+            with self.assertRaisesRegex(hook.GuardRefusal,'secret',msg=str(includes)):
+                self.agy('grep_search',{'SearchPath':str(self.root),'Query':'x','Includes':includes})
+        # Any casing, any filter-like name, any depth and any tool.
+        for name,args in (('grep_search',{'SearchPath':str(self.root),'includes':['.env']}),
+                          ('mcp_search',{'path':str(self.root),'Globs':['.env']}),
+                          ('mcp_search',{'path':str(self.root),'opts':{'glob':'.env'}}),
+                          ('grep_search',{'SearchPath':str(self.root),'Options':{'Includes':[['.env']]}}),
+                          ('find_by_name',{'SearchDirectory':str(self.root),'Pattern':'id_*'}),
+                          ('mcp_search',{'IncludePattern':'.env'}),('mcp_search',{'file_pattern':'cred*'})):
+            with self.assertRaisesRegex(hook.GuardRefusal,'secret',msg=str(args)):
+                self.agy(name,args)
+        self.assertEqual(self.agy('grep_search',{'SearchPath':str(self.root),'Query':'x','Includes':['*.md','*.py']}),{})
+        self.assertEqual(self.agy('grep_search',{'SearchPath':str(self.root),'Query':'x','Includes':[]}),{})
+        for args in ({'SearchPath':str(self.root),'Includes':[1]},{'SearchPath':str(self.root),'Includes':None}):
+            with self.assertRaises(ValueError):
+                self.agy('grep_search',args)
+        with self.assertRaises(ValueError):
+            self.agy('run_command',{'CommandLine':'ls','Includes':['*.md']})
+        # A windowed view of a long file is a bounded read; the whole file is not.
+        long=self.root/'long.md'
+        long.write_text('x\n'*500)
+        self.assertEqual(self.agy('view_file',{'AbsolutePath':str(long),'StartLine':1,'EndLine':20}),{})
+        self.assertEqual(self.agy('grep_search',{'SearchPath':str(long),'Query':'x','MatchPerLine':False}),{})
+        with self.assertRaisesRegex(hook.GuardRefusal,'intake|Bounded'):
+            self.agy('run_command',{'CommandLine':'cat long.md','Cwd':str(self.root)})
+        # A relative read is sized in the directory it runs in, whatever the key's case.
+        sub=self.root/'sub'
+        sub.mkdir()
+        (sub/'big.log').write_text('x\n'*500)
+        for name,args in (('mcp_shell',{'command':'cat big.log','cwd':str(sub)}),('mcp_shell',{'command':'cat big.log','workdir':str(sub)}),
+                          ('run_command',{'CommandLine':'cat big.log','cwd':str(sub)})):
+            with self.assertRaisesRegex(hook.GuardRefusal,'intake|Bounded',msg=str(args)):
+                self.agy(name,args)
+        with self.assertRaises(ValueError):
+            self.agy('run_command',{'CommandLine':'ls','Cwd':str(self.root),'workdir':str(sub)})
+        # A directory under another name, or not a string, is refused rather than sized at the root.
+        for args in ({'command':'cat big.log','working_directory':str(sub)},{'command':'cat big.log','WorkingDirectory':str(sub)},
+                     {'command':'cat big.log','directory':str(sub)},{'command':'cat big.log','cwd':[str(sub)]},
+                     {'CommandLine':'cat big.log','Cwd':{'path':str(sub)}},{'command':'cat big.log','dir_path':str(sub)},
+                     {'command':'cat big.log','options':{'cwd':str(sub)}},{'command':'cat big.log','description':'x'},
+                     {'CommandLine':'ls','FilePath':str(self.root/('.'+'env'))}):
+            with self.assertRaises(ValueError,msg=str(args)):
+                self.agy('mcp_shell',args)
+        self.assertEqual(self.agy('run_command',{'CommandLine':'ls','Cwd':str(sub),'Blocking':True,'SafeToAutoRun':True,'WaitMsBeforeAsync':0}),{})
+        # A file: URI directory is decoded like any other path.
+        with self.assertRaisesRegex(hook.GuardRefusal,'intake|Bounded'):
+            self.agy('mcp_shell',{'command':'cat big.log','cwd':sub.as_uri()})
+        for name,args in (('view_file',{'AbsolutePath':str(long)}),('grep_search',{'SearchPath':str(long),'Query':'x'}),
+                          ('view_file',{'AbsolutePath':str(long),'limit':10}),
+                          ('grep_search',{'SearchPath':str(long),'Query':'x','output_mode':'files_with_matches','head_limit':5})):
+            with self.assertRaisesRegex(hook.GuardRefusal,'intake|Bounded',msg=name):
+                self.agy(name,args)
+        # Only the Antigravity branch reads its own path list; another provider's payload cannot supply one.
+        with self.assertRaisesRegex(hook.GuardRefusal,'secret'):
+            self.call('codex',hook_event_name='PreToolUse',tool_name='Read',tool_input={'file_path':path},antigravity_paths=['README.md'])
+        # A file tool whose path field is unknown is refused, not waved through.
+        with self.assertRaises(ValueError):
+            self.agy('view_file',{'Location':path})
+        with self.assertRaises(ValueError):
+            self.call('antigravity',session_id=None,toolCall={'name':'run_command','args':'cat'})
+
+    def test_antigravity_decisions_are_explicit(self):
+        def run(payload,event='PreToolUse'):
+            result=subprocess.run(['python3',str(ROOT/'tools/agents/hook.py'),'antigravity',event],
+                                  input=json.dumps(payload),capture_output=True,text=True)
+            self.assertEqual(result.returncode,0,result.stderr)
+            return json.loads(result.stdout)
+        denied=run({'toolCall':{'name':'run_command','args':{'CommandLine':'cat .env'}}})
+        self.assertEqual(denied['decision'],'deny')
+        self.assertIn('secret',denied['reason'])
+        self.assertEqual(run({'toolCall':{'name':'run_command','args':{'CommandLine':'git status --short'}}}),{'decision':'allow'})
+        self.assertEqual(run({'toolCall':{'name':'view_file','args':{}}})['decision'],'deny')
+        # A pre-tool payload in any other shape is refused, never allowed unguarded.
+        self.assertEqual(run({'tool_call':{'name':'view_file','args':{'AbsolutePath':'/x/.env'}}})['decision'],'deny')
+        self.assertNotIn('verification unavailable',json.dumps(run({},event='Stop')))
+        self.assertEqual(run({'toolCall':{'name':'run_command','args':{'CommandLine':'ls'}}},event='Unknown')['continue'],False)
+
+    def test_antigravity_edits_are_recorded_for_feedback_and_sign_off(self):
+        key=hook.key('antigravity',{})
+        log=Path(tempfile.gettempdir())/f'claude-edited-{key}'
+        log.unlink(missing_ok=True)
+        self.addCleanup(log.unlink,missing_ok=True)
+        (self.root/'notes.md').write_text('x\n')
+        self.agy('replace_file_content',{'TargetFile':str(self.root/'notes.md')},event='PostToolUse')
+        self.assertEqual(set(log.read_text().splitlines()),{'notes.md'})
+
+    def test_antigravity_hooks_route_every_event_to_the_adapter(self):
+        groups=json.loads((ROOT/'.agents/hooks.json').read_text())
+        self.assertEqual(list(groups),['aeion-factory'])
+        hooks=groups['aeion-factory']
+        self.assertEqual(set(hooks),{'PreToolUse','PostToolUse','Stop'})
+        for event,entries in hooks.items():
+            for entry in entries:
+                commands=[h['command'] for h in entry.get('hooks',[entry])]
+                self.assertTrue(all(c.endswith(f'tools/agents/hook.py" antigravity {event}') for c in commands))
+                if event!='Stop':
+                    self.assertEqual(entry['matcher'],'.*')
 
     def test_read_only_loop_denies_writers_and_shell_composition(self):
         for command in ('tools/efficiency/bundle','tools/architecture/setup','git diff --output=x',

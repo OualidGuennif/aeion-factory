@@ -21,3 +21,10 @@ I fitted the app commands on one line and shortened my paragraph. The file can a
 ## Proposed fix
 - Leave headroom in the template, about 10 lines. The seven lines of the factory's own test suite under "Build and test" can become one line: `tools/check-all`, or a pointer to the CI job that already lists them.
 - Or have the cap count only the lines the project adds. That is harder to explain, so headroom is the better fix.
+
+## Seen again (round 03, the parent repository)
+The owner asked to map the new top-level `demo/` folder, and the sign-off hook asks for it too
+("new top-level demo but AGENTS.md (repository map) did not change"). The parent `AGENTS.md` was
+also at 120 lines, so a line had to go first: the two-line `loops/` entry became one line and lost
+the list of loop names (that list lives in `knowledge/operations/loops.md`). Each new map line costs
+an existing one.

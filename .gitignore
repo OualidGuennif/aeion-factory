@@ -18,3 +18,7 @@ __pycache__/
 .DS_Store
 node_modules/
 .venv/
+# demo/: briefs and READMEs are tracked; each harness folder is local except its feedback.
+/demo/*/*
+!/demo/plan/*
+!/demo/*/feedback_for_aeion/

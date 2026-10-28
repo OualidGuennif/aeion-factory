@@ -4,6 +4,13 @@ Task state only. One entry per open task, newest first. At most 150 lines, 10 pe
 Finished tasks are deleted: the commit message and knowledge/ keep what matters.
 Status: ACTIVE, WAITING-OWNER, MEASURING, BLOCKED, BACKLOG.
 
+## demo/ Idea Board run and feedback for Æion — ACTIVE
+- Owner decision: 2026-10-28, Claude Code builds the Idea Board in a git-less copy (demo/claude_code/workspace), journals each round, files feedback, fixes small ones in the base.
+- State: briefs in demo/plan/; rounds 00–02 done (2396a52, 64a466b); FB-006 fixed in 2c2fb1d; harness folders local except feedback_for_aeion/ (FB-001–007); round 03 in progress.
+- Next: rounds 03–07, base fixes FB-002/004/005/007, demo READMEs, inline review; push only on the owner's yes (who: agent).
+- Blocker: none.
+- Evidence: work/handovers/35c6f26d-3a08-48c8-8457-2cb97c7285df.md
+
 ## Live Devin, Droid and Antigravity hook qualification — WAITING-OWNER
 - Owner decision: 2026-10-27, support Devin, Droid and Antigravity; adapters use documented, not live-run, payloads.
 - State: Devin merged in #12, Droid in #13, Antigravity in task/antigravity; no live run of any yet.

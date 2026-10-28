@@ -22,8 +22,8 @@ efficiency/   the seven-phase guide (read 00-EFFICIENCY.md first)
 knowledge/    canonical knowledge (index.md first): policies, components, decisions, operations
 work/         current.md, the state of open tasks only
 tech-watch/   the technical watch: method, and pending dated packages
-loops/        orchestrator.sh (inner, middle, outer, docs, security, watch, retro), prompts, schedules,
-              the issue protocol, the Decisions API client (off)
+loops/        orchestrator.sh and its prompts, schedules, issue protocol, Decisions API client (off)
+demo/         playground: plan/ briefs; each demo/<harness>/ is local except its feedback_for_aeion/
 tools/        knowledge/link/health checks, agent adapters, architecture and local language servers
 .claude/      original hooks, maintained skills, path-scoped rules, hookify examples
 .codex/       Codex native config/hooks; .agents/ holds skill links and Antigravity's hooks.json

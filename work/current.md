@@ -4,13 +4,6 @@ Task state only. One entry per open task, newest first. At most 150 lines, 10 pe
 Finished tasks are deleted: the commit message and knowledge/ keep what matters.
 Status: ACTIVE, WAITING-OWNER, MEASURING, BLOCKED, BACKLOG.
 
-## Release v1.3.0 — WAITING-OWNER
-- Owner decision: 2026-10-28, merge commits allowed and linear history off on main (applied via gh api).
-- State: #19 merged as 34c0b2e (CI and Architecture refresh green), tag v1.3.0 pushed, develop fast-forwarded; the GitHub release page is not created (the agent's permission mode refused gh release create).
-- Next: gh release create v1.3.0 --title v1.3.0 --notes "$(tools/release/release --notes 1.3.0)", then delete this entry (who: owner, or agent once allowed).
-- Blocker: none.
-- Evidence: knowledge/operations/github-protection.md; .claude/skills/ship/SKILL.md
-
 ## Live Devin, Droid and Antigravity hook qualification — WAITING-OWNER
 - Owner decision: 2026-10-27, support Devin, Droid and Antigravity; adapters use documented, not live-run, payloads.
 - State: Devin merged in #12, Droid in #13, Antigravity in task/antigravity; no live run of any yet.

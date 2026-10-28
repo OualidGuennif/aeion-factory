@@ -154,6 +154,25 @@ class RefreshTests(unittest.TestCase):
         self.assertFalse(marker.exists())
 
 
+class PlainFolderTests(unittest.TestCase):
+    def test_a_plain_folder_nested_in_a_repository_is_refused_before_any_git_call(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            parent = Path(tmp).resolve()
+            subprocess.run(["git", "init", "-q", str(parent)], check=True)
+            copy = parent / "demo/workspace"
+            copy.mkdir(parents=True)
+            calls = []
+            original = refresh.revision
+            refresh.revision = lambda *args: calls.append(args) or original(*args)
+            try:
+                with self.assertRaisesRegex(ValueError, "needs its own git repository"):
+                    refresh.refresh(copy, "HEAD")
+            finally:
+                refresh.revision = original
+            self.assertEqual(calls, [])
+            self.assertFalse((copy / ".aeion").exists())
+
+
 class SpecSourceTests(unittest.TestCase):
     def test_frontmatter_sources_become_specifies_edges_and_misses_are_reported(self):
         # The spec's body names no code: only its frontmatter can link it.

@@ -57,6 +57,13 @@ deletions and renames cannot leave old nodes. Required code/Markdown with no ext
 fails coverage. Other files are explicitly listed as inventory-only. PDF/image semantics and
 LLM inference are not claimed. This deterministic baseline needs no model token or secret.
 
+**Plain folder.** `refresh` needs the root to be its own git repository and refuses otherwise, before
+any git call: nested in another repository, git would answer for the parent. In a plain folder, run
+the two steps directly, with the parent's toolchain: `.aeion/integrations/graphify-venv/bin/python
+tools/architecture/graph.py <root> <out> <manifest.json>` (the manifest lists `{path, required}`),
+then `node .aeion/integrations/archify/archify/bin/archify.mjs render <type> <input.json> <out.html>`
+and `browser-check <out.html>`. Archify's evidence links need a git SHA, so a plain folder's diagrams carry none.
+
 The canonical [architecture spec](../components/factory-architecture.md) and `views.json` are
 reviewed source, not generated policy. Runtime/config changes must update the architecture spec
 in the same diff (or carry its existing `Docs-Checked` trailer). Reviewers verify semantic

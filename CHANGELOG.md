@@ -21,6 +21,8 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 - The Graphify graph links each spec to the files its frontmatter `sources` name (`specifies` edges),
   so "which spec covers this file" is answered; unresolved resources are listed in `coverage.json`.
   `graph.py` also accepts a relative root.
+- `tools/architecture/refresh` refuses a root that is not its own git repository before any git call,
+  instead of analysing the enclosing repository; the doc gives the plain-folder commands.
 
 ## [1.3.0] - 2026-10-28
 

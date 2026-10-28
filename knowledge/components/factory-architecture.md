@@ -91,7 +91,8 @@ are excluded, and unsupported formats remain explicitly inventory-only. Tool ver
 The graph includes code and native Markdown structure/frontmatter/links; semantic inference by
 an LLM is outside the baseline. Each doc's frontmatter `sources` adds a `specifies` edge to the file
 it names (Graphify alone links only code names written in a body); `coverage.json` lists any
-`resource` that names no file in the corpus. This keeps the default independent of model credentials.
+`resource` that names no file in the corpus. `refresh` runs only on a root that is its own git
+repository; a plain folder nested in another one is refused before any git call. This keeps the default independent of model credentials.
 Setup stamps Graphify's commit archive URL and SHA-256, including replacement of a same-version wheel
 from another source; analysis refuses mismatched package provenance or a dirty Archify checkout.
 

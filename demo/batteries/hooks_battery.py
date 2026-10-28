@@ -37,8 +37,9 @@ def main():
     environment = dict(os.environ, CLAUDE_PROJECT_DIR=str(ROOT))
     failures = 0
     for hook, payload, expected in CASES:
-        # Run from the copy, as a session opened there would.
-        done = subprocess.run([sys.executable, str(ROOT / ".claude/hooks" / hook)], input=json.dumps(payload),
+        # Run from the copy, as a session opened there would; the hook path is relative to it, so the
+        # command line holds no text from the caller.
+        done = subprocess.run([sys.executable, f".claude/hooks/{hook}"], input=json.dumps(payload),
                               capture_output=True, text=True, cwd=ROOT, env=environment, timeout=30)
         said = " ".join((done.stdout + done.stderr).split())[:220]
         tool_input = payload.get("tool_input", {})

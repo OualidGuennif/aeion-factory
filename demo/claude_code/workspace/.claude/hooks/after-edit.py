@@ -75,6 +75,10 @@ if rel.startswith(("knowledge/", "work/")) or path.name in ("AGENTS.md", "CLAUDE
     problems += [l for l in output.splitlines() if l.startswith("FAIL ")]
 
 # Add your project's per-file checks here (formatter, linter), e.g. shellcheck for *.sh.
+# The Deno app: format and lint the edited file with the app's own deno.json; a failure blocks with Deno's output.
+if rel.startswith("app/") and path.suffix in (".ts", ".tsx") and "/_fresh/" not in rel:
+    run("env", "NO_COLOR=1", "deno", "fmt", "--check", "--config", "app/deno.json", rel)
+    run("env", "NO_COLOR=1", "deno", "lint", "--config", "app/deno.json", rel)
 
 # Code a doc covers: name the doc, once per file and session.
 hint = ""

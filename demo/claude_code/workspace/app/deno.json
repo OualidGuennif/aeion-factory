@@ -22,6 +22,7 @@
   ],
   "imports": {
     "@/": "./",
+    "@std/path": "jsr:@std/path@1.1.6",
     "fresh": "jsr:@fresh/core@^2.3.3",
     "preact": "npm:preact@^10.29.8",
     "@preact/signals": "npm:@preact/signals@^2.11.4",
@@ -37,7 +38,8 @@
       "dom",
       "dom.asynciterable",
       "dom.iterable",
-      "deno.ns"
+      "deno.ns",
+      "deno.unstable"
     ],
     "jsx": "precompile",
     "jsxImportSource": "preact",
@@ -63,5 +65,8 @@
   },
   "unstable": [
     "kv"
-  ]
+  ],
+  "fmt": {
+    "lineWidth": 120
+  }
 }

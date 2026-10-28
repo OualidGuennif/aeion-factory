@@ -2,8 +2,10 @@
 import { assertEquals, assertStringIncludes } from "@std/assert";
 import { createApi } from "./app.ts";
 import { VERSION } from "../version.ts";
+import { createIdeaStore } from "../store/ideas.ts";
 
-const api = createApi();
+// Health and error tests never touch storage; a store over a never-used KV stub keeps the signature honest.
+const api = createApi({ ideas: createIdeaStore({} as Deno.Kv) });
 
 Deno.test("health answers ok with the app version", async () => {
   const response = await api.request("/api/health");
@@ -32,7 +34,7 @@ Deno.test("wrong method is a JSON 405", async () => {
 });
 
 Deno.test("an exception is a bare JSON 500", async () => {
-  const failing = createApi();
+  const failing = createApi({ ideas: createIdeaStore({} as Deno.Kv) });
   failing.get("/boom", () => {
     throw new Error("secret detail");
   });

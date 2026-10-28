@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the real health check in disposable repositories, including its Git error path."""
+"""Run the real health check in disposable repositories and plain folders."""
 import shutil
 import json
 import subprocess
@@ -9,6 +9,7 @@ import unittest
 from pathlib import Path
 
 TOOL = Path(__file__).resolve().parents[1] / "repo-health"
+FILES = Path(__file__).resolve().parents[3] / ".claude/hooks/project_files.py"
 
 
 class RepoHealthTests(unittest.TestCase):
@@ -19,15 +20,27 @@ class RepoHealthTests(unittest.TestCase):
         self.tool = self.root / "tools/repo-health/repo-health"
         self.tool.parent.mkdir(parents=True)
         shutil.copy(TOOL, self.tool)
+        (self.root / ".claude/hooks").mkdir(parents=True)
+        shutil.copy(FILES, self.root / ".claude/hooks/project_files.py")
 
     def check_health(self, *args):
         return subprocess.run([sys.executable, str(self.tool), *args], cwd=self.root,
                               capture_output=True, text=True, timeout=10)
 
-    def test_non_repository_is_not_a_clean_scorecard(self):
+    def test_plain_folder_is_walked_without_git(self):
+        # Many users have no git: the caps still apply to the files on disk, dependencies excluded.
+        (self.root / "big.py").write_text("value = 1\n" * 1501)
+        (self.root / "node_modules").mkdir()
+        (self.root / "node_modules/huge.js").write_text("x\n" * 5000)
+        result = self.check_health("--json")
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertIn("big.py", result.stdout)
+        self.assertNotIn("huge.js", result.stdout)
+
+    def test_broken_repository_still_fails(self):
+        (self.root / ".git").write_text("gitdir: /nonexistent\n")
         result = self.check_health("--json")
         self.assertEqual(result.returncode, 1)
-        self.assertIn("Git", result.stderr)
         self.assertEqual(result.stdout, "")
 
     def test_valid_repository_produces_a_scorecard(self):

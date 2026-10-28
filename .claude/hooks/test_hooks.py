@@ -382,7 +382,8 @@ shutil.rmtree(after)
 
 # sign-off: in a throwaway repo, a code change without its doc blocks once, then passes.
 tmp = Path(tempfile.mkdtemp())
-for rel in (".claude/hooks/sign-off.py", ".claude/hooks/secret_names.py", "tools/knowledge/doc-links"):
+for rel in (".claude/hooks/sign-off.py", ".claude/hooks/secret_names.py", ".claude/hooks/project_files.py",
+            "tools/knowledge/doc-links"):
     (tmp / rel).parent.mkdir(parents=True, exist_ok=True)
     shutil.copy(ROOT / rel, tmp / rel)
 (tmp / "knowledge/components").mkdir(parents=True)
@@ -446,16 +447,16 @@ if '"block"' in local_result.stdout:
 
 # session-start: at most 25 lines, and it names the flow mode.
 # The mode is read from the repository's local config, so each run gets a throwaway repository.
-def session_start(mode, global_mode=None):
+def session_start(mode, global_mode=None, git=True):
     repo = Path(tempfile.mkdtemp())
-    for rel in (".claude/hooks/session-start.py", "tools/repo-health/repo-health"):
+    for rel in (".claude/hooks/session-start.py", ".claude/hooks/project_files.py", "tools/repo-health/repo-health"):
         (repo / rel).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy(ROOT / rel, repo / rel)
     (repo / "work").mkdir()
     (repo / "work/current.md").write_text("# Current work\n\n## Probe task — ACTIVE\n- State: x\n")
     git_env = {**os.environ, "GIT_CONFIG_GLOBAL": str(repo / "global.cfg"), "GIT_CONFIG_NOSYSTEM": "1"}
     (repo / "global.cfg").write_text(f"[aeion]\n\tmode = {global_mode}\n" if global_mode else "")
-    for args in (["init", "-q"], ["add", "work"], ["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "Probe commit"]):
+    for args in (["init", "-q"], ["add", "work"], ["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "Probe commit"]) if git else ():
         subprocess.run(["git"] + args, cwd=repo, capture_output=True, check=True, env=git_env)
     if mode:
         subprocess.run(["git", "config", "aeion.mode", mode], cwd=repo, capture_output=True, check=True, env=git_env)
@@ -465,6 +466,9 @@ def session_start(mode, global_mode=None):
     return result
 
 
+result = session_start(None, git=False)
+expect("session-start names a plain folder", result, 0, "git: inactive (plain folder)")
+expect("session-start in a plain folder still lists tasks", result, 0, "Probe task")
 result = session_start("team")
 expect("session-start runs", result, 0, "git status")
 expect("session-start names the team flow", result, 0, "Æion Factory mode: team")

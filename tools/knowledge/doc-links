@@ -20,6 +20,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / ".claude/hooks"))
 from secret_names import is_secret  # noqa: E402
+from project_files import git_active, project_files  # noqa: E402
 RESOURCE_RE = re.compile(r"^\s*resource:\s*\"?([^\"\n]+?)\"?\s*$", re.MULTILINE)
 FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---\n", re.DOTALL)
 SPEC_RE = re.compile(r"\bSpec:\s*(knowledge/[\w./-]+\.md)")
@@ -71,7 +72,12 @@ def doc_sources(doc: Path):
 
 def tracked_headers():
     """Yield bounded leading metadata, without reading known secrets or following file symlinks."""
-    for rel in git("ls-files", "-z").split("\0"):
+    try:
+        files = project_files(ROOT)
+    except (OSError, subprocess.SubprocessError) as error:
+        print(f"FAIL Git file listing failed: {error}", file=sys.stderr)
+        sys.exit(1)
+    for rel in files:
         path = ROOT / rel
         parts = Path(rel).parts
         if not rel or parts[0] == "knowledge" or path.suffix.lower() == ".md" or EXCLUDED_PARTS.intersection(parts):
@@ -186,6 +192,10 @@ def main(argv):
 
     # A change whose covering doc neither changed nor was declared checked.
     if args.base:
+        # L3 compares commits; a plain folder has none, so the edit-time checks above are all it gets.
+        if not git_active(ROOT):
+            print("FAIL --diff needs a git repository; run without it in a plain folder.", file=sys.stderr)
+            return 1
         files, checked = changed_since(args.base, args.worktree)
         for path, docs in base_coverage(args.base, files).items():
             coverage.setdefault(path, set()).update(docs)

@@ -43,6 +43,35 @@ class HookTests(unittest.TestCase):
     def call(self,provider='codex',**changes):
         return hook.handle(self.root,provider,{**self.event,**changes})
 
+    def test_harness_commands_find_the_adapter_in_a_plain_folder(self):
+        # Without git, `git rev-parse` prints nothing; every command must fall back to the folder itself.
+        plain = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, plain)
+        (plain / 'tools/agents').mkdir(parents=True)
+        (plain / 'tools/agents/hook.py').write_text('import sys\nprint("adapter", sys.argv[1])\n')
+        commands = []
+
+        def collect(value):
+            if isinstance(value, dict):
+                commands.extend([value['command']] if isinstance(value.get('command'), str) else [])
+                for item in value.values():
+                    collect(item)
+            elif isinstance(value, list):
+                for item in value:
+                    collect(item)
+
+        for config in ('.codex/hooks.json', '.devin/hooks.v1.json', '.factory/settings.json', '.agents/hooks.json'):
+            collect(json.loads((ROOT / config).read_text()))
+        self.assertGreaterEqual(len(commands), 16)
+        environment = {key: value for key, value in os.environ.items()
+                       if key not in {'DEVIN_PROJECT_DIR', 'FACTORY_PROJECT_DIR'}}
+        environment['GIT_CEILING_DIRECTORIES'] = str(plain.parent)
+        for command in commands:
+            result = subprocess.run(['sh', '-c', command], cwd=plain, capture_output=True, text=True,
+                                    input='{}', env=environment, timeout=10)
+            self.assertEqual(result.returncode, 0, f'{command}: {result.stderr}')
+            self.assertIn('adapter', result.stdout, command)
+
     def test_secret_bash_is_denied_by_real_guard(self):
         for provider in ('codex','opencode'):
             with self.assertRaises(ValueError):

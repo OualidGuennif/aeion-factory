@@ -39,8 +39,13 @@ it and fails when the committed bundle differs.
 The pre-commit (`git config core.hooksPath tools/git-hooks`) runs the first three; CI runs all of
 them and the security scans.
 
-The link and health checks fail when Git cannot enumerate the repository or read the comparison
-base. A valid empty change set remains successful; an unavailable check is never reported as clean.
+Many people run Æion Factory in a plain folder, without git. The link and health checks, the context
+fingerprint and the session-start summary then walk the files on disk (skipping `.git`, `.aeion`,
+dependencies and caches; `.claude/hooks/project_files.py`), and every harness hook command falls back
+from `git rev-parse --show-toplevel` to the current folder. Only `doc-links --diff`, which compares
+commits, needs git. A folder whose `.git` git cannot read is a broken repository and fails, as does a
+missing comparison base; a valid empty change set remains successful and an unavailable check is
+never reported as clean.
 
 Header traceability is extension-independent and bounded; see the discovery scope in
 [specs-first](../policies/specs-first.md). The Stop reminder preserves spaces/Unicode in edited

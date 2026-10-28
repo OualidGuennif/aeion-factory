@@ -183,7 +183,9 @@ for command in ["head $X/id_*", "head $(pwd)/k/cred*", "cat id_*", "head auth*",
                 "echo -n - > c; echo -pre=sh >> c; echo 'head -n3 $X/id_*' > f; RIPGREP_CONFIG_PATH=c rg x f",
                 # zsh alternation, bash extglob and a parameter default name a secret as well.
                 "head (i)d_rsa", "head $X/(i|x)d_rsa", "head .e(n)v", "head $X/@(i)d_rsa", "cat ${X:-$HOME/.ssh/id_*}",
-                "head ${X:=$Y/.e}*", "head $X/.[e]nv"]:
+                "head ${X:=$Y/.e}*", "head $X/.[e]nv", "head (i)(d)_rsa", "head (i)d_(r)sa", "head .(e)(n)v",
+                "head ((i)|x)d_rsa", "head @(@(i)|x)d_rsa", "head ${X:-${Y:-.e}}*", "head ${X:-${HOME}/.e}*",
+                "head -n1 .e\\nv", "head $X/i\\d_rsa"]:
     expect(f"bash deny named glob: {command}", run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 2)
 # A subshell, a substitution and the dotfile idiom .[!.]* name no secret.
 (glob_dir / "plain").mkdir()
@@ -201,12 +203,20 @@ for command in ["./grep 'id_*'", "bin/rg 'id_*'"]:
 # The git config file is written only through git config, which guard-bash checks.
 for command in ["echo '[aeion] mode = local' >> .git/config", "printf x > ./.git/config", "tee -a .git/config < f",
                 "sed -i '' s/team/local/ .git/config", "cp f .git/config", "vim .git/config",
-                "python3 -c 'pass' .git/config", "sh -c 'echo x >> .git/config'", "cat f > .git/worktrees/w/config.worktree"]:
+                "python3 -c 'pass' .git/config", "sh -c 'echo x >> .git/config'", "cat f > .git/worktrees/w/config.worktree",
+                "echo x >| .git/config", "echo x >> .git/CONFIG", "echo x >> .GIT/Config", "echo x > .git//config",
+                "echo x > .git/./config", "echo x >\".git\"/config", "echo x > .git/\"config\"", "echo x > .gi?/config",
+                "tee .git/conf{i,}g < f", "dd if=f of=.git/config", "cp f .git/", "cd .git && echo x >> config",
+                "python3 -c \"open('.git/config','a').write('x')\"", "git log -1 --format=x --output=.git/config"]:
     expect(f"bash deny config write: {command}", run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 2)
 for command in ["cat .git/config", "grep -n hooksPath .git/config", "git config --local --get aeion.mode", "diff .git/config f"]:
     expect(f"bash allow config read: {command}", run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 0)
 for tool in ["Edit", "Write", "MultiEdit"]:
     expect(f"path deny: {tool} on .git/config", run_hook("guard-path.py", {"file_path": "/repo/.git/config"}, tool_name=tool), 2)
+for path in ["/repo/.git//config", "/repo/.git/./config", "/repo/.GIT/Config"]:
+    expect(f"path deny: Write on {path}", run_hook("guard-path.py", {"file_path": path}, tool_name="Write"), 2)
+expect("bash allow: find prunes .git", run_hook("guard-bash.py", {"command": "find . -path ./.git -prune -o -name '*.md' -print",
+                                                                 "workdir": str(glob_dir)}), 0)
 expect("path allow: Read of .git/config", run_hook("guard-path.py", {"file_path": "/repo/.git/config"}, tool_name="Read"), 0)
 expect("bash allow: a cd with a plain glob", run_hook("guard-bash.py", {"command": "cd sub && ls *.md", "workdir": str(glob_dir)}), 0)
 expect("bash deny names the Grep tool for searches", run_hook("guard-bash.py", {"command": "grep -rn id_rsa tools"}), 2,

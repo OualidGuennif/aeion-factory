@@ -2,6 +2,7 @@
 # Spec: knowledge/policies/security.md
 """Refuse secret paths and unbounded large reads before native tool execution (exit 2)."""
 import json
+import posixpath
 import re
 import sys
 from pathlib import Path, PurePosixPath
@@ -81,8 +82,9 @@ if is_secret(name):
           f"(knowledge/policies/security.md).", file=sys.stderr)
     sys.exit(2)
 # Writing the git config file sets aeion.mode or core.hooksPath without guard-bash's git config checks.
+# The path is normalized and case folded: .git//config and .GIT/Config are the same file on APFS.
 if event.get("tool_name") not in {"Read", "Grep", "Glob"} and re.search(
-        r"(^|/)\.git/(config|config\.worktree|worktrees/[^/]+/config\.worktree)$", path):
+        r"(^|/)\.git/(config|config\.worktree|worktrees/[^/]+/config\.worktree)$", posixpath.normpath(path).lower()):
     deny("the git config file is changed with git config, never edited directly")
 # Grep's glob filter picks the files it reads, so a glob that names a secret is a read of it.
 if event.get("tool_name") == "Grep" and tool_input.get("glob") is not None:

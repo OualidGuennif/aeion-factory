@@ -6,9 +6,11 @@ Input: the hook event as JSON on stdin; tool_input.command is the command. Outpu
 reason on stderr blocks it; a JSON "ask" decision asks a human; exit 0 lets it run. A seatbelt,
 not a guarantee: the rules are in knowledge/policies/security.md.
 """
+import fnmatch
 import glob
 import json
 import os
+import posixpath
 import re
 import shlex
 import sys
@@ -50,8 +52,6 @@ def directories(command, base):
 
 
 GROUP = re.compile(r"([@+?*!]?)\(([^()]*)\)")
-# A word with a glued group: zsh alternation (i|x)d_rsa or bash extglob @(i)d_rsa, never a spaced subshell.
-GROUP_WORD = re.compile(r"[^\s;&<>`()]*\([^()\s]*\)[^\s;&|<>()`]*")
 # A parameter default (${X:-word}, :=, :+, :?) expands to its word when X is unset.
 DEFAULT = re.compile(r"\$\{\w+:?[-=+?]([^{}]*)\}")
 
@@ -71,10 +71,16 @@ def group_variants(word):
 
 
 def shell_words(text):
-    """The words the shell globs: quotes dropped (they join a word), defaults as their word, and each
-    glued group word kept whole besides its parenthesis-split parts."""
-    text = DEFAULT.sub(r"\1", re.sub(r"['\"]", "", text))
-    return [t for t in re.split(r"[\s=;&|<>()`]+", text) if t] + GROUP_WORD.findall(text)
+    """The words the shell globs: quotes and escapes dropped (they join a word: .e\\nv), defaults as
+    their word (innermost first), and each word with a group (zsh (i|x)d_rsa, extglob @(i)d_rsa)
+    kept whole besides its parenthesis-split parts."""
+    text = re.sub(r"\\(.)", r"\1", re.sub(r"['\"]", "", text))
+    text = re.sub(r"\$\{(\w+)\}", r"$\1", text)
+    while DEFAULT.search(text):
+        text = DEFAULT.sub(r"\1", text)
+    # Split on whitespace first: one pattern scan per long word would be quadratic.
+    grouped = [w for w in re.split(r"[\s;&<>`]+", text) if "(" in w]
+    return [t for t in re.split(r"[\s=;&|<>()`]+", text) if t] + grouped
 
 
 def mentioned_secrets(tokens, shell_tokens, bases, unquoted_globs):
@@ -437,15 +443,37 @@ def git_bypass(command):
     return None
 
 
-GIT_CONFIG_FILE = re.compile(r"(^|/)\.git/(config|config\.worktree|worktrees/[^/]+/config\.worktree)$")
+GIT_CONFIG_FILE = re.compile(r"(^|[^\w.-])\.git/(config|config\.worktree|worktrees/[^/\s]+/config\.worktree)(?![\w.-])")
 CONFIG_READERS = {"cat", "head", "tail", "grep", "rg", "less", "wc", "git", "ls", "stat", "diff"}
+# These write into a directory they are given (cp f .git/) or move the shell into it (cd .git).
+INTO_DIRECTORY = {"cp", "mv", "install", "ln", "rsync", "cd", "pushd"}
+
+
+def names_git_config(word):
+    """Whether a shell word names the git config file: quotes and escapes dropped, braces and groups
+    expanded, the path normalized and case folded (APFS and NTFS ignore case), a glob matched."""
+    word = re.sub(r"\\(.)", r"\1", re.sub(r"['\"]", "", word))
+    # The word itself too: in open('.git/config') the parentheses are code, not a group.
+    for variant in [word] + [b for g in group_variants(word) for b in brace_variants(g)]:
+        for form in {variant.lower(), posixpath.normpath(variant).lower()}:
+            if GIT_CONFIG_FILE.search(form):
+                return True
+            last_two = "/".join(PurePosixPath(form).parts[-2:])
+            if any(char in last_two for char in "*?[") and fnmatch.fnmatchcase(".git/config", shell_pattern(last_two)):
+                return True
+    return False
+
+
+def names_git_directory(word):
+    path = posixpath.normpath(re.sub(r"\\(.)", r"\1", re.sub(r"['\"]", "", word))).lower()
+    return path == ".git" or path.endswith("/.git")
 
 
 def config_write(command):
     """The reason a command writes the repository's git config file directly, or None: an editor
     or redirection there sets aeion.mode or core.hooksPath without git config's checks."""
     reason = "writing .git/config directly skips the git config checks; use git config."
-    if re.search(r">\s*['\"]?[^\s;&|<>'\"]*\.git/(config|worktrees/)", command):
+    if any(names_git_config(target) for target in re.findall(r">\|?\s*([^\s;&|<>]+)", command)):
         return reason
     for words in simple_commands(command):
         words = program(words)
@@ -453,8 +481,16 @@ def config_write(command):
             if config_write(words[1]):
                 return reason
             continue
-        if words and PurePosixPath(words[0]).name not in CONFIG_READERS and any(
-                GIT_CONFIG_FILE.search(re.sub(r"['\"]", "", w)) for w in words[1:]):
+        if not words:
+            continue
+        name = PurePosixPath(words[0]).name
+        if name not in CONFIG_READERS and any(names_git_config(w) for w in words[1:]):
+            return reason
+        # git log --output writes any text it formats.
+        outputs = [i for i, w in enumerate(words) if w.startswith("--output")]
+        if name == "git" and any(names_git_config(" ".join(words[i:i + 2])) for i in outputs):
+            return reason
+        if name in INTO_DIRECTORY and any(names_git_directory(w) for w in words[1:]):
             return reason
     return None
 

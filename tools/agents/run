@@ -25,7 +25,7 @@ if provider == 'codex':
     for value in arguments:
         if any(key in value for key in ('model_auto_compact_token_limit', 'features.hooks', 'disableAllHooks')):
             sys.exit('Æion Factory owns native compaction/hook settings in managed launches.')
-    arguments = ['-C', str(root), '-c', 'model_auto_compact_token_limit=250000', '-c', 'features.hooks=true', *arguments]
+    arguments = ['-C', str(root), '-c', 'model_auto_compact_token_limit=280000', '-c', 'features.hooks=true', *arguments]
 if provider == 'opencode' and '--isolated' in arguments:
     arguments.remove('--isolated')
     for kind in ('DATA', 'CONFIG', 'STATE', 'CACHE'):

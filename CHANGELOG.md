@@ -6,6 +6,10 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+- Live runs fixed two closure stalls: OpenCode's file tools (`path`) can now write the handover in
+  closure and its verified compaction ends the closure; Codex compacts natively at 280000, after the
+  250k alert, since a refused compaction ends its turn.
+
 ### Added
 - `tools/release/release --new-project` starts a copy of the factory as a new project: `VERSION` 0.1.0, an
   empty changelog and only the "Adapt" task in `work/current.md`. It refuses in the factory's own clone.

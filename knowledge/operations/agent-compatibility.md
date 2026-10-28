@@ -43,7 +43,8 @@ directory does not establish loaded hooks or identical runtime guarantees.
 - Keep existing `.claude/skills` as the maintained skill source. Codex discovers symlinked folders
   under `.agents/skills`; OpenCode already discovers the Claude-compatible paths.
 - Codex local trusted projects enable `.codex/config.toml` and `.codex/hooks.json`. Its native
-  auto-compaction threshold is 250000. Its hook transcript format is not a stable token API.
+  auto-compaction threshold is 280000, after the 250k alert: a refused compaction ends Codex's turn,
+  so at 250000 it compacted before the hook had seen 250k and stalled. Its rollout is not a stable token API.
 - OpenCode 2.1.4+ loads root `opencode.json` and `.opencode/plugins/factory/index.js`. The plugin reads each
   step's tokens (`session.step.ended`) and compacts itself at 250k once the handover is verified.
 - Pi 1.4.0+ reads `AGENTS.md`/`CLAUDE.md` from its folder and every parent, and project

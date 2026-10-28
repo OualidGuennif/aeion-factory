@@ -276,8 +276,12 @@ def handle(root, provider, event):
                 budget.ensure_handover(root, session)
                 return fail(provider, name, f'Fill {handover.relative_to(root)} and verify the docs before compaction: '
                             + budget.checkpoint_command(root, session))
+            # OpenCode sends no compact SessionStart, so the verified compaction itself ends the closure.
             if provider == 'opencode':
                 state.pop('checkpoint', None)
+                state.pop('observed_tokens', None)
+                state['epoch'] += 1
+                state['state'] = 'RECOVERING'
                 budget.atomic(file, json.dumps(state, sort_keys=True) + '\n')
             return {'systemMessage': f'Æion Factory verified handover: {handover.relative_to(root)}'}
         measured = {}
@@ -286,7 +290,13 @@ def handle(root, provider, event):
             # Harnesses report usage after the response that asked for the tool: until then the last count holds.
             if usage is None:
                 usage = state.get('observed_tokens') or 0
-            measured = budget.apply_usage(root, session, state, name, normalized, usage)
+            # Closure judges a file edit by `file_path`; native tools name it `path`, `filePath` or a patch header.
+            call = normalized
+            if name == 'PreToolUse' and event.get('tool_name') in {'Edit', 'Write', 'apply_patch'}:
+                paths = edit_paths(event, provider)
+                target = str(root / paths[0]) if len(paths) == 1 else ''
+                call = {**normalized, 'tool_name': 'Edit', 'tool_input': {'file_path': target}}
+            measured = budget.apply_usage(root, session, state, name, call, usage)
             budget.atomic(file, json.dumps(state, sort_keys=True) + '\n')
             reason = measured.get('stopReason') or measured.get('hookSpecificOutput', {}).get('permissionDecisionReason')
             if reason:

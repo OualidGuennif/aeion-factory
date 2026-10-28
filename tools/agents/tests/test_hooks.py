@@ -188,6 +188,9 @@ class HookTests(unittest.TestCase):
             self.assertTrue(denied(alert), provider)
             self.assertIn('250k', alert['hookSpecificOutput']['permissionDecisionReason'])
             self.assertFalse(denied(self.measure(provider, 250_000, **tasks)), provider)
+            # Native tools name the file `path` and relative to the project, as OpenCode 2.2.0 and Pi send it.
+            native = {'tool_name': 'Write', 'tool_input': {'path': str(handover.relative_to(self.root)), 'content': 'x'}}
+            self.assertFalse(denied(self.measure(provider, 250_000, **native)), provider)
             self.assertFalse(self.measure(provider, 250_000, hook_event_name='PreCompact')['continue'])
             # 300k: only the handover and its checkpoint remain, and the run is never stopped for size.
             forced = self.measure(provider, 300_000, **tasks)
@@ -203,6 +206,9 @@ class HookTests(unittest.TestCase):
             hook.budget.atomic(state_file, json.dumps(state))
             self.assertEqual(self.measure(provider, 300_000, hook_event_name='PostToolUse')['aeion'], {'compact': True})
             self.assertNotIn('continue', self.measure(provider, 300_000, hook_event_name='PreCompact'))
+            # OpenCode sends no compact SessionStart: the allowed compaction itself ends the closure.
+            if provider == 'opencode':
+                self.assertEqual(json.loads(state_file.read_text())['state'], 'RECOVERING')
             self.measure(provider, 300_000, hook_event_name='SessionStart', source='compact')
             self.assertFalse(denied(self.measure(provider, 1_000, **edit)), provider)
             self.assertEqual(json.loads(state_file.read_text())['state'], 'RUNNING')

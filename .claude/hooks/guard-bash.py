@@ -305,7 +305,8 @@ def program(words):
                 # -S splits its string into env's own arguments (env -S 'FOO=1' still prints them all).
                 if (flag == "--split-string" or re.fullmatch(r"-[a-zA-Z]*S", flag)) and rest:
                     return ["<script>", "env " + rest[0] + " " + shlex.join(rest[1:])]
-                if flag in ("-u", "-C", "--unset", "--chdir") and rest:
+                # A cluster ending in a value flag (-iu HOME; BSD -P path, -L/-U user) takes the next word.
+                if (flag in ("--unset", "--chdir") or re.fullmatch(r"-[a-zA-Z]*[uCPLU]", flag)) and rest:
                     rest.pop(0)
             if not rest:
                 break

@@ -18,6 +18,7 @@
     ".factory/README.md",
     ".factory/settings.json",
     ".opencode/**",
+    ".pi/**",
     ".claude/**",
     ".github/**",
     "AGENTS.md",

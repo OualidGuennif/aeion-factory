@@ -1,6 +1,6 @@
 ---
 type: Runbook
-title: "Claude Code, Codex, OpenCode, Devin, Droid and Antigravity"
+title: "Claude Code, Codex, OpenCode, Pi, Devin, Droid and Antigravity"
 description: "One Æion Factory instruction/skill source, runtime-specific adapters, setup and explicitly bounded guarantees."
 status: stable
 sources:
@@ -16,6 +16,8 @@ sources:
     title: "OpenCode native config"
   - resource: ../../.opencode/plugins/factory/index.js
     title: "OpenCode plugin callbacks"
+  - resource: ../../.pi/extensions/factory/index.js
+    title: "Pi extension events"
   - resource: ../../.devin/config.json
     title: "Devin import settings"
   - resource: ../../.devin/hooks.v1.json
@@ -32,7 +34,7 @@ generated:
 # Agent compatibility
 
 AGENTS.md, Knowledge, task state, checker commands and the reviewed PR workflow are shared.
-Claude Code remains the original integration. Codex, OpenCode, Devin, Droid and Antigravity use their
+Claude Code remains the original integration. Codex, OpenCode, Pi, Devin, Droid and Antigravity use their
 documented native configuration and small adapters to the existing guards/checkpoints; copying a
 directory does not establish loaded hooks or identical runtime guarantees.
 
@@ -44,16 +46,30 @@ directory does not establish loaded hooks or identical runtime guarantees.
   auto-compaction threshold is 250000. Its hook transcript format is not a stable token API.
 - OpenCode 2.1.4+ loads root `opencode.json` and `.opencode/plugins/factory/index.js`. Auto-compaction remains
   native to its selected model; no supported fixed 250k setting is invented.
+- Pi 1.4.0+ reads `AGENTS.md`/`CLAUDE.md` from its folder and every parent, and project
+  `.agents/skills` from its folder or a parent, so the shared rules and skills need no copy. It loads
+  `.pi/extensions/factory/index.js` from **its start folder only**, once the project is trusted; started
+  elsewhere (`demo/`), pass it explicitly: `pi -e ../.pi/extensions/factory/index.js`. The extension sends
+  `before_agent_start` (once per session, and again after a compaction) as SessionStart, `tool_call` as
+  PreToolUse (`{block: true, reason}`, also on any hook failure), `tool_result` as PostToolUse (feedback
+  appended, `structuredContent` kept) and `session_before_compact` as PreCompact (`{cancel: true}` and a
+  notification without a verified handover) to `tools/agents/hook.py pi`. `bash` and `powershell` are
+  Bash, `read`/`edit`/`write`/`grep` name their file in `path`, `find` and `ls` are Glob and LS, and an
+  unknown tool carrying a `command` string is a shell call. `tools/agents/run pi` requires 1.4.0+.
+  Compaction stays Pi's own (`compaction.reserveTokens`); no fixed 250k is set. Like OpenCode, Pi has no
+  Stop sign-off: use the skill `sign-off`. Not yet qualified live: the events follow the 1.4.0 docs and
+  published type declarations.
 - Token feedback (narration between tools, full-file rewrites; advisory, never blocking) covers
   Claude Code natively and Codex through its rollout transcript. Devin, Droid and Antigravity pass
-  no transcript the hook can read and OpenCode's plugin exposes no assistant text, so they get the
+  no transcript the hook can read and the OpenCode and Pi extensions pass no assistant text, so they get the
   written rule in `AGENTS.md` only; the adapter stays silent for them and keeps working.
 - In a plain folder without git, every hook command falls back from `git rev-parse --show-toplevel`
   to the current folder, so the adapters run where the agent starts. Limit: a plain folder started
   from a subfolder, or nested in another repository, does not find `tools/agents/hook.py`; Codex and
   Antigravity then refuse every tool call (fail closed). Start the agent at the project root.
   Inside a git repository a subfolder such as `demo/` works: the hook commands resolve the git root,
-  and OpenCode's plugin uses the nearest folder above its start folder that has `tools/agents/hook.py`.
+  and the OpenCode and Pi extensions use the nearest folder above their start folder that has
+  `tools/agents/hook.py`.
 - Both adapters enforce supported Bash/path refusals, edit feedback and a verified handover
   before compaction; the first refused compaction creates the skeleton to fill. Native token stops and strict pre-request 300k admission are unqualified.
 - Devin CLI reads `AGENTS.md` and `.agents/skills` natively. By default it also imports
@@ -126,6 +142,8 @@ qualification and setup commands are recorded below.
 - https://opencode.ai/v2/docs/build/plugins/
 - https://opencode.ai/v2/docs/config/
 - https://opencode.ai/v2/docs/skills/
+- https://github.com/earendil-works/pi/tree/main/packages/coding-agent/docs (extensions, skills,
+  configuration, security; event types in `src/core/extensions/types.ts`)
 - https://docs.devin.ai/cli/extensibility/hooks/overview
 - https://docs.devin.ai/cli/reference/configuration/read-config-from
 - https://docs.devin.ai/cli/extensibility/skills/overview
@@ -148,11 +166,13 @@ qualification and setup commands are recorded below.
 4. OpenCode: `tools/agents/run opencode`. The root config selects the maintained skill directory;
    the native loader loads the local plugin directory. A database schema conflict can use
    `--isolated`, a separate ignored XDG profile; connect that profile's provider natively.
-5. Devin CLI: `devin` or `tools/agents/run devin` from the repository root. Approve the project
+5. Pi: `tools/agents/run pi` (1.4.0+). Trust the project when Pi asks, so `.pi/extensions/` loads;
+   the startup list names `factory`. Connect the provider in Pi's own settings.
+6. Devin CLI: `devin` or `tools/agents/run devin` from the repository root. Approve the project
    hooks if Devin asks. Keep the model/provider choice in Devin's own user settings.
-6. Droid: `droid` or `tools/agents/run droid` from the repository root. Approve the project hooks
+7. Droid: `droid` or `tools/agents/run droid` from the repository root. Approve the project hooks
    if Droid asks; account and model stay in Droid's user settings (`~/.factory/`).
-7. Antigravity: `agy` or `tools/agents/run antigravity` from the repository root, or open the
+8. Antigravity: `agy` or `tools/agents/run antigravity` from the repository root, or open the
    folder in the IDE. Trust the folder so `.agents/hooks.json` loads; `/hooks` lists it.
 
 The shared guards are basename/command-pattern safeguards. Codex native Bash and apply_patch
@@ -169,7 +189,7 @@ Edit semantics, so checking a patch never becomes an accidental full-file Read r
 ## Qualification and limits
 
 Regression commands: `python3 tools/agents/tests/test_hooks.py`,
-`node --test tools/agents/tests/test_opencode.mjs` and `python3 tools/loops/tests/test_loops.py`.
+`node --test tools/agents/tests/test_opencode.mjs`, `node --test tools/agents/tests/test_pi.mjs` and `python3 tools/loops/tests/test_loops.py`.
 These exercise real guard processes, payload normalization, patch paths, failure decisions,
 checkpoint invalidation, process deadlines, turn caps and issue severity routing.
 
@@ -190,6 +210,13 @@ tool names, `DEVIN_PROJECT_DIR` and the block decision follow Devin's documentat
 integrations verified on Devin 3000.11.3. To qualify, in a disposable clone ask Devin to `cat .env`
 and to edit a file: the first must be refused with the guard's reason, the second must name the
 covering doc. Devin cloud sessions do not read `.devin/` and are not covered.
+
+Pi is not yet qualified live either: no Pi ran in the change that added it. The events, results and
+tool inputs follow the 1.4.0 docs and its published type declarations (`types.d.ts`, the tool schemas).
+Unverified: that a thrown `before_agent_start` handler stops the run (the tool guards refuse anyway),
+and that symlinked `.agents/skills` folders are followed. Qualify it like Devin with `tools/agents/run
+pi`: `cat .env` and a read of that file refused with the guard's reason, an edit naming its covering
+doc, and `/compact` cancelled until the checkpoint passes.
 
 Droid is not yet qualified live either. docs.factory.ai was unreachable from the container that
 added it, so the payload shape, tool names and `$FACTORY_PROJECT_DIR` follow search excerpts of

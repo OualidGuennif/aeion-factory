@@ -45,6 +45,7 @@ tools/agents/run claude                             # existing Claude integratio
 tools/agents/run codex                              # trust project/hooks first
 tools/agents/run opencode                           # native plugin, shared skills
 tools/agents/run opencode --isolated                # separate local profile on database conflict
+tools/agents/run pi                                 # Pi 1.4.0+, project extension in .pi/
 tools/agents/run devin                              # Devin CLI: .devin/ hooks, shared skills
 tools/agents/run droid                              # Droid (factory.ai): .factory/ hooks, shared skills
 tools/agents/run antigravity                        # Google Antigravity CLI (agy): .agents/hooks.json
@@ -52,6 +53,7 @@ git config aeion.mode local                         # local play: commits on mai
 git config --unset aeion.mode                       # back to the team flow
 python3 tools/agents/tests/test_hooks.py
 node --test tools/agents/tests/test_opencode.mjs
+node --test tools/agents/tests/test_pi.mjs
 python3 tools/loops/tests/test_loops.py
 tools/context/run                                    # original Claude entry, native compact at 250k
 tools/context/run --strict                           # refuses: strict pre-request control unqualified

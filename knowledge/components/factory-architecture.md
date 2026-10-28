@@ -40,7 +40,7 @@ structural facts; fresh review establishes the verdict; GitHub records PR/merge/
 There is no application server, broker, production database or deployed Æion Factory control plane.
 Adopting projects keep their existing instructions and architecture.
 
-Claude Code retains its native hooks. Codex, OpenCode, Devin, Droid (factory.ai) and Google
+Claude Code retains its native hooks. Codex, OpenCode, Pi, Devin, Droid (factory.ai) and Google
 Antigravity load the same instructions and skills, with narrow adapters to the existing secret
 guards, edit checks and handover checkpoints (Devin, Droid and Antigravity have no compaction
 checkpoint). Droid owns `.factory/`, so
@@ -233,5 +233,7 @@ runtime admission control, and automatically enabling additional agents or Super
 
 Native adapters validate line endings and required path/command fields before guard dispatch.
 OpenCode uses the V2 directory id/setup entrypoint and native prompt/tool/compaction callbacks;
-its pre-compaction receipt is consumed per attempt. Loop cancellation terminates the ordinary
+its pre-compaction receipt is consumed per attempt. Pi's extension maps `tool_call`,
+`tool_result`, `before_agent_start` and `session_before_compact` to the same guards and cancels a
+compaction without a verified handover. Loop cancellation terminates the ordinary
 child process group as well as enforcing deadlines. No SDK dependency is bundled for the plugin.

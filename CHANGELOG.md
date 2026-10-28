@@ -7,6 +7,11 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 ## [Unreleased]
 
 ### Added
+- `tools/architecture/ask callers <file>:<name or line>`: who calls a symbol, resolved by type through the
+  project's own language server (`deno lsp`, or a TypeScript 7 `tsc --lsp`), in any harness. Installs
+  nothing; without a server it exits 1 with the search to run instead.
+- The Pi harness (1.4.0+): `.pi/extensions/factory/` sends Pi's tool, start and compaction events to the
+  shared guards, `tools/agents/run pi` checks the version, and `demo/pi/` opens it in the playground.
 - `tools/architecture/ask` and the skill `graph`: exact, deterministic answers from a Graphify graph of the
   working tree, rebuilt only when a file changed (`find`, `deps`, `rdeps`, `path`, `tests`, `untested`,
   `spec`, `files`, `hubs`, `status`). Names match exactly (exit 3 ambiguous, 4 none), and a call Graphify

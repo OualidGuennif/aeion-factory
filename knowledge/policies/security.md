@@ -126,7 +126,7 @@ arbitrary Git arguments and shell composition. A published body file must be a r
 make a loop post a local file such as a CLI credential store. A production read must match the configured
 single trusted command. These are accidental-command controls, not OS-level isolation.
 
-Codex/OpenCode adapters normalize their supported native Bash/file/patch payloads to these same
+Codex/OpenCode/Pi adapters normalize their supported native Bash/file/patch payloads to these same
 guards. A known refusal is returned as an explicit native denial; it is never silently converted
 into approval. Native project/hook trust and sandbox controls still apply, and events unsupported
 by the runtime cannot be advertised as enforced. See the compatibility runbook.

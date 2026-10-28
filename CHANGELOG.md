@@ -28,6 +28,9 @@ dates them at release time. Spec: knowledge/policies/engineering.md
   instead of analysing the enclosing repository; the doc gives the plain-folder commands.
 - Without git, the file walk honours each folder's simple `.gitignore` rules, so build output such as
   Fresh's `app/_fresh/` no longer fails `repo-health` in a plain folder.
+- At the 250k alert the checkpoint is admitted from any working directory (relative, absolute or
+  `cd <root> &&`), and without `--base` in a plain folder, which could not close before; a refused
+  checkpoint names the missing heading or the remaining TODO.
 
 ## [1.3.0] - 2026-10-28
 

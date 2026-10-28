@@ -60,6 +60,10 @@ and handover hash. Later edits invalidate it. Compaction is refused without a cu
 Local mode (`git config aeion.mode local`, read with `--local` so includes and the global config
 do not count) keeps no `work/current.md` entry, so its checkpoint
 does not require one. During closure a command the shell cannot parse is denied, never a stop.
+The checkpoint is admitted from any working directory when its path resolves to this root's
+`budget.py` (relative to the shell's folder, absolute, or after a `cd <root> &&` prefix), and a bare
+`cd <root>` is admitted; any other `cd`, chain or session is denied. A refused checkpoint names each
+missing heading (the exact `## Completed` line) and any remaining TODO.
 The skeleton appears only when closure needs it (the 250k alert, the observed stop, a refused
 compaction or the first checkpoint command), so ordinary sessions and subagents leave none; replace each TODO. Keep outcomes, remaining
 work, constraints and evidence concise. These local handovers are ignored by Git; durable facts

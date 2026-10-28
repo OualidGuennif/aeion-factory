@@ -194,7 +194,8 @@ No production migration, rollback command or availability/SLO is applicable to t
 2. 249,999/250,000 and 299,999/300,000 observations have explicit boundaries; stopped state is
    not reset by resume; unavailable usage is refused (`tools/context/tests/test_budget.py`).
 3. Compaction readiness binds the handover and exact source state; later edits invalidate it
-   (`test_budget.py`, checkpoint/compaction tests).
+   (`test_budget.py`, checkpoint/compaction tests). At the alert the checkpoint is admitted only when
+   its path resolves to this root's `budget.py`, from any working directory.
 4. Source evidence belongs to the target SHA; missing/ambiguous anchors, secret paths and nodes
    outside Archify's one-to-three sources fail
    (`tools/architecture/tests/test_refresh.py` and real Archify gates).

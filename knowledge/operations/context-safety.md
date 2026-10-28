@@ -34,7 +34,9 @@ The default Claude profile enables native auto-compaction at 250,000 tokens and 
 on session start, prompts, tools, compaction and stop. SubagentStop also checks a child's final
 observation, including pure-text child responses. The hook reads only the current session's
 bounded transcript tail and retains native token counts, never transcript text. Cached input
-counts once. Missing or zero usage is unavailable, not an empty context. An incomplete final JSONL line is
+counts once. Synthetic assistant records (API errors and hook stops, model `<synthetic>`) were
+never sent and are skipped, so a stop cannot hide the last real request and block every later
+prompt. Missing or zero usage is unavailable, not an empty context. An incomplete final JSONL line is
 a transient write; a malformed complete record is invalid.
 
 Every event latches the first observed 250k crossing, including PreCompact. The hook alerts both

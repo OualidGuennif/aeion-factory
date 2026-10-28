@@ -82,6 +82,17 @@ class BudgetTests(unittest.TestCase):
         self.transcript.write_text(record * 2)
         self.assertEqual(budget.native_usage(self.transcript, "test-session"), 250000)
 
+    def test_synthetic_records_do_not_hide_the_latest_request(self):
+        synthetic = json.dumps({"type": "assistant", "message": {"model": "<synthetic>",
+                                                                 "usage": dict.fromkeys(budget.FIELDS, 0)}}) + "\n"
+        self.observe(1000)
+        self.transcript.write_text(self.transcript.read_text() + synthetic * 2)
+        self.assertEqual(budget.native_usage(self.transcript, "test-session"), 1000)
+        self.call(hook_event_name="UserPromptSubmit")
+        self.assertEqual(self.call(hook_event_name="UserPromptSubmit"), {})
+        self.transcript.write_text(synthetic)
+        self.assertIsNone(budget.native_usage(self.transcript, "test-session"))
+
     def test_missing_usage_stops_after_one_prompt_bootstrap(self):
         self.transcript.write_text("")
         self.assertEqual(self.call(hook_event_name="UserPromptSubmit"), {})

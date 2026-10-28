@@ -97,6 +97,10 @@ def native_usage(path, session):
             return None
         if record.get("type") != "assistant":
             continue
+        # API errors and hook stops are written as synthetic assistant records with zero tokens: they
+        # were never sent, so reading them as the latest request would block every later prompt.
+        if record.get("message", {}).get("model") == "<synthetic>":
+            continue
         usage = record.get("message", {}).get("usage")
         if usage is None:
             continue

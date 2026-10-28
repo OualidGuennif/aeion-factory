@@ -6,6 +6,9 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-10-29
+
+### Fixed
 - Live runs fixed two closure stalls: OpenCode's file tools (`path`) can now write the handover in
   closure and its verified compaction ends the closure.
 - Codex no longer stalls around compaction: it compacts natively at 250000, a compaction that comes
@@ -24,7 +27,7 @@ dates them at release time. Spec: knowledge/policies/engineering.md
   the Codex run).
 
 ### Changed
-- One context rule for Claude, Codex, OpenCode and Pi: 250k closure and verified handover before compaction, and 300k forces the handover and compaction again instead of stopping. Codex reads its rollout tokens, OpenCode its step tokens, Pi its context usage; OpenCode and Pi compact themselves.
+- One context rule for Claude, Codex, OpenCode, Pi and dsh: 250k closure and verified handover before compaction, and 300k forces the handover and compaction again instead of stopping. Codex reads its rollout tokens, OpenCode its step tokens, Pi its context usage; OpenCode and Pi compact themselves.
 
 ## [1.4.0] - 2026-10-28
 

@@ -43,6 +43,27 @@ class HookTests(unittest.TestCase):
     def call(self,provider='codex',**changes):
         return hook.handle(self.root,provider,{**self.event,**changes})
 
+    def test_token_feedback_reaches_every_harness_without_breaking_it(self):
+        prose = 'I will now read the adapter, then the settings, then compare both with the documented payloads. ' * 2
+        rollout = self.root / 'rollout.jsonl'
+        rollout.write_text(''.join(json.dumps(r) + '\n' for r in (
+            {'type': 'response_item', 'payload': {'type': 'message', 'role': 'user',
+                                                  'content': [{'type': 'input_text', 'text': 'fix it'}]}},
+            {'type': 'response_item', 'payload': {'type': 'message', 'role': 'assistant',
+                                                  'content': [{'type': 'output_text', 'text': prose}]}},
+            {'type': 'response_item', 'payload': {'type': 'function_call', 'name': 'shell', 'arguments': '{}'}})))
+        # Codex passes its rollout: the narration note reaches the model as PostToolUse context.
+        # The once-per-turn state lives in the temp folder: a fresh session id keeps runs independent.
+        result = self.call('codex', hook_event_name='PostToolUse', transcript_path=str(rollout),
+                           session_id=f'feedback-codex-{os.getpid()}-{id(self)}')
+        self.assertIn('narration:', result['hookSpecificOutput']['additionalContext'])
+        # Harnesses with no readable transcript stay silent and keep working, on PostToolUse and Stop.
+        for provider in ('devin', 'droid', 'opencode'):
+            event = {**self.event, 'session_id': f'feedback-{provider}', 'hook_event_name': 'PostToolUse'}
+            self.assertEqual(hook.handle(self.root, provider, event), {}, provider)
+            stopped = hook.handle(self.root, provider, {**event, 'hook_event_name': 'Stop'})
+            self.assertNotIn('Æion Factory adapter verification unavailable', json.dumps(stopped), provider)
+
     def test_harness_commands_find_the_adapter_in_a_plain_folder(self):
         # Without git, `git rev-parse` prints nothing; every command must fall back to the folder itself.
         plain = Path(tempfile.mkdtemp())

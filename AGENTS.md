@@ -36,7 +36,7 @@ tools/        knowledge/link/health checks, agent adapters, architecture and loc
 
 ```bash
 tools/knowledge/knowledge-check && tools/knowledge/doc-links && tools/repo-health/repo-health
-python3 tools/knowledge/tests/test_doc_links.py && python3 .claude/hooks/test_hooks.py
+python3 tools/knowledge/tests/test_doc_links.py && python3 .claude/hooks/test_hooks.py && python3 .claude/hooks/test_token_feedback.py
 python3 tools/repo-health/tests/test_repo_health.py && python3 tools/git-hooks/tests/test_pre_push.py
 python3 tools/context/tests/test_budget.py && python3 tools/architecture/tests/test_refresh.py
 python3 tools/agents/tests/test_hooks.py && node --test tools/agents/tests/test_opencode.mjs

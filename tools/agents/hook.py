@@ -250,9 +250,10 @@ def handle(root, provider, event):
             data = {**event['tool_input'], 'file_path': path}
             script(root, 'guard-path.py', {'tool_name': tool, 'tool_input': data})
         return {}
-    if name == 'PostToolUse' and event.get('tool_name') in {'apply_patch', 'Edit', 'Write'}:
+    if name == 'PostToolUse':
         messages = []
-        for raw in edit_paths(event, provider):
+        edited = edit_paths(event, provider) if event.get('tool_name') in {'apply_patch', 'Edit', 'Write'} else []
+        for raw in edited:
             path = Path(raw)
             path = (root / path).resolve() if not path.is_absolute() else path.resolve()
             if not path.is_relative_to(root):
@@ -263,8 +264,13 @@ def handle(root, provider, event):
             context = result.get('hookSpecificOutput', {}).get('additionalContext')
             if context:
                 messages.append(context)
+        # Advisory token feedback: it reads the transcript when the harness passes a known shape.
+        context = script(root, 'token-feedback.py', normalized).get('hookSpecificOutput', {}).get('additionalContext')
+        if context:
+            messages.append(context)
         return {'hookSpecificOutput': {'hookEventName': name, 'additionalContext': '\n'.join(messages)}} if messages else {}
     if name == 'Stop':
+        script(root, 'token-feedback.py', normalized)
         return script(root, 'sign-off.py', normalized)
     return {}
 

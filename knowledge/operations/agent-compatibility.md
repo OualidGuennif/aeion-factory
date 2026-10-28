@@ -44,6 +44,12 @@ directory does not establish loaded hooks or identical runtime guarantees.
   auto-compaction threshold is 250000. Its hook transcript format is not a stable token API.
 - OpenCode 2.1.4+ loads root `opencode.json` and `.opencode/plugins/factory/index.js`. Auto-compaction remains
   native to its selected model; no supported fixed 250k setting is invented.
+- Token feedback (narration between tools, full-file rewrites; advisory, never blocking) covers
+  Claude Code natively and Codex through its rollout transcript. Devin, Droid and Antigravity pass
+  no transcript the hook can read and OpenCode's plugin exposes no assistant text, so they get the
+  written rule in `AGENTS.md` only; the adapter stays silent for them and keeps working.
+- In a plain folder without git, every hook command falls back from `git rev-parse --show-toplevel`
+  to the current folder, so the adapters run where the agent starts.
 - Both adapters enforce supported Bash/path refusals, edit feedback and a verified handover
   before compaction; the first refused compaction creates the skeleton to fill. Native token stops and strict pre-request 300k admission are unqualified.
 - Devin CLI reads `AGENTS.md` and `.agents/skills` natively. By default it also imports

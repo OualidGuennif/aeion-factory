@@ -10,6 +10,8 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 - A `develop` branch for daily work: `tools/git-hooks/pre-push` refuses a push of `develop` without a
   recorded `Review: OK` for the exact commit, and any direct push to `main`.
 - Versioning: `VERSION`, this changelog and `tools/release/release`; releases are tagged `vX.Y.Z`.
+- Token feedback (advisory): one line, once per turn, when an agent writes prose between tool calls
+  or rewrites an existing file of 200+ lines with Write; Claude Code and Codex are covered.
 - Plain folders without git: hooks, link and health checks, the context checkpoint and the
   session-start summary work on the files on disk.
 

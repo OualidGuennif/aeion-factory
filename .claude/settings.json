@@ -75,6 +75,15 @@
           }
         ]
       }
+,
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/token-feedback.py\""
+          }
+        ]
+      }
     ],
     "Stop": [
       {
@@ -92,6 +101,15 @@
           {
             "type": "command",
             "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/sign-off.py\""
+          }
+        ]
+      }
+,
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/token-feedback.py\""
           }
         ]
       }

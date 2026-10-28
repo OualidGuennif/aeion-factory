@@ -8,7 +8,7 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ### Added
 - `demo/`, a playground where an agent builds a real app on a copy of the factory: briefs in
-  `demo/plan/` are tracked; each `demo/<harness>/` stays local except its `feedback_for_aeion/`.
+  `demo/plan/`; each `demo/<harness>/` keeps its journal and `feedback_for_aeion/`, and only its `workspace/` is local.
 
 ### Fixed
 - `doc-links` skips a project nested in this one (its own `AGENTS.md` and `knowledge/`), whose `Spec:`

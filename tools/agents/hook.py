@@ -145,6 +145,11 @@ def antigravity_event(event):
         raise ValueError('the Antigravity shell call carries an argument the guards cannot place')
     # Every path-like argument meets the guards, not only the first: one call can name several files.
     paths = antigravity_paths(args)
+    # grep_search's Includes patterns pick the files it reads, so each one meets the Grep glob check.
+    includes = [value for key, value in args.items() if argument_name(key) in {'include', 'includes', 'glob', 'globs'}]
+    globs = [item for value in includes for item in (value if isinstance(value, list) else [value])]
+    if any(not isinstance(item, str) for item in globs):
+        raise ValueError('the Antigravity include patterns must be strings')
     # view_file windows by StartLine/EndLine; the intake guard reads the same window as offset/limit.
     if type(args.get('StartLine')) is int and type(args.get('EndLine')) is int:
         data['offset'], data['limit'] = args['StartLine'], args['EndLine'] - args['StartLine'] + 1
@@ -155,7 +160,7 @@ def antigravity_event(event):
     # Any tool carrying a command line is a shell call; a file path in it still meets the path guard.
     if command is not None:
         tool = 'Bash'
-    return {**event, 'tool_name': tool, 'tool_input': data, 'antigravity_paths': paths}
+    return {**event, 'tool_name': tool, 'tool_input': data, 'antigravity_paths': paths, 'antigravity_globs': globs}
 
 
 def handle(root, provider, event):
@@ -224,6 +229,8 @@ def handle(root, provider, event):
             for path in edit_paths(event, provider):
                 script(root, 'guard-path.py', {'tool_name': 'Edit', 'tool_input': {**data, 'file_path': path}})
             return result
+        for pattern in event.get('antigravity_globs', []) if provider == 'antigravity' else []:
+            script(root, 'guard-path.py', {'tool_name': 'Grep', 'tool_input': {'glob': pattern}})
         paths = edit_paths(event, provider)
         if not paths and event.get('tool_name') == 'Grep':
             script(root, 'guard-path.py', normalized)

@@ -284,6 +284,13 @@ class HookTests(unittest.TestCase):
             self.agy('run_command',{'command':'echo ok','CommandLine':'cat .env'})
         self.assertEqual(self.agy('view_code_item',{'File':str(self.root/'notes.md'),'NodePaths':['Cache.key','credentials']}),{})
         self.assertEqual(self.agy('grep_search',{'SearchPath':str(self.root),'Query':'x','ExcludePath':''}),{})
+        # Include patterns pick the files a search reads, so a pattern naming a secret is refused.
+        for includes in (['.env'],['*.md','id_*'],'.e*'):
+            with self.assertRaisesRegex(hook.GuardRefusal,'secret',msg=str(includes)):
+                self.agy('grep_search',{'SearchPath':str(self.root),'Query':'x','Includes':includes})
+        self.assertEqual(self.agy('grep_search',{'SearchPath':str(self.root),'Query':'x','Includes':['*.md','*.py']}),{})
+        with self.assertRaises(ValueError):
+            self.agy('grep_search',{'SearchPath':str(self.root),'Query':'x','Includes':[1]})
         # A windowed view of a long file is a bounded read; the whole file is not.
         long=self.root/'long.md'
         long.write_text('x\n'*500)

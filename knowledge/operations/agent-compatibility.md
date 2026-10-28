@@ -81,7 +81,8 @@ directory does not establish loaded hooks or identical runtime guarantees.
   mapped file tool with none is refused. Not recognized: other names (`target`, `Url`), text typed
   into a running command (`send_command_input`) and Windows paths. `view_file`'s
   `StartLine`/`EndLine` become the intake window; `grep_search` with `MatchPerLine: false` lists
-  names only. Any tool with a `CommandLine` goes through the
+  names only. Each `Includes` pattern (or `Include`, `Glob`, `Globs` in any case) goes through
+  the Grep glob check, so a pattern that names a secret is refused; a non-string one is refused. Any tool with a `CommandLine` goes through the
   shell guard, as does a `command` or `commandLine` argument in any case; a call with two is
   refused. `Cwd` or `workdir` in any case (a `file:` URI decoded) is the shell's directory; two
   or a non-string one are refused. On a shell call any other argument must be a flag or a
@@ -89,7 +90,9 @@ directory does not establish loaded hooks or identical runtime guarantees.
   The guards see only fields the adapter derives, never a raw `limit` or output mode from the
   model. A pre-tool payload without `toolCall` is refused. A pre-tool answer is always an
   explicit `{"decision": "allow"}` or `{"decision": "deny", "reason": ...}`, since Antigravity
-  reads an empty answer as a refusal. No compaction checkpoint or token stop.
+  reads an empty answer as a refusal. Unverified until a live run: whether that `allow` also
+  skips Antigravity's own approval prompt (a `run_command` with `SafeToAutoRun: false`); until
+  then, assume it may. No compaction checkpoint or token stop.
 - Managed CLI launchers enter the repository root and check the exact-HEAD architecture baseline;
   its absence is a warning, because installing the integrations needs the user's yes.
 - Raw command/MCP paths, host-managed/cloud orchestration and deliberate local modification are

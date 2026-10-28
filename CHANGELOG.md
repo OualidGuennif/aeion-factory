@@ -23,6 +23,8 @@ dates them at release time. Spec: knowledge/policies/engineering.md
   `graph.py` also accepts a relative root.
 - `tools/architecture/refresh` refuses a root that is not its own git repository before any git call,
   instead of analysing the enclosing repository; the doc gives the plain-folder commands.
+- Without git, the file walk honours each folder's simple `.gitignore` rules, so build output such as
+  Fresh's `app/_fresh/` no longer fails `repo-health` in a plain folder.
 
 ## [1.3.0] - 2026-10-28
 

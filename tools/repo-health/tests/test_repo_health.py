@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Run the real health check in disposable repositories and plain folders."""
+import importlib.util
 import shutil
 import json
 import subprocess
@@ -51,6 +52,28 @@ class RepoHealthTests(unittest.TestCase):
         result = self.check_health("--json")
         self.assertEqual(result.returncode, 1, result.stderr)
         self.assertIn("src/build/big.py", result.stdout)
+
+    def test_plain_walk_honours_simple_gitignore_rules_below_their_folder(self):
+        # Fresh writes app/_fresh, which app/.gitignore excludes; git would not list it either.
+        (self.root / "app/_fresh/server").mkdir(parents=True)
+        (self.root / "app/_fresh/server/entry.mjs").write_text("x\n" * 5000)
+        (self.root / "app/debug.log").write_text("x\n" * 5000)
+        (self.root / "app/.gitignore").write_text("# build\n_fresh/\n*.log\n!keep.log\n/anchored\nsub/path\n")
+        (self.root / "other").mkdir()
+        (self.root / "other/_fresh").write_text("value = 1\n" * 1501)
+        result = self.check_health("--json")
+        self.assertNotIn("entry.mjs", result.stdout + result.stderr)
+        self.assertNotIn("debug.log", result.stdout + result.stderr)
+        # The rule lives in app/ only, and a directory rule never hides a file.
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        spec = importlib.util.spec_from_file_location("project_files", self.root / ".claude/hooks/project_files.py")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        listed = module.project_files(self.root)
+        self.assertIn("other/_fresh", listed)
+        self.assertNotIn("app/_fresh/server/entry.mjs", listed)
+        self.assertNotIn("app/debug.log", listed)
+        self.assertEqual(module.ignore_rules(self.root / "app"), [("_fresh", True), ("*.log", False)])
 
     def test_repository_reached_through_another_letter_case_stays_a_repository(self):
         subprocess.run(["git", "init", "-q", str(self.root)], check=True)

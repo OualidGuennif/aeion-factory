@@ -2,6 +2,7 @@
 """The project's files: from git when the folder is a repository, from the file system otherwise.
 
 Many people run Æion Factory in a plain folder, so no check may require git just to list files."""
+import fnmatch
 import os
 import subprocess
 from pathlib import Path
@@ -33,6 +34,29 @@ def git_active(root):
     return active
 
 
+def ignore_rules(folder):
+    """The simple rules of a folder's .gitignore, as (pattern, directories only): a name or glob with
+    no inner slash, optionally ending in /. Negations and anchored or nested paths are not read, so
+    the files they would hide stay listed: an unknown rule fails toward checking more, not less."""
+    try:
+        lines = (Path(folder) / ".gitignore").read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        return []
+    rules = []
+    for line in (raw.strip() for raw in lines):
+        directory_only = line.endswith("/")
+        pattern = line.rstrip("/")
+        if not pattern or pattern.startswith(("#", "!")) or "/" in pattern or "\\" in pattern:
+            continue
+        rules.append((pattern, directory_only))
+    return rules
+
+
+def ignored(name, is_directory, rules):
+    return any(fnmatch.fnmatchcase(name, pattern) and (is_directory or not directory_only)
+               for pattern, directory_only in rules)
+
+
 def git_files(root, *args):
     """Relative paths from one git ls-files call; a failure is an error, never an empty project."""
     # check=True: the hooks that catch SubprocessError already fail closed on it.
@@ -48,11 +72,17 @@ def project_files(root, untracked=False):
         if untracked:
             paths += git_files(root, "--others", "--exclude-standard")
         return sorted(set(paths))
-    paths = []
+    paths, rules = [], {}
     # os.walk does not follow directory symlinks, so the walk stays inside the project.
     for folder, folders, files in os.walk(root):
         top = Path(folder) == root
-        folders[:] = [name for name in folders if name not in SKIPPED and not (top and name in TOP_SKIPPED)]
+        # A folder's .gitignore applies to it and below, as git reads it (simple rules only).
+        here = rules.get(folder, []) + ignore_rules(folder)
+        folders[:] = [name for name in folders if name not in SKIPPED and not (top and name in TOP_SKIPPED)
+                      and not ignored(name, True, here)]
+        for name in folders:
+            rules[os.path.join(folder, name)] = here
         relative = Path(folder).relative_to(root)
-        paths += [(relative / name).as_posix() for name in files if name not in SKIPPED_FILES]
+        paths += [(relative / name).as_posix() for name in files
+                  if name not in SKIPPED_FILES and not ignored(name, False, here)]
     return sorted(paths)

@@ -43,7 +43,9 @@ all of them and the security scans, for `main` only.
 Many people run Æion Factory in a plain folder, without git. The link and health checks, the context
 fingerprint and the session-start summary then walk the files on disk (skipping `.git`, `.aeion`,
 dependencies, caches, the root's build output such as `dist/` or `target/`, and desktop files such as
-`.DS_Store`; `.claude/hooks/project_files.py`). Git counts only when its top level is the project
+`.DS_Store`; `.claude/hooks/project_files.py`). Each folder's `.gitignore` applies to it and below for
+its simple rules (a name or glob, optionally ending in `/`); negations and paths with a slash are not
+read, so what they would hide stays listed. Git counts only when its top level is the project
 root: a folder nested in another repository, even a monorepo subfolder that repository tracks, is plain,
 and the Stop sign-off reminder, which compares branches, stays silent there. Every harness hook command
 falls back from `git rev-parse --show-toplevel` to the current folder. Only `doc-links --diff`, which compares

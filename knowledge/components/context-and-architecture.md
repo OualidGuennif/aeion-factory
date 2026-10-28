@@ -45,8 +45,8 @@ Adapted material retains its MIT attribution in CREDITS and the accompanying not
 
 ## Graphify and Archify
 
-[Graphify revision](https://github.com/Graphify-Labs/graphify/tree/92741d162b2094ffc2fed58cfbd8ee823e9da62c) and
-[Archify revision](https://github.com/tt-a1i/archify/tree/81c6be8d87090670c45d08a8f97f9d29c5af0bec).
+[Graphify 0.9.97](https://github.com/Graphify-Labs/graphify/tree/0a8cd4e1e342235fe53e881fb5d591bf0460071f) and
+[Archify v3.2.0](https://github.com/tt-a1i/archify/tree/208acba8d412335185b2056fedf54b3405df43fb).
 CI analyses every main update; locally they are strongly recommended and installed only on
 the user's yes. Use native structural code/Markdown
 extraction, including frontmatter, headings and links, instead of making required CI depend on

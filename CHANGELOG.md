@@ -15,6 +15,11 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 - `tools/factory-tests` runs every factory test suite, as CI now does; `AGENTS.md` names it in one line
   instead of five, so a project has room under the 120-line cap for its own build commands.
 
+### Changed
+- Graphify is pinned to the 0.9.97 release and Archify to the v3.2.0 release tag (was 0.9.95 and 13
+  commits past v3.2.0); only optional extras changed upstream, so the hashed requirements are unchanged.
+- Release source archives leave out `demo/` (`.gitattributes` export-ignore); a release test checks it.
+
 ### Fixed
 - `doc-links` skips a project nested in this one (its own `AGENTS.md` and `knowledge/`), whose `Spec:`
   pointers name its own knowledge; a demo copy no longer fails the parent's L1 and L3.

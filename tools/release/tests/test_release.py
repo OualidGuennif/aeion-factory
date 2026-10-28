@@ -60,5 +60,18 @@ class ReleaseTests(unittest.TestCase):
         self.assertIn("FAIL VERSION and CHANGELOG.md", missing.stderr)
 
 
+class ArchiveTests(unittest.TestCase):
+    def test_release_archive_leaves_out_demo(self):
+        # GitHub builds a release's source archives with `git archive`, which honours export-ignore.
+        repo = TOOL.parents[2]
+        if not (repo / ".git").exists() or not (repo / "demo").is_dir():
+            self.skipTest("needs the factory's own git checkout with its demo/ folder")
+        listing = subprocess.run(["git", "-C", str(repo), "archive", "--worktree-attributes", "--format=tar", "HEAD"],
+                                 capture_output=True, timeout=60, check=True).stdout
+        names = subprocess.run(["tar", "-t"], input=listing, capture_output=True, check=True).stdout.decode().split()
+        self.assertIn("AGENTS.md", names)
+        self.assertEqual([name for name in names if name.startswith("demo/")], [])
+
+
 if __name__ == "__main__":
     unittest.main()

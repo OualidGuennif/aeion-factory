@@ -39,7 +39,8 @@ machine is a work computer whose policy restricts installs. On a yes, run setup,
 CI still runs the analysis on GitHub, for the release pull request `develop → main` and every main
 update; pushes to `develop` run none. Setup creates a virtual environment in `.aeion/integrations/`,
 downloads the reviewed Graphify revision and its pinned packages into it, and clones the pinned
-Archify package there. Git, Python 3.12+ (excluding 3.14.1), Node 18+ and Chrome/Chromium are
+Archify package there. Both pins are release tags (Graphify 0.9.97, Archify v3.2.0), recorded by commit
+in `tools/architecture/integrations.json`. Git, Python 3.12+ (excluding 3.14.1), Node 18+ and Chrome/Chromium are
 required. Dependencies and browser execution are explicit; there is no global plugin install.
 Setup reinstalls the Graphify source pin even if the same package version was installed from a
 different source; refresh verifies its immutable commit archive URL and SHA-256 before importing it.

@@ -127,7 +127,7 @@ for path in ["/repo/.env", "/repo/env.local", "/x/server.pem", "/h/auth.json", "
 for pattern in [".env", ".e*", "**/.env*", ".{e,x}nv", "*.pem"]:
     expect(f"path deny: Grep glob {pattern}",
            run_hook("guard-path.py", {"pattern": "x", "glob": pattern, "path": "/repo"}, tool_name="Grep"), 2)
-for pattern in ["id_*", "cred*", "[^x]d_*", ".*rc", "env.*", "i[[:lower:]]_*", "*2"]:
+for pattern in ["id_*", "cred*", "[^x]d_*", ".*rc", "env.*", "i[[:lower:]]_*", "*2", "[.]env", "?env", "*env", "*.env*"]:
     expect(f"path deny: Grep glob {pattern}",
            run_hook("guard-path.py", {"pattern": "x", "glob": pattern, "path": "/repo"}, tool_name="Grep"), 2)
 for pattern in ["*.py", "*.{ts,tsx}", "**/*.md", ".github/**", "!.env", "*.json", "*.kts", "k*", ".*", ".[^.]*", ".[!.]*"]:
@@ -183,7 +183,7 @@ for command in ["head $X/id_*", "head $(pwd)/k/cred*", "cat id_*", "head auth*",
                 "echo -n - > c; echo -pre=sh >> c; echo 'head -n3 $X/id_*' > f; RIPGREP_CONFIG_PATH=c rg x f",
                 # zsh alternation, bash extglob and a parameter default name a secret as well.
                 "head (i)d_rsa", "head $X/(i|x)d_rsa", "head .e(n)v", "head $X/@(i)d_rsa", "cat ${X:-$HOME/.ssh/id_*}",
-                "head ${X:=$Y/.e}*", "head $X/.[e]nv", "head (i)(d)_rsa", "head (i)d_(r)sa", "head .(e)(n)v",
+                "head ${X:=$Y/.e}*", "head $X/.[e]nv", "head $X/[.]env", "head $X/*.env*", "head (i)(d)_rsa", "head (i)d_(r)sa", "head .(e)(n)v",
                 "head ((i)|x)d_rsa", "head @(@(i)|x)d_rsa", "head ${X:-${Y:-.e}}*", "head ${X:-${HOME}/.e}*",
                 "head -n1 .e\\nv", "head $X/i\\d_rsa"]:
     expect(f"bash deny named glob: {command}", run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 2)

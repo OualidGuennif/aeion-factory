@@ -47,13 +47,15 @@ def shell_pattern(pattern):
 def named_secrets(pattern):
     """The secrets a glob's last part names wherever it expands: a dotfile glob with a literal first
     letter (.e*) by its name; any other glob when it matches a secret and no ordinary name, so *.json
-    and .* stay allowed and id_* and .*rc do not."""
+    and .* stay allowed and id_*, .*rc and *env do not."""
     pattern = shell_pattern(pattern)
     if pattern.startswith(".."):
         return set()
     dotted = pattern.startswith(".")
-    secrets = {n for n in EXAMPLES if n.startswith(".") == dotted and fnmatch.fnmatchcase(n, pattern)}
-    ordinary = DOT_ORDINARY if dotted else ORDINARY
+    # A leading wildcard (*env, [.]env) matches dotfiles in Grep, rg and fnmatch, though not in the shell.
+    wild = pattern[:1] in ("*", "?", "[")
+    secrets = {n for n in EXAMPLES if (wild or n.startswith(".") == dotted) and fnmatch.fnmatchcase(n, pattern)}
+    ordinary = DOT_ORDINARY if dotted else ORDINARY + DOT_ORDINARY if wild else ORDINARY
     # A literal or a positive class after the dot names its letter (.e*, .[e]nv); a negated class (.[!.]*) does not.
     if re.match(r"\.([^*?.\[]|\[(?![!^]))", pattern) or not any(fnmatch.fnmatchcase(n, pattern) for n in ordinary):
         return secrets

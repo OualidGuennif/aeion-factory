@@ -38,7 +38,8 @@ Requirements for a change, not claims about what production already satisfies.
   too) is read as its word. A glob is judged by the secret it names, wherever it expands, since a
   variable, a substitution or a `cd` can hide its directory: a dotfile glob with a literal first
   letter or a positive class (`.e*`, `.[e]nv`) against the dotfile secrets; any other glob (`id*`,
-  `cred*`, `.*rc`, `.[!.]*`) when it matches a secret name and no ordinary file name, so `*`,
+  `cred*`, `.*rc`, `.[!.]*`, and `*env` or `[.]env`, whose leading wildcard reaches dotfiles in Grep
+  and `rg`) when it matches a secret name and no ordinary file name, so `*`,
   `*.json`, `c*`, `.*` and `.[!.]*` stay allowed. A `[^x]` class is read as the shell reads it, a
   negation like `[!x]`, and a bracket with a POSIX class (`[[:lower:]]`) as one wildcard. A quoted pattern
   (`grep 'key.*'`) is not judged by name only when quotes surely stay quotes: every program is a

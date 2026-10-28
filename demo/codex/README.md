@@ -37,3 +37,5 @@ To fill in as the rounds are done.
 Round 00: [journal and retained output](journal/00-setup.md).
 
 | 01 | Scaffold Fresh and Hono | 3 passed | 0 failed; smoke and factory checks PASS | 1 (FB-001) | existing authorization | FB-001 |
+
+| 02 | Ideas API and KV persistence | 28 passed | 0 failed; smoke and factory checks PASS | 0 | existing authorization | none new |

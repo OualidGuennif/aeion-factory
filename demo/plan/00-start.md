@@ -68,10 +68,22 @@ demo/<harness>/
   feedback_for_aeion/    FB-001-<slug>.md …: severity, evidence, proposed fix, status
   render/                round 07 output: index.html, diagrams/, graphify/
   workspace/             the factory copy without git (git archive HEAD); the app goes in workspace/app/
+  result/                after round 07: a snapshot of workspace/app/ and its idea-board specs
 ```
 
-Only `workspace/` is ignored by the parent repository; everything else is committed. Start the
-agent with `workspace/` as its working folder, and give it this file and the round's file.
+Only `workspace/` is ignored by the parent repository; everything else is committed.
+
+Open the agent at the **repository root**, as the Claude Code run did. The agent writes the app under
+`demo/<harness>/workspace/` and its records beside it, and runs the copy's commands from inside the
+copy. Opening the agent inside `workspace/` does not isolate it: the copy has no `.git`, so the agent's
+project discovery and the hook commands (`git rev-parse --show-toplevel`) still resolve to the parent
+repository. Its sandbox may also refuse writes to the `journal/` beside the copy.
+
+Round 00 (setup) checks the factory copy itself before any app code:
+- run the copy's own test command (`tools/factory-tests`) inside `workspace/`;
+- run `python3 ../../batteries/hooks_battery.py .` from `workspace/`. It feeds real hook payloads to
+  the copy's Claude hooks, because a session opened in the parent runs the parent's hooks;
+- note which of the copy's hooks your harness actually runs.
 
 ## What every round records (so harnesses compare)
 

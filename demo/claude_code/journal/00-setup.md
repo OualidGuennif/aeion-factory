@@ -28,9 +28,9 @@
    | `loops/orchestrator.sh outer --dry-run` | 0 | `dry run: nothing executed` |
    | `tools/architecture/refresh --target HEAD` | **1** | `FAILED (run tools/architecture/setup first)` |
 
-3. **Ran the copy's hooks with real payloads.** A session opened in this repository runs the parent's hooks, not the copy's. To see what the copy itself would decide, I wrote [`../batteries/hooks_battery.py`](../batteries/hooks_battery.py), which pipes the JSON a Claude hook receives into each hook.
+3. **Ran the copy's hooks with real payloads.** A session opened in this repository runs the parent's hooks, not the copy's. To see what the copy itself would decide, I wrote [`../../batteries/hooks_battery.py`](../../batteries/hooks_battery.py), which pipes the JSON a Claude hook receives into each hook.
    ```bash
-   cd demo/claude_code/workspace && python3 ../batteries/hooks_battery.py .
+   cd demo/claude_code/workspace && python3 ../../batteries/hooks_battery.py .
    ```
    Result: `hooks battery: 0 failure(s)`.
    - **Refused:**

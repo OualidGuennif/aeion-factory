@@ -1,0 +1,33 @@
+# Spec: knowledge/components/idea-board-runtime.md
+name: idea-board
+
+services:
+  web:
+    build: .
+    image: idea-board:local
+    ports:
+      - "8000:8000"
+    environment:
+      PORT: "8000"
+      KV_PATH: /data/ideas.sqlite3
+    volumes:
+      - ideas-data:/data
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    # The app's own runtime asks the app, so the image needs no curl.
+    healthcheck:
+      test:
+        - CMD
+        - deno
+        - eval
+        - "const r = await fetch('http://127.0.0.1:8000/api/health'); Deno.exit(r.ok ? 0 : 1)"
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  ideas-data:

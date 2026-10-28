@@ -4,10 +4,10 @@ Task state only. One entry per open task, newest first. At most 150 lines, 10 pe
 Finished tasks are deleted: the commit message and knowledge/ keep what matters.
 Status: ACTIVE, WAITING-OWNER, MEASURING, BLOCKED, BACKLOG.
 
-## Release v1.3.0 — ACTIVE
+## Release v1.3.0 — WAITING-OWNER
 - Owner decision: 2026-10-28, merge commits allowed and linear history off on main (applied via gh api).
-- State: PR #19 has Review OK, green CI and a clean Claude Security scan; not merged yet.
-- Next: merge #19 with a merge commit, wait for Architecture refresh on main, tag v1.3.0, gh release, fast-forward develop (who: agent).
+- State: #19 merged as 34c0b2e (CI and Architecture refresh green), tag v1.3.0 pushed, develop fast-forwarded; the GitHub release page is not created (the agent's permission mode refused gh release create).
+- Next: gh release create v1.3.0 --title v1.3.0 --notes "$(tools/release/release --notes 1.3.0)", then delete this entry (who: owner, or agent once allowed).
 - Blocker: none.
 - Evidence: knowledge/operations/github-protection.md; .claude/skills/ship/SKILL.md
 
@@ -17,13 +17,6 @@ Status: ACTIVE, WAITING-OWNER, MEASURING, BLOCKED, BACKLOG.
 - Next: run the qualification steps with Devin CLI, Droid and agy and record the result (who: owner).
 - Blocker: neither CLI is in the agent's container.
 - Evidence: knowledge/operations/agent-compatibility.md
-
-## Main branch protection — WAITING-OWNER
-- Owner decision: 2026-10-27, protect main as knowledge/operations/github-protection.md describes.
-- State: the agent's GitHub tools cannot change branch protection; the settings must be applied by the owner.
-- Next: owner applies the rule in Settings → Rules/Branches and reads it back with the API (who: owner).
-- Blocker: no branch-protection access from the agent session.
-- Evidence: knowledge/operations/github-protection.md
 
 ## Native strict context admission — BLOCKED
 - Owner decision: 2026-10-26, attempt native 300k qualification using paid OpenCode Go DeepSeek V4.1 Flash.

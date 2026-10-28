@@ -1,0 +1,8 @@
+$ python3 /tmp/codex_smoke.py 1
+GET /api/health 200 {"status":"ok","version":"0.1.0"}
+GET / 200 <!DOCTYPE html><html><head><meta charset="utf-8"/></head><body><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Idea Board</title></head><body><main><h1>Idea Board</h1><p>No ideas yet.</p></main></body></html></body></html>
+GET /api/nope 404 {"error":"not_found"}
+HTTP SMOKE PASS
+
+Exit: 0
+Elapsed seconds: 0.2

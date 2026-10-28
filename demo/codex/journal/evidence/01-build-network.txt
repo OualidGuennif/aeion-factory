@@ -1,0 +1,32 @@
+$ deno task build
+Download https://registry.npmjs.org/preact-render-to-string/-/preact-render-to-string-6.8.2.tgz
+Download https://registry.npmjs.org/@babel/types/-/types-7.29.11.tgz
+Download https://registry.npmjs.org/@babel/parser/-/parser-7.29.11.tgz
+Download https://registry.npmjs.org/browserslist/-/browserslist-4.29.5.tgz
+Download https://registry.npmjs.org/@babel/helper-string-parser/-/helper-string-parser-7.29.11.tgz
+Download https://registry.npmjs.org/node-releases/-/node-releases-2.0.60.tgz
+Download https://registry.npmjs.org/caniuse-lite/-/caniuse-lite-1.0.30001819.tgz
+Download https://registry.npmjs.org/electron-to-chromium/-/electron-to-chromium-1.5.466.tgz
+Download https://registry.npmjs.org/baseline-browser-mapping/-/baseline-browser-mapping-2.11.33.tgz
+Initialize node-releases@2.0.60
+Initialize baseline-browser-mapping@2.11.33
+Initialize browserslist@4.29.5
+Initialize electron-to-chromium@1.5.466
+Initialize @babel/helper-string-parser@7.29.11
+Initialize preact-render-to-string@6.8.2
+Initialize @babel/parser@7.29.11
+Initialize @babel/types@7.29.11
+Initialize caniuse-lite@1.0.30001819
+Task build deno run -A --unstable-kv npm:vite build
+failed to load config from /Users/wallseven/Desktop/aeion-factory/demo/codex/workspace/app/vite.config.ts
+error during build:
+TypeError: Failed to resolve the specifier ""preact/jsx-runtime"" as its after-prefix portion ""jsx-runtime"" could not be URL-parsed relative to the URL prefix "npm:preact@10.29.8/" mapped to by the prefix "preact/"
+    at async loadConfigFromBundledFile (file:///Users/wallseven/Desktop/aeion-factory/demo/codex/workspace/app/node_modules/.deno/vite@7.3.7/node_modules/vite/dist/node/chunks/config.js:36167:12)
+    at async bundleAndLoadConfigFile (file:///Users/wallseven/Desktop/aeion-factory/demo/codex/workspace/app/node_modules/.deno/vite@7.3.7/node_modules/vite/dist/node/chunks/config.js:36055:17)
+    at async loadConfigFromFile (file:///Users/wallseven/Desktop/aeion-factory/demo/codex/workspace/app/node_modules/.deno/vite@7.3.7/node_modules/vite/dist/node/chunks/config.js:36022:42)
+    at async resolveConfig (file:///Users/wallseven/Desktop/aeion-factory/demo/codex/workspace/app/node_modules/.deno/vite@7.3.7/node_modules/vite/dist/node/chunks/config.js:35671:22)
+    at async createBuilder (file:///Users/wallseven/Desktop/aeion-factory/demo/codex/workspace/app/node_modules/.deno/vite@7.3.7/node_modules/vite/dist/node/chunks/config.js:34126:19)
+    at async CAC.<anonymous> (file:///Users/wallseven/Desktop/aeion-factory/demo/codex/workspace/app/node_modules/.deno/vite@7.3.7/node_modules/vite/dist/node/cli.js:629:10)
+
+Exit: 1
+Elapsed seconds: 0.58

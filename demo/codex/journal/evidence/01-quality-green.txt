@@ -1,0 +1,12 @@
+$ deno task check
+Task check deno fmt --check && deno lint && deno check && deno test -A
+
+from /Users/wallseven/Desktop/aeion-factory/demo/codex/workspace/app/routes/api/[...path].ts:
+5 | -export const handler = (ctx: Context<Record<string, never>>) => api.fetch(ctx.req);
+5 | +export const handler = (ctx: Context<Record<string, never>>) =>
+6 | +  api.fetch(ctx.req);
+
+error: Found 1 not formatted file in 11 files
+
+Exit: 1
+Elapsed seconds: 0.02

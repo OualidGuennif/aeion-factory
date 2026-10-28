@@ -1,0 +1,7 @@
+$ python3 -c import subprocess; commands=[["tools/knowledge/knowledge-check"],["tools/knowledge/doc-links"],["tools/repo-health/repo-health"]]; codes=[subprocess.run(c).returncode for c in commands]; raise SystemExit(any(codes))
+RESULT: PASS (0 problem(s))
+RESULT: PASS (70 links checked)
+repo-health: AGENTS.md 118 lines, work/current.md 8, 8 top-level folders, 0 big files, 0 long comment blocks
+
+Exit: 0
+Elapsed seconds: 0.19

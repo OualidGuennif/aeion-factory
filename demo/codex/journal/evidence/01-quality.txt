@@ -1,0 +1,22 @@
+$ deno task check
+Download https://registry.npmjs.org/preact-render-to-string/-/preact-render-to-string-6.8.2.tgz
+Download https://registry.npmjs.org/@babel/types/-/types-7.29.11.tgz
+Download https://registry.npmjs.org/@babel/parser/-/parser-7.29.11.tgz
+Download https://registry.npmjs.org/@babel/helper-string-parser/-/helper-string-parser-7.29.11.tgz
+Download https://registry.npmjs.org/browserslist/-/browserslist-4.29.5.tgz
+Download https://registry.npmjs.org/electron-to-chromium/-/electron-to-chromium-1.5.466.tgz
+Download https://registry.npmjs.org/baseline-browser-mapping/-/baseline-browser-mapping-2.11.33.tgz
+Download https://registry.npmjs.org/node-releases/-/node-releases-2.0.60.tgz
+Download https://registry.npmjs.org/caniuse-lite/-/caniuse-lite-1.0.30001819.tgz
+Initialize @babel/plugin-syntax-jsx@7.29.7
+Initialize @babel/helper-annotate-as-pure@7.29.7
+error: Failed caching npm package '@babel/parser@7.29.11'
+
+Caused by:
+    0: error sending request for url (https://registry.npmjs.org/@babel/parser/-/parser-7.29.11.tgz): client error (Connect): dns error: failed to lookup address information: nodename nor servname provided, or not known
+    1: client error (Connect)
+    2: dns error
+    3: failed to lookup address information: nodename nor servname provided, or not known
+
+Exit: 1
+Elapsed seconds: 0.87

@@ -1,0 +1,12 @@
+$ deno test -A
+Check api/app_test.ts
+running 3 tests from ./api/app_test.ts
+health is JSON and uses the single version ... ok (10ms)
+unknown API route is JSON 404 ... ok (1ms)
+wrong health method is JSON 405 ... ok (461µs)
+
+ok | 3 passed | 0 failed (15ms)
+
+
+Exit: 0
+Elapsed seconds: 0.66

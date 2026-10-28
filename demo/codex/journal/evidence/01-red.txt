@@ -1,0 +1,9 @@
+$ deno test -A api/app_test.ts
+Download https://registry.npmjs.org/hono
+error: Failed loading https://registry.npmjs.org/hono for package "hono"
+
+Caused by:
+    error sending request for url (https://registry.npmjs.org/hono): client error (Connect): dns error: failed to lookup address information: nodename nor servname provided, or not known
+
+Exit: 1
+Elapsed seconds: 0.88

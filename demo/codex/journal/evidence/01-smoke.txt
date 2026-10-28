@@ -1,0 +1,12 @@
+$ python3 /tmp/codex_smoke.py 1
+Traceback (most recent call last):
+  File "/tmp/codex_smoke.py", line 19, in <module>
+    status,body=request('/api/health');break
+                ~~~~~~~^^^^^^^^^^^^^^^
+  File "/tmp/codex_smoke.py", line 14, in request
+    body=r.read().decode();print(req.method,path,r.code,body[:350]);return r.code,body
+                                 ^^^^^^^^^^
+AttributeError: 'Request' object has no attribute 'method'
+
+Exit: 1
+Elapsed seconds: 0.2

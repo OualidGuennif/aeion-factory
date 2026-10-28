@@ -1,0 +1,33 @@
+$ deno test -A api/app_test.ts
+Download https://registry.npmjs.org/hono
+Download https://registry.npmjs.org/hono/-/hono-4.13.14.tgz
+Download https://registry.npmjs.org/postcss/-/postcss-8.5.32.tgz
+Download https://registry.npmjs.org/rollup/-/rollup-4.65.1.tgz
+Download https://registry.npmjs.org/@rollup/rollup-darwin-arm64/-/rollup-darwin-arm64-4.65.1.tgz
+Initialize vite@7.3.7
+Initialize preact@10.29.8
+Initialize tinyglobby@0.2.17
+Initialize fdir@6.5.0
+Initialize esbuild@0.28.2
+Initialize fsevents@2.3.3
+Initialize picomatch@4.0.7
+Initialize nanoid@3.3.20
+Initialize picocolors@1.1.1
+Initialize source-map-js@1.2.2
+Initialize @types/estree@1.0.9
+Initialize @esbuild/darwin-arm64@0.28.2
+Initialize postcss@8.5.32
+Initialize rollup@4.65.1
+Initialize hono@4.13.14
+Initialize @rollup/rollup-darwin-arm64@4.65.1
+Check api/app_test.ts
+TS2307 [ERROR]: Cannot find module 'file:///Users/wallseven/Desktop/aeion-factory/demo/codex/workspace/app/api/app.ts'.
+    at file:///Users/wallseven/Desktop/aeion-factory/demo/codex/workspace/app/api/app_test.ts:3:27
+
+error: Type checking failed.
+
+  [33minfo:[39m The program failed type-checking, but it still might work correctly.
+  [36mhint:[39m Re-run with [4m--no-check[24m to skip type-checking.
+
+Exit: 1
+Elapsed seconds: 0.82

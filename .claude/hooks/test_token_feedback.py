@@ -114,6 +114,19 @@ class TokenFeedbackTests(unittest.TestCase):
                              capture_output=True, text=True, timeout=10)
         self.assertEqual((bad.returncode, bad.stdout), (0, ""))
 
+    def test_symlinked_state_and_record_are_never_written_through(self):
+        self.write(claude_user("go"), claude_assistant(PROSE, ("Bash",)), tool_result(), claude_assistant("Done."))
+        target = self.tmp / "target.txt"
+        target.write_text("keep\n")
+        state = Path(tempfile.gettempdir()) / f"aeion-narration-{self.session}"
+        state.symlink_to(target)
+        self.addCleanup(state.unlink)
+        self.assertEqual(self.run_hook(), "")
+        (self.tmp / ".aeion/context").mkdir(parents=True)
+        (self.tmp / f".aeion/context/narration-{self.session}.json").symlink_to(target)
+        self.run_hook("Stop")
+        self.assertEqual(target.read_text(), "keep\n")
+
     def test_full_rewrite_of_an_existing_file_is_named(self):
         self.write(claude_user("go"))
         big = "line\n" * 250

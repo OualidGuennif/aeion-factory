@@ -6,7 +6,7 @@ Status: ACTIVE, WAITING-OWNER, MEASURING, BLOCKED, BACKLOG.
 
 ## Develop flow, versioning, plain folders, token feedback — ACTIVE
 - Owner decision: 2026-10-28, work on develop with a review per push, SemVer releases (v1.3.0 first), git optional, narration hook that warns.
-- State: three commits on local develop; fresh-subagent review of origin/develop..HEAD running.
+- State: four commits on local develop plus uncommitted review fixes; first review NOT OK (3 findings, all fixed).
 - Next: record the verdict, push develop, cut v1.3.0 through a release PR, then Claude Security at medium (who: agent).
 - Blocker: none.
 - Evidence: knowledge/policies/engineering.md; CHANGELOG.md

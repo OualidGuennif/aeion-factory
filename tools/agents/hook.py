@@ -58,6 +58,14 @@ def fail(provider, name, reason):
     return {'continue': False, 'stopReason': reason, 'systemMessage': reason}
 
 
+def advisory(root, event):
+    """Token feedback reads the transcript when the harness passes a known shape; it may fail, never stop work."""
+    try:
+        return script(root, 'token-feedback.py', event)
+    except Exception:  # noqa: BLE001 - a timeout or crash here must not become a continue: false.
+        return {}
+
+
 def script(root, name, event):
     result = subprocess.run([sys.executable, str(root / '.claude/hooks' / name)], cwd=root,
                             input=json.dumps(event), capture_output=True, text=True, timeout=4)
@@ -264,13 +272,12 @@ def handle(root, provider, event):
             context = result.get('hookSpecificOutput', {}).get('additionalContext')
             if context:
                 messages.append(context)
-        # Advisory token feedback: it reads the transcript when the harness passes a known shape.
-        context = script(root, 'token-feedback.py', normalized).get('hookSpecificOutput', {}).get('additionalContext')
+        context = advisory(root, normalized).get('hookSpecificOutput', {}).get('additionalContext')
         if context:
             messages.append(context)
         return {'hookSpecificOutput': {'hookEventName': name, 'additionalContext': '\n'.join(messages)}} if messages else {}
     if name == 'Stop':
-        script(root, 'token-feedback.py', normalized)
+        advisory(root, normalized)
         return script(root, 'sign-off.py', normalized)
     return {}
 

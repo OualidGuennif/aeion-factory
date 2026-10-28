@@ -154,7 +154,7 @@ def post_tool_use(event, session):
     chars = narration(event[1] for event in turn if event[0] == "text")
     # Once per turn: the reminder is the cost we accept, a stream of them is not.
     state = Path(tempfile.gettempdir()) / f"aeion-narration-{session}"
-    if key and chars and (not state.exists() or state.read_text().strip() != key):
+    if key and chars and not state.is_symlink() and (not state.exists() or state.read_text().strip() != key):
         state.write_text(key + "\n")
         notes.append(f"narration: {chars} chars of prose between tools this turn; "
                      "write one-line {json} notes, or nothing, until the final answer.")
@@ -169,6 +169,8 @@ def stop(event, session):
         return
     chars = narration(between_tools(turn))
     record = ROOT / ".aeion/context" / f"narration-{session}.json"
+    if record.is_symlink():
+        return
     totals = json.loads(record.read_text()) if record.is_file() and not record.is_symlink() else {}
     turns = totals.get("turns", {})
     # A Stop that a sign-off reminder sent back fires again for the same turn: replace, never add twice.

@@ -64,6 +64,14 @@ class HookTests(unittest.TestCase):
             stopped = hook.handle(self.root, provider, {**event, 'hook_event_name': 'Stop'})
             self.assertNotIn('Æion Factory adapter verification unavailable', json.dumps(stopped), provider)
 
+    def test_a_failing_token_feedback_never_stops_the_harness(self):
+        (self.root / '.claude/hooks/token-feedback.py').write_text('import time\ntime.sleep(10)\n')
+        event = {**self.event, 'session_id': 'feedback-timeout', 'hook_event_name': 'PostToolUse'}
+        self.assertEqual(hook.handle(self.root, 'codex', event), {})
+        (self.root / '.claude/hooks/token-feedback.py').write_text('raise SystemExit(1)\n')
+        stopped = hook.handle(self.root, 'codex', {**event, 'hook_event_name': 'Stop'})
+        self.assertNotIn('continue', stopped)
+
     def test_harness_commands_find_the_adapter_in_a_plain_folder(self):
         # Without git, `git rev-parse` prints nothing; every command must fall back to the folder itself.
         plain = Path(tempfile.mkdtemp())

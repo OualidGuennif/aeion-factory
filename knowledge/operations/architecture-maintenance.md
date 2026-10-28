@@ -78,7 +78,8 @@ provenance. Incomplete attempts have no PASS receipt; invalid prior attempts are
 A same-SHA successful rerun verifies artifact hashes and all gate summaries before reuse.
 There is no shared writable cross-job graph cache.
 `tools/architecture/refresh --check --target HEAD` verifies all artifact hashes at launch.
-No mutable latest pointer can be moved backward by an older finishing job.
+No mutable latest pointer can be moved backward by an older finishing job. Each run instead rebuilds
+`.aeion/analysis/index.html` from the PASS receipts, newest commit first; `docs/diagrams.html` links it.
 Downloaded CI artifacts preserve the original run's evidence and portable hashes. To revalidate
 Archify path provenance in a different location, run a new local baseline for that SHA.
 

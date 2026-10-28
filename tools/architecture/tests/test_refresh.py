@@ -173,6 +173,32 @@ class PlainFolderTests(unittest.TestCase):
             self.assertFalse((copy / ".aeion").exists())
 
 
+class ListingTests(unittest.TestCase):
+    def test_listing_links_pass_baselines_newest_commit_first(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            subprocess.run(["git", "init", "-q", str(root)], check=True)
+            shas = []
+            for day, subject in (("2026-01-01", "older"), ("2026-02-01", "newer <b>")):
+                env = {"GIT_COMMITTER_DATE": f"{day}T00:00:00Z", "GIT_AUTHOR_DATE": f"{day}T00:00:00Z",
+                       "PATH": "/usr/bin:/bin:/usr/local/bin:/opt/homebrew/bin"}
+                subprocess.run(["git", "-C", str(root), "-c", "user.name=T", "-c", "user.email=t@example.invalid",
+                                "commit", "-q", "--allow-empty", "-m", subject], check=True, env=env)
+                shas.append(refresh.git(root, "rev-parse", "HEAD").decode().strip())
+            analysis = root / ".aeion/analysis"
+            for sha, status in ((shas[0], "PASS"), (shas[1], "PASS")):
+                (analysis / sha).mkdir(parents=True)
+                (analysis / sha / "receipt.json").write_text(json.dumps({"status": status, "target": sha}))
+            # A failed attempt and a receipt naming another folder are not listed.
+            (analysis / "incomplete-x").mkdir()
+            (analysis / "incomplete-x/receipt.json").write_text(json.dumps({"status": "PASS", "target": shas[0]}))
+            refresh.write_listing(root, analysis)
+            page = (analysis / "index.html").read_text()
+            self.assertLess(page.index(shas[1]), page.index(shas[0]))
+            self.assertEqual(page.count("<li>"), 2)
+            self.assertIn("newer &lt;b&gt;", page)
+
+
 class SpecSourceTests(unittest.TestCase):
     def test_frontmatter_sources_become_specifies_edges_and_misses_are_reported(self):
         # The spec's body names no code: only its frontmatter can link it.

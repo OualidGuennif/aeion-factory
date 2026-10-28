@@ -7,6 +7,8 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 ## [Unreleased]
 
 ### Added
+- `docs/diagrams.html` links every Archify diagram; `tools/architecture/refresh` rebuilds
+  `.aeion/analysis/index.html`, a listing of the PASS baselines, newest commit first.
 - `demo/`, a playground where an agent builds a real app on a copy of the factory: briefs in
   `demo/plan/`; each `demo/<harness>/` keeps its journal and `feedback_for_aeion/`, and only its `workspace/` is local.
 

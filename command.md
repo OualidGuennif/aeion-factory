@@ -11,6 +11,7 @@ Everything you can run here, grouped by loop. Skills are invoked by name in a Cl
 | `spec` | a feature or component changes: write its spec sections first |
 | `build` | implement in thin, tested slices |
 | `test` | add or fix tests; never weaken an assertion |
+| `graph` | before changing or tracing code: `knowledge/`, then `tools/architecture/ask`, then the language server |
 | `debug` | reproduce a failure, test one hypothesis, fix its root cause and prove the regression |
 | `sign-off` | end a task: tests, docs and links, task state, security on sensitive diffs |
 | `pr-review` | a pull request is open: fresh reviewer, verified findings, one verdict comment |

@@ -160,6 +160,7 @@ OpenCode loads skills through its native skill tool; Devin, Droid and Antigravit
 | `adopt` | Introduce Æion Factory into an existing project |
 | `plan`, `spec` | Inspect and approve a change, then define its contract |
 | `build`, `test`, `debug` | Implement, verify and investigate failures |
+| `graph` | Know the code's structure before reading it: `tools/architecture/ask`, exact and without an LLM |
 | `okf-update`, `sign-off` | Maintain Knowledge and finish a task with evidence |
 | `pr-review`, `ship` | Obtain fresh review and deliver behind green checks |
 | `security-scan` | Use native/project security tooling and report its actual coverage |

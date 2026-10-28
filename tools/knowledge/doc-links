@@ -20,7 +20,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / ".claude/hooks"))
 from secret_names import is_secret  # noqa: E402
-from project_files import git_active, project_files  # noqa: E402
+from project_files import git_active, project_files, inside, nested_projects  # noqa: E402
 RESOURCE_RE = re.compile(r"^\s*resource:\s*\"?([^\"\n]+?)\"?\s*$", re.MULTILINE)
 FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---\n", re.DOTALL)
 SPEC_RE = re.compile(r"\bSpec:\s*(knowledge/[\w./-]+\.md)")
@@ -68,20 +68,6 @@ def doc_sources(doc: Path):
             continue
         out.append((text[:block.start(1) + m.start()].count("\n") + 1, rel))
     return out
-
-
-def nested_projects(files):
-    """Folders below the root holding a project of their own (AGENTS.md and knowledge/index.md side by side).
-
-    Their Spec pointers name their own knowledge/, so they resolve there, never against this root;
-    the nested project's own doc-links checks them."""
-    listed = set(files)
-    return {rel[:-len("/knowledge/index.md")] for rel in listed
-            if rel.endswith("/knowledge/index.md") and rel[:-len("knowledge/index.md")] + "AGENTS.md" in listed}
-
-
-def inside(rel, folders):
-    return any(rel.startswith(folder + "/") for folder in folders)
 
 
 def tracked_headers():

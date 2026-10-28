@@ -65,6 +65,11 @@ tools/architecture/graph.py <root> <out> <manifest.json>` (the manifest lists `{
 then `node .aeion/integrations/archify/archify/bin/archify.mjs render <type> <input.json> <out.html>`
 and `browser-check <out.html>`. Archify's evidence links need a git SHA, so a plain folder's diagrams carry none.
 
+**Working graph.** The baselines are immutable per commit. For questions while editing, the skill
+`graph` uses [`tools/architecture/ask`](../components/graph-queries.md): it rebuilds `.aeion/graph/`
+from the working tree when a file changed, in a git repository or a plain folder alike, and answers
+from it without the venv.
+
 The canonical [architecture spec](../components/factory-architecture.md) and `views.json` are
 reviewed source, not generated policy. Runtime/config changes must update the architecture spec
 in the same diff (or carry its existing `Docs-Checked` trailer). Reviewers verify semantic

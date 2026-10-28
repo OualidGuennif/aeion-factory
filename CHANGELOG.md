@@ -7,6 +7,14 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 ## [Unreleased]
 
 ### Added
+- `tools/architecture/ask` and the skill `graph`: exact, deterministic answers from a Graphify graph of the
+  working tree, rebuilt only when a file changed (`find`, `deps`, `rdeps`, `path`, `tests`, `untested`,
+  `spec`, `files`, `hubs`, `status`). Names match exactly (exit 3 ambiguous, 4 none), and a call Graphify
+  inferred by name alone counts only when the files import each other. No server and no LLM.
+- `graph.py` adds `specified_by` edges from `Spec:` lines, `names_file` edges from tests that name a file
+  they run, and exact `imports` from `deno info` in a Deno project; `coverage.json` counts each.
+- The Bash guard refuses Graphify's LLM and installer commands (`extract`, `label`, `provider`, `add`,
+  `clone`, `global`, `install`, `cluster-only` without `--no-label`).
 - `docs/diagrams.html` links every Archify diagram; `tools/architecture/refresh` rebuilds
   `.aeion/analysis/index.html`, a listing of the PASS baselines, newest commit first.
 - `demo/`, a playground where an agent builds a real app on a copy of the factory: briefs in

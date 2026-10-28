@@ -93,6 +93,9 @@ an LLM is outside the baseline. Each doc's frontmatter `sources` adds a `specifi
 it names (Graphify alone links only code names written in a body); `coverage.json` lists any
 `resource` that names no file in the corpus. `refresh` runs only on a root that is its own git
 repository; a plain folder nested in another one is refused before any git call. This keeps the default independent of model credentials.
+`graph.py` also adds `specified_by` edges from `Spec:` lines, `names_file` edges from tests that name a
+file, and exact `imports` from `deno info` in a Deno project. For day-to-day questions on the working
+tree, [`tools/architecture/ask`](graph-queries.md) keeps its own graph in `.aeion/graph/`, apart from the baselines.
 Setup stamps Graphify's commit archive URL and SHA-256, including replacement of a same-version wheel
 from another source; analysis refuses mismatched package provenance or a dirty Archify checkout.
 

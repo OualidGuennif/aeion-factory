@@ -86,3 +86,17 @@ def project_files(root, untracked=False):
         paths += [(relative / name).as_posix() for name in files
                   if name not in SKIPPED_FILES and not ignored(name, False, here)]
     return sorted(paths)
+
+
+def nested_projects(files):
+    """Folders below the root holding a project of their own (AGENTS.md and knowledge/index.md side by side).
+
+    Their Spec pointers name their own knowledge/ and their code is theirs: doc-links and the code graph
+    leave them to the nested project's own checks."""
+    listed = set(files)
+    return {rel[:-len("/knowledge/index.md")] for rel in listed
+            if rel.endswith("/knowledge/index.md") and rel[:-len("knowledge/index.md")] + "AGENTS.md" in listed}
+
+
+def inside(rel, folders):
+    return any(rel.startswith(folder + "/") for folder in folders)

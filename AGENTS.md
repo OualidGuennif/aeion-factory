@@ -53,6 +53,7 @@ open that file and follow it.
 | Agent setup and runtime differences | [Compatibility](knowledge/operations/agent-compatibility.md); README setup |
 | Any change | `knowledge/index.md`, then the doc of the area; `.agents/skills/plan/SKILL.md` |
 | A feature or component | `knowledge/policies/specs-first.md`; `.agents/skills/spec/SKILL.md` |
+| Tracing code before changing it | `.agents/skills/graph/SKILL.md`; `tools/architecture/ask` (no LLM) |
 | A bug or a failing check | `.agents/skills/debug/SKILL.md`, then `.agents/skills/test/SKILL.md` |
 | Finishing a task | `.agents/skills/sign-off/SKILL.md` (team flow) |
 | Security-sensitive code | `knowledge/policies/security.md`; `.agents/skills/security-scan/SKILL.md` |

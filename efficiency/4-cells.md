@@ -57,6 +57,7 @@ description: What it does, in the third person. Use when <the trigger>.   # <= ~
 | `tech-watch` | the monthly watch (Phase 3's method) |
 | `pr-taste` | the owner commented on a PR: durable preferences into the knowledge base |
 | `retro` | after a session or weekly: lessons, new hook rules, new skills (Phase 7) |
+| `graph` | before changing or tracing code: exact structural answers from `tools/architecture/ask` |
 | `loop-triage` | an outer-loop finding: turn it into an issue an inner loop can pick up |
 | `adopt` | applying this guide to an existing repository, phase by phase |
 

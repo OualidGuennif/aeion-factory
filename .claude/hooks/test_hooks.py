@@ -83,6 +83,19 @@ for command in ["cat .env", "cat env.local", "printenv", "cat /proc/1/environ", 
     expect(f"bash deny: {command}", run_hook("guard-bash.py", {"command": command}), 2)
 for command in ["env FOO=1 npm test", "env -u DEBUG python3 -m pytest -q", "env PATH=/usr/bin git status"]:
     expect(f"bash allow: {command}", run_hook("guard-bash.py", {"command": command}), 0)
+
+# Graphify LLM commands: the code graph stays structural and calls no model.
+for command in ["graphify extract .", "graphify label .", "graphify provider add x", "graphify add https://x.test/a",
+                "graphify clone https://github.com/a/b", "graphify global add graph.json", "graphify cluster-only .",
+                ".aeion/integrations/graphify-venv/bin/graphify extract . --backend claude",
+                "cd /tmp && graphify label out", "bash -c 'graphify extract .'", "graphify install --platform codex",
+                "graphify claude install", "graphify hook install"]:
+    result = run_hook("guard-bash.py", {"command": command})
+    expect(f"bash deny graphify: {command}", result, 2, stderr_has="tools/architecture/ask")
+for command in ["graphify cluster-only . --no-label --no-viz", "graphify query 'x'", "graphify path a b",
+                "graphify affected x", "graphify god-nodes", "graphify update .", "grep -rn 'graphify extract' knowledge",
+                "git commit -m 'refuse graphify extract'", "tools/architecture/ask path a b"]:
+    expect(f"bash allow graphify: {command}", run_hook("guard-bash.py", {"command": command}), 0)
 expect("bash ask: mentions a secret", run_hook("guard-bash.py", {"command": "ls -la .env"}), 0, '"ask"')
 for command in ["git status --short", "git commit -m 'the environment check'",
                 "grep -rn environment knowledge", "/usr/bin/env python3 tools/x.py", "npm config set registry x", "git commit -m 'block env'", "ps -ef", "ps aux",

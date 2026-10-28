@@ -429,6 +429,33 @@ def docker_inspect_dump(command):
     return False
 
 
+GRAPHIFY_LLM = {"extract": "runs semantic LLM extraction", "label": "names communities with an LLM",
+                "provider": "configures LLM providers", "add": "fetches a URL into the corpus",
+                "clone": "clones a repository for LLM extraction", "global": "writes the global graph in ~/.graphify"}
+GRAPHIFY_INSTALLERS = {"install", "uninstall", "hook"}
+
+
+def graphify_command(command):
+    """Graphify stays structural and read-only here: no LLM call, no rewrite of agent instructions."""
+    for words in simple_commands(command):
+        words = program(words)
+        if words and words[0] == "<script>":
+            reason = graphify_command(words[1])
+            if reason:
+                return reason
+            continue
+        if not words or PurePosixPath(words[0]).name != "graphify" or len(words) < 2:
+            continue
+        sub, rest = words[1], words[2:]
+        if sub in GRAPHIFY_LLM:
+            return f"graphify {sub} {GRAPHIFY_LLM[sub]}"
+        if sub == "cluster-only" and "--no-label" not in rest:
+            return "graphify cluster-only names communities with an LLM unless --no-label is given"
+        if sub in GRAPHIFY_INSTALLERS or rest[:1] in (["install"], ["uninstall"]):
+            return f"graphify {' '.join(words[1:3])} rewrites agent instructions or git hooks"
+    return ""
+
+
 GIT_VALUE_FLAGS = {"-C", "-c", "--config-env", "--git-dir", "--work-tree", "--namespace"}
 HOOKS_PATH = "tools/git-hooks"
 # Short options that take a value: in a cluster, the rest is that value, not more flags.
@@ -765,6 +792,12 @@ if refuses(docker_inspect_dump, command):
     deny("docker inspect without a narrow --format shows the container's environment.")
 if refuses(compose_config, command):
     deny("docker compose config prints the configuration with the secrets filled in.")
+
+# The code graph is deterministic: tools/architecture/ask answers structural questions without an LLM.
+graphify_reason = refuses(graphify_command, command)
+if graphify_reason:
+    deny((graphify_reason if isinstance(graphify_reason, str) else "the graphify command is nested too deeply to verify")
+         + "; use tools/architecture/ask (skill graph), which stays structural and calls no model.")
 
 # History and checks are not bypassed.
 if re.search(r"\bgit\s+push\b", command) and re.search(r"\s(-f|--force|--force-with-lease)(\s|=|$)", command):

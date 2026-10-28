@@ -28,7 +28,7 @@ it and fails when the committed bundle differs.
 | Knowledge | `tools/knowledge/knowledge-check` | the root |
 | Docs and code links | `tools/knowledge/doc-links` (`--diff origin/develop` before a push) | the root |
 | Comments, file size, caps | `tools/repo-health/repo-health` | the root |
-| The factory's own test suites (hooks, tools, push gate, release, context, analysis, adapters, loops) | `tools/factory-tests` (each suite also runs alone; the script lists them) | root; Node 18+ |
+| The factory's own test suites (hooks, tools, push gate, release, context, analysis and graph queries, adapters, loops) | `tools/factory-tests` (each suite also runs alone; the script lists them) | root; Node 18+ |
 | Efficiency bundle | `tools/efficiency/bundle`, then `git diff --exit-code efficiency/efficiency-bundle.md` | the root |
 | Source analysis (CI on every main update; local run recommended) | `tools/architecture/refresh --target HEAD --base origin/main` after committing | pinned tools installed on the user's yes, Node and Chrome required |
 | Your code | add your build, lint and test commands here, copied from CI | |
@@ -38,7 +38,7 @@ refuses a push of `develop` without a recorded `Review: OK` and any direct push 
 all of them and the security scans, for `main` only.
 
 Many people run Æion Factory in a plain folder, without git. The link and health checks, the context
-fingerprint and the session-start summary then walk the files on disk (skipping `.git`, `.aeion`,
+fingerprint, the code graph (`tools/architecture/ask`) and the session-start summary then walk the files on disk (skipping `.git`, `.aeion`,
 dependencies, caches, the root's build output such as `dist/` or `target/`, and desktop files such as
 `.DS_Store`; `.claude/hooks/project_files.py`). Each folder's `.gitignore` applies to it and below for
 its simple rules (a name or glob, optionally ending in `/`); negations and paths with a slash are not

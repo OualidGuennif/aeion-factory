@@ -18,6 +18,7 @@ run python3 tools/git-hooks/tests/test_pre_push.py
 run python3 tools/release/tests/test_release.py
 run python3 tools/context/tests/test_budget.py
 run python3 tools/architecture/tests/test_refresh.py
+run python3 tools/architecture/tests/test_ask.py
 run python3 tools/agents/tests/test_hooks.py
 run node --test tools/agents/tests/test_opencode.mjs
 run python3 tools/loops/tests/test_loops.py

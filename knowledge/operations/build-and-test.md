@@ -28,10 +28,7 @@ it and fails when the committed bundle differs.
 | Knowledge | `tools/knowledge/knowledge-check` | the root |
 | Docs and code links | `tools/knowledge/doc-links` (`--diff origin/develop` before a push) | the root |
 | Comments, file size, caps | `tools/repo-health/repo-health` | the root |
-| Hooks and tools | `python3 .claude/hooks/test_hooks.py`, `python3 .claude/hooks/test_token_feedback.py`, `python3 tools/knowledge/tests/test_doc_links.py` | the root |
-| Health, push gate and release regressions | `python3 tools/repo-health/tests/test_repo_health.py`, `python3 tools/git-hooks/tests/test_pre_push.py`, `python3 tools/release/tests/test_release.py` | the root |
-| Context and analysis regressions | `python3 tools/context/tests/test_budget.py`, `python3 tools/architecture/tests/test_refresh.py` | the root |
-| Agent adapters and loop boundaries | `python3 tools/agents/tests/test_hooks.py`, `node --test tools/agents/tests/test_opencode.mjs`, `python3 tools/loops/tests/test_loops.py` | root; Node 18+ |
+| The factory's own test suites (hooks, tools, push gate, release, context, analysis, adapters, loops) | `tools/factory-tests` (each suite also runs alone; the script lists them) | root; Node 18+ |
 | Efficiency bundle | `tools/efficiency/bundle`, then `git diff --exit-code efficiency/efficiency-bundle.md` | the root |
 | Source analysis (CI on every main update; local run recommended) | `tools/architecture/refresh --target HEAD --base origin/main` after committing | pinned tools installed on the user's yes, Node and Chrome required |
 | Your code | add your build, lint and test commands here, copied from CI | |

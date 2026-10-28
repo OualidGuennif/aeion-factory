@@ -10,6 +10,9 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 - `demo/`, a playground where an agent builds a real app on a copy of the factory: briefs in
   `demo/plan/`; each `demo/<harness>/` keeps its journal and `feedback_for_aeion/`, and only its `workspace/` is local.
 
+- `tools/factory-tests` runs every factory test suite, as CI now does; `AGENTS.md` names it in one line
+  instead of five, so a project has room under the 120-line cap for its own build commands.
+
 ### Fixed
 - `doc-links` skips a project nested in this one (its own `AGENTS.md` and `knowledge/`), whose `Spec:`
   pointers name its own knowledge; a demo copy no longer fails the parent's L1 and L3.

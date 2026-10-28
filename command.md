@@ -31,6 +31,7 @@ tools/knowledge/doc-links                             # docs <-> code links reso
 tools/knowledge/doc-links --diff origin/develop --worktree   # also: code changed without its doc (L3)
 tools/knowledge/doc-links --for path/to/file          # the docs covering a file
 tools/repo-health/repo-health [--json]                # comment blocks, file sizes, AGENTS.md and work caps
+tools/factory-tests                                   # every factory test suite below, as CI runs them
 python3 tools/knowledge/tests/test_doc_links.py       # tool tests
 python3 .claude/hooks/test_hooks.py                   # hook tests
 python3 tools/context/tests/test_budget.py            # context boundary/recovery regressions

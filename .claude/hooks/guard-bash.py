@@ -452,6 +452,8 @@ GIT_CONFIG_FILE = re.compile(r"(^|[^\w.-])\.git/(config|config\.worktree|worktre
 CONFIG_READERS = {"cat", "head", "tail", "grep", "rg", "less", "wc", "git", "ls", "stat", "diff", "echo", "printf"}
 # These write into the directory they end with (cp f .git/); cd and pushd move the shell into it.
 INTO_DIRECTORY = {"cp", "mv", "install", "ln", "rsync"}
+TARGET_OPTIONS = {**{n: ("-t", "--target-directory") for n in ("cp", "mv", "install", "ln")},
+                  "tar": ("-C", "--directory"), "unzip": ("-d",)}
 
 
 def as_shell_sees(word, quoted=()):
@@ -469,11 +471,16 @@ def path_forms(word):
         yield from {variant.lower(), posixpath.normpath(variant).lower()}
 
 
+def globs_to(name, part):
+    # The shell's glob part never crosses a / and meets a leading dot only with a literal one.
+    return any(char in part for char in "*?[") and part[:1] == name[:1] == "." and fnmatch.fnmatchcase(name, shell_pattern(part))
+
+
 def names_git_config(word):
     for form in path_forms(word):
-        last_two = "/".join(PurePosixPath(form).parts[-2:])
-        if GIT_CONFIG_FILE.search(form) or any(char in last_two for char in "*?[") and fnmatch.fnmatchcase(
-                ".git/config", shell_pattern(last_two)):
+        parts = PurePosixPath(form).parts
+        if GIT_CONFIG_FILE.search(form) or len(parts) >= 2 and (globs_to(".git", parts[-2]) or parts[-2] == ".git") and (
+                parts[-1] == "config" or any(char in parts[-1] for char in "*?[") and fnmatch.fnmatchcase("config", shell_pattern(parts[-1]))):
             return True
     return False
 
@@ -481,7 +488,7 @@ def names_git_config(word):
 def names_git_directory(word):
     for form in path_forms(word):
         last = PurePosixPath(form).name
-        if last == ".git" or any(char in last for char in "*?[") and fnmatch.fnmatchcase(".git", shell_pattern(last)):
+        if last == ".git" or globs_to(".git", last):
             return True
     return False
 
@@ -490,8 +497,11 @@ def config_write(command):
     """The reason a command writes the repository's git config file directly, or None: an editor
     or redirection there sets aeion.mode or core.hooksPath without git config's checks."""
     reason = "writing .git/config directly skips the git config checks; use git config."
-    # >, >>, >|, zsh >! and >& all write their target.
-    if any(names_git_config(as_shell_sees(t)) for t in re.findall(r">[|!]?&?\s*([^\s;&|<>]+)", command)):
+    # >, >>, >|, zsh >! and >& all write their target. A quoted span with spaces is prose (a commit
+    # message) and a heredoc fed to a program is text; sh -c scripts are judged below on their own.
+    shell_text = re.sub(r"'[^']*'|\"[^\"]*\"", lambda m: " " if re.search(r"\s", m.group(0)) else m.group(0),
+                        without_inert_heredocs(command))
+    if any(names_git_config(as_shell_sees(t)) for t in re.findall(r">[|!]?&?\s*([^\s;&|<>]+)", shell_text)):
         return reason
     quoted = {a or b for a, b in re.findall(r"'([^']*)'|\"([^\"]*)\"", command)}
     for words in simple_commands(command):
@@ -513,6 +523,10 @@ def config_write(command):
         if name == "git" and any(names_git_config(as_shell_sees(" ".join(words[i:i + 2]), quoted)) for i in outputs):
             return reason
         targets = args if name in {"cd", "pushd"} else args[-1:] if name in INTO_DIRECTORY else []
+        # A directory option names the destination too: cp -t .git, tar -C .git, unzip -d .git.
+        options = TARGET_OPTIONS.get(name, ())
+        targets += [args[i + 1] for i, w in enumerate(args[:-1]) if w in options]
+        targets += [w.split("=", 1)[1] for w in args if w.split("=", 1)[0] in options and "=" in w]
         if any(names_git_directory(w) for w in targets):
             return reason
     return None

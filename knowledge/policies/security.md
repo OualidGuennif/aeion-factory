@@ -61,10 +61,12 @@ Requirements for a change, not claims about what production already satisfies.
   (`.git/config`, `config.worktree`) directly is refused: a shell redirection to it (`>`, `>>`,
   `>|`, `>!`, `>&`), any program but a reader (`cat`, `grep`, `git`, `diff`, `echo`, ...) naming
   it, also inside interpreter code or after `=` (`dd of=`), `git --output` to it, a `cp`, `mv`, `ln`
-  or `rsync` that ends in `.git`, `cd` into it, and the Edit and Write tools. The path is read as
-  the shell expands it (defaults, braces, groups, an unquoted glob), normalized and case folded
-  (`.GIT//Config` is the same file on APFS); a quoted pattern (`-path './.git/*'`) and prose with
-  spaces (a PR title) are not paths. Reading it stays allowed. A text guard sees one call at a time, so
+  or `rsync` that ends in `.git` (or `-t .git`, `tar -C .git`, `unzip -d .git`), `cd` into it, and
+  the Edit and Write tools. The path is read as the shell expands it (defaults, braces, groups, an
+  unquoted glob that, like the shell's, crosses no `/` and meets `.git` only with a literal dot),
+  normalized and case folded (`.GIT//Config` is the same file on APFS); a quoted pattern (`-path
+  './.git/*'`), prose with spaces (a commit message) and a heredoc fed to a program are not paths.
+  Reading it stays allowed. A text guard sees one call at a time, so
   a path held in a variable or a symlink, and a script written in one call and run in a later
   one, are not judged by what they do. CI repeats the checks, so it stays the gate a
   deliberate local bypass cannot pass.

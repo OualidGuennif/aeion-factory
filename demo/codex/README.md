@@ -32,3 +32,6 @@ To fill in as the rounds are done.
 
 | Round | Result | Tests | Guard refusals | Human help | Feedback |
 | --- | --- | --- | --- | --- | --- |
+| 00 | Setup checks passed; round 01 awaits approval | 743 passed, 2 skipped; hook battery 10 passed, 5 informational; factory checks PASS | 0 during work; 5 expected battery denials | 0 during setup; commit approval requested separately | none new |
+
+Round 00: [journal and retained output](journal/00-setup.md).

@@ -1,0 +1,41 @@
+$ deno task check
+Task check deno fmt --check && deno lint && deno check && deno test -A
+Checked 23 files
+Checked 21 files
+Check api/app.ts
+Check api/app_test.ts
+Check api/ideas_test.ts
+Check client.ts
+Check domain/form.ts
+Check domain/form_test.ts
+Check domain/idea.ts
+Check domain/idea_test.ts
+Check islands/NewIdeaForm.tsx
+Check main.ts
+Check routes/api/[...path].ts
+Check routes/index.tsx
+Check routes/index_test.ts
+Check server.ts
+Check store/ideas.ts
+Check store/ideas_test.ts
+Check store/kv.ts
+Check utils.ts
+Check version.ts
+Check vite.config.ts
+Check wrapper.tsx
+TS2322 [ERROR]: Type 'AnyComponent<PageProps<{ ideas: Idea[]; values: { title: string; description: string; tags: string; }; error: undefined; } | { ideas: Idea[]; values: { title: string; description: string; tags: string; }; error: Invalid; }, State>>' is not assignable to type 'RouteComponent<State> | undefined'.
+  Type 'FunctionComponent<PageProps<{ ideas: Idea[]; values: { title: string; description: string; tags: string; }; error: undefined; } | { ideas: Idea[]; values: { title: string; description: string; tags: string; }; error: Invalid; }, State>>' is not assignable to type 'RouteComponent<State> | undefined'.
+    Type 'FunctionComponent<PageProps<{ ideas: Idea[]; values: { title: string; description: string; tags: string; }; error: undefined; } | { ideas: Idea[]; values: { title: string; description: string; tags: string; }; error: Invalid; }, State>>' is not assignable to type 'FunctionComponent<PageProps<unknown, State>>'.
+      Types of parameters 'props' and 'props' are incompatible.
+        Type 'RenderableProps<PageProps<unknown, State>, any>' is not assignable to type 'RenderableProps<PageProps<{ ideas: Idea[]; values: { title: string; description: string; tags: string; }; error: undefined; } | { ideas: Idea[]; values: { title: string; description: string; tags: string; }; error: Invalid; }, State>, any>'.
+          Type 'RenderableProps<PageProps<unknown, State>, any>' is not assignable to type '{ data: { ideas: Idea[]; values: { title: string; description: string; tags: string; }; error: undefined; } | { ideas: Idea[]; values: { title: string; description: string; tags: string; }; error: Invalid; }; }'.
+            Types of property 'data' are incompatible.
+              Type 'unknown' is not assignable to type '{ ideas: Idea[]; values: { title: string; description: string; tags: string; }; error: undefined; } | { ideas: Idea[]; values: { title: string; description: string; tags: string; }; error: Invalid; }'.
+  }).route("/", { component: Home, handler: handlers }).handler();
+                  ~~~~~~~~~
+    at file:///Users/wallseven/Desktop/aeion-factory/demo/codex/workspace/app/routes/index_test.ts:11:19
+
+error: Type checking failed.
+
+Exit: 1
+Elapsed seconds: 0.63

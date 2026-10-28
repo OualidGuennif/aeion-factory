@@ -1,0 +1,28 @@
+$ deno test -A routes/index_test.ts domain/form_test.ts
+Check routes/index_test.ts
+Check domain/form_test.ts
+TS2307 [ERROR]: Cannot find module 'file:///Users/wallseven/Desktop/aeion-factory/demo/codex/workspace/app/utils.ts'.
+    at file:///Users/wallseven/Desktop/aeion-factory/demo/codex/workspace/app/routes/index_test.ts:6:28
+
+TS2307 [ERROR]: Cannot find module 'file:///Users/wallseven/Desktop/aeion-factory/demo/codex/workspace/app/domain/form.ts'.
+    at file:///Users/wallseven/Desktop/aeion-factory/demo/codex/workspace/app/domain/form_test.ts:3:27
+
+TS2614 [ERROR]: Module '"file:///Users/wallseven/Desktop/aeion-factory/demo/codex/workspace/app/routes/index.tsx"' has no exported member 'handlers'. Did you mean to use 'import handlers from "file:///Users/wallseven/Desktop/aeion-factory/demo/codex/workspace/app/routes/index.tsx"' instead?
+import Home, { handlers } from "./index.tsx";
+               ~~~~~~~~
+    at file:///Users/wallseven/Desktop/aeion-factory/demo/codex/workspace/app/routes/index_test.ts:4:16
+
+TS2353 [ERROR]: Object literal may only specify known properties, and 'handlers' does not exist in type 'MaybeLazy<Route<State>>'.
+ return new App<State>().use(ctx=>{ctx.state.store=store;return ctx.next();}).route("/",{component:Home,handlers}).handler();
+                                                                                                        ~~~~~~~~
+    at file:///Users/wallseven/Desktop/aeion-factory/demo/codex/workspace/app/routes/index_test.ts:8:105
+
+Found 4 errors.
+
+error: Type checking failed.
+
+  [33minfo:[39m The program failed type-checking, but it still might work correctly.
+  [36mhint:[39m Re-run with [4m--no-check[24m to skip type-checking.
+
+Exit: 1
+Elapsed seconds: 0.4

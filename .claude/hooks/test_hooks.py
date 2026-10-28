@@ -185,6 +185,8 @@ for command in ["python3 - <<'PY'\nopen('server.key').read()\nPY",
                 "bash <<'EOF'\ncat server.key;\nEOF",
                 "xargs cat <<'EOF'\nserver.key\nEOF",
                 "while read f; do cat \"$f\"; done <<'EOF'\nserver.key;\nEOF",
+                "cat > out.txt <<EOF\n$(cat server.key)\nEOF",
+                "git commit -F - <<EOF\n$(cat server.key)\nEOF",
                 "grep -n entry.key app/x.ts",
                 "cat server.key"]:
     expect(f"bash deny secret beside accessors: {command[:30]}", run_hook("guard-bash.py", {"command": command}), 2, stderr_has="secret")

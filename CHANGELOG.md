@@ -19,8 +19,8 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 - The Bash guard's bounded-intake refusal names its cause (oversized file, variable or glob path, a
   `cat` after a `cd`) instead of always asking for a limiter.
 - The Bash guard no longer reads a code property such as Deno KV's `entry.key)` as a key file, in a
-  heredoc read by an interpreter or git or written by `cat`/`tee`; shell, `xargs` and read-loop
-  heredocs stay strict.
+  quoted heredoc read by an interpreter or git or written by `cat`/`tee`; unquoted, shell, `xargs`
+  and read-loop heredocs stay strict.
 - The Graphify graph links each spec to the files its frontmatter `sources` name (`specifies` edges),
   so "which spec covers this file" is answered; unresolved resources are listed in `coverage.json`.
   `graph.py` also accepts a relative root.

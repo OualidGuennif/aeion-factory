@@ -54,7 +54,8 @@ Requirements for a change, not claims about what production already satisfies.
   A read of a secret name is refused even as a search pattern; search names with the Grep tool.
   One exception, for code: in a heredoc read by an interpreter or git, or written to a file by `cat`
   or `tee`, an identifier's property directly followed by `)`, `]`, `}`, `;` or `,` (a Deno KV
-  `entry.key)`) is not a file name. A heredoc fed to a shell, `xargs` or a read loop is never exempt.
+  `entry.key)`) is not a file name. The delimiter must be quoted (`<<'EOF'`), because an unquoted body
+  runs `$(…)`. A heredoc fed to a shell, `xargs` or a read loop is never exempt.
 - The Bash guard refuses skipping Git hooks or force-pushing in its common spellings: `-n` in a
   commit cluster, any unambiguous prefix of `--no-verify`, a `core.hooksPath` override (`-c`,
   `--config-env`, `GIT_CONFIG_*`, or `git config` set to anything but `tools/git-hooks`; reading it

@@ -176,7 +176,7 @@ def without_inert_heredocs(command):
 
 
 # In code, `entry.key)` reads a property, not a file: a name directly followed by ) ] } ; or , and not
-# preceded by a path character is masked, and only in a heredoc that is code or text: read by an
+# preceded by a path character is masked, and only in a quoted heredoc that is code or text: read by an
 # interpreter (which can open any file anyway) or git (a message), or written to a file by cat or tee.
 # A bare "server.key" may still be a path; a heredoc fed to a shell, xargs or a read loop names files,
 # so it is never masked.
@@ -208,7 +208,8 @@ def without_code_accessors(command):
         out.append(line)
         m = HEREDOC.search(line)
         if m:
-            end, masked = m.group(2), text_heredoc(line[:m.start()], line[m.end():])
+            # An unquoted delimiter lets the shell run $(…) in the body, so only a quoted one is plain text.
+            end, masked = m.group(2), bool(m.group(1)) and text_heredoc(line[:m.start()], line[m.end():])
     return "\n".join(out)
 
 

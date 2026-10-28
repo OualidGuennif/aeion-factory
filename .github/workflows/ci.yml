@@ -57,5 +57,6 @@ jobs:
     container: semgrep/semgrep
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - run: semgrep scan --config p/owasp-top-ten --error
+      # demo/ is a playground left out of release archives; only the shipped factory is scanned.
+      - run: semgrep scan --config p/owasp-top-ten --error --exclude demo
 # Keep action revisions pinned; review upstream changes before updating them.

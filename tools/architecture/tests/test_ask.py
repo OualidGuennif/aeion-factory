@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""tools/architecture/ask on fixture graphs: exact names, rebuilds, paths, tests, specs and hubs.
+"""tools/architecture/ask on fixture graphs: exact names, rebuilds, paths, tests, specs and hubs; callers
+through the project's language server (skipped without deno).
 
 Query tests write graph.json by hand, so they need no venv; the extraction test builds a real graph
 with the pinned Graphify and is skipped when its venv is missing."""
@@ -140,6 +141,7 @@ with open({str(self.builds)!r}, "a") as count:
         code, out, _ = self.run_ask("path", "pkg/store.py", "pkg/app.py")
         self.assertEqual(code, 0)
         self.assertTrue(out.startswith("no edge path: pkg/store.py reaches 0 files"))
+        self.assertIn("ask callers <file>:<method>", out)
 
     def test_inferred_call_without_import_is_dropped(self):
         _, out, _ = self.run_ask("rdeps", "pkg/app.py")
@@ -199,6 +201,46 @@ with open({str(self.builds)!r}, "a") as count:
         self.assertEqual((code, data["command"]), (0, "deps"))
         self.assertEqual(data["results"][0]["file"], "pkg/util.py")
         self.assertEqual(data["results"][-1], {"external": ["json"]})
+
+
+class CallersTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name).resolve()
+
+    def run_ask(self, *args):
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = ask.main(["--root", str(self.root), *args])
+        return code, out.getvalue(), err.getvalue()
+
+    @unittest.skipUnless(shutil.which("deno") or (Path.home() / ".deno/bin/deno").is_file(), "needs deno (deno lsp)")
+    def test_callers_resolve_by_type(self):
+        # api.ts calls add() on a parameter: no import edge reaches the method, the server does.
+        (self.root / "app").mkdir()
+        (self.root / "app/deno.json").write_text("{}\n")
+        (self.root / "app/store.ts").write_text(
+            "export function createStore() {\n  return {\n    add(x: number): number {\n      return x + 1;\n    },\n"
+            "    size(): number {\n      return 0;\n    },\n  };\n}\nexport type Store = ReturnType<typeof createStore>;\n")
+        (self.root / "app/api.ts").write_text(
+            'import type { Store } from "./store.ts";\n\nexport function handle(store: Store) {\n  return store.add(1);\n}\n')
+        code, out, err = self.run_ask("callers", "app/store.ts:add")
+        self.assertEqual((code, err), (0, ""))
+        self.assertEqual(out.splitlines(), ["app/api.ts:4  handle  [lsp call]"])
+        self.assertEqual(self.run_ask("callers", "app/store.ts:3")[1], out, "a line names the same symbol")
+        self.assertEqual(self.run_ask("callers", "app/store.ts:size")[1].strip(), "no caller of size at app/store.ts:6")
+        self.assertEqual(self.run_ask("callers", "app/store.ts:ad")[0], 4, "a prefix is not a match")
+
+    def test_callers_refuse_without_server(self):
+        (self.root / "pkg").mkdir()
+        (self.root / "pkg/app.py").write_text("def main():\n    return 1\n")
+        code, out, err = self.run_ask("callers", "pkg/app.py:main")
+        self.assertEqual((code, out), (1, ""))
+        self.assertIn("no language server for pkg/app.py", err)
+        self.assertIn("installs nothing", err)
+        self.assertEqual(self.run_ask("callers", "pkg/missing.py:main")[0], 2)
+        self.assertEqual(self.run_ask("callers", "pkg/app.py")[0], 2, "the symbol is required")
 
 
 @unittest.skipUnless(ask.VENV_PYTHON.is_file(), "needs the Graphify venv (tools/architecture/setup)")

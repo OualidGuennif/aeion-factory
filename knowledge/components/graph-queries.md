@@ -1,7 +1,7 @@
 ---
 type: Component
 title: "Code graph queries"
-description: "tools/architecture/ask: a working Graphify graph rebuilt when files change, and exact, deterministic answers to the structural questions an agent asks before reading code."
+description: "tools/architecture/ask: a working Graphify graph rebuilt when files change, exact deterministic answers to the structural questions an agent asks before reading code, and type-resolved callers from the project's own language server."
 status: draft
 generated:
   by: aeion-factory/1.3
@@ -29,7 +29,9 @@ covers it before it reads code. Reading whole folders to find out costs tokens a
 
 `tools/architecture/ask` answers those questions from a Graphify graph of the **working tree**. The
 graph is rebuilt only when a project file changed. Every answer is exact, deterministic and names
-`file:line`.
+`file:line`. A call the graph cannot see, a method on an object received as a parameter
+(`ideas.create()`), comes from the project's own language server through `callers`, so every harness
+gets it, not only those with a language-server tool.
 
 It complements the per-commit baselines of [architecture maintenance](../operations/architecture-maintenance.md),
 which stay immutable and feed Archify. Intent and rules still come from `knowledge/` first: see the
@@ -44,6 +46,7 @@ which stay immutable and feed Archify. Intent and rules still come from `knowled
 | `Spec:` comment lines (first 20 lines, the line holds only the pointer, as `doc-links` reads it) | `specified_by` edges, file → spec | each code file | each rebuild |
 | Test files' text | `names_file` edges when a test names a project path literally (scripts run as subprocesses) | the tests | each rebuild |
 | `deno info --json` | exact `imports` edges of a Deno project, when `deno` and `deno.json` exist | Deno toolchain | each rebuild |
+| Language server (`deno lsp`, or the project's TypeScript 7 `tsc --lsp`) | `callers`: call hierarchy, or references when the server has none | the project's toolchain | each call |
 
 ## Inputs
 `ask [--root DIR] [--json] [--all] <command> [args]`. A name is a file path relative to the root, a
@@ -59,6 +62,7 @@ symbol label (`checkpoint_call()`), or a node id.
 | `untested` | Which source files does no test reach? |
 | `spec <file>` / `files <spec>` | Which spec covers this file? Which files does this spec cover? |
 | `hubs [--top N]` | Where should a newcomer start? |
+| `callers <file>:<name or line>` | Who calls this function or method, resolved by type? |
 
 ## Outputs
 - **Text** (the default) is at most 40 result lines, each with `file:line`. `--all` lifts the cap,
@@ -70,7 +74,8 @@ symbol label (`checkpoint_call()`), or a node id.
   - 4: no node matches;
   - 2: a usage error;
   - 1: the graph cannot be built, for example when the Graphify venv is missing (the message names
-    `tools/architecture/setup`).
+    `tools/architecture/setup`); for `callers`, no language server serves the file, or it failed or
+    took over 60 s.
 - The graph lives in `.aeion/graph/`, which is ignored: `graph.json`, `coverage.json` and `fingerprint`.
 
 ## Invariants
@@ -83,12 +88,17 @@ symbol label (`checkpoint_call()`), or a node id.
 | `spec` reports each spec from frontmatter and from the `Spec:` comment line; it marks a gap (a code file with no `Spec:` line, or a `Spec:` line the spec's sources omit) and a file shared by two specs, never a conflict. A file no extractor reads still resolves. | `test_spec_both_directions`, `test_real_build_adds_spec_line_and_test_name_edges` |
 | `hubs` leaves out tests, documents and external modules. | `test_hubs_exclude_noise` |
 | Output order is stable: sorted, never in dictionary order. | `test_output_is_stable` |
+| `callers` finds the name exactly in the file (several definitions give exit 3 with their lines, none gives exit 4), picks the server from the nearest `deno.json` or the project's TypeScript 7 install, and exits 1 without installing anything when there is none. | `test_callers_resolve_by_type`, `test_callers_refuse_without_server` |
+| `path` with no edge between two files suggests `callers` instead of skipping the hop. | `test_path_names_each_hop` |
 | No language model is called. The build is `graph.py` (AST only), and `guard-bash` refuses Graphify's LLM commands. | `test_hooks.py`: graphify LLM commands |
 
 ## Determinism
 - Same files give the same graph and the same answers. Sorting is by path, then line, then label.
-- `deno info` is the only external process, and it is used only for a Deno project. When it is
-  missing, `coverage.json` records `toolchain_imports: "unavailable"` and no edge is invented.
+- `deno info` is the only external process of a rebuild, and it is used only for a Deno project. When
+  it is missing, `coverage.json` records `toolchain_imports: "unavailable"` and no edge is invented.
+- `callers` starts the language server for one question, opens the project's source files, and stops
+  the server afterwards. The server reads the files on disk, so the answer is never stale; call sites
+  are sorted by path, then line.
 - Queries use only the Python standard library on `graph.json`, so a query does not start the venv.
 
 ## Acceptance checks
@@ -97,11 +107,14 @@ python3 tools/architecture/tests/test_ask.py
 tools/architecture/ask status
 tools/architecture/ask rdeps tools/context/budget.py
 tools/architecture/ask tests .claude/hooks/guard-bash.py
+tools/architecture/ask --root demo/claude_code/workspace callers app/store/ideas.ts:create
 ```
 
 ## Out of scope
-- **Type-resolved calls** (a method called on an object received as a parameter): the language server
-  answers those (the `graph` skill routes them to LSP `findReferences`).
+- **Type-resolved calls in a language with no server here** (Python: no pyright is installed). `callers`
+  says so and installs nothing; the `graph` skill then routes to a search.
+- **Type-resolved edges stored in the graph.** A server costs about 2 s per question, too slow for every
+  rebuild; `callers` asks it on demand.
 - **An MCP server.** A query costs about 50 ms, and a rebuild about 1 s on 155 files. A resident
   server would hold a graph that goes stale as files are edited.
 - Graphify's LLM extraction, community labels and SCIP ingestion. SCIP ingestion is an unwired

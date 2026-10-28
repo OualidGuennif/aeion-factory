@@ -14,8 +14,10 @@ read only the lines the answers name. Spec: `knowledge/components/graph-queries.
 2. **Structure: `tools/architecture/ask`.** The graph of the working tree is rebuilt only when a file
    changed (about 1–2 s), and a query on a fresh graph takes about 0.1 s. Every line names `file:line`.
 3. **Type-resolved references: the language server.** A method called on an object received as a
-   parameter (`ideas.create()`) has no edge in the graph. Use the LSP tool (`findReferences`,
-   `incomingCalls`); without one, `rg -n '\bcreate\('` limited to the folder the graph named.
+   parameter (`ideas.create()`) has no edge in the graph. `ask callers <file>:<name or line>` asks the
+   project's own server (`deno lsp`, or a TypeScript 7 `tsc --lsp`) in any harness; then the LSP tool
+   (`findReferences`, `incomingCalls`) where the harness has one; without either, `rg -n '\bcreate\('`
+   limited to the folder the graph named.
 4. **Targeted reads.** Open only the lines the answers named, with an offset and a limit.
 
 ## Question → command
@@ -26,6 +28,7 @@ read only the lines the answers name. Spec: `knowledge/components/graph-queries.
 | What does this file or symbol use? | `ask deps <path or name>` |
 | What breaks if I change it? | `ask rdeps <path> --depth 2` |
 | How does a request reach the store? | `ask path <from> <to>` |
+| Who calls this method, resolved by type? | `ask callers <file>:<name or line>` |
 | Which tests do I run after this change? | `ask tests <path>` |
 | What is not tested at all? | `ask untested` |
 | Which spec do I update? Which files does this spec cover? | `ask spec <path>`, `ask files <doc>` |
@@ -69,7 +72,8 @@ tools/agents/tests/test_hooks.py  [names_file at tools/agents/tests/test_hooks.p
 | `status` lists a file under "no symbol" | top-level script without functions, or no extractor | read it directly; it is small |
 | a test you know exists is missing from `ask tests` | it reaches the file through a string or a fixture | search the test folder for the file's name; consider naming the path literally |
 | `toolchain imports: unavailable` | `deno` is not on PATH in a Deno project | Graphify's own imports remain; install nothing, say so |
-| an inferred call is missing | Graphify matched a call by name, with no import between the files | `ask` drops those on purpose; use the language server |
+| an inferred call is missing | Graphify matched a call by name, with no import between the files | `ask` drops those on purpose; use `ask callers` |
+| `callers` exit 1, "no language server" | no `deno.json` and no TypeScript 7 in `node_modules` (Python, plain JS) | install nothing; use the `rg` search the message gives |
 
 ## Verification
 - [ ] Each structural claim cites a `file:line` you opened.

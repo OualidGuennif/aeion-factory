@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # Spec: knowledge/components/graph-queries.md
 """Exact, deterministic answers to structural questions, from a Graphify graph of the working tree
-that is rebuilt only when a project file changed. No language model is involved."""
+that is rebuilt only when a project file changed, and type-resolved callers from the project's own
+language server. No language model is involved."""
 import argparse
 import collections
 import fcntl
@@ -10,8 +11,11 @@ import json
 import os
 from pathlib import Path
 import re
+import select
+import shutil
 import subprocess
 import sys
+import time
 
 FACTORY = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(FACTORY / ".claude/hooks"))
@@ -26,6 +30,8 @@ TEST_NAME = re.compile(r"(^|/)(tests?/|test_[^/]*$|[^/]*[._]test\.[^/]+$|[^/]*\.
 CONFIG = (".json", ".jsonc", ".yml", ".yaml", ".toml", ".lock")
 MAX_BYTES = 1_000_000
 CAP = 40
+LSP_TIMEOUT = 60
+LSP_SOURCES = (".ts", ".tsx", ".mts", ".js", ".jsx")
 
 
 class Refusal(Exception):
@@ -271,7 +277,7 @@ def cmd_path(graph, coverage, args):
                     for a, b, relation, where in hops(seen, links, goal)] or [(f"{start} is {goal}", {"same_file": start})]
     reached = sorted(set(reach(graph.file_links(CODE), start)) - {start})
     return [(f"no edge path: {start} reaches {len(reached)} files by imports and calls, not {goal}; "
-             "the missing hop may be a call on an object (ask the language server) or a runtime link",
+             "the missing hop may be a method called on an object (ask callers <file>:<method>) or a runtime link",
              {"path": None, "from": start, "to": goal, "reached": reached})]
 
 
@@ -373,6 +379,158 @@ def cmd_hubs(graph, coverage, args):
              {"file": path, "fan_in": fan_in[path], "fan_out": len(links.get(path, {}))}) for path in ranked]
 
 
+# --- Type-resolved callers ---------------------------------------------------------------------
+
+def language_server(root, path):
+    """The project's own server for this file: the nearest deno.json above it, else a TypeScript 7 install."""
+    for folder in [path.parent, *path.parent.parents]:
+        if not folder.is_relative_to(root):
+            break
+        if (folder / "deno.json").is_file() or (folder / "deno.jsonc").is_file():
+            # The desktop app's PATH may lack ~/.deno/bin, as tools/claude-plugins/deno-lsp knows.
+            deno = shutil.which("deno") or str(Path.home() / ".deno/bin/deno")
+            if not os.access(deno, os.X_OK):
+                raise Refusal(1, [f"FAIL {folder.relative_to(root).as_posix() or '.'} is a Deno project but deno is not "
+                                  "installed; nothing is installed."])
+            return folder, [deno, "lsp"]
+        tsc = folder / "node_modules/.bin/tsc"
+        version = folder / "node_modules/typescript/package.json"
+        if tsc.is_file() and version.is_file() and '"version": "7.' in version.read_text(errors="replace"):
+            return folder, [str(tsc), "--lsp", "--stdio"]
+    raise Refusal(1, [f"FAIL no language server for {path.relative_to(root).as_posix()}: callers needs a deno.json or "
+                      "a TypeScript 7 install above it, and installs nothing. Search instead: rg -n '\\b<name>\\('"])
+
+
+class LanguageServer:
+    """One JSON-RPC session over stdio with the project's language server, for one question."""
+    def __init__(self, command, folder):
+        self.process = subprocess.Popen(command, cwd=folder, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                        stderr=subprocess.DEVNULL)
+        self.deadline = time.monotonic() + LSP_TIMEOUT
+        self.buffer, self.last = b"", 0
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_):
+        self.process.kill()
+        self.process.wait()
+        self.process.stdin.close()
+        self.process.stdout.close()
+
+    def write(self, message):
+        body = json.dumps({"jsonrpc": "2.0", **message}).encode()
+        self.process.stdin.write(b"Content-Length: %d\r\n\r\n" % len(body) + body)
+        self.process.stdin.flush()
+
+    def notify(self, method, params):
+        self.write({"method": method, "params": params})
+
+    def read(self):
+        """The next message; past the deadline or at the server's exit, a refusal, never a hang."""
+        while True:
+            end = self.buffer.find(b"\r\n\r\n")
+            length = re.search(rb"Content-Length: *(\d+)", self.buffer[:end], re.I) if end >= 0 else None
+            if length and len(self.buffer) >= end + 4 + int(length.group(1)):
+                stop = end + 4 + int(length.group(1))
+                body, self.buffer = self.buffer[end + 4:stop], self.buffer[stop:]
+                return json.loads(body)
+            remaining = self.deadline - time.monotonic()
+            if remaining <= 0 or not select.select([self.process.stdout], [], [], remaining)[0]:
+                raise Refusal(1, [f"FAIL the language server gave no answer within {LSP_TIMEOUT} s."])
+            chunk = os.read(self.process.stdout.fileno(), 65536)
+            if not chunk:
+                raise Refusal(1, ["FAIL the language server stopped before it answered."])
+            self.buffer += chunk
+
+    def request(self, method, params):
+        self.last += 1
+        self.write({"id": self.last, "method": method, "params": params})
+        while True:
+            message = self.read()
+            if "method" in message and "id" in message:
+                # The server asks for settings: Deno's are {"enable": true}; anything else gets null.
+                items = message.get("params", {}).get("items", [])
+                result = [{"enable": True}] * len(items) if message["method"] == "workspace/configuration" else None
+                self.write({"id": message["id"], "result": result})
+            elif message.get("id") == self.last:
+                if "error" in message:
+                    raise Refusal(1, [f"FAIL the language server refused {method}: {message['error'].get('message')}"])
+                return message.get("result")
+
+
+def symbols(items, parents=()):
+    """documentSymbol results, flattened to (name, kind, line, character, container)."""
+    for item in items or []:
+        where = item.get("selectionRange") or item.get("location", {}).get("range", {})
+        start = where.get("start", {})
+        yield item["name"], item.get("kind"), start.get("line", 0), start.get("character", 0), ".".join(parents)
+        yield from symbols(item.get("children"), (*parents, item["name"]))
+
+
+def target_symbol(found, rel, wanted):
+    """The one symbol `wanted` (a name, or a 1-based line) names in the file; nothing is guessed."""
+    if wanted.isdigit():
+        matches = [s for s in found if s[2] + 1 == int(wanted)]
+    else:
+        matches = [s for s in found if s[0] == wanted]
+    if not matches:
+        raise Refusal(4, [f"no symbol {wanted!r} in {rel}; check the name against the file, or give file:line"])
+    if len(matches) > 1:
+        raise Refusal(3, [f"{wanted!r} names {len(matches)} symbols in {rel}; give one as {rel}:<line>:"]
+                      + [f"  {rel}:{line + 1}  {'.'.join(filter(None, (container, name)))}"
+                         for name, _, line, _, container in sorted(matches, key=lambda s: (s[2], s[3]))])
+    return matches[0]
+
+
+def relative(uri, root):
+    path = Path(uri.removeprefix("file://"))
+    return path.relative_to(root).as_posix() if path.is_relative_to(root) else None
+
+
+def cmd_callers(root, args):
+    rel, _, wanted = args.target.rpartition(":")
+    path = (root / rel).resolve()
+    if not rel or not wanted or not path.is_file() or not path.is_relative_to(root) or is_secret(path.name):
+        raise Refusal(2, [f"callers takes <file>:<name or line> for a file in the project, not {args.target!r}"])
+    folder, command = language_server(root, path)
+    with LanguageServer(command, folder) as server:
+        # Deno reads its settings from initializationOptions; the folder scopes the project.
+        capabilities = (server.request("initialize", {
+            "processId": os.getpid(), "rootUri": folder.as_uri(),
+            "workspaceFolders": [{"uri": folder.as_uri(), "name": folder.name}],
+            "capabilities": {"textDocument": {"callHierarchy": {}, "references": {}, "documentSymbol": {
+                "hierarchicalDocumentSymbolSupport": True}}, "workspace": {"workspaceFolders": True, "configuration": True}},
+            "initializationOptions": {"enable": True}}) or {}).get("capabilities", {})
+        server.notify("initialized", {})
+        # Every source file is opened, so a caller in a file nothing has loaded yet is still found.
+        for source in sorted(rel for rel in corpus(root) if rel.endswith(LSP_SOURCES) and (root / rel).resolve().is_relative_to(folder)):
+            server.notify("textDocument/didOpen", {"textDocument": {
+                "uri": (root / source).resolve().as_uri(), "languageId": "typescriptreact" if source.endswith("x") else "typescript",
+                "version": 1, "text": (root / source).read_text(errors="replace")}})
+        document = {"uri": path.as_uri()}
+        name, _, line, character, _ = target_symbol(list(symbols(server.request("textDocument/documentSymbol",
+                                                                                  {"textDocument": document}))), rel, wanted)
+        position = {"textDocument": document, "position": {"line": line, "character": character}}
+        sites = []
+        items = server.request("textDocument/prepareCallHierarchy", position) if capabilities.get("callHierarchyProvider") else None
+        if items:
+            for call in server.request("callHierarchy/incomingCalls", {"item": items[0]}) or []:
+                where = relative(call["from"]["uri"], root)
+                # A call at module level comes from the file itself, which Deno names by its path.
+                caller = "(module)" if "/" in call["from"]["name"] else call["from"]["name"]
+                sites += [(where, site["start"]["line"] + 1, caller, "lsp call") for site in call.get("fromRanges", []) if where]
+        else:
+            for location in server.request("textDocument/references", {**position, "context": {"includeDeclaration": False}}) or []:
+                where = relative(location["uri"], root)
+                if where:
+                    sites.append((where, location["range"]["start"]["line"] + 1, "", "lsp reference"))
+    rows = [(f"{where}:{number}  {caller}  [{how}]" if caller else f"{where}:{number}  [{how}]",
+             {"where": f"{where}:{number}", "caller": caller or None, "how": how})
+            for where, number, caller, how in sorted(set(sites))]
+    return rows or [(f"no caller of {name} at {rel}:{line + 1}", {"where": None})]
+
+
 # --- Entry point --------------------------------------------------------------------------------
 
 def parser():
@@ -393,6 +551,8 @@ def parser():
     path.add_argument("target")
     commands.add_parser("untested", help="source files no test reaches")
     commands.add_parser("hubs", help="the most used source files").add_argument("--top", type=int, default=10)
+    commands.add_parser("callers", help="who calls it, resolved by the language server").add_argument(
+        "target", metavar="file:name-or-line")
     return top
 
 
@@ -405,10 +565,14 @@ def main(argv):
     args = parser().parse_args(argv)
     root = Path(args.root).resolve()
     try:
-        data, coverage, state = working_graph(root)
-        graph = Graph(data)
-        state.update(nodes=len(graph.nodes), edges=len(graph.edges))
-        rows = COMMANDS[args.command](graph, coverage, args)
+        # callers asks the language server, which reads the files themselves; it needs no graph.
+        if args.command == "callers":
+            state, rows = None, cmd_callers(root, args)
+        else:
+            data, coverage, state = working_graph(root)
+            graph = Graph(data)
+            state.update(nodes=len(graph.nodes), edges=len(graph.edges))
+            rows = COMMANDS[args.command](graph, coverage, args)
     except Refusal as refusal:
         print("\n".join(refusal.lines), file=sys.stderr)
         return refusal.code

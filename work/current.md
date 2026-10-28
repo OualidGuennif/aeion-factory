@@ -6,8 +6,8 @@ Status: ACTIVE, WAITING-OWNER, MEASURING, BLOCKED, BACKLOG.
 
 ## demo/ Idea Board run and feedback for Æion — ACTIVE
 - Owner decision: 2026-10-28, Claude Code builds the Idea Board in a git-less copy (demo/claude_code/workspace), journals each round, files feedback, fixes small ones in the base.
-- State: briefs in demo/plan/; rounds 00–02 done (2396a52, 64a466b); FB-006 fixed in 2c2fb1d; harness folders local except feedback_for_aeion/ (FB-001–007); round 03 in progress.
-- Next: rounds 03–07, base fixes FB-002/004/005/007, demo READMEs, inline review; push only on the owner's yes (who: agent).
+- State: briefs in demo/plan/; rounds 00–02 done (2396a52, 64a466b); FB-006 fixed in 2c2fb1d; harness folders local except feedback_for_aeion/ (FB-001–008); round 03 done (page + island, 38 tests).
+- Next: owner's visual yes on round 03; rounds 04–07, base fixes FB-002/004/005/007/008, demo READMEs, inline review; push only on the owner's yes (who: agent).
 - Blocker: none.
 - Evidence: work/handovers/35c6f26d-3a08-48c8-8457-2cb97c7285df.md
 

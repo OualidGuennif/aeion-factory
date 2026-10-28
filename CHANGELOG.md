@@ -13,6 +13,11 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 ### Fixed
 - `doc-links` skips a project nested in this one (its own `AGENTS.md` and `knowledge/`), whose `Spec:`
   pointers name its own knowledge; a demo copy no longer fails the parent's L1 and L3.
+- The Bash guard's bounded-intake refusal names its cause (oversized file, variable or glob path, a
+  `cat` after a `cd`) instead of always asking for a limiter.
+- The Bash guard no longer reads a code property such as Deno KV's `entry.key)` as a key file, in a
+  heredoc read by an interpreter or git or written by `cat`/`tee`; shell, `xargs` and read-loop
+  heredocs stay strict.
 
 ## [1.3.0] - 2026-10-28
 

@@ -174,6 +174,20 @@ expect("bash allow: a glob in a heredoc fed to a program is text",
        run_hook("guard-bash.py", {"command": "git commit -F - <<'EOF'\nfix head $PWD/sub/.e*\nEOF", "workdir": str(glob_dir)}), 0)
 expect("bash deny: a glob in a heredoc fed to a shell",
        run_hook("guard-bash.py", {"command": "bash <<'EOF'\nhead $PWD/sub/.e*\nEOF", "workdir": str(glob_dir)}), 2)
+# A property access glued to code punctuation (Deno KV's entry.key) is not a file, in code or text heredocs only.
+for command in ["python3 - <<'PY'\nt = s.replace('a', '.map((entry) => entry.key)')\nPY",
+                "python3 - <<'PY'\nprint(keys, e.key)\nPY",
+                "cat > edit.ts <<'EOF'\nconst ids = list.map((entry) => entry.key);\nEOF",
+                "git commit -F - <<'EOF'\nuse map((entry) => entry.key) for ids\nEOF"]:
+    expect(f"bash allow code accessor: {command[:30]}", run_hook("guard-bash.py", {"command": command}), 0)
+for command in ["python3 - <<'PY'\nopen('server.key').read()\nPY",
+                "python3 - <<'PY'\nopen(\"certs/server.key\")\nPY",
+                "bash <<'EOF'\ncat server.key;\nEOF",
+                "xargs cat <<'EOF'\nserver.key\nEOF",
+                "while read f; do cat \"$f\"; done <<'EOF'\nserver.key;\nEOF",
+                "grep -n entry.key app/x.ts",
+                "cat server.key"]:
+    expect(f"bash deny secret beside accessors: {command[:30]}", run_hook("guard-bash.py", {"command": command}), 2, stderr_has="secret")
 # A glob that names a secret and no ordinary file is refused wherever it expands.
 # A caret class is negation to the shell, and a stem or a dotfile suffix names its secrets.
 for command in ["head $X/id_*", "head $(pwd)/k/cred*", "cat id_*", "head auth*", "head $X/[^x]d_rsa",
@@ -299,7 +313,9 @@ with tempfile.TemporaryDirectory() as intake_dir:
         expect("intake allows exact threshold Read", run_hook("guard-path.py", {"path": str(boundary)}, tool_name="Read"), 0)
         expect("intake allows exact threshold cat", run_hook("guard-bash.py", {"command": f"cat '{boundary}'"}), 0)
     expect("intake respects native Bash workdir", run_hook("guard-bash.py", {"command": "cat many.log", "workdir": intake_dir}), 2)
-    expect("intake refuses unknown cwd after cd", run_hook("guard-bash.py", {"command": f"cd '{intake}'; cat many.log"}), 2)
+    expect("intake refuses unknown cwd after cd", run_hook("guard-bash.py", {"command": f"cd '{intake}'; cat many.log"}), 2, stderr_has="after a cd")
+    expect("intake names a variable path as the cause", run_hook("guard-bash.py", {"command": 'cat "$S/serve03.pid" | head -n 1; echo'}), 2, stderr_has='cannot size "$S/serve03.pid" (a variable or glob path)')
+    expect("intake names an oversized file", run_hook("guard-bash.py", {"command": f"cat '{many}'"}), 2, stderr_has='many.log" is over 400 lines')
     expect("intake keeps secret refusal ahead of limiter", run_hook("guard-bash.py", {"command": "cat .env | head -n 80"}), 2, stderr_has="secret")
     for count in ("²", "9" * 1000):
         expect("intake refuses malformed limiter count", run_hook("guard-bash.py", {"command": f"cat '{many}' | head -n {count}"}), 2, stderr_has="bounded-intake.md")

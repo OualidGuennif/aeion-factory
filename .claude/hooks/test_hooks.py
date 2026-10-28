@@ -72,8 +72,14 @@ for command in ["cat .env", "cat env.local", "printenv", "cat /proc/1/environ", 
                 "git --config-env core.hooksPath=PWD commit -m x", "git push --mirror origin",
                 "git config aeion.mode local", "git config --unset aeion.mode", "git config set aeion.mode local",
                 "git config --rename-section foo aeion", "git config rename-section foo aeion", "git config --remove-section aeion",
-                "git config --rename-section foo AEION"]:
+                "git config --rename-section foo AEION",
+                # env runs the program after it, so the git checks see through it.
+                "env git config aeion.mode local", "env -i FOO=1 git config core.hooksPath /tmp",
+                "env -u HOME git config aeion.mode local", "env -S 'git config aeion.mode local'",
+                "env FOO=1 sh -c 'echo x > .git/config'"]:
     expect(f"bash deny: {command}", run_hook("guard-bash.py", {"command": command}), 2)
+for command in ["env FOO=1 npm test", "env -u DEBUG python3 -m pytest -q", "env PATH=/usr/bin git status"]:
+    expect(f"bash allow: {command}", run_hook("guard-bash.py", {"command": command}), 0)
 expect("bash ask: mentions a secret", run_hook("guard-bash.py", {"command": "ls -la .env"}), 0, '"ask"')
 for command in ["git status --short", "git commit -m 'the environment check'",
                 "grep -rn environment knowledge", "/usr/bin/env python3 tools/x.py", "npm config set registry x", "git commit -m 'block env'", "ps -ef", "ps aux",

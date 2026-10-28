@@ -120,7 +120,7 @@ def mentioned_secrets(tokens, shell_tokens, bases, unquoted_globs):
 
 # Environment dumps hold keys. The command is split into simple commands (newlines, ; & | && || and
 # parentheses outside quotes; redirections dropped; heredoc bodies only when a shell reads them);
-# wrappers are unwrapped (sudo, time, xargs, nohup, docker [compose] exec/run, kubectl exec, ssh,
+# wrappers are unwrapped (sudo, time, xargs, nohup, env with a program, docker [compose] exec/run, kubectl exec, ssh,
 # sh -c/-lc, su -c, shell keywords,
 # recursively); then refused: printenv; env with no program to run;
 # declare, typeset, export and set that print variables; ps with BSD e or -E (process environments). And
@@ -297,6 +297,18 @@ def program(words):
             if sub not in ("exec", "run"):
                 break
             words = skip_options(rest, "docker")[1:]
+        elif w == "env":
+            # env runs the program after its options and assignments; alone it prints the environment.
+            rest = words[1:]
+            while rest and (rest[0].startswith("-") or re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*=.*", rest[0])):
+                flag = rest.pop(0)
+                if flag in ("-S", "--split-string") and rest:
+                    return ["<script>", rest[0]]
+                if flag in ("-u", "-C", "--unset", "--chdir") and rest:
+                    rest.pop(0)
+            if not rest:
+                break
+            words = rest
         elif w == "kubectl" and words[1:2] == ["exec"]:
             words = words[words.index("--") + 1:] if "--" in words else []
         elif w == "ssh":

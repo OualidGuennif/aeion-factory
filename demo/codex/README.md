@@ -41,3 +41,5 @@ Round 00: [journal and retained output](journal/00-setup.md).
 | 02 | Ideas API and KV persistence | 28 passed | 0 failed; smoke and factory checks PASS | 0 | existing authorization | none new |
 
 | 03 | SSR page and progressive form | 33 passed | 0 failed; smoke and factory checks PASS | 0 | existing authorization | none new |
+
+| 04 | Votes and sorting | 40 passed | 0 failed; smoke and factory checks PASS | 0 | existing authorization | none new |

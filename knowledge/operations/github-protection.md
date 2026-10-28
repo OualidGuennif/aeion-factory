@@ -13,8 +13,10 @@ generated:
 Repository files do not impose GitHub settings. At adoption, an administrator must configure
 branch protection/rulesets for main, then read the effective result back through the API.
 
-Require pull requests, branches up to date with main, the repository's actual CI job names,
-linear history and resolved conversations. Enforce these rules for administrators; disallow
+Require pull requests, branches up to date with main, the repository's actual CI job names and
+resolved conversations; allow merge commits and do not require linear history, because a release
+pull request `develop → main` merges with a merge commit so `develop` stays an ancestor of `main`
+(owner decision, 2026-10-28). Enforce these rules for administrators; disallow
 force-push and branch deletion. Preserve stronger existing rules. Pin required checks to their
 actual GitHub App where available; do not invent check names or require disabled optional jobs.
 

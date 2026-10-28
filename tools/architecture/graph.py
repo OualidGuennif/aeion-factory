@@ -84,29 +84,36 @@ def spec_line_edges(nodes, root):
     return edges, unresolved
 
 
+PATH_TOKEN = re.compile(r"[\w.\[\]/-]+")
+QUOTED_NAME = re.compile(r"[\"']([^\"'\s/]+)[\"']")
+
+
 def test_name_edges(nodes, root):
     """test -> file `names_file` edges when a test's text names a project file: tests that run a script
     as a subprocess import nothing, so without these no test would reach the scripts it covers. A full
-    path counts; a bare file name counts only quoted, with a dot, and unique in the project."""
+    path counts; a bare file name counts only quoted, with a dot, and unique in the project. One pass
+    over each test's text, whatever the number of files."""
     files = file_nodes(nodes)
     names = {}
     for source in files:
         names.setdefault(posixpath.basename(source), []).append(source)
+    unique = {name: paths[0] for name, paths in names.items() if "." in name and len(paths) == 1}
     edges = []
     for test in sorted(source for source in files if is_test(source)):
         try:
             text = (root / test).read_text(encoding="utf-8", errors="replace")
         except OSError:
             continue
-        for source in sorted(files):
-            if source == test or is_test(source):
-                continue
-            name = posixpath.basename(source)
-            found = re.search(rf"(?<![\w./-]){re.escape(source)}(?![\w/-])", text)
-            if not found and "." in name and len(names[name]) == 1:
-                found = re.search(rf"[\"']{re.escape(name)}[\"']", text)
-            if found:
-                line = text.count("\n", 0, found.start()) + 1
+        first = {}
+        for match in PATH_TOKEN.finditer(text):
+            if match.group() in files:
+                first.setdefault(match.group(), match.start())
+        for match in QUOTED_NAME.finditer(text):
+            if match.group(1) in unique:
+                first.setdefault(unique[match.group(1)], match.start())
+        for source, position in sorted(first.items()):
+            if source != test and not is_test(source):
+                line = text.count("\n", 0, position) + 1
                 edges.append((files[test], files[source], edge("names_file", "test_text", test, line)))
     return edges
 

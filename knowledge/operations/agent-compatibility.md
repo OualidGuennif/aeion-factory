@@ -44,8 +44,8 @@ directory does not establish loaded hooks or identical runtime guarantees.
   under `.agents/skills`; OpenCode already discovers the Claude-compatible paths.
 - Codex local trusted projects enable `.codex/config.toml` and `.codex/hooks.json`. Its native
   auto-compaction threshold is 250000. Its hook transcript format is not a stable token API.
-- OpenCode 2.1.4+ loads root `opencode.json` and `.opencode/plugins/factory/index.js`. Auto-compaction remains
-  native to its selected model; no supported fixed 250k setting is invented.
+- OpenCode 2.1.4+ loads root `opencode.json` and `.opencode/plugins/factory/index.js`. The plugin reads each
+  step's tokens (`session.step.ended`) and compacts itself at 250k once the handover is verified.
 - Pi 1.4.0+ reads `AGENTS.md`/`CLAUDE.md` from its folder and every parent, and project
   `.agents/skills` from its folder or a parent, so the shared rules and skills need no copy. It loads
   `.pi/extensions/factory/index.js` from **its start folder only**, once the project is trusted; started
@@ -56,7 +56,8 @@ directory does not establish loaded hooks or identical runtime guarantees.
   notification without a verified handover) to `tools/agents/hook.py pi`. `bash` and `powershell` are
   Bash, `read`/`edit`/`write`/`grep` name their file in `path`, `find` and `ls` are Glob and LS, and an
   unknown tool carrying a `command` string is a shell call. `tools/agents/run pi` requires 1.4.0+.
-  Compaction stays Pi's own (`compaction.reserveTokens`); no fixed 250k is set. Like OpenCode, Pi has no
+  The extension sends `ctx.getContextUsage()` to the shared rule and calls `ctx.compact()` at 250k once
+  the handover is verified. Like OpenCode, Pi has no
   Stop sign-off: use the skill `sign-off`. Not yet qualified live: the events follow the 1.4.0 docs and
   published type declarations.
 - Token feedback (narration between tools, full-file rewrites; advisory, never blocking) covers

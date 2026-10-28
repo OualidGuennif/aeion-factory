@@ -202,8 +202,8 @@ Shared [intake guards](knowledge/policies/bounded-intake.md) refuse obvious larg
 dumps before execution. Use targeted ranges, limited searches and summaries; no output is rewritten.
 
 Before compaction, complete the active handover, current task and affected docs, then verify the
-checkpoint. Claude and Codex configure native compaction at 250k; OpenCode uses its native model
-window. Only the Claude profile implements the observed 300k stop. An absolute pre-request 300k
+checkpoint. Claude, Codex, OpenCode and Pi share one rule: a 250k closure, then compaction once the
+handover is verified; 300k forces the handover and compaction again. An absolute pre-request 300k
 ceiling remains unqualified; strict mode refuses rather than claiming it.
 
 Graphify/Archify analyze committed source and documentation in CI after every main update, and

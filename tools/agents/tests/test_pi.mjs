@@ -1,5 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import extension from '../../../.pi/extensions/factory/index.js';
 
@@ -56,4 +59,26 @@ test('Pi gives the factory context once per session, and again after a compactio
   assert.equal(await handlers.before_agent_start({ type: 'before_agent_start', messageType: 'user', prompt: 'again' }, ctx), undefined);
   await handlers.session_compact({ type: 'session_compact', reason: 'manual' }, ctx);
   assert.ok(await handlers.before_agent_start({ type: 'before_agent_start', messageType: 'user', prompt: 'after' }, ctx));
+});
+
+test('Pi past 250k is held to closure by its own context measure', async () => {
+  const { handlers, ctx } = load(root);
+  const measured = { ...ctx, sessionManager: { getSessionId: () => `${sessionID}-250k` }, getContextUsage: () => ({ tokens: 260000, contextWindow: 1000000, percent: 26 }) };
+  const write = { type: 'tool_call', toolCallId: 'call-4', toolName: 'write', input: { path: `${root}/src.py`, content: 'x' } };
+  const refused = await handlers.tool_call(write, measured);
+  assert.equal(refused.block, true);
+  assert.match(refused.reason, /250k alert/);
+});
+
+test('Pi compacts itself once the hook reports a verified handover', async () => {
+  // A stand-in adapter answers as the shared rule does after a verified checkpoint past 250k.
+  const folder = mkdtempSync(join(tmpdir(), 'pi-compact-'));
+  mkdirSync(join(folder, 'tools/agents'), { recursive: true });
+  writeFileSync(join(folder, 'tools/agents/hook.py'), 'import json\nprint(json.dumps({"aeion": {"compact": True}}))\n');
+  const { handlers, ctx } = load(folder);
+  let compacted = 0;
+  const result = { type: 'tool_result', toolCallId: 'call-5', toolName: 'bash', input: { command: 'true' }, content: [], isError: false };
+  await handlers.tool_result(result, { ...ctx, getContextUsage: () => ({ tokens: 260000 }), compact: () => { compacted += 1; } });
+  rmSync(folder, { recursive: true, force: true });
+  assert.equal(compacted, 1);
 });

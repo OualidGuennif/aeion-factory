@@ -73,8 +73,8 @@ open that file and follow it.
 3. The outer loop only reads. No loop deploys, restarts, migrates data or changes a setting.
 4. Uncertain, missing or failed means *no*: fail closed.
 5. English in code, comments, docs and commits.
-6. Claude and Codex native compaction is 250k; OpenCode uses its model window. Verify handover/docs
-   before compaction. Only Claude has the observed 300k guard; strict admission is unqualified.
+6. Claude, Codex, OpenCode and Pi share one rule: 250k closure, verified handover, then compaction;
+   300k forces the handover and compaction again, never a stop. Strict admission is unqualified.
 7. Install nothing the repository does not already run without the user's yes. The Graphify/Archify
    baseline is strongly recommended: before `tools/architecture/setup`, say what it installs (a venv
    and pinned packages in `.aeion/`, an Archify clone; Node and Chrome needed) and ask whether this

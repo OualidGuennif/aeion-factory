@@ -30,7 +30,7 @@ architecture specification; this file records the integration choices rather tha
 Retain bounded output, processing large results in code, file artifacts and handover restoration.
 No upstream code/MCP/memory store is installed. Its best-effort snapshot is not a deterministic
 250k/300k token guard. Æion Factory uses native compaction at 250k, explicit closure and a verified
-checkpoint; the observed 300k stop is not qualified pre-request admission. Strict execution
+checkpoint; the 300k forced compaction is not qualified pre-request admission. Strict execution
 refuses instead of claiming an unsupported guarantee.
 
 ## Superpowers

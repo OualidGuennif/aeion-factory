@@ -1,7 +1,7 @@
 ---
 type: Runbook
 title: "Context safety and handover"
-description: "Enabled Claude checkpoints, 250k native compaction, mandatory handovers, and the limits of 300k enforcement."
+description: "One 250k/300k rule for Claude, Codex, OpenCode and Pi: closure, verified handover, compaction, and its limits."
 status: stable
 generated:
   by: aeion-factory/1.1
@@ -19,6 +19,9 @@ sources:
   - id: tests
     resource: ../../tools/context/tests/test_budget.py
     title: "Boundary and failure regressions"
+  - id: adapters
+    resource: ../../tools/agents/hook.py
+    title: "Codex, OpenCode and Pi usage readers"
   - id: launcher
     resource: ../../tools/context/run
     title: "Managed launch and unsupported strict refusal"
@@ -44,7 +47,9 @@ Every event latches the first observed 250k crossing, including PreCompact. The 
 agent and user at the next supported event; PreCompact retains a pending alert because that event
 discards system messages. Only closure work
 (docs/task/handover edits and fixed verification commands) remains available. At an observed
-300k it returns `continue: false`; a Stop reminder cannot override this decision. The session
+300k closure narrows to the handover and its checkpoint (reads stay open), Stop is refused, and the
+message asks for the handover and compaction now. 300k never stops the run: once the checkpoint is
+verified, compaction runs again and the session continues from its handover. The session
 state and active handover survive restart. Each session has its own file lock and atomic state.
 Tool events carrying `agent_id` use a separate parent/agent key and that child's transcript,
 including the documented nested `subagents/agent-<id>.jsonl` layout and a workflow's
@@ -64,7 +69,7 @@ The checkpoint is admitted from any working directory when its path resolves to 
 `budget.py` (relative to the shell's folder, absolute, or after a `cd <root> &&` prefix), and a bare
 `cd <root>` is admitted; any other `cd`, chain or session is denied. A refused checkpoint names each
 missing heading (the exact `## Completed` line) and any remaining TODO.
-The skeleton appears only when closure needs it (the 250k alert, the observed stop, a refused
+The skeleton appears only when closure needs it (the 250k alert, the 300k forced closure, a refused
 compaction or the first checkpoint command), so ordinary sessions and subagents leave none; replace each TODO. Keep outcomes, remaining
 work, constraints and evidence concise. These local handovers are ignored by Git; durable facts
 belong in Knowledge. After compaction the same file is the recovery pointer.
@@ -73,15 +78,15 @@ Startup and the first prompt allow a native bootstrap before usage exists. All l
 requires a positive native observation. A bounded retry waits for asynchronous transcript writes;
 unavailable usage denies the current tool call (the agent keeps running and may retry it;
 PostToolUse passes; other events stop) without latching STOPPED, so a later valid observation
-can recover. Invalid complete records and the observed 300k stop remain terminal. A `compact_boundary` or compact SessionStart clears the
-old observation; resuming a stopped session does not clear its stop. Smaller model windows retain
+can recover. Invalid complete records remain terminal: that is an integrity failure, not a size. A `compact_boundary` or compact SessionStart clears the
+old observation and ends a 250k or 300k closure. Smaller model windows retain
 their native earlier limit. The guard does not expand a model's capacity.
 
 **Guarantee:** this is checkpoint-based enforcement, not a proof of an absolute 300k ceiling.
 Claude Code exposes no qualified before-every-request admission callback here. A large tool
 result or response may cross a threshold before another hook runs. `tools/context/run --strict`
-therefore refuses execution rather than advertising unsupported strict protection. Codex/OpenCode support shared guards and verified checkpoints through their own adapters, with
-token enforcement unqualified; see [compatibility](agent-compatibility.md). A live Claude 250k/300k long-session run remains unverified.
+therefore refuses execution rather than advertising unsupported strict protection. Codex, OpenCode and Pi apply the same rule through `tools/agents/hook.py`, from the context size
+each harness measures; see [compatibility](agent-compatibility.md). A live Claude 250k/300k long-session run remains unverified.
 
 The [2026-10-26 OpenCode experiment](../references/opencode-context-qualification.md) exercised a
 real paid DeepSeek V4.1 Flash call with 278,859 input tokens and a native refusal after a tool result
@@ -94,7 +99,24 @@ current architecture baseline (a warning, not a refusal, when absent), passes `-
 and refuses explicit compaction overrides. Hooks are an accidental-behavior guard, not isolation against malicious code that can
 edit its own scripts/settings. Raw CLI launches outside the managed entry point are not qualified.
 
-Verification: `python3 tools/context/tests/test_budget.py`. Synthetic fixtures prove state and
+## One rule, four harnesses
+
+| Harness | Context size it measures | Compaction at 250k |
+| --- | --- | --- |
+| Claude Code | the session transcript's last request | native, `autoCompactWindow: 250000` |
+| Codex | the rollout's newest `token_count` after the newest `compacted` record | native, `model_auto_compact_token_limit = 250000` |
+| OpenCode | the newest `session.step.ended` tokens (input, output, cache) | the plugin calls `session.compact` |
+| Pi | `ctx.getContextUsage().tokens` | the extension calls `ctx.compact()` |
+
+A harness reports usage after the response that asked for a tool, so the adapter keeps the last count
+until a new one arrives (0 after a compaction). A malformed count or a rollout from another session
+fails closed. Codex without a `transcript_path` keeps only its native compaction and refusal. Pi and
+OpenCode compact themselves on the hook's `aeion.compact` signal, sent once a closure's checkpoint
+is verified, so the context never waits for the model window. The OpenCode stream and compaction
+calls are read from the 2.2.0 build and unit-tested; a live long run has not exercised them yet.
+
+Verification: `python3 tools/context/tests/test_budget.py`, `tools/agents/tests/test_hooks.py`,
+`test_pi.mjs` and `test_opencode.mjs`. Synthetic fixtures prove state and
 refusal behavior; they do not establish live runtime guarantees. The existing Stop hook remains
 a once-only normal sign-off reminder, separate from the mandatory pre-compaction checkpoint.
 

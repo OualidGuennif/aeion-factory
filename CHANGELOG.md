@@ -12,6 +12,9 @@ dates them at release time. Spec: knowledge/policies/engineering.md
   The README's New project steps and the demo copy command run it (FB-003 of Claude Code run 1, FB-001 of
   the Codex run).
 
+### Changed
+- One context rule for Claude, Codex, OpenCode and Pi: 250k closure and verified handover before compaction, and 300k forces the handover and compaction again instead of stopping. Codex reads its rollout tokens, OpenCode its step tokens, Pi its context usage; OpenCode and Pi compact themselves.
+
 ## [1.4.0] - 2026-10-28
 
 ### Added

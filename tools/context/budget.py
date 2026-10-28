@@ -239,6 +239,79 @@ def checkpoint_call(root, event, words):
                               and re.fullmatch(r"[A-Za-z0-9_./-]+", rest[4]) is not None)
 
 
+def compact_tool(root, event):
+    """At 300k only what compaction needs remains: reading, the handover and its checkpoint."""
+    tool = event.get("tool_name")
+    data = event.get("tool_input", {})
+    if not isinstance(data, dict):
+        return False
+    if tool in {"Read", "Grep", "Glob"}:
+        return True
+    if tool in {"Edit", "Write"}:
+        return Path(data.get("file_path", "")).resolve() == handover_path(root, event["session_id"]).resolve()
+    if tool == "Bash":
+        command = data.get("command", "")
+        if not isinstance(command, str):
+            return False
+        try:
+            words = shlex.split(command)
+        except ValueError:
+            return False
+        return checkpoint_call(root, event, words)
+    return False
+
+
+def apply_usage(root, session, state, name, event, usage):
+    """The 250k/300k rule every harness shares, from the context usage that harness measured."""
+    handover = handover_path(root, session)
+    state["observed_tokens"] = usage
+    result = {}
+    if usage is None and name == "UserPromptSubmit" and not state.get("bootstrapped"):
+        state["bootstrapped"] = True
+    elif usage is None:
+        reason = "Æion Factory native usage temporarily unavailable; work is blocked. Retry after transcript persistence; no terminal stop was latched."
+        # Transcripts persist asynchronously: deny only this call so the agent can retry it, not stop the agent.
+        if name == "PreToolUse":
+            result = {"hookSpecificOutput": {"hookEventName": name, "permissionDecision": "deny", "permissionDecisionReason": reason}}
+        elif name != "PostToolUse":
+            result = stop(name, reason)
+    else:
+        state["bootstrapped"] = True
+        # 300k never stops the run: it narrows closure to the handover and forces compaction again.
+        if usage >= LIMIT and state["state"] != "COMPACT_REQUIRED":
+            state["state"] = "COMPACT_REQUIRED"
+            state["warning_pending"] = True
+        elif usage >= WARNING and state["state"] not in {"HANDOVER_REQUIRED", "COMPACT_REQUIRED"}:
+            state["state"] = "HANDOVER_REQUIRED"
+            state["warning_pending"] = True
+        if name == "PreCompact":
+            if not ready(root, session, state):
+                ensure_handover(root, session)
+                result = stop(name, f"Fill {handover.relative_to(root)}, then create a verified checkpoint before compaction: {checkpoint_command(root, session)}")
+        elif state["state"] in {"HANDOVER_REQUIRED", "COMPACT_REQUIRED"}:
+            ensure_handover(root, session)
+            first = state.pop("warning_pending", False)
+            call = {**event, "session_id": session}
+            if state["state"] == "COMPACT_REQUIRED":
+                message = (f"Æion Factory 300k: write {handover.relative_to(root)} and verify the checkpoint now "
+                           f"({checkpoint_command(root, session)}); compaction follows.")
+                allowed = compact_tool(root, call)
+            else:
+                message = f"Æion Factory 250k alert: finish closure only, update {handover.relative_to(root)}, work/current.md and affected docs; verify the checkpoint before compaction."
+                allowed = closure_tool(root, call)
+            if name == "PreToolUse" and not allowed:
+                result = {"hookSpecificOutput": {"hookEventName": name, "permissionDecision": "deny", "permissionDecisionReason": message}}
+            elif name in {"Stop", "SubagentStop"}:
+                result = stop(name, message + " Task has not been signed off.")
+            elif first and name in {"PreToolUse", "PostToolUse", "UserPromptSubmit"}:
+                result = {"systemMessage": message, "hookSpecificOutput": {"hookEventName": name, "additionalContext": message}}
+            if first:
+                result["systemMessage"] = message
+        elif state["state"] == "RECOVERING":
+            state["state"] = "RUNNING"
+    return result
+
+
 def stop(event_name, reason):
     if event_name == "PreCompact":
         return {"decision": "block", "reason": reason}
@@ -266,7 +339,7 @@ def handle(root, event):
         if state.get("state") == "STOPPED":
             result = stop(name, "Æion Factory context run is stopped; start a new validated session from its handover.")
         elif name == "SessionStart":
-            context = "Æion Factory checkpoint profile: 250k handover/compact, 300k observed stop; not a strict ceiling."
+            context = "Æion Factory checkpoint profile: 250k handover/compact, 300k forced handover and compaction; not a strict ceiling."
             if handover.is_file():
                 context += f" Recovery: {handover.relative_to(root)}"
             result = {"hookSpecificOutput": {"hookEventName": name, "additionalContext": context}}
@@ -282,43 +355,7 @@ def handle(root, event):
                 state["state"] = "STOPPED"
                 atomic(file, json.dumps(state, sort_keys=True) + "\n")
                 return stop(name, "Æion Factory native usage is invalid; refusing further work.")
-            state["observed_tokens"] = usage
-            if usage is None and name == "UserPromptSubmit" and not state.get("bootstrapped"):
-                state["bootstrapped"] = True
-            elif usage is None:
-                reason = "Æion Factory native usage temporarily unavailable; work is blocked. Retry after transcript persistence; no terminal stop was latched."
-                # Transcripts persist asynchronously: deny only this call so the agent can retry it, not stop the agent.
-                if name == "PreToolUse":
-                    result = {"hookSpecificOutput": {"hookEventName": name, "permissionDecision": "deny", "permissionDecisionReason": reason}}
-                elif name != "PostToolUse":
-                    result = stop(name, reason)
-            elif usage >= LIMIT:
-                state["state"] = "STOPPED"
-                ensure_handover(root, session)
-                result = stop(name, "Æion Factory observed 300k context limit reached; task remains incomplete. Read the handover.")
-            else:
-                state["bootstrapped"] = True
-                if usage >= WARNING and state["state"] != "HANDOVER_REQUIRED":
-                    state["state"] = "HANDOVER_REQUIRED"
-                    state["warning_pending"] = True
-                if name == "PreCompact":
-                    if not ready(root, session, state):
-                        ensure_handover(root, session)
-                        result = stop(name, f"Fill {handover.relative_to(root)}, then create a verified checkpoint before compaction: {checkpoint_command(root, session)}")
-                elif state["state"] == "HANDOVER_REQUIRED":
-                    ensure_handover(root, session)
-                    first = state.pop("warning_pending", False)
-                    message = f"Æion Factory 250k alert: finish closure only, update {handover.relative_to(root)}, work/current.md and affected docs; verify the checkpoint before compaction."
-                    if name == "PreToolUse" and not closure_tool(root, {**event, "session_id": session}):
-                        result = {"hookSpecificOutput": {"hookEventName": name, "permissionDecision": "deny", "permissionDecisionReason": message}}
-                    elif name in {"Stop", "SubagentStop"}:
-                        result = stop(name, message + " Task has not been signed off.")
-                    elif first and name in {"PreToolUse", "PostToolUse", "UserPromptSubmit"}:
-                        result = {"systemMessage": message, "hookSpecificOutput": {"hookEventName": name, "additionalContext": message}}
-                    if first:
-                        result["systemMessage"] = message
-                elif state["state"] == "RECOVERING":
-                    state["state"] = "RUNNING"
+            result = apply_usage(root, session, state, name, event, usage)
             state["source"] = "current-session native transcript usage"
         atomic(file, json.dumps(state, sort_keys=True) + "\n")
         return result

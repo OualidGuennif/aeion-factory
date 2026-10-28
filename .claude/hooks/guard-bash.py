@@ -70,14 +70,19 @@ def group_variants(word):
     return variants
 
 
+def with_defaults(text):
+    """Each parameter default as its word, innermost first: ${X:-${Y:-a}}b is ab."""
+    text = re.sub(r"\$\{(\w+)\}", r"$\1", text)
+    while DEFAULT.search(text):
+        text = DEFAULT.sub(r"\1", text)
+    return text
+
+
 def shell_words(text):
     """The words the shell globs: quotes and escapes dropped (they join a word: .e\\nv), defaults as
     their word (innermost first), and each word with a group (zsh (i|x)d_rsa, extglob @(i)d_rsa)
     kept whole besides its parenthesis-split parts."""
-    text = re.sub(r"\\(.)", r"\1", re.sub(r"['\"]", "", text))
-    text = re.sub(r"\$\{(\w+)\}", r"$\1", text)
-    while DEFAULT.search(text):
-        text = DEFAULT.sub(r"\1", text)
+    text = with_defaults(re.sub(r"\\(.)", r"\1", re.sub(r"['\"]", "", text)))
     # Split on whitespace first: one pattern scan per long word would be quadratic.
     grouped = [w for w in re.split(r"[\s;&<>`]+", text) if "(" in w]
     return [t for t in re.split(r"[\s=;&|<>()`]+", text) if t] + grouped
@@ -444,37 +449,51 @@ def git_bypass(command):
 
 
 GIT_CONFIG_FILE = re.compile(r"(^|[^\w.-])\.git/(config|config\.worktree|worktrees/[^/\s]+/config\.worktree)(?![\w.-])")
-CONFIG_READERS = {"cat", "head", "tail", "grep", "rg", "less", "wc", "git", "ls", "stat", "diff"}
-# These write into a directory they are given (cp f .git/) or move the shell into it (cd .git).
-INTO_DIRECTORY = {"cp", "mv", "install", "ln", "rsync", "cd", "pushd"}
+CONFIG_READERS = {"cat", "head", "tail", "grep", "rg", "less", "wc", "git", "ls", "stat", "diff", "echo", "printf"}
+# These write into the directory they end with (cp f .git/); cd and pushd move the shell into it.
+INTO_DIRECTORY = {"cp", "mv", "install", "ln", "rsync"}
+
+
+def as_shell_sees(word, quoted=()):
+    """The word as the shell expands it: glob characters inert where quotes held them, quotes and
+    escapes dropped, parameter defaults as their word."""
+    word = word.translate(QUOTED_GLOB) if word in quoted else word
+    word = re.sub(r"'[^']*'|\"[^\"]*\"", lambda m: m.group(0).translate(QUOTED_GLOB), word)
+    return with_defaults(re.sub(r"\\(.)", r"\1", re.sub(r"['\"]", "", word)))
+
+
+def path_forms(word):
+    """Each path a shell word may name: braces and groups expanded, normalized and case folded
+    (APFS and NTFS ignore case). The word itself too: in open('.git/config') the parentheses are code."""
+    for variant in [word] + [b for g in group_variants(word) for b in brace_variants(g)]:
+        yield from {variant.lower(), posixpath.normpath(variant).lower()}
 
 
 def names_git_config(word):
-    """Whether a shell word names the git config file: quotes and escapes dropped, braces and groups
-    expanded, the path normalized and case folded (APFS and NTFS ignore case), a glob matched."""
-    word = re.sub(r"\\(.)", r"\1", re.sub(r"['\"]", "", word))
-    # The word itself too: in open('.git/config') the parentheses are code, not a group.
-    for variant in [word] + [b for g in group_variants(word) for b in brace_variants(g)]:
-        for form in {variant.lower(), posixpath.normpath(variant).lower()}:
-            if GIT_CONFIG_FILE.search(form):
-                return True
-            last_two = "/".join(PurePosixPath(form).parts[-2:])
-            if any(char in last_two for char in "*?[") and fnmatch.fnmatchcase(".git/config", shell_pattern(last_two)):
-                return True
+    for form in path_forms(word):
+        last_two = "/".join(PurePosixPath(form).parts[-2:])
+        if GIT_CONFIG_FILE.search(form) or any(char in last_two for char in "*?[") and fnmatch.fnmatchcase(
+                ".git/config", shell_pattern(last_two)):
+            return True
     return False
 
 
 def names_git_directory(word):
-    path = posixpath.normpath(re.sub(r"\\(.)", r"\1", re.sub(r"['\"]", "", word))).lower()
-    return path == ".git" or path.endswith("/.git")
+    for form in path_forms(word):
+        last = PurePosixPath(form).name
+        if last == ".git" or any(char in last for char in "*?[") and fnmatch.fnmatchcase(".git", shell_pattern(last)):
+            return True
+    return False
 
 
 def config_write(command):
     """The reason a command writes the repository's git config file directly, or None: an editor
     or redirection there sets aeion.mode or core.hooksPath without git config's checks."""
     reason = "writing .git/config directly skips the git config checks; use git config."
-    if any(names_git_config(target) for target in re.findall(r">\|?\s*([^\s;&|<>]+)", command)):
+    # >, >>, >|, zsh >! and >& all write their target.
+    if any(names_git_config(as_shell_sees(t)) for t in re.findall(r">[|!]?&?\s*([^\s;&|<>]+)", command)):
         return reason
+    quoted = {a or b for a, b in re.findall(r"'([^']*)'|\"([^\"]*)\"", command)}
     for words in simple_commands(command):
         words = program(words)
         if words and words[0] == "<script>":
@@ -484,13 +503,17 @@ def config_write(command):
         if not words:
             continue
         name = PurePosixPath(words[0]).name
-        if name not in CONFIG_READERS and any(names_git_config(w) for w in words[1:]):
+        # A word with spaces is prose (a title, a message) unless an interpreter runs it as code.
+        code = re.match(r"(python|perl|ruby|node|php)", name)
+        args = [as_shell_sees(w, quoted) for w in words[1:] if code or not re.search(r"\s", w)]
+        if name not in CONFIG_READERS and any(names_git_config(w) for w in args):
             return reason
         # git log --output writes any text it formats.
         outputs = [i for i, w in enumerate(words) if w.startswith("--output")]
-        if name == "git" and any(names_git_config(" ".join(words[i:i + 2])) for i in outputs):
+        if name == "git" and any(names_git_config(as_shell_sees(" ".join(words[i:i + 2]), quoted)) for i in outputs):
             return reason
-        if name in INTO_DIRECTORY and any(names_git_directory(w) for w in words[1:]):
+        targets = args if name in {"cd", "pushd"} else args[-1:] if name in INTO_DIRECTORY else []
+        if any(names_git_directory(w) for w in targets):
             return reason
     return None
 

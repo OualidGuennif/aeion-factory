@@ -207,9 +207,13 @@ for command in ["echo '[aeion] mode = local' >> .git/config", "printf x > ./.git
                 "echo x >| .git/config", "echo x >> .git/CONFIG", "echo x >> .GIT/Config", "echo x > .git//config",
                 "echo x > .git/./config", "echo x >\".git\"/config", "echo x > .git/\"config\"", "echo x > .gi?/config",
                 "tee .git/conf{i,}g < f", "dd if=f of=.git/config", "cp f .git/", "cd .git && echo x >> config",
-                "python3 -c \"open('.git/config','a').write('x')\"", "git log -1 --format=x --output=.git/config"]:
+                "python3 -c \"open('.git/config','a').write('x')\"", "git log -1 --format=x --output=.git/config",
+                "cat x >& .git/config", "cat x >! .git/config", "sed -i '' s/a/b/ ${U:-.git/config}",
+                "printf x >> ${U:-.git}/config", "cd .gi? && printf x >> config", "cp x .gi[t]/"]:
     expect(f"bash deny config write: {command}", run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 2)
-for command in ["cat .git/config", "grep -n hooksPath .git/config", "git config --local --get aeion.mode", "diff .git/config f"]:
+for command in ["cat .git/config", "grep -n hooksPath .git/config", "git config --local --get aeion.mode", "diff .git/config f",
+                "find . -type f -not -path './.git/*'", "zip -r o.zip . -x '.git/*'", "echo 'see .git/config'",
+                "gh pr create --title 'Refuse writes to .git/config'", "rsync -a --exclude .git src/ dst/", "cp -r .git ../backup/"]:
     expect(f"bash allow config read: {command}", run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 0)
 for tool in ["Edit", "Write", "MultiEdit"]:
     expect(f"path deny: {tool} on .git/config", run_hook("guard-path.py", {"file_path": "/repo/.git/config"}, tool_name=tool), 2)

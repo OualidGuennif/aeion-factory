@@ -72,8 +72,17 @@ for command in ["cat .env", "cat env.local", "printenv", "cat /proc/1/environ", 
                 "git --config-env core.hooksPath=PWD commit -m x", "git push --mirror origin",
                 "git config aeion.mode local", "git config --unset aeion.mode", "git config set aeion.mode local",
                 "git config --rename-section foo aeion", "git config rename-section foo aeion", "git config --remove-section aeion",
-                "git config --rename-section foo AEION"]:
+                "git config --rename-section foo AEION",
+                # env runs the program after it, so the git checks see through it.
+                "env git config aeion.mode local", "env -i FOO=1 git config core.hooksPath /tmp",
+                "env -u HOME git config aeion.mode local", "env -S 'git config aeion.mode local'",
+                "env FOO=1 sh -c 'echo x > .git/config'", "env -iS 'git config aeion.mode local'",
+                "env -S ''", "env -S 'FOO=1'", "env -S '-i'", "env -i -S 'FOO=1 BAR=2'",
+                "env -iu HOME git config aeion.mode local", "env -P /usr/bin git config aeion.mode local",
+                "env -L root git config aeion.mode local", "env -U root git config aeion.mode local"]:
     expect(f"bash deny: {command}", run_hook("guard-bash.py", {"command": command}), 2)
+for command in ["env FOO=1 npm test", "env -u DEBUG python3 -m pytest -q", "env PATH=/usr/bin git status"]:
+    expect(f"bash allow: {command}", run_hook("guard-bash.py", {"command": command}), 0)
 expect("bash ask: mentions a secret", run_hook("guard-bash.py", {"command": "ls -la .env"}), 0, '"ask"')
 for command in ["git status --short", "git commit -m 'the environment check'",
                 "grep -rn environment knowledge", "/usr/bin/env python3 tools/x.py", "npm config set registry x", "git commit -m 'block env'", "ps -ef", "ps aux",
@@ -127,10 +136,10 @@ for path in ["/repo/.env", "/repo/env.local", "/x/server.pem", "/h/auth.json", "
 for pattern in [".env", ".e*", "**/.env*", ".{e,x}nv", "*.pem"]:
     expect(f"path deny: Grep glob {pattern}",
            run_hook("guard-path.py", {"pattern": "x", "glob": pattern, "path": "/repo"}, tool_name="Grep"), 2)
-for pattern in ["id_*", "cred*", "[^x]d_*", ".*rc", "env.*", "i[[:lower:]]_*", "*2"]:
+for pattern in ["id_*", "cred*", "[^x]d_*", ".*rc", "env.*", "i[[:lower:]]_*", "*2", "[.]env", "?env", "*env", "*.env*"]:
     expect(f"path deny: Grep glob {pattern}",
            run_hook("guard-path.py", {"pattern": "x", "glob": pattern, "path": "/repo"}, tool_name="Grep"), 2)
-for pattern in ["*.py", "*.{ts,tsx}", "**/*.md", ".github/**", "!.env", "*.json", "*.kts", "k*", ".*"]:
+for pattern in ["*.py", "*.{ts,tsx}", "**/*.md", ".github/**", "!.env", "*.json", "*.kts", "k*", ".*", ".[^.]*", ".[!.]*"]:
     expect(f"path allow: Grep glob {pattern}",
            run_hook("guard-path.py", {"pattern": "x", "glob": pattern, "path": "/repo"}, tool_name="Grep"), 0)
 expect("path deny: MultiEdit on a secret", run_hook("guard-path.py", {"file_path": "/repo/.env"}, tool_name="MultiEdit"), 2)
@@ -180,8 +189,18 @@ for command in ["head $X/id_*", "head $(pwd)/k/cred*", "cat id_*", "head auth*",
                 "echo 'head $X/id_*' | sort --compress-program=sh -S 1", "cat <(echo 'head $X/id_*') | grep x",
                 "echo 'head $X/id_*' > >(sh)", "watch -n1 head -n3 '$X/.e*'", "watch head -n3 '$X/id_*'",
                 "watch 'head -n3 $X/.e*; /bin/echo'",
-                "echo -n - > c; echo -pre=sh >> c; echo 'head -n3 $X/id_*' > f; RIPGREP_CONFIG_PATH=c rg x f"]:
+                "echo -n - > c; echo -pre=sh >> c; echo 'head -n3 $X/id_*' > f; RIPGREP_CONFIG_PATH=c rg x f",
+                # zsh alternation, bash extglob and a parameter default name a secret as well.
+                "head (i)d_rsa", "head $X/(i|x)d_rsa", "head .e(n)v", "head $X/@(i)d_rsa", "cat ${X:-$HOME/.ssh/id_*}",
+                "head ${X:=$Y/.e}*", "head $X/.[e]nv", "head $X/[.]env", "head $X/*.env*", "head (i)(d)_rsa", "head (i)d_(r)sa", "head .(e)(n)v",
+                "head ((i)|x)d_rsa", "head @(@(i)|x)d_rsa", "head ${X:-${Y:-.e}}*", "head ${X:-${HOME}/.e}*",
+                "head -n1 .e\\nv", "head $X/i\\d_rsa", "head $X/(a|b)(c|d)(e|f)(g|h)(i|j)(k|l)(m|n)(o|p)(q|r)id_rsa"]:
     expect(f"bash deny named glob: {command}", run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 2)
+# A subshell, a substitution and the dotfile idiom .[!.]* name no secret.
+(glob_dir / "plain").mkdir()
+(glob_dir / "plain/.gitignore").write_text("x\n")
+for command in ["(cd plain && ls)", "echo $(pwd)", "ls -d .[!.]*", "ls -d .[^.]* *", "ls ${DIR:-.}/*.md"]:
+    expect(f"bash allow: {command}", run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir / "plain")}), 0)
 # A quoted pattern is a regex or prose the shell never expands.
 for command in ["ls *", "head *.md", "grep x *.json", "ls c*", "ls *_*", "wc -l *.py", "ls -d .*", "head k*", "wc -l *.kts",
                 "grep -n 'key.*' config.py", "rg 'env.*' src", 'rg -n "auth.*" src | head -5',
@@ -190,6 +209,39 @@ for command in ["ls *", "head *.md", "grep x *.json", "ls c*", "ls *_*", "wc -l 
 # A path-qualified program may be any script, so its quoted glob is judged by name.
 for command in ["./grep 'id_*'", "bin/rg 'id_*'"]:
     expect(f"bash ask: {command}", run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 0, '"ask"')
+# The git config file is written only through git config, which guard-bash checks.
+for command in ["echo '[aeion] mode = local' >> .git/config", "printf x > ./.git/config", "tee -a .git/config < f",
+                "sed -i '' s/team/local/ .git/config", "cp f .git/config", "vim .git/config",
+                "python3 -c 'pass' .git/config", "sh -c 'echo x >> .git/config'", "cat f > .git/worktrees/w/config.worktree",
+                "echo x >| .git/config", "echo x >> .git/CONFIG", "echo x >> .GIT/Config", "echo x > .git//config",
+                "echo x > .git/./config", "echo x >\".git\"/config", "echo x > .git/\"config\"", "echo x > .gi?/config",
+                "tee .git/conf{i,}g < f", "dd if=f of=.git/config", "cp f .git/", "cd .git && echo x >> config",
+                "python3 -c \"open('.git/config','a').write('x')\"", "git log -1 --format=x --output=.git/config",
+                "cat x >& .git/config", "cat x >! .git/config", "sed -i '' s/a/b/ ${U:-.git/config}",
+                "printf x >> ${U:-.git}/config", "cd .gi? && printf x >> config", "cp x .gi[t]/",
+                "cp -t .git config", "mv -t .git config", "cp --target-directory=.git config", "tar -xf c.tar -C .git",
+                "unzip c.zip -d .git", "tee .git/* < f", "printf x > .gi?/conf*", "cp -t.git config",
+                "tar -C.git -xf p.tar", "unzip -d.git p.zip", "cd .git/hooks && printf x > ../config",
+                "cd .git/worktrees/wt && echo x > config.worktree"]:
+    expect(f"bash deny config write: {command}", run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 2)
+for command in ["cat .git/config", "grep -n hooksPath .git/config", "git config --local --get aeion.mode", "diff .git/config f",
+                "find . -type f -not -path './.git/*'", "zip -r o.zip . -x '.git/*'", "echo 'see .git/config'",
+                "gh pr create --title 'Refuse writes to .git/config'", "rsync -a --exclude .git src/ dst/", "cp -r .git ../backup/",
+                "du -sh *", "chmod +x *", "touch *", "mv * ../dest/", "npx prettier --check */*", "tar czf x.tgz .[!.]*",
+                'git commit -m "Refuse echo x > .git/config and friends"',
+                "gh pr create --title 'Guard' --body 'a > .git/config is refused'",
+                "cat > notes.md <<'EOF'\necho x > .git/config\nEOF",
+                # Too many alternatives to list widen to a wildcard rather than refuse or crash.
+                "grep -E '(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)/(api|v1|v2)/(users|orders|items|carts)/(200|201|404|500)' a.log",
+                "node -e 'f((a|b) + (c|d) + (e|f) + (g|h) + (i|j) + (k|l) + (m|n) + (o|p) + (q|r))'"]:
+    expect(f"bash allow config read: {command}", run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 0)
+for tool in ["Edit", "Write", "MultiEdit"]:
+    expect(f"path deny: {tool} on .git/config", run_hook("guard-path.py", {"file_path": "/repo/.git/config"}, tool_name=tool), 2)
+for path in ["/repo/.git//config", "/repo/.git/./config", "/repo/.GIT/Config"]:
+    expect(f"path deny: Write on {path}", run_hook("guard-path.py", {"file_path": path}, tool_name="Write"), 2)
+expect("bash allow: find prunes .git", run_hook("guard-bash.py", {"command": "find . -path ./.git -prune -o -name '*.md' -print",
+                                                                 "workdir": str(glob_dir)}), 0)
+expect("path allow: Read of .git/config", run_hook("guard-path.py", {"file_path": "/repo/.git/config"}, tool_name="Read"), 0)
 expect("bash allow: a cd with a plain glob", run_hook("guard-bash.py", {"command": "cd sub && ls *.md", "workdir": str(glob_dir)}), 0)
 expect("bash deny names the Grep tool for searches", run_hook("guard-bash.py", {"command": "grep -rn id_rsa tools"}), 2,
        stderr_has="Grep tool")
@@ -394,14 +446,21 @@ if '"block"' in local_result.stdout:
 
 # session-start: at most 25 lines, and it names the flow mode.
 # The mode is read from the repository's local config, so each run gets a throwaway repository.
-def session_start(mode):
+def session_start(mode, global_mode=None):
     repo = Path(tempfile.mkdtemp())
     for rel in (".claude/hooks/session-start.py", "tools/repo-health/repo-health"):
         (repo / rel).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy(ROOT / rel, repo / rel)
-    subprocess.run(["git", "init", "-q"], cwd=repo, capture_output=True, check=True)
-    subprocess.run(["git", "config", "aeion.mode", mode], cwd=repo, capture_output=True, check=True)
-    result = subprocess.run([sys.executable, str(repo / ".claude/hooks/session-start.py")], capture_output=True, text=True, cwd=repo)
+    (repo / "work").mkdir()
+    (repo / "work/current.md").write_text("# Current work\n\n## Probe task — ACTIVE\n- State: x\n")
+    git_env = {**os.environ, "GIT_CONFIG_GLOBAL": str(repo / "global.cfg"), "GIT_CONFIG_NOSYSTEM": "1"}
+    (repo / "global.cfg").write_text(f"[aeion]\n\tmode = {global_mode}\n" if global_mode else "")
+    for args in (["init", "-q"], ["add", "work"], ["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "Probe commit"]):
+        subprocess.run(["git"] + args, cwd=repo, capture_output=True, check=True, env=git_env)
+    if mode:
+        subprocess.run(["git", "config", "aeion.mode", mode], cwd=repo, capture_output=True, check=True, env=git_env)
+    result = subprocess.run([sys.executable, str(repo / ".claude/hooks/session-start.py")], capture_output=True, text=True,
+                            cwd=repo, env=git_env)
     shutil.rmtree(repo)
     return result
 
@@ -409,9 +468,13 @@ def session_start(mode):
 result = session_start("team")
 expect("session-start runs", result, 0, "git status")
 expect("session-start names the team flow", result, 0, "Æion Factory mode: team")
+expect("session-start lists the last commit", result, 0, "Probe commit")
+expect("session-start lists the open task", result, 0, "Probe task — ACTIVE")
 if len(result.stdout.strip().split("\n")) > 25:
     failures.append("session-start printed more than 25 lines")
 expect("session-start names local mode", session_start("local"), 0, "Æion Factory mode: local")
+# The global config cannot switch the mode: only the repository's own config does.
+expect("session-start ignores a global aeion.mode", session_start(None, "local"), 0, "Æion Factory mode: team")
 
 print(f"hook tests: {passes} passed, {len(failures)} failed")
 for f in failures:

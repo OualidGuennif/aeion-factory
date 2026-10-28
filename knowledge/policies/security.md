@@ -31,13 +31,18 @@ Requirements for a change, not claims about what production already satisfies.
 - One list names secret files for the guards, doc-links, the context fingerprint and the
   architecture scope: `.claude/hooks/secret_names.py` (dotenv files, `env.local`, credential and
   `auth.json` files, SSH keys, `.netrc`, `.npmrc`, `.pypirc`, `.pgpass`, `.envrc`, `*.pem`, `*.key`,
-  `*.p12`, `*.pfx`; templates such as `.env.example` stay allowed). In a Bash command, quotes are
-  joined and brace alternatives expanded first. A glob is judged by the secret it names, wherever
-  it expands, since a variable, a substitution or a `cd` can hide its directory: a dotfile glob
-  with a literal first letter (`.e*`, `.[e]nv`) against the dotfile secrets; any other glob
-  (`id*`, `cred*`, `.*rc`) when it matches a secret name and no ordinary file name, so `*`,
-  `*.json`, `c*` and `.*` stay allowed. A `[^x]` class is read as the shell reads it, a negation
-  like `[!x]`, and a bracket with a POSIX class (`[[:lower:]]`) as one wildcard. A quoted pattern
+  `*.p12`, `*.pfx`; templates such as `.env.example` stay allowed). In a Bash command, quotes and
+  backslash escapes are joined and brace alternatives expanded first, and so are groups, nested
+  or several in a word: zsh alternation (`(i|x)d_rsa`) and bash extglob (`@(i)d_rsa`) give each
+  alternative, `?(…)`, `*(…)` and `!(…)` a wildcard, as does every group past 256 alternatives
+  (a long regex); a parameter default (`${X:-dir/id_*}`, nested
+  too) is read as its word. A glob is judged by the secret it names, wherever it expands, since a
+  variable, a substitution or a `cd` can hide its directory: a dotfile glob with a literal first
+  letter or a positive class (`.e*`, `.[e]nv`) against the dotfile secrets; any other glob (`id*`,
+  `cred*`, `.*rc`, `.[!.]*`, and `*env` or `[.]env`, whose leading wildcard reaches dotfiles in Grep
+  and `rg`) when it matches a secret name and no ordinary file name, so `*`,
+  `*.json`, `c*`, `.*` and `.[!.]*` stay allowed. A `[^x]` class is read as the shell reads it, a
+  negation like `[!x]`, and a bracket with a POSIX class (`[[:lower:]]`) as one wildcard. A quoted pattern
   (`grep 'key.*'`) is not judged by name only when quotes surely stay quotes: every program is a
   reader that runs no shell (`grep`, `rg`, `jq`, `head`, `cat`, ...) and the command has no `$(`,
   `${`, `$'`, backtick, backslash, `#`, `<<`, process substitution, variable assignment or
@@ -51,11 +56,22 @@ Requirements for a change, not claims about what production already satisfies.
   commit cluster, any unambiguous prefix of `--no-verify`, a `core.hooksPath` override (`-c`,
   `--config-env`, `GIT_CONFIG_*`, or `git config` set to anything but `tools/git-hooks`; reading it
   stays allowed), `-f`/`--force*`/`--mirror`/`+refspec` on push. It also refuses setting or
-  unsetting `aeion.mode`, and renaming or removing the `aeion` section: local mode relaxes the
+  unsetting `aeion.mode`, and renaming or removing the `aeion` section, also behind `env`: local mode relaxes the
   sign-off and checkpoint, so the user switches it. The readers use `git config --local`, so an
-  `include.path` or the global config cannot switch the mode; writing `.git/config` directly from
-  the shell is not detected. CI repeats the checks, so it stays the gate a deliberate local bypass
-  cannot pass.
+  `include.path` or the global config cannot switch the mode. Writing the git config file
+  (`.git/config`, `config.worktree`) directly is refused: a shell redirection to it (`>`, `>>`,
+  `>|`, `>!`, `>&`), any program but a reader (`cat`, `grep`, `git`, `diff`, `echo`, ...) naming
+  it, also inside interpreter code or after `=` (`dd of=`), `git --output` to it, a `cp`, `mv`, `ln`
+  or `rsync` that ends in `.git` (or `-t .git`, `tar -C.git`, `unzip -d .git`), `cd` into or
+  through it (`cd .git/hooks`), and
+  the Edit and Write tools. The path is read as the shell expands it (defaults, braces, groups, an
+  unquoted glob that, like the shell's, crosses no `/` and meets `.git` only with a literal dot),
+  normalized and case folded (`.GIT//Config` is the same file on APFS); a quoted pattern (`-path
+  './.git/*'`), prose with spaces (a commit message) and a heredoc fed to a program are not paths.
+  Reading it stays allowed. A text guard sees one call at a time, so
+  a path held in a variable or a symlink, and a script written in one call and run in a later
+  one, are not judged by what they do. CI repeats the checks, so it stays the gate a
+  deliberate local bypass cannot pass.
 
 The same PreToolUse hooks also apply [bounded intake](bounded-intake.md) to recognized large
 reads/dumps. Secret refusals take precedence even when a command has a valid output limiter.

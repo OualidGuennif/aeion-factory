@@ -6,9 +6,11 @@ Input: the hook event as JSON on stdin; tool_input.command is the command. Outpu
 reason on stderr blocks it; a JSON "ask" decision asks a human; exit 0 lets it run. A seatbelt,
 not a guarantee: the rules are in knowledge/policies/security.md.
 """
+import fnmatch
 import glob
 import json
 import os
+import posixpath
 import re
 import shlex
 import sys
@@ -49,11 +51,57 @@ def directories(command, base):
     return found
 
 
+GROUP = re.compile(r"([@+?*!]?)\(([^()]*)\)")
+# A parameter default (${X:-word}, :=, :+, :?) expands to its word when X is unset.
+DEFAULT = re.compile(r"\$\{\w+:?[-=+?]([^{}]*)\}")
+
+
+def group_variants(word):
+    """The words a group makes of word: each alternative of (a|b) or @(a|b), innermost first; a group
+    that may match anything else (?(a), *(a), !(a), a zsh qualifier *(D)) widens to a wildcard, and
+    so does every group when there are too many alternatives to list (a long regex)."""
+    variants = [word]
+    while any(GROUP.search(v) for v in variants):
+        expanded = []
+        for variant in variants:
+            match = GROUP.search(variant)
+            if not match:
+                expanded.append(variant)
+                continue
+            op, inner = match.groups()
+            options = ["*"] if op and op in "?*!" else inner.split("|")
+            expanded += [variant[:match.start()] + option + variant[match.end():] for option in options]
+        if len(expanded) > 256:
+            while GROUP.search(word):
+                word = GROUP.sub("*", word)
+            return [word]
+        variants = expanded
+    return variants
+
+
+def with_defaults(text):
+    """Each parameter default as its word, innermost first: ${X:-${Y:-a}}b is ab."""
+    text = re.sub(r"\$\{(\w+)\}", r"$\1", text)
+    while DEFAULT.search(text):
+        text = DEFAULT.sub(r"\1", text)
+    return text
+
+
+def shell_words(text):
+    """The words the shell globs: quotes and escapes dropped (they join a word: .e\\nv), defaults as
+    their word (innermost first), and each word with a group (zsh (i|x)d_rsa, extglob @(i)d_rsa)
+    kept whole besides its parenthesis-split parts."""
+    text = with_defaults(re.sub(r"\\(.)", r"\1", re.sub(r"['\"]", "", text)))
+    # Split on whitespace first: one pattern scan per long word would be quadratic.
+    grouped = [w for w in re.split(r"[\s;&<>`]+", text) if "(" in w]
+    return [t for t in re.split(r"[\s=;&|<>()`]+", text) if t] + grouped
+
+
 def mentioned_secrets(tokens, shell_tokens, bases, unquoted_globs):
     names = {PurePosixPath(t).name for t in tokens if is_secret(PurePosixPath(t).name)}
     # Only the shell expands braces and globs; a heredoc body fed to a program is text.
     for token, unquoted in zip(shell_tokens, unquoted_globs):
-        for word in brace_variants(token):
+        for word in (b for g in group_variants(token) for b in brace_variants(g)):
             name = PurePosixPath(word).name
             if is_secret(name):
                 names.add(name)
@@ -72,7 +120,7 @@ def mentioned_secrets(tokens, shell_tokens, bases, unquoted_globs):
 
 # Environment dumps hold keys. The command is split into simple commands (newlines, ; & | && || and
 # parentheses outside quotes; redirections dropped; heredoc bodies only when a shell reads them);
-# wrappers are unwrapped (sudo, time, xargs, nohup, docker [compose] exec/run, kubectl exec, ssh,
+# wrappers are unwrapped (sudo, time, xargs, nohup, env with a program, docker [compose] exec/run, kubectl exec, ssh,
 # sh -c/-lc, su -c, shell keywords,
 # recursively); then refused: printenv; env with no program to run;
 # declare, typeset, export and set that print variables; ps with BSD e or -E (process environments). And
@@ -249,6 +297,20 @@ def program(words):
             if sub not in ("exec", "run"):
                 break
             words = skip_options(rest, "docker")[1:]
+        elif w == "env":
+            # env runs the program after its options and assignments; alone it prints the environment.
+            rest = words[1:]
+            while rest and (rest[0].startswith("-") or re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*=.*", rest[0])):
+                flag = rest.pop(0)
+                # -S splits its string into env's own arguments (env -S 'FOO=1' still prints them all).
+                if (flag == "--split-string" or re.fullmatch(r"-[a-zA-Z]*S", flag)) and rest:
+                    return ["<script>", "env " + rest[0] + " " + shlex.join(rest[1:])]
+                # A cluster ending in a value flag (-iu HOME; BSD -P path, -L/-U user) takes the next word.
+                if (flag in ("--unset", "--chdir") or re.fullmatch(r"-[a-zA-Z]*[uCPLU]", flag)) and rest:
+                    rest.pop(0)
+            if not rest:
+                break
+            words = rest
         elif w == "kubectl" and words[1:2] == ["exec"]:
             words = words[words.index("--") + 1:] if "--" in words else []
         elif w == "ssh":
@@ -409,11 +471,99 @@ def git_bypass(command):
     return None
 
 
+GIT_CONFIG_FILE = re.compile(r"(^|[^\w.-])\.git/(config|config\.worktree|worktrees/[^/\s]+/config\.worktree)(?![\w.-])")
+CONFIG_READERS = {"cat", "head", "tail", "grep", "rg", "less", "wc", "git", "ls", "stat", "diff", "echo", "printf"}
+# These write into the directory they end with (cp f .git/); cd and pushd move the shell into it.
+INTO_DIRECTORY = {"cp", "mv", "install", "ln", "rsync"}
+TARGET_OPTIONS = {**{n: ("-t", "--target-directory") for n in ("cp", "mv", "install", "ln")},
+                  "tar": ("-C", "--directory"), "unzip": ("-d",)}
+
+
+def as_shell_sees(word, quoted=()):
+    """The word as the shell expands it: glob characters inert where quotes held them, quotes and
+    escapes dropped, parameter defaults as their word."""
+    word = word.translate(QUOTED_GLOB) if word in quoted else word
+    word = re.sub(r"'[^']*'|\"[^\"]*\"", lambda m: m.group(0).translate(QUOTED_GLOB), word)
+    return with_defaults(re.sub(r"\\(.)", r"\1", re.sub(r"['\"]", "", word)))
+
+
+def path_forms(word):
+    """Each path a shell word may name: braces and groups expanded, normalized and case folded
+    (APFS and NTFS ignore case). The word itself too: in open('.git/config') the parentheses are code."""
+    for variant in [word] + [b for g in group_variants(word) for b in brace_variants(g)]:
+        yield from {variant.lower(), posixpath.normpath(variant).lower()}
+
+
+def globs_to(name, part):
+    # The shell's glob part never crosses a / and meets a leading dot only with a literal one.
+    return any(char in part for char in "*?[") and part[:1] == name[:1] == "." and fnmatch.fnmatchcase(name, shell_pattern(part))
+
+
+def names_git_config(word):
+    for form in path_forms(word):
+        parts = PurePosixPath(form).parts
+        if GIT_CONFIG_FILE.search(form) or len(parts) >= 2 and (globs_to(".git", parts[-2]) or parts[-2] == ".git") and (
+                parts[-1] == "config" or any(char in parts[-1] for char in "*?[") and fnmatch.fnmatchcase("config", shell_pattern(parts[-1]))):
+            return True
+    return False
+
+
+def names_git_directory(word, anywhere=False):
+    """Whether the path ends in .git, or with anywhere passes through it (cd .git/hooks)."""
+    for form in path_forms(word):
+        parts = PurePosixPath(form).parts if anywhere else [PurePosixPath(form).name]
+        if any(part == ".git" or globs_to(".git", part) for part in parts):
+            return True
+    return False
+
+
+def config_write(command):
+    """The reason a command writes the repository's git config file directly, or None: an editor
+    or redirection there sets aeion.mode or core.hooksPath without git config's checks."""
+    reason = "writing .git/config directly skips the git config checks; use git config."
+    # >, >>, >|, zsh >! and >& all write their target. A quoted span with spaces is prose (a commit
+    # message) and a heredoc fed to a program is text; sh -c scripts are judged below on their own.
+    shell_text = re.sub(r"'[^']*'|\"[^\"]*\"", lambda m: " " if re.search(r"\s", m.group(0)) else m.group(0),
+                        without_inert_heredocs(command))
+    if any(names_git_config(as_shell_sees(t)) for t in re.findall(r">[|!]?&?\s*([^\s;&|<>]+)", shell_text)):
+        return reason
+    quoted = {a or b for a, b in re.findall(r"'([^']*)'|\"([^\"]*)\"", command)}
+    for words in simple_commands(command):
+        words = program(words)
+        if words and words[0] == "<script>":
+            if config_write(words[1]):
+                return reason
+            continue
+        if not words:
+            continue
+        name = PurePosixPath(words[0]).name
+        # A word with spaces is prose (a title, a message) unless an interpreter runs it as code.
+        code = re.match(r"(python|perl|ruby|node|php)", name)
+        args = [as_shell_sees(w, quoted) for w in words[1:] if code or not re.search(r"\s", w)]
+        if name not in CONFIG_READERS and any(names_git_config(w) for w in args):
+            return reason
+        # git log --output writes any text it formats.
+        outputs = [i for i, w in enumerate(words) if w.startswith("--output")]
+        if name == "git" and any(names_git_config(as_shell_sees(" ".join(words[i:i + 2]), quoted)) for i in outputs):
+            return reason
+        if name in {"cd", "pushd"} and any(names_git_directory(w, anywhere=True) for w in args):
+            return reason
+        targets = args[-1:] if name in INTO_DIRECTORY else []
+        # A directory option names the destination too: cp -t .git, tar -C.git, unzip -d .git.
+        options = TARGET_OPTIONS.get(name, ())
+        targets += [args[i + 1] for i, w in enumerate(args[:-1]) if w in options]
+        targets += [w.split("=", 1)[1] for w in args if w.split("=", 1)[0] in options and "=" in w]
+        targets += [w[2:] for w in args if len(w) > 2 and w[:2] in options]
+        if any(names_git_directory(w) for w in targets):
+            return reason
+    return None
+
+
 def refuses(check, command):
-    """Runs one check; a command nested so deep that the check cannot finish is refused."""
+    """Runs one check; a command nested so deep or so large that the check cannot finish is refused."""
     try:
         return check(command)
-    except RecursionError:
+    except (RecursionError, ValueError):
         return True
 
 
@@ -516,13 +666,12 @@ tokens = [t for t in re.split(TOKEN_SPLIT, command) if t]
 workdir = event.get("tool_input", {}).get("workdir", event.get("tool_input", {}).get("cwd", event.get("cwd", ".")))
 try:
     # Quotes join a shell word (sub/'.e'*), so they are dropped rather than split on.
-    shell_text = re.sub(r"['\"]", "", without_inert_heredocs(command))
-    shell_tokens = [t for t in re.split(r"[\s=;&|<>()`]+", shell_text) if t]
+    shell_tokens = shell_words(without_inert_heredocs(command))
     # The same words with quoted glob characters made inert, only where quotes surely stay quotes.
     inert = without_inert_heredocs(command)
     if quotes_inert(command):
         inert = re.sub(r"'[^']*'|\"[^\"]*\"", lambda m: m.group(0).translate(QUOTED_GLOB), inert)
-    marked = [t for t in re.split(r"[\s=;&|<>()`]+", re.sub(r"['\"]", "", inert)) if t]
+    marked = shell_words(inert)
     unquoted_globs = [any(char in t for char in "*?[") for t in marked]
     secrets = mentioned_secrets(tokens, shell_tokens, directories(command, workdir if isinstance(workdir, str) else "."),
                                 unquoted_globs)
@@ -583,6 +732,9 @@ if re.search(r"\bgit\b", command) and "--no-verify" in tokens:
 bypass = refuses(git_bypass, command)
 if bypass:
     deny(bypass if isinstance(bypass, str) else "the git command is nested too deeply to verify.")
+written = refuses(config_write, command)
+if written:
+    deny(written if isinstance(written, str) else "the command is nested too deeply to verify.")
 try:
     base = event["tool_input"].get("workdir", event["tool_input"].get("cwd", event.get("cwd", ".")))
     if intake_dump(command, Path(base)):

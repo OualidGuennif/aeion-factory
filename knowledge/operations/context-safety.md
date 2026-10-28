@@ -1,7 +1,7 @@
 ---
 type: Runbook
 title: "Context safety and handover"
-description: "One 250k/300k rule for Claude, Codex, OpenCode and Pi: closure, verified handover, compaction, and its limits."
+description: "One 250k/300k rule for Claude, Codex, OpenCode, Pi and dsh: closure, verified handover, compaction, and its limits."
 status: stable
 generated:
   by: aeion-factory/1.1
@@ -99,21 +99,25 @@ current architecture baseline (a warning, not a refusal, when absent), passes `-
 and refuses explicit compaction overrides. Hooks are an accidental-behavior guard, not isolation against malicious code that can
 edit its own scripts/settings. Raw CLI launches outside the managed entry point are not qualified.
 
-## One rule, four harnesses
+## One rule, five harnesses
 
 | Harness | Context size it measures | Compaction at 250k |
 | --- | --- | --- |
 | Claude Code | the session transcript's last request | native, `autoCompactWindow: 250000` |
-| Codex | the rollout's newest `token_count` after the newest `compacted` record | native at 280000 (`model_auto_compact_token_limit`), after the 250k alert |
+| Codex | the rollout's newest `token_count` after the newest `compacted` record | native at 250000 (`model_auto_compact_token_limit`); a compaction before the handover owes it after |
 | OpenCode | the newest `session.step.ended` tokens (input, output, cache) | the plugin calls `session.compact` |
 | Pi | `ctx.getContextUsage().tokens` | the extension calls `ctx.compact()` |
+| dsh | `ctx.tokenMeter.measure(session).totalTokens` | the plugin compacts before the next step |
 
 A harness reports usage after the response that asked for a tool, so the adapter keeps the last count
 until a new one arrives (0 after a compaction). A malformed count or a rollout from another session
 fails closed. Codex without a `transcript_path` keeps only its native compaction and refusal. Pi and
 OpenCode compact themselves on the hook's `aeion.compact` signal, sent once a closure's checkpoint
 is verified, so the context never waits for the model window. OpenCode sends no compact SessionStart, so
-its allowed compaction itself ends the closure (state RECOVERING, usage cleared). The OpenCode stream and compaction
+its allowed compaction itself ends the closure (state RECOVERING, usage cleared). Codex ends its turn on a
+refused compaction and retries it before every turn, so it would stall: when Codex compacts before its
+handover is verified (owner decision 2026-10-28), the compaction runs and the session resumes in closure,
+allowed only the handover, `work/current.md`, docs and the checkpoint until the checkpoint passes. The OpenCode stream and compaction
 calls are read from the 2.2.0 build and unit-tested; a live long run has not exercised them yet.
 
 Verification: `python3 tools/context/tests/test_budget.py`, `tools/agents/tests/test_hooks.py`,

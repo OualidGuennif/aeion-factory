@@ -4,6 +4,7 @@ import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 
 const UNAVAILABLE = 'Æion Factory hook unavailable; action refused.';
+const RESUME = 'Æion Factory: context compacted. Read your handover in work/handovers/ and continue the task.';
 // Pi's built-in tools under the names the shared guards know; find and ls only list paths.
 const TOOLS = { bash: 'Bash', powershell: 'Bash', read: 'Read', edit: 'Edit', write: 'Write', grep: 'Grep', find: 'Glob', ls: 'LS' };
 
@@ -67,7 +68,8 @@ export default function (pi) {
     if (event.isError) return undefined;
     const { reason, output } = invoke(projectRoot(ctx.cwd), toolEvent(event, ctx, 'PostToolUse'));
     // A verified handover past 250k compacts now, not at Pi's own threshold near the model window.
-    if (output.aeion?.compact) ctx.compact();
+    // Compacting aborts the running turn, so the session is told to resume from its handover once it is done.
+    if (output.aeion?.compact) ctx.compact({ onComplete: () => pi.sendUserMessage(RESUME) });
     const message = reason || output.hookSpecificOutput?.additionalContext;
     if (!message) return undefined;
     return { content: [...event.content, { type: 'text', text: `Æion Factory feedback: ${message}` }], structuredContent: event.structuredContent };

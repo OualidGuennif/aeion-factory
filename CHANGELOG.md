@@ -7,10 +7,17 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 ## [Unreleased]
 
 - Live runs fixed two closure stalls: OpenCode's file tools (`path`) can now write the handover in
-  closure and its verified compaction ends the closure; Codex compacts natively at 280000, after the
-  250k alert, since a refused compaction ends its turn.
+  closure and its verified compaction ends the closure.
+- Codex no longer stalls around compaction: it compacts natively at 250000, a compaction that comes
+  before the verified handover runs and the session resumes in closure until the checkpoint passes
+  (owner decision), and closure lets shell-only harnesses read files with plain read commands.
+- Pi resumes by itself after the compaction its extension starts (the compaction aborts the turn).
+- Devin and Droid hooks pass their event name on the command line and fall back on a per-clone key, so a
+  payload without an event name or session id is still guarded instead of stopping the session.
 
 ### Added
+- DeepSeek Harness (dsh) support: `.dsh/plugins/factory/` applies the shared guards and the 250k/300k
+  rule from dsh's token meter and compacts before the next step; `tools/agents/run dsh` loads it.
 - `tools/release/release --new-project` starts a copy of the factory as a new project: `VERSION` 0.1.0, an
   empty changelog and only the "Adapt" task in `work/current.md`. It refuses in the factory's own clone.
   The README's New project steps and the demo copy command run it (FB-003 of Claude Code run 1, FB-001 of

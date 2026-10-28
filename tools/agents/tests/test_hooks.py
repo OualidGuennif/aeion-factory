@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -132,7 +133,8 @@ class HookTests(unittest.TestCase):
                 self.call(tool_name='apply_patch',tool_input={'command':patch_text})
 
     def test_before_compaction_refuses_missing_and_changed_checkpoint(self):
-        for provider in ('codex','opencode','pi'):
+        # Codex instead compacts and owes the closure after it (owner decision, tested below).
+        for provider in ('opencode','pi'):
             key=hook.key(provider,self.event)
             self.call(provider)
             self.assertFalse(hook.budget.handover_path(self.root,key).exists())
@@ -191,7 +193,12 @@ class HookTests(unittest.TestCase):
             # Native tools name the file `path` and relative to the project, as OpenCode 2.2.0 and Pi send it.
             native = {'tool_name': 'Write', 'tool_input': {'path': str(handover.relative_to(self.root)), 'content': 'x'}}
             self.assertFalse(denied(self.measure(provider, 250_000, **native)), provider)
-            self.assertFalse(self.measure(provider, 250_000, hook_event_name='PreCompact')['continue'])
+            early = self.measure(provider, 250_000, hook_event_name='PreCompact')
+            # Codex would stall on a refusal, so it compacts and owes the closure; the others refuse.
+            if provider == 'codex':
+                self.assertNotIn('continue', early)
+            else:
+                self.assertFalse(early['continue'], provider)
             # 300k: only the handover and its checkpoint remain, and the run is never stopped for size.
             forced = self.measure(provider, 300_000, **tasks)
             self.assertIn('300k', forced['hookSpecificOutput']['permissionDecisionReason'])
@@ -212,6 +219,28 @@ class HookTests(unittest.TestCase):
             self.measure(provider, 300_000, hook_event_name='SessionStart', source='compact')
             self.assertFalse(denied(self.measure(provider, 1_000, **edit)), provider)
             self.assertEqual(json.loads(state_file.read_text())['state'], 'RUNNING')
+
+    def test_codex_compaction_before_its_handover_runs_and_owes_the_closure_after_it(self):
+        session = hook.key('codex', {'session_id': 'context-codex'})
+        handover = hook.budget.handover_path(self.root, session)
+        state_file = self.root / '.aeion/context' / f'{session}.json'
+        edit = {'tool_name': 'Edit', 'tool_input': {'file_path': str(self.root / 'src.py')}}
+        denied = lambda result: result.get('hookSpecificOutput', {}).get('permissionDecision') == 'deny'
+        # Codex compacts natively before its last measure reached 250k: a refusal would end every turn.
+        self.measure('codex', 231_000, **edit)
+        self.assertNotIn('continue', self.measure('codex', 231_000, hook_event_name='PreCompact'))
+        self.measure('codex', 0, hook_event_name='SessionStart', source='compact')
+        # After it, only closure runs until the handover is verified, then work resumes without compacting again.
+        self.assertTrue(denied(self.measure('codex', 20_000, **edit)))
+        handover.write_text('## Scope\nx\n## Completed\nx\n## Remaining\nx\n## Constraints\nx\n## Evidence\nx\n')
+        state = json.loads(state_file.read_text())
+        state['checkpoint'] = {'tree': hook.budget.fingerprint(self.root),
+                               'handover': hook.budget.hashlib.sha256(handover.read_bytes()).hexdigest()}
+        hook.budget.atomic(state_file, json.dumps(state))
+        self.assertFalse(denied(self.measure('codex', 20_000, **edit)))
+        self.assertEqual(json.loads(state_file.read_text())['state'], 'RUNNING')
+        # Every other harness still refuses a compaction without a verified handover.
+        self.assertFalse(self.measure('opencode', 231_000, hook_event_name='PreCompact')['continue'])
 
     def test_codex_usage_restarts_at_compaction_and_refuses_a_foreign_rollout(self):
         rollout = self.root / 'rollout-2026-10-28T00-00-00-native-fixture.jsonl'
@@ -405,8 +434,19 @@ class HookTests(unittest.TestCase):
     def test_droid_settings_route_every_event_to_the_adapter(self):
         hooks=json.loads((ROOT/'.factory/settings.json').read_text())['hooks']
         self.assertEqual(set(hooks),{'SessionStart','PreToolUse','PostToolUse','Stop'})
-        for entries in hooks.values():
-            self.assertTrue(all(h['command'].endswith('tools/agents/hook.py" droid') for e in entries for h in e['hooks']))
+        # Each registration also names its event, so a payload without hook_event_name is still understood.
+        for event, entries in hooks.items():
+            self.assertTrue(all(h['command'].endswith(f'tools/agents/hook.py" droid {event}') for e in entries for h in e['hooks']))
+
+    def test_a_payload_without_its_event_name_takes_the_registered_one(self):
+        for provider in ('devin', 'droid'):
+            result = subprocess.run([sys.executable, str(ROOT / 'tools/agents/hook.py'), provider, 'PreToolUse'],
+                                    input=json.dumps({'session_id': None, 'tool_name': 'Bash', 'tool_input': {'command': 'cat .' + 'env'}}),
+                                    capture_output=True, text=True, cwd=ROOT)
+            output = json.loads(result.stdout)
+            # A refusal of this call, not a stop of the whole session.
+            self.assertNotIn('continue', output, provider)
+            self.assertIn('secret', json.dumps(output), provider)
 
     def agy(self,name,args,event='PreToolUse'):
         return self.call('antigravity',session_id=None,hook_event_name=event,toolCall={'name':name,'args':args})

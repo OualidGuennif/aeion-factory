@@ -1,7 +1,7 @@
 # Æion Factory
 
-**A repository template for Claude Code, Codex, OpenCode, Pi, Devin, Factory's Droid and Google
-Antigravity: shared instructions, linked specs, reusable skills and automatic checks.**
+**A repository template for Claude Code, Codex, OpenCode, Pi, DeepSeek Harness (dsh), Devin,
+Factory's Droid and Google Antigravity: shared instructions, linked specs, reusable skills and automatic checks.**
 
 Æion Factory organizes the work around **plan → change → test → review → merge**. Your project's
 existing instructions and the owner's decisions take precedence.
@@ -27,6 +27,7 @@ PR workflow and your chosen agent separately:
 - [Codex](https://learn.chatgpt.com/docs/cli)
 - [OpenCode V2](https://opencode.ai/v2/docs/) — 2.1.4+ for Æion Factory's native plugin
 - [Pi](https://github.com/earendil-works/pi) — 1.4.0+ for Æion Factory's extension
+- DeepSeek Harness (`dsh`) — 0.2.1+, loads `.dsh/` through `tools/agents/run dsh`
 - [Devin CLI](https://docs.devin.ai/cli/extensibility) — reads `.devin/`, `AGENTS.md` and `.agents/skills`
 - [Droid](https://docs.factory.ai/cli/configuration/hooks-guide), the CLI of Factory (factory.ai), a separate
   product — reads `.factory/settings.json`, `AGENTS.md` and `.agents/skills`
@@ -78,6 +79,7 @@ policy before installing. CI analyses every main update either way.
    | Codex | `codex` | Trust the project, enable its hooks in `/hooks`, then restart Codex. Skills come from `.agents/skills`. |
    | OpenCode 2.1.4+ | `opencode` | Connect your provider in OpenCode. The root `opencode.json` and `.opencode/plugins/factory/` load on their own; on a database conflict, `tools/agents/run opencode --isolated`. |
    | Pi 1.4.0+ | `pi` | Accept the trust prompt, so `.pi/extensions/factory/` loads (the startup list names `factory`). Connect your provider in Pi. |
+   | dsh 0.2.1+ | `tools/agents/run dsh` | The launcher adds `--patch .dsh/factory.patch.yml`, which loads the adapter; skills come from `.agents/skills`. Connect your provider in dsh. |
    | Devin CLI | `devin` | Approve the project hooks (`.devin/`). |
    | Droid (factory.ai) | `droid` | Approve the project hooks (`.factory/settings.json`). |
    | Google Antigravity | `agy` | Trust the folder; hooks come from `.agents/hooks.json`. |
@@ -129,6 +131,7 @@ policy before installing. CI analyses every main update either way.
    | Codex | `.codex/config.toml`, `.codex/hooks.json`, `.agents/skills` links | Trust the project, enable the hooks in `/hooks`, restart |
    | OpenCode | `opencode.json` (merged with yours), `.opencode/plugins/factory/` | Restart; reconnect the provider if you use `--isolated` |
    | Pi | `.pi/extensions/factory/`, `.agents/skills` links | Restart from the project root and accept the trust prompt |
+   | dsh | `.dsh/`, `.agents/skills` links | Start with `tools/agents/run dsh [profile]` |
    | Devin, Droid, Antigravity | `.devin/`, `.factory/`, `.agents/hooks.json` | Approve the project hooks or trust the folder |
 
 5. Check the hooks as in a new project (step 3), then say yes to the Git hooks, Graphify and Archify
@@ -145,6 +148,7 @@ Run these from the repository root. Additional arguments are native CLI argument
 | Codex | `tools/agents/run codex` | Trusted `.codex/config.toml` / `hooks.json`, shared `.agents/skills` |
 | OpenCode | `tools/agents/run opencode` | Root `opencode.json`, native V2 plugin in `.opencode/plugins/factory/` |
 | Pi | `tools/agents/run pi` | Extension in `.pi/extensions/factory/`, loaded once the project is trusted |
+| dsh | `tools/agents/run dsh [tui\|web\|headless]` | Plugin in `.dsh/plugins/factory/`, loaded by `.dsh/factory.patch.yml` |
 | Devin CLI | `tools/agents/run devin` | `.devin/hooks.v1.json` and `config.json`, `AGENTS.md`, shared `.agents/skills` |
 | Droid (factory.ai) | `tools/agents/run droid` | `.factory/settings.json` hooks, `AGENTS.md`, shared `.agents/skills` |
 | Google Antigravity | `tools/agents/run antigravity` | `.agents/hooks.json`, `AGENTS.md`, shared `.agents/skills` |
@@ -202,7 +206,7 @@ Shared [intake guards](knowledge/policies/bounded-intake.md) refuse obvious larg
 dumps before execution. Use targeted ranges, limited searches and summaries; no output is rewritten.
 
 Before compaction, complete the active handover, current task and affected docs, then verify the
-checkpoint. Claude, Codex, OpenCode and Pi share one rule: a 250k closure, then compaction once the
+checkpoint. Claude, Codex, OpenCode, Pi and dsh share one rule: a 250k closure, then compaction once the
 handover is verified; 300k forces the handover and compaction again. An absolute pre-request 300k
 ceiling remains unqualified; strict mode refuses rather than claiming it.
 

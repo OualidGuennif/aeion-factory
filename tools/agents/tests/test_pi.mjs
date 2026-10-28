@@ -13,9 +13,10 @@ const sessionID = `factory-pi-extension-test-${process.pid}`;
 function load(cwd) {
   const handlers = {};
   const notes = [];
-  extension({ on: (name, handler) => { handlers[name] = handler; } });
+  const sent = [];
+  extension({ on: (name, handler) => { handlers[name] = handler; }, sendUserMessage: (text) => sent.push(text) });
   const ctx = { cwd, sessionManager: { getSessionId: () => sessionID }, ui: { notify: (text, kind) => notes.push([kind, text]) } };
-  return { handlers, notes, ctx };
+  return { handlers, notes, ctx, sent };
 }
 
 const bash = (command) => ({ type: 'tool_call', toolCallId: 'call-1', toolName: 'bash', input: { command } });
@@ -70,15 +71,19 @@ test('Pi past 250k is held to closure by its own context measure', async () => {
   assert.match(refused.reason, /250k alert/);
 });
 
-test('Pi compacts itself once the hook reports a verified handover', async () => {
+test('Pi compacts itself once the hook reports a verified handover, then resumes from it', async () => {
   // A stand-in adapter answers as the shared rule does after a verified checkpoint past 250k.
   const folder = mkdtempSync(join(tmpdir(), 'pi-compact-'));
   mkdirSync(join(folder, 'tools/agents'), { recursive: true });
   writeFileSync(join(folder, 'tools/agents/hook.py'), 'import json\nprint(json.dumps({"aeion": {"compact": True}}))\n');
-  const { handlers, ctx } = load(folder);
+  const { handlers, ctx, sent } = load(folder);
   let compacted = 0;
   const result = { type: 'tool_result', toolCallId: 'call-5', toolName: 'bash', input: { command: 'true' }, content: [], isError: false };
-  await handlers.tool_result(result, { ...ctx, getContextUsage: () => ({ tokens: 260000 }), compact: () => { compacted += 1; } });
+  const compact = (options) => { compacted += 1; options.onComplete({}); };
+  await handlers.tool_result(result, { ...ctx, getContextUsage: () => ({ tokens: 260000 }), compact });
   rmSync(folder, { recursive: true, force: true });
   assert.equal(compacted, 1);
+  // Compacting aborts the running turn, so without this message the session would sit idle.
+  assert.equal(sent.length, 1);
+  assert.match(sent[0], /handover/);
 });

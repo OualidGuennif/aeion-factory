@@ -274,6 +274,20 @@ class BudgetTests(unittest.TestCase):
             self.assertEqual(self.call(tool_name="Bash", tool_input={"command": command})["hookSpecificOutput"]["permissionDecision"], "deny")
         self.assertEqual(self.call(tool_name="Bash", tool_input={"command": "tools/knowledge/doc-links"}), {})
 
+    def test_plain_shell_reads_are_closure_tools(self):
+        # Codex reads only through its shell, so closure must let it read the handover it has to fill.
+        self.observe(250000)
+        for command in ("sed -n 1,200p work/handovers/x.md", "rg -n TODO work/handovers/x.md", "cat AGENTS.md",
+                        "head -n 40 knowledge/index.md"):
+            result = self.call(tool_name="Bash", tool_input={"command": command})
+            self.assertNotIn("permissionDecision", result.get("hookSpecificOutput", {}), command)
+        secret = "." + "env"
+        for command in (f"cat {secret}", f"cat config/{secret}.local", "cat .e*", "rg --pre=sh x",
+                        "sed -i s/a/b/ AGENTS.md", "sed -n 1w/tmp/x AGENTS.md", "cat AGENTS.md > copy.md",
+                        "cat $HOME/x", "python3 -c 1"):
+            result = self.call(tool_name="Bash", tool_input={"command": command})
+            self.assertEqual(result["hookSpecificOutput"]["permissionDecision"], "deny", command)
+
     def test_checkpoint_is_admitted_from_any_folder_and_only_for_this_root(self):
         # A shell left in a subfolder at the alert must still reach this root's checkpoint.
         self.observe(250000)

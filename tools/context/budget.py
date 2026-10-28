@@ -212,8 +212,22 @@ def closure_tool(root, event):
             words = shlex.split(command)
         except ValueError:
             return False
-        return checkpoint_call(root, event, words)
+        return read_call(command, words) or checkpoint_call(root, event, words)
     return False
+
+
+# Shell-only harnesses (Codex) read through these, so closure must let them read the handover and docs.
+READERS = {"cat", "head", "tail", "wc", "nl", "ls", "grep", "rg"}
+
+
+def read_call(command, words):
+    """One plain read command: no shell operators or globs, no secret file, no `rg --pre` program, and `sed`
+    only as `sed -n <lines>p <files>`."""
+    if not words or re.search(r"[;&|<>`$\n*?\[{~]", command) or any(is_secret(Path(word).name) for word in words):
+        return False
+    if words[0] == "sed":
+        return len(words) >= 3 and words[1] == "-n" and re.fullmatch(r"\d+(,\d+)?p", words[2]) is not None
+    return words[0] in READERS and not any(word.startswith("--pre") for word in words)
 
 
 def checkpoint_call(root, event, words):
@@ -257,7 +271,7 @@ def compact_tool(root, event):
             words = shlex.split(command)
         except ValueError:
             return False
-        return checkpoint_call(root, event, words)
+        return read_call(command, words) or checkpoint_call(root, event, words)
     return False
 
 

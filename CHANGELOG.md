@@ -6,6 +6,8 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-10-28
+
 ### Added
 - `tools/architecture/ask callers <file>:<name or line>`: who calls a symbol, resolved by type through the
   project's own language server (`deno lsp`, or a TypeScript 7 `tsc --lsp`), in any harness. Installs

@@ -36,7 +36,8 @@ observation, including pure-text child responses. The hook reads only the curren
 bounded transcript tail and retains native token counts, never transcript text. Cached input
 counts once. Synthetic assistant records (API errors and hook stops, model `<synthetic>`) were
 never sent and are skipped, so a stop cannot hide the last real request and block every later
-prompt. Missing or zero usage is unavailable, not an empty context. An incomplete final JSONL line is
+prompt. After a "prompt is too long" error the real context may exceed that last observation; the
+request itself still fails natively. Missing or zero usage is unavailable, not an empty context. An incomplete final JSONL line is
 a transient write; a malformed complete record is invalid.
 
 Every event latches the first observed 250k crossing, including PreCompact. The hook alerts both

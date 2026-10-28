@@ -92,6 +92,14 @@ class BudgetTests(unittest.TestCase):
         self.assertEqual(self.call(hook_event_name="UserPromptSubmit"), {})
         self.transcript.write_text(synthetic)
         self.assertIsNone(budget.native_usage(self.transcript, "test-session"))
+        # A compaction boundary still hides the older request, and a skipped record cannot lift a stop.
+        boundary = json.dumps({"type": "system", "subtype": "compact_boundary"}) + "\n"
+        self.observe(1000)
+        self.transcript.write_text(self.transcript.read_text() + boundary + synthetic)
+        self.assertIsNone(budget.native_usage(self.transcript, "test-session"))
+        self.observe(300000)
+        self.transcript.write_text(self.transcript.read_text() + synthetic)
+        self.assertFalse(self.call()["continue"])
 
     def test_missing_usage_stops_after_one_prompt_bootstrap(self):
         self.transcript.write_text("")

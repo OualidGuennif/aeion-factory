@@ -185,7 +185,7 @@ for command in ["head $X/id_*", "head $(pwd)/k/cred*", "cat id_*", "head auth*",
                 "head (i)d_rsa", "head $X/(i|x)d_rsa", "head .e(n)v", "head $X/@(i)d_rsa", "cat ${X:-$HOME/.ssh/id_*}",
                 "head ${X:=$Y/.e}*", "head $X/.[e]nv", "head $X/[.]env", "head $X/*.env*", "head (i)(d)_rsa", "head (i)d_(r)sa", "head .(e)(n)v",
                 "head ((i)|x)d_rsa", "head @(@(i)|x)d_rsa", "head ${X:-${Y:-.e}}*", "head ${X:-${HOME}/.e}*",
-                "head -n1 .e\\nv", "head $X/i\\d_rsa"]:
+                "head -n1 .e\\nv", "head $X/i\\d_rsa", "head $X/(a|b)(c|d)(e|f)(g|h)(i|j)(k|l)(m|n)(o|p)(q|r)id_rsa"]:
     expect(f"bash deny named glob: {command}", run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 2)
 # A subshell, a substitution and the dotfile idiom .[!.]* name no secret.
 (glob_dir / "plain").mkdir()
@@ -211,7 +211,9 @@ for command in ["echo '[aeion] mode = local' >> .git/config", "printf x > ./.git
                 "cat x >& .git/config", "cat x >! .git/config", "sed -i '' s/a/b/ ${U:-.git/config}",
                 "printf x >> ${U:-.git}/config", "cd .gi? && printf x >> config", "cp x .gi[t]/",
                 "cp -t .git config", "mv -t .git config", "cp --target-directory=.git config", "tar -xf c.tar -C .git",
-                "unzip c.zip -d .git", "tee .git/* < f", "printf x > .gi?/conf*"]:
+                "unzip c.zip -d .git", "tee .git/* < f", "printf x > .gi?/conf*", "cp -t.git config",
+                "tar -C.git -xf p.tar", "unzip -d.git p.zip", "cd .git/hooks && printf x > ../config",
+                "cd .git/worktrees/wt && echo x > config.worktree"]:
     expect(f"bash deny config write: {command}", run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 2)
 for command in ["cat .git/config", "grep -n hooksPath .git/config", "git config --local --get aeion.mode", "diff .git/config f",
                 "find . -type f -not -path './.git/*'", "zip -r o.zip . -x '.git/*'", "echo 'see .git/config'",
@@ -219,7 +221,10 @@ for command in ["cat .git/config", "grep -n hooksPath .git/config", "git config 
                 "du -sh *", "chmod +x *", "touch *", "mv * ../dest/", "npx prettier --check */*", "tar czf x.tgz .[!.]*",
                 'git commit -m "Refuse echo x > .git/config and friends"',
                 "gh pr create --title 'Guard' --body 'a > .git/config is refused'",
-                "cat > notes.md <<'EOF'\necho x > .git/config\nEOF"]:
+                "cat > notes.md <<'EOF'\necho x > .git/config\nEOF",
+                # Too many alternatives to list widen to a wildcard rather than refuse or crash.
+                "grep -E '(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)/(api|v1|v2)/(users|orders|items|carts)/(200|201|404|500)' a.log",
+                "node -e 'f((a|b) + (c|d) + (e|f) + (g|h) + (i|j) + (k|l) + (m|n) + (o|p) + (q|r))'"]:
     expect(f"bash allow config read: {command}", run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 0)
 for tool in ["Edit", "Write", "MultiEdit"]:
     expect(f"path deny: {tool} on .git/config", run_hook("guard-path.py", {"file_path": "/repo/.git/config"}, tool_name=tool), 2)

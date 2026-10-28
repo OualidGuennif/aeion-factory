@@ -34,7 +34,8 @@ Requirements for a change, not claims about what production already satisfies.
   `*.p12`, `*.pfx`; templates such as `.env.example` stay allowed). In a Bash command, quotes and
   backslash escapes are joined and brace alternatives expanded first, and so are groups, nested
   or several in a word: zsh alternation (`(i|x)d_rsa`) and bash extglob (`@(i)d_rsa`) give each
-  alternative, `?(…)`, `*(…)` and `!(…)` a wildcard; a parameter default (`${X:-dir/id_*}`, nested
+  alternative, `?(…)`, `*(…)` and `!(…)` a wildcard, as does every group past 256 alternatives
+  (a long regex); a parameter default (`${X:-dir/id_*}`, nested
   too) is read as its word. A glob is judged by the secret it names, wherever it expands, since a
   variable, a substitution or a `cd` can hide its directory: a dotfile glob with a literal first
   letter or a positive class (`.e*`, `.[e]nv`) against the dotfile secrets; any other glob (`id*`,
@@ -61,7 +62,8 @@ Requirements for a change, not claims about what production already satisfies.
   (`.git/config`, `config.worktree`) directly is refused: a shell redirection to it (`>`, `>>`,
   `>|`, `>!`, `>&`), any program but a reader (`cat`, `grep`, `git`, `diff`, `echo`, ...) naming
   it, also inside interpreter code or after `=` (`dd of=`), `git --output` to it, a `cp`, `mv`, `ln`
-  or `rsync` that ends in `.git` (or `-t .git`, `tar -C .git`, `unzip -d .git`), `cd` into it, and
+  or `rsync` that ends in `.git` (or `-t .git`, `tar -C.git`, `unzip -d .git`), `cd` into or
+  through it (`cd .git/hooks`), and
   the Edit and Write tools. The path is read as the shell expands it (defaults, braces, groups, an
   unquoted glob that, like the shell's, crosses no `/` and meets `.git` only with a literal dot),
   normalized and case folded (`.GIT//Config` is the same file on APFS); a quoted pattern (`-path

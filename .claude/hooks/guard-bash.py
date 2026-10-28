@@ -57,16 +57,25 @@ DEFAULT = re.compile(r"\$\{\w+:?[-=+?]([^{}]*)\}")
 
 
 def group_variants(word):
-    """The words a group makes of word: each alternative of (a|b) or @(a|b); a group that may match
-    anything else (?(a), *(a), !(a), a zsh qualifier *(D)) widens to a wildcard."""
-    match = GROUP.search(word)
-    if not match:
-        return [word]
-    op, inner = match.groups()
-    options = ["*"] if op and op in "?*!" else inner.split("|")
-    variants = [v for option in options for v in group_variants(word[:match.start()] + option + word[match.end():])]
-    if len(variants) > 256:
-        raise ValueError("too many group variants to verify")
+    """The words a group makes of word: each alternative of (a|b) or @(a|b), innermost first; a group
+    that may match anything else (?(a), *(a), !(a), a zsh qualifier *(D)) widens to a wildcard, and
+    so does every group when there are too many alternatives to list (a long regex)."""
+    variants = [word]
+    while any(GROUP.search(v) for v in variants):
+        expanded = []
+        for variant in variants:
+            match = GROUP.search(variant)
+            if not match:
+                expanded.append(variant)
+                continue
+            op, inner = match.groups()
+            options = ["*"] if op and op in "?*!" else inner.split("|")
+            expanded += [variant[:match.start()] + option + variant[match.end():] for option in options]
+        if len(expanded) > 256:
+            while GROUP.search(word):
+                word = GROUP.sub("*", word)
+            return [word]
+        variants = expanded
     return variants
 
 
@@ -485,10 +494,11 @@ def names_git_config(word):
     return False
 
 
-def names_git_directory(word):
+def names_git_directory(word, anywhere=False):
+    """Whether the path ends in .git, or with anywhere passes through it (cd .git/hooks)."""
     for form in path_forms(word):
-        last = PurePosixPath(form).name
-        if last == ".git" or globs_to(".git", last):
+        parts = PurePosixPath(form).parts if anywhere else [PurePosixPath(form).name]
+        if any(part == ".git" or globs_to(".git", part) for part in parts):
             return True
     return False
 
@@ -522,21 +532,24 @@ def config_write(command):
         outputs = [i for i, w in enumerate(words) if w.startswith("--output")]
         if name == "git" and any(names_git_config(as_shell_sees(" ".join(words[i:i + 2]), quoted)) for i in outputs):
             return reason
-        targets = args if name in {"cd", "pushd"} else args[-1:] if name in INTO_DIRECTORY else []
-        # A directory option names the destination too: cp -t .git, tar -C .git, unzip -d .git.
+        if name in {"cd", "pushd"} and any(names_git_directory(w, anywhere=True) for w in args):
+            return reason
+        targets = args[-1:] if name in INTO_DIRECTORY else []
+        # A directory option names the destination too: cp -t .git, tar -C.git, unzip -d .git.
         options = TARGET_OPTIONS.get(name, ())
         targets += [args[i + 1] for i, w in enumerate(args[:-1]) if w in options]
         targets += [w.split("=", 1)[1] for w in args if w.split("=", 1)[0] in options and "=" in w]
+        targets += [w[2:] for w in args if len(w) > 2 and w[:2] in options]
         if any(names_git_directory(w) for w in targets):
             return reason
     return None
 
 
 def refuses(check, command):
-    """Runs one check; a command nested so deep that the check cannot finish is refused."""
+    """Runs one check; a command nested so deep or so large that the check cannot finish is refused."""
     try:
         return check(command)
-    except RecursionError:
+    except (RecursionError, ValueError):
         return True
 
 

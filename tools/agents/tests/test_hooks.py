@@ -288,9 +288,22 @@ class HookTests(unittest.TestCase):
         for includes in (['.env'],['*.md','id_*'],'.e*'):
             with self.assertRaisesRegex(hook.GuardRefusal,'secret',msg=str(includes)):
                 self.agy('grep_search',{'SearchPath':str(self.root),'Query':'x','Includes':includes})
+        # Any casing, any filter-like name, any depth and any tool.
+        for name,args in (('grep_search',{'SearchPath':str(self.root),'includes':['.env']}),
+                          ('mcp_search',{'path':str(self.root),'Globs':['.env']}),
+                          ('mcp_search',{'path':str(self.root),'opts':{'glob':'.env'}}),
+                          ('grep_search',{'SearchPath':str(self.root),'Options':{'Includes':[['.env']]}}),
+                          ('find_by_name',{'SearchDirectory':str(self.root),'Pattern':'id_*'}),
+                          ('mcp_search',{'IncludePattern':'.env'}),('mcp_search',{'file_pattern':'cred*'})):
+            with self.assertRaisesRegex(hook.GuardRefusal,'secret',msg=str(args)):
+                self.agy(name,args)
         self.assertEqual(self.agy('grep_search',{'SearchPath':str(self.root),'Query':'x','Includes':['*.md','*.py']}),{})
+        self.assertEqual(self.agy('grep_search',{'SearchPath':str(self.root),'Query':'x','Includes':[]}),{})
+        for args in ({'SearchPath':str(self.root),'Includes':[1]},{'SearchPath':str(self.root),'Includes':None}):
+            with self.assertRaises(ValueError):
+                self.agy('grep_search',args)
         with self.assertRaises(ValueError):
-            self.agy('grep_search',{'SearchPath':str(self.root),'Query':'x','Includes':[1]})
+            self.agy('run_command',{'CommandLine':'ls','Includes':['*.md']})
         # A windowed view of a long file is a bounded read; the whole file is not.
         long=self.root/'long.md'
         long.write_text('x\n'*500)

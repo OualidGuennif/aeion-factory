@@ -28,6 +28,8 @@ ANTIGRAVITY_TOOLS = {'run_command': 'Bash', 'view_file': 'Read', 'write_to_file'
 ANTIGRAVITY_PATH_KEY = re.compile(r'(paths?|files?|dirs?|directory|directories|uris?)$')
 # view_code_item's NodePaths are code symbols (Cache.key), not files.
 ANTIGRAVITY_SYMBOL_KEYS = {'nodepath', 'nodepaths'}
+# An argument at any depth named like a file filter (Includes, glob, IncludePattern, file_pattern) picks files to read.
+ANTIGRAVITY_GLOB_KEY = re.compile(r'(includes?|globs?|patterns?)$')
 
 
 class GuardRefusal(ValueError):
@@ -111,6 +113,18 @@ def antigravity_paths(value, named=False):
     return []
 
 
+def antigravity_globs(value, named=False):
+    # Walked like paths: a string is a file filter only under a filter-like name, and anything else there is refused.
+    if isinstance(value, dict):
+        return [glob for key, item in value.items()
+                for glob in antigravity_globs(item, named or ANTIGRAVITY_GLOB_KEY.search(argument_name(key)) is not None)]
+    if isinstance(value, list):
+        return [glob for item in value for glob in antigravity_globs(item, named)]
+    if named and not isinstance(value, str):
+        raise ValueError('the Antigravity include patterns must be strings')
+    return [value] if named and value else []
+
+
 def antigravity_event(event):
     call = event.get('toolCall')
     if call is None:
@@ -145,11 +159,8 @@ def antigravity_event(event):
         raise ValueError('the Antigravity shell call carries an argument the guards cannot place')
     # Every path-like argument meets the guards, not only the first: one call can name several files.
     paths = antigravity_paths(args)
-    # grep_search's Includes patterns pick the files it reads, so each one meets the Grep glob check.
-    includes = [value for key, value in args.items() if argument_name(key) in {'include', 'includes', 'glob', 'globs'}]
-    globs = [item for value in includes for item in (value if isinstance(value, list) else [value])]
-    if any(not isinstance(item, str) for item in globs):
-        raise ValueError('the Antigravity include patterns must be strings')
+    # grep_search's Includes and any tool's file filters pick the files it reads, so each meets the Grep glob check.
+    globs = antigravity_globs(args)
     # view_file windows by StartLine/EndLine; the intake guard reads the same window as offset/limit.
     if type(args.get('StartLine')) is int and type(args.get('EndLine')) is int:
         data['offset'], data['limit'] = args['StartLine'], args['EndLine'] - args['StartLine'] + 1

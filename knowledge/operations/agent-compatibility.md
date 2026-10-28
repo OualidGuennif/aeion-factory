@@ -81,8 +81,10 @@ directory does not establish loaded hooks or identical runtime guarantees.
   mapped file tool with none is refused. Not recognized: other names (`target`, `Url`), text typed
   into a running command (`send_command_input`) and Windows paths. `view_file`'s
   `StartLine`/`EndLine` become the intake window; `grep_search` with `MatchPerLine: false` lists
-  names only. Each `Includes` pattern (or `Include`, `Glob`, `Globs` in any case) goes through
-  the Grep glob check, so a pattern that names a secret is refused; a non-string one is refused. Any tool with a `CommandLine` goes through the
+  names only. For any tool, every string at any depth under an argument whose name ends in
+  include, glob or pattern, or their plurals (`Includes`, `IncludePattern`, `file_pattern`), goes
+  through the Grep glob check, so a filter that names a secret is refused, and so is a
+  non-string one. Any tool with a `CommandLine` goes through the
   shell guard, as does a `command` or `commandLine` argument in any case; a call with two is
   refused. `Cwd` or `workdir` in any case (a `file:` URI decoded) is the shell's directory; two
   or a non-string one are refused. On a shell call any other argument must be a flag or a

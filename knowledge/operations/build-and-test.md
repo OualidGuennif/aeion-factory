@@ -42,9 +42,9 @@ all of them and the security scans, for `main` only.
 
 Many people run Æion Factory in a plain folder, without git. The link and health checks, the context
 fingerprint and the session-start summary then walk the files on disk (skipping `.git`, `.aeion`,
-dependencies, caches, build output such as `dist/` or `target/`, and desktop files such as `.DS_Store`;
-`.claude/hooks/project_files.py`). A plain folder inside another repository is still a plain folder:
-git counts only when its top level is the project root, and every harness hook command falls back
+dependencies, caches, the root's build output such as `dist/` or `target/`, and desktop files such as
+`.DS_Store`; `.claude/hooks/project_files.py`). Git counts only when its top level is the project
+root: a folder nested in another repository, even a monorepo subfolder that repository tracks, is plain, and every harness hook command falls back
 from `git rev-parse --show-toplevel` to the current folder. Only `doc-links --diff`, which compares
 commits, needs git. A folder whose `.git` git cannot read is a broken repository and fails, as does a
 missing comparison base; a valid empty change set remains successful and an unavailable check is

@@ -44,6 +44,23 @@ class RepoHealthTests(unittest.TestCase):
         result = self.check_health("--json")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
+    def test_build_named_source_below_the_root_is_walked(self):
+        # Only the root's build output is skipped; a source folder named build deeper is the project's code.
+        (self.root / "src/build").mkdir(parents=True)
+        (self.root / "src/build/big.py").write_text("value = 1\n" * 1501)
+        result = self.check_health("--json")
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertIn("src/build/big.py", result.stdout)
+
+    def test_repository_reached_through_another_letter_case_stays_a_repository(self):
+        subprocess.run(["git", "init", "-q", str(self.root)], check=True)
+        swapped = Path(str(self.tool).swapcase())
+        if not swapped.exists():
+            self.skipTest("case-sensitive file system")
+        result = subprocess.run([sys.executable, str(swapped)], cwd=str(self.root).swapcase(),
+                                capture_output=True, text=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
     def test_folder_nested_in_another_repository_is_walked(self):
         # A plain project unpacked inside a parent repository is not tracked there: git would list nothing.
         parent = Path(self.directory.name)

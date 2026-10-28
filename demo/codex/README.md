@@ -8,8 +8,8 @@ Codex builds the same Idea Board from [`../plan/`](../plan/00-start.md) as the
   `tools/architecture/ask` with `ask callers`, and the skill `graph`.
 - **Command:** `git archive HEAD -- . ':(exclude)demo'`. The copy has no `.git`, holds 163 files and
   no app yet.
-- **Inherited state:** the copy's `work/current.md` and `CHANGELOG.md` still hold the factory's own
-  entries, as they did for the Claude Code run (FB-003).
+- **Inherited state:** this copy was made before `tools/release/release --new-project`; Codex reset its
+  `work/current.md` by hand (its FB-001, like FB-003 of run 1).
 
 | Folder | What goes there |
 | --- | --- |

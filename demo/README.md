@@ -12,7 +12,7 @@ on `develop`, each with a test, so the next harness starts from a better factory
 1. Create the copy from the repository root, replacing `<harness>` with the harness name:
 
    ```bash
-   mkdir -p demo/<harness>/workspace && git archive HEAD -- . ':(exclude)demo' | tar -x -C demo/<harness>/workspace
+   mkdir -p demo/<harness>/workspace && git archive HEAD -- . ':(exclude)demo' | tar -x -C demo/<harness>/workspace && tools/release/release --new-project --root demo/<harness>/workspace
    ```
 
 2. Create `journal/`, `feedback_for_aeion/` and `render/` beside it. The layout is in

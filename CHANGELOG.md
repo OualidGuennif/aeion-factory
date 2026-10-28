@@ -6,6 +6,12 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+### Added
+- `tools/release/release --new-project` starts a copy of the factory as a new project: `VERSION` 0.1.0, an
+  empty changelog and only the "Adapt" task in `work/current.md`. It refuses in the factory's own clone.
+  The README's New project steps and the demo copy command run it (FB-003 of Claude Code run 1, FB-001 of
+  the Codex run).
+
 ## [1.4.0] - 2026-10-28
 
 ### Added

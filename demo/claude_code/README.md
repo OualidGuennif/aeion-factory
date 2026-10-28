@@ -9,8 +9,8 @@ Claude Code builds the same Idea Board again from [`../plan/`](../plan/00-start.
   check that every fix from run 1 holds.
 - **Command:** `git archive HEAD -- . ':(exclude)demo'`. The copy has no `.git`, holds 163 files and
   no app yet.
-- **Inherited state:** the copy's `work/current.md` and `CHANGELOG.md` still hold the factory's own
-  entries, as they did for the Claude Code run (FB-003).
+- **Fresh state:** `tools/release/release --new-project` reset the copy (FB-003 of run 1, FB-001 of
+  Codex): `VERSION` 0.1.0, an empty changelog, and only the "Adapt" task in `work/current.md`.
 
 | Folder | What goes there |
 | --- | --- |

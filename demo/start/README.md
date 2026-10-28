@@ -22,7 +22,7 @@ Every message assumes the agent was opened in `demo/`, and every path in it star
   as [`../claude_code/archive/run-01/`](../claude_code/archive/run-01/SUMMARY.md) shows, then copy the
   factory again:
   ```bash
-  rm -rf demo/<harness>/workspace && mkdir -p demo/<harness>/workspace && git archive HEAD -- . ':(exclude)demo' | tar -x -C demo/<harness>/workspace
+  rm -rf demo/<harness>/workspace && mkdir -p demo/<harness>/workspace && git archive HEAD -- . ':(exclude)demo' | tar -x -C demo/<harness>/workspace && tools/release/release --new-project --root demo/<harness>/workspace
   ```
 
 ## Skills and hooks, per harness

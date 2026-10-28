@@ -68,6 +68,8 @@ policy before installing. CI analyses every main update either way.
 
 1. [Create a repository from this template](https://github.com/OualidGuennif/aeion-factory/generate),
    then clone your new repository and open its folder.
+   Reset the factory's own history and tasks: `tools/release/release --new-project` (version 0.1.0, an
+   empty changelog, one task: adapt the factory to this project).
 2. Prepare your harness (once), then start it in that folder:
 
    | Harness | Start | What to do first |

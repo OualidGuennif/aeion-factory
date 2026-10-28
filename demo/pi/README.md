@@ -7,8 +7,8 @@ Pi builds the same Idea Board from [`../plan/`](../plan/00-start.md) as the
   the base fixes from the Claude Code run (FB-002, 004 to 010), Graphify 0.9.97 and Archify v3.2.0 pins,
   `tools/architecture/ask` with `ask callers`, and the skill `graph`.
 - **Command:** `git archive HEAD -- . ':(exclude)demo'`. The copy has no `.git` and no app yet.
-- **Inherited state:** the copy's `work/current.md` and `CHANGELOG.md` still hold the factory's own
-  entries, as they did for the Claude Code run (FB-003).
+- **Fresh state:** `tools/release/release --new-project` reset the copy (FB-003 of run 1, FB-001 of
+  Codex): `VERSION` 0.1.0, an empty changelog, and only the "Adapt" task in `work/current.md`.
 
 | Folder | What goes there |
 | --- | --- |

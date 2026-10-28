@@ -60,6 +60,34 @@ class ReleaseTests(unittest.TestCase):
         self.assertIn("FAIL VERSION and CHANGELOG.md", missing.stderr)
 
 
+    def test_new_project_keeps_only_the_adapt_task(self):
+        self.write("1.4.0\n", "# Changelog\n\nIntro.\n\n## [Unreleased]\n\n## [1.4.0] - 2026-10-28\n\n- Old.\n")
+        (self.root / "work").mkdir()
+        tasks = ("# Current work\n\nHeader.\n\n## Factory task — ACTIVE\n- State: factory.\n\n"
+                 "## Adapt Æion Factory to this project — ACTIVE\n- Owner decision: <date>, started.\n- Next: adapt.\n")
+        (self.root / "work/current.md").write_text(tasks)
+        self.assertEqual(self.release("--new-project").returncode, 0)
+        expected = ("# Current work\n\nHeader.\n\n## Adapt Æion Factory to this project — ACTIVE\n"
+                    "- Owner decision: 2026-10-28, started.\n- Next: adapt.\n")
+        self.assertEqual((self.root / "work/current.md").read_text(), expected)
+        self.assertEqual((self.root / "CHANGELOG.md").read_text(), "# Changelog\n\nIntro.\n\n## [Unreleased]\n")
+        self.assertEqual((self.root / "VERSION").read_text(), "0.1.0\n")
+        # A second run changes nothing.
+        self.assertEqual(self.release("--new-project").returncode, 0)
+        self.assertEqual((self.root / "work/current.md").read_text(), expected)
+
+    def test_new_project_refuses_in_the_factory_clone(self):
+        self.write("1.4.0\n", HEAD)
+        (self.root / "work").mkdir()
+        (self.root / "work/current.md").write_text("# Current work\n\n## Adapt Æion Factory to this project — ACTIVE\n- x\n")
+        subprocess.run(["git", "init", "-q", str(self.root)], check=True)
+        subprocess.run(["git", "-C", str(self.root), "remote", "add", "origin",
+                        "https://github.com/OualidGuennif/aeion-factory.git"], check=True)
+        result = self.release("--new-project")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("own clone", result.stderr)
+        self.assertEqual((self.root / "VERSION").read_text(), "1.4.0\n")
+
 class ArchiveTests(unittest.TestCase):
     def test_release_archive_leaves_out_demo(self):
         # GitHub builds a release's source archives with `git archive`, which honours export-ignore.

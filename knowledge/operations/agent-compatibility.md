@@ -83,8 +83,8 @@ directory does not establish loaded hooks or identical runtime guarantees.
   `StartLine`/`EndLine` become the intake window; `grep_search` with `MatchPerLine: false` lists
   names only. For any tool, every string at any depth under an argument whose name ends in
   include, glob or pattern, or their plurals (`Includes`, `IncludePattern`, `file_pattern`), goes
-  through the Grep glob check, so a filter that names a secret is refused, and so is a
-  non-string one. Any tool with a `CommandLine` goes through the
+  through the same check as Claude's Grep `glob` filter ([security](../policies/security.md)),
+  with its limits; a non-string filter is refused. Any tool with a `CommandLine` goes through the
   shell guard, as does a `command` or `commandLine` argument in any case; a call with two is
   refused. `Cwd` or `workdir` in any case (a `file:` URI decoded) is the shell's directory; two
   or a non-string one are refused. On a shell call any other argument must be a flag or a

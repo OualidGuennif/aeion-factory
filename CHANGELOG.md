@@ -6,6 +6,8 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+- Simplify the README around quick start, all 16 skills and optional tools; keep detailed setup,
+  adoption and dsh troubleshooting in a linked getting-started guide.
 - demo: the run 2 launch commands use OpenCode 2.2.0's `opencode2 run`, read from its `--help`.
 
 ## [1.6.0] - 2026-10-29

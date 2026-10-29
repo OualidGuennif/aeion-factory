@@ -1,11 +1,11 @@
 ---
 type: Reference
 title: "Operations index"
-description: "Build and test, the loops, recovery."
+description: "Getting started, build and test, the loops, recovery."
 status: stable
 generated:
-  by: aeion-factory/1.0
-  at: 2026-10-20T00:00:00Z
+  by: aeion-factory/1.6
+  at: 2026-10-29
 ---
 
 # Operations
@@ -15,6 +15,7 @@ generated:
 
 | Concept | Status | Notes |
 | --- | --- | --- |
+| [Getting started](getting-started.md) | stable | first-run setup, adoption and dsh troubleshooting |
 | [Build and test](build-and-test.md) | stable | every gate, and the language servers |
 | [The loops](loops.md) | stable | inner, middle, outer: jobs, schedules, safety |
 

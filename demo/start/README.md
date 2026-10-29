@@ -26,7 +26,7 @@ and effort are run 2's choice.
 | --- | --- | --- |
 | Claude Code | `claude -p --model <opus> --effort high --session-id <uuid> "<prompt>"` | `claude -p --resume <uuid> "<prompt>"` |
 | Codex | `codex exec -m <model> -c model_reasoning_effort="high" --json "<prompt>"` | `codex exec resume <session-id> "<prompt>"` |
-| OpenCode | `opencode run "<prompt>"` (check `opencode run --help` first) | its session flag, from the same help |
+| OpenCode | `opencode2 run -m <provider>/<model>#high -s <id> --format json "<prompt>"` | the same command, same `-s <id>` |
 | Pi | `pi -p --model <provider/id>:high --session-id <id> "<prompt>"` | the same command, same `--session-id` |
 | dsh | `dsh headless --patch .dsh/factory.patch.yml --json "<prompt>"` | add `--session-id <id>` from the first run's events |
 
@@ -66,6 +66,8 @@ The hooks all call the same guards in `.claude/hooks/` and `tools/agents/hook.py
   narrower, the agent stops with the commit command and you run it.
 
 ### OpenCode (2.1.4+)
+- **Command.** On this machine OpenCode 2.2.0 is `opencode2` (`~/.opencode/bin/`, on the interactive
+  shell's PATH only): call it by that path from a non-interactive shell.
 - **Skills and hooks load on their own.** The root `opencode.json` points at the skills, and the plugin
   in `.opencode/plugins/factory/` runs the hooks.
 - **Provider.** Connect it in OpenCode's own settings.

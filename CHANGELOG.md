@@ -6,6 +6,8 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+- demo: the run 2 launch commands use OpenCode 2.2.0's `opencode2 run`, read from its `--help`.
+
 ## [1.6.0] - 2026-10-29
 
 - Droid registers PreCompact: a compaction before a verified handover runs and closure (handover,

@@ -53,9 +53,11 @@ cd demo/pi/render && python3 build_gallery.py
 
 It writes `index.html`: one self-contained page with all fourteen diagrams inlined as iframe
 `srcdoc`, so it opens from a plain `file://` path with no server, no network and no access to the
-other files. "Open full size" reuses the same inlined markup. The `diagrams/*.html` files are still
+other files. Each preview clears its "Loading preview…" overlay when the frame really loads;
+"Open full size" reuses the same inlined markup, and `‹ Prev`/`Next ›`, the arrow keys and Escape
+move through the fourteen diagrams without leaving the page. The `diagrams/*.html` files are still
 written beside it for anyone who serves the folder. Verified with headless Chrome on `file://`:
-14/14 iframes rendered their SVG.
+14/14 previews rendered their SVG, 14/14 placeholders cleared, viewer paged and closed.
 
 macOS still has to allow the browser to read the Desktop folder before any `file://` page opens;
 that permission, not the HTML, is what produced "Access to the file was denied".

@@ -71,6 +71,7 @@ article{border:1px solid var(--line);border-radius:14px;overflow:hidden;backgrou
 .preview{position:relative;height:245px;overflow:hidden;background:#eef1ea;border-bottom:1px solid var(--line)}
 .preview iframe{width:1200px;height:500px;transform:scale(.49);transform-origin:top left;border:0;pointer-events:none}
 .preview .empty{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);font-size:14px}
+.preview[data-ready="true"] .empty{display:none}
 .copy{padding:22px 24px 28px}
 .copy p{margin:10px 0 20px}
 .copy .kind{margin:0}
@@ -83,18 +84,27 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding-top:22px;color:v
 #viewer .bar{display:flex;align-items:center;gap:16px;padding:10px 18px;color:#e8efe9}
 #viewer .bar strong{font:20px/1.2 Georgia,serif;font-weight:600}
 #viewer .bar button{background:#16211d;color:#e8efe9;border-color:#33453e}
+#viewer .bar button.close{margin-left:auto}
 @media(max-width:750px){main{padding:32px 18px}.grid{grid-template-columns:1fr}.preview{height:180px}.preview iframe{transform:scale(.31)}}
 """
 
 SCRIPT = """
 const data = {};
+const titles = {};
+const order = [];
 for (const node of document.querySelectorAll('script[type="application/json"][data-diagram]')) {
   data[node.dataset.diagram] = JSON.parse(node.textContent);
+  order.push(node.dataset.diagram);
+}
+for (const button of document.querySelectorAll('button[data-open]')) {
+  titles[button.dataset.open] = button.dataset.title;
 }
 const frames = document.querySelectorAll('iframe[data-diagram]');
 const load = (frame) => {
   if (frame.dataset.loaded === 'true') return;
   frame.dataset.loaded = 'true';
+  const card = frame.closest('.preview');
+  frame.addEventListener('load', () => { card.dataset.ready = 'true'; }, { once: true });
   frame.srcdoc = data[frame.dataset.diagram];
 };
 const watcher = new IntersectionObserver((entries) => {
@@ -105,19 +115,33 @@ for (const frame of frames) watcher.observe(frame);
 const viewer = document.getElementById('viewer');
 const viewerFrame = viewer.querySelector('iframe');
 const viewerTitle = viewer.querySelector('strong');
-const close = () => { viewer.dataset.open = 'false'; viewerFrame.removeAttribute('srcdoc'); document.body.style.overflow = ''; };
+let current = 0;
+const show = (index) => {
+  current = (index + order.length) % order.length;
+  const name = order[current];
+  viewerTitle.textContent = titles[name] || name;
+  viewerFrame.srcdoc = data[name];
+  viewer.dataset.open = 'true';
+  document.body.style.overflow = 'hidden';
+};
+const close = () => {
+  viewer.dataset.open = 'false';
+  viewerFrame.removeAttribute('srcdoc');
+  document.body.style.overflow = '';
+  document.querySelector('button[data-open="' + order[current] + '"]')?.focus();
+};
 for (const button of document.querySelectorAll('button[data-open]')) {
-  button.addEventListener('click', () => {
-    const name = button.dataset.open;
-    viewerTitle.textContent = button.dataset.title;
-    viewerFrame.srcdoc = data[name];
-    viewer.dataset.open = 'true';
-    document.body.style.overflow = 'hidden';
-    viewerFrame.focus();
-  });
+  button.addEventListener('click', () => show(order.indexOf(button.dataset.open)));
 }
 viewer.querySelector('button.close').addEventListener('click', close);
-document.addEventListener('keydown', (event) => { if (event.key === 'Escape') close(); });
+viewer.querySelector('button.prev').addEventListener('click', () => show(current - 1));
+viewer.querySelector('button.next').addEventListener('click', () => show(current + 1));
+document.addEventListener('keydown', (event) => {
+  if (viewer.dataset.open !== 'true') return;
+  if (event.key === 'Escape') close();
+  if (event.key === 'ArrowLeft') show(current - 1);
+  if (event.key === 'ArrowRight') show(current + 1);
+});
 """
 
 
@@ -173,7 +197,7 @@ use-case diagrams are architecture diagrams with actors kept outside the system 
 board is a local public demo, with no authentication and no per-visitor vote limit.</footer>
 </main>
 <div id="viewer" aria-hidden="false">
-<div class="bar"><strong></strong><button class="close">Close (Esc)</button></div>
+<div class="bar"><strong></strong><button class="prev" aria-label="Previous diagram">‹ Prev</button><button class="next" aria-label="Next diagram">Next ›</button><button class="close">Close (Esc)</button></div>
 <iframe title="Full-size diagram"></iframe>
 </div>
 {"".join(parts)}

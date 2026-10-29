@@ -6,6 +6,8 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+- Keep reasoning private and omit optional progress narration, including JSON notes; token feedback
+  now counts JSON progress notes and recommends direct tool use without blocking work.
 ## [1.6.1] - 2026-10-29
 
 - Simplify the README around quick start, all 16 skills and optional tools; keep detailed setup,

@@ -2,8 +2,8 @@
 # Spec: knowledge/policies/bounded-intake.md
 """PostToolUse/Stop hook: one-line feedback on tokens spent for nothing; it never blocks.
 
-Narration: prose the agent writes before or between tool calls. Allowed are a one-line JSON note,
-one status line of at most 100 characters per turn (the desktop app asks for them) and the final
+Narration: visible prose or JSON notes before or between tool calls. Tolerated are one required
+status line of at most 100 characters per turn (some harnesses ask for one) and the final
 answer after the last tool. PostToolUse warns once per turn; Stop records the turn's total in
 .aeion/context/narration-<session>.json. Rewrite: a Write that replaced an existing file with
 200+ lines, where Edit would have sent only the change.
@@ -20,7 +20,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 MAX_TAIL = 4 * 1024 * 1024
 STATUS_LIMIT = 100
-NOTE_LIMIT = 200
 REWRITE_LINES = 200
 SESSION = re.compile(r"[A-Za-z0-9_-]{1,100}")
 
@@ -102,23 +101,14 @@ def current_turn(records):
     return key, turn
 
 
-def is_note(text):
-    if "\n" in text or len(text) > NOTE_LIMIT or not text.startswith("{"):
-        return False
-    try:
-        return isinstance(json.loads(text), dict)
-    except ValueError:
-        return False
-
-
 def narration(texts):
-    """Characters of prose, after the JSON notes and the turn's one short status line."""
+    """Visible narration, excluding only the turn's one short non-JSON status line."""
     total, status_used = 0, False
     for raw in texts:
         text = raw.strip()
-        if not text or is_note(text):
+        if not text:
             continue
-        if not status_used and "\n" not in text and len(text) <= STATUS_LIMIT:
+        if not status_used and not text.startswith(("{", "[")) and "\n" not in text and len(text) <= STATUS_LIMIT:
             status_used = True
             continue
         total += len(text)
@@ -156,8 +146,9 @@ def post_tool_use(event, session):
     state = Path(tempfile.gettempdir()) / f"aeion-narration-{session}"
     if key and chars and not state.is_symlink() and (not state.exists() or state.read_text().strip() != key):
         state.write_text(key + "\n")
-        notes.append(f"narration: {chars} chars of prose between tools this turn; "
-                     "write one-line {json} notes, or nothing, until the final answer.")
+        notes.append(f"narration: {chars} chars of visible narration between tools this turn; "
+                     "keep reasoning private; omit optional progress and JSON notes. "
+                     "Use tools directly until a necessary user decision or the final result.")
     if notes:
         print(json.dumps({"hookSpecificOutput": {"hookEventName": "PostToolUse",
                                                  "additionalContext": "\n".join(notes)}}))

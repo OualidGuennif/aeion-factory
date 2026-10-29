@@ -60,11 +60,28 @@ class TokenFeedbackTests(unittest.TestCase):
                    claude_user("and now this"), claude_assistant(PROSE, ("Bash",)))
         self.assertIn("narration:", self.run_hook())
 
-    def test_json_notes_status_line_and_silence_pass(self):
-        self.write(claude_user("go"), claude_assistant('{"s":"test","n":"fix"}', ("Bash",)), tool_result(),
+    def test_silent_tools_and_one_required_status_line_pass(self):
+        self.write(claude_user("go"), claude_assistant(("Bash",)), tool_result(),
                    claude_assistant("Running the tests now.", ("Bash",)), tool_result(), claude_assistant(("Read",)))
         self.assertEqual(self.run_hook(), "")
-        # A second status line in the same turn is prose.
+
+    def test_json_progress_notes_are_counted_even_before_the_first_tool(self):
+        note = '{"s":"test","n":"fix"}'
+        self.write(claude_user("go"), claude_assistant(note, ("Bash",)), tool_result())
+        feedback = self.run_hook()
+        self.assertIn(f"narration: {len(note)} chars", feedback)
+        self.assertNotIn("write one-line {json}", feedback)
+
+    def test_silent_tools_and_final_answer_record_zero_narration(self):
+        self.write(claude_user("go"), claude_assistant(("Bash",)), tool_result(),
+                   claude_assistant(("Read",)), tool_result(), claude_assistant("Checks passed."))
+        self.assertEqual(self.run_hook(), "")
+        self.run_hook("Stop")
+        record = json.loads((self.tmp / f".aeion/context/narration-{self.session}.json").read_text())
+        self.assertEqual(record["chars"], 0)
+        self.assertEqual(record["turns_with_narration"], 0)
+
+    def test_second_status_line_is_counted_as_narration(self):
         self.write(claude_user("go"), claude_assistant("Running the tests now.", ("Bash",)), tool_result(),
                    claude_assistant("Reading the next file.", ("Read",)))
         self.assertIn("narration: 22 chars", self.run_hook())

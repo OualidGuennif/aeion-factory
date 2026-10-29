@@ -168,9 +168,11 @@ folder.</p>
 browser-check gate. Archify has no use-case type: the three use-case diagrams are architecture
 diagrams with actors kept outside the system boundary. The board is a local public demo, with no
 authentication and no per-visitor vote limit — the diagrams say so where it matters.<br>Open this
-folder over HTTP (<code>cd demo/pi/render &amp;&amp; python3 -m http.server 8137</code>, then
-<code>http://localhost:8137/</code>): browsers refuse to read some <code>file://</code> paths and
-block local iframes, so the previews can stay blank when the page is opened from disk.</footer>
+folder over HTTP, in a terminal you leave open:
+<code>cd demo/pi/render &amp;&amp; python3 -m http.server 8137 --bind ::</code>, then
+<code>http://127.0.0.1:8137/</code>. Browsers refuse some <code>file://</code> paths (macOS
+protects the Desktop) and block local iframes; <code>--bind ::</code> listens on IPv6 and IPv4, so
+<code>localhost</code> works as well as <code>127.0.0.1</code>.</footer>
 </main>
 </body>
 </html>

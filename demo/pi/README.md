@@ -46,13 +46,15 @@ To fill in as the rounds are done.
 ## Viewing the gallery
 `render/index.html` opens offline, but browsers refuse some `file://` paths (macOS protects the
 Desktop) and block local iframes, so a direct double-click can show "Access to the file was
-denied". Serve the folder instead:
+denied". Serve the folder instead, in a terminal you leave open:
 
 ```bash
-cd demo/pi/render && python3 -m http.server 8137
+cd demo/pi/render && python3 -m http.server 8137 --bind ::
 ```
 
-Then open <http://localhost:8137/>. The diagrams themselves (`render/diagrams/*.html`) are
+Then open <http://127.0.0.1:8137/>. `--bind ::` listens on IPv6 and IPv4, so `localhost` works
+too; without it Python listens on IPv4 only, which is what makes Firefox report a failed
+connection on `localhost:8137`. The diagrams themselves (`render/diagrams/*.html`) are
 self-contained, with no network request; served the same way they render everywhere.
 
 ## What this run showed

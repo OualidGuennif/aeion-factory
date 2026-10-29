@@ -3,12 +3,21 @@ type: Policy
 title: "Bounded tool intake"
 description: "Refuse obvious large dumps before execution; use targeted reads and summary commands."
 status: stable
+generated:
+  by: aeion-factory/1.6.2
+  at: 2026-10-29
 sources:
   - resource: ../../.claude/hooks/guard-path.py
   - resource: ../../.claude/hooks/guard-bash.py
   - resource: ../../.claude/hooks/session-start.py
   - resource: ../../tools/agents/hook.py
   - resource: ../../.claude/hooks/token-feedback.py
+  - resource: https://developers.openai.com/api/docs/guides/reasoning-best-practices
+    title: "Simple, direct instructions for reasoning models"
+  - resource: https://learn.chatgpt.com/docs/agent-configuration/agents-md
+    title: "Project instruction discovery and session loading"
+  - resource: https://code.claude.com/docs/en/output-styles
+    title: "Response style is instruction, not enforcement"
 ---
 
 # Bounded tool intake
@@ -40,14 +49,21 @@ refusal names its cause: the file over the limit, a variable or glob path, or a 
 after a `cd` (an absolute path is sized whatever the directory).
 Tests remain runnable; quiet/fail-fast flags and error summaries are guidance in this version.
 
-Token feedback (`.claude/hooks/token-feedback.py`) never refuses. After a tool call it adds one line
-of context, at most once per turn, when the turn holds prose before or between tool calls (allowed:
-one-line JSON notes, one status line of at most 100 characters, the final answer), and names a
+Token feedback (`.claude/hooks/token-feedback.py`) never refuses. Keep reasoning private and use
+tools directly; do not emit optional progress narration or intermediate JSON notes. After a tool
+call the hook adds one line of context, at most once per turn, when the turn holds visible prose
+or JSON notes before or between tool calls. It tolerates one status line of at most 100 characters
+for harnesses that require it, and excludes the final answer. It also names a
 Write that resent 200+ lines of an existing file where Edit would send only the change. Stop records
 each turn's narration in `.aeion/context/narration-<session>.json`. It reads Claude Code and Codex
 transcript shapes from a bounded tail, never through a symlink; any other shape or error is silence.
 A measured session spent 2% of its transcript on narration and 65% on tool inputs and results, so
 the rewrite note and the read limits above carry most of the saving.
+
+Use clear output instructions rather than prescribing a private reasoning format. Project
+instructions and advisory feedback cannot guarantee silence across harnesses or override higher
+priority instructions. Start a new Codex session to load edited `AGENTS.md` instructions. This
+policy changes no model, reasoning-effort or provider setting and claims no measured reasoning-token saving.
 
 ## Invariants
 

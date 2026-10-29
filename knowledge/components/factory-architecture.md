@@ -4,8 +4,8 @@ title: "Æion Factory architecture"
 description: "Complete source-backed specification of Æion Factory's authority, execution, Knowledge, context checkpoints, analysis and delivery."
 status: stable
 generated:
-  by: aeion-factory/1.1
-  at: 2026-10-25
+  by: aeion-factory/1.6.2
+  at: 2026-10-29
 sources:
   - id: instructions
     resource: ../../AGENTS.md
@@ -57,6 +57,10 @@ Knowledge is canonical policy/specification; OKF is the maintained concept/front
 discipline. Skills describe task procedures. Hooks are event-triggered feedback/control within
 the supported harness. A checkpoint preserves an unfinished task; a baseline records source
 analysis at a commit. Neither replaces owner authorization, tests or canonical documentation.
+
+Agents keep reasoning private and omit optional progress narration, including JSON notes.
+Necessary user decisions and final validation remain visible. [Token feedback](../policies/bounded-intake.md)
+is advisory; it does not enforce the model's private reasoning format or a token-saving guarantee.
 
 ## Data sources
 

@@ -10,6 +10,7 @@ one harness:
 | OpenCode | [`opencode/START.md`](opencode/START.md) | the repository root |
 | Pi | [`pi/START.md`](pi/START.md) | the repository root |
 | dsh | [`dsh/START.md`](dsh/START.md) | the repository root, with the patch flag below |
+| Orchestrator (run 2) | [`orchestrator/START.md`](orchestrator/START.md) | the repository root, in Claude Code |
 
 Every message assumes the agent was opened at the repository root, and every path in it starts there.
 Run 1 opened them in `demo/`: a sandbox that writes only below its folder then refused `.git` and the
@@ -17,7 +18,7 @@ root `work/` the 250k closure writes (dsh FB-003, FB-006). Run one harness at a 
 tree make each other's checkpoint receipts stale (OpenCode FB-003).
 
 ## Launch commands, without a terminal UI
-A driver (a person, or an orchestrating agent) sends `START.md` as the first prompt,
+A driver (a person, or the [orchestrator](orchestrator/START.md)) sends `START.md` as the first prompt,
 then one message per round in the same session. Each CLI's `--help` was read on 2026-10-29; the models
 and effort are run 2's choice.
 

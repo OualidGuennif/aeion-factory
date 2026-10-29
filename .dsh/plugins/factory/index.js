@@ -2,12 +2,14 @@
 import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
+import { seam } from './seam.js';
 
 export const name = 'aeion-factory';
-export const inject = ['tools', 'tokenMeter', 'compaction'];
+export const inject = ['tools', 'tokenMeter'];
 
 const UNAVAILABLE = 'Æion Factory hook unavailable; action refused.';
 const RESUME = 'Æion Factory: context compacted. Read your handover in work/handovers/ and continue the task.';
+const ASK = 'Æion Factory: handover verified. This dsh profile lets only the user compact: ask them to type /compact now, then wait.';
 // dsh's built-in tools under the names the shared guards know; glob only lists paths.
 const TOOLS = { bash: 'Bash', read: 'Read', write: 'Write', edit: 'Edit', str_replace_editor: 'Edit', glob: 'Glob', grep: 'Grep' };
 
@@ -46,7 +48,21 @@ export function apply(ctx) {
   // Agents whose verified handover asked for a compaction; it runs before their next model step.
   const due = new Set();
 
+  // The last measure per session: a fall to under half means the user compacted (/compact), so its next call
+  // is told the start context again as after a compaction.
+  const last = new Map();
+
   const tokens = (agent) => ctx.tokenMeter.measure(agent.session).totalTokens;
+
+  function observe(agent) {
+    const session = agent.session.id;
+    const now = tokens(agent);
+    if (last.get(session) > 2 * now && started.has(session)) {
+      started.delete(session);
+      compacted.add(session);
+    }
+    last.set(session, now);
+  }
 
   function start(session) {
     if (started.has(session)) return;
@@ -71,6 +87,7 @@ export function apply(ctx) {
     // A call without an agent has no session to account it to, so it is refused.
     if (!exec.agent) return UNAVAILABLE;
     try {
+      observe(exec.agent);
       start(exec.agent.session.id);
       return invoke(root, toolEvent(exec, 'PreToolUse')).reason || undefined;
     } catch (error) {
@@ -98,8 +115,13 @@ export function apply(ctx) {
     try {
       // The shared rule refuses the compaction unless the checkpoint is still verified.
       if (invoke(root, { session_id: session, hook_event_name: 'PreCompact' }).reason) return next();
+      // The web profile keeps compaction inside each agent preset, out of a plugin's reach: the user compacts.
+      if (!seam.compaction) {
+        agent.steer({ content: [{ type: 'text', text: ASK }], source: { kind: 'aeion-factory' } });
+        return next();
+      }
       // dsh's overflow path compacts now whatever its own threshold; it is the step-time compaction dsh exposes.
-      await ctx.compaction.compactIfNeeded(agent, 'context-overflow', signal);
+      await seam.compaction.compactIfNeeded(agent, 'context-overflow', signal);
       started.delete(session);
       compacted.add(session);
       agent.steer({ content: [{ type: 'text', text: RESUME }], source: { kind: 'aeion-factory' } });

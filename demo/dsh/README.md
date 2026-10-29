@@ -22,10 +22,13 @@ dsh (DeepSeek Harness) builds the same Idea Board from [`../plan/`](../plan/00-s
    `.agents/skills` from any folder below the root, but loads the factory plugin only through a patch
    overlay, so from `demo/` the patch is passed explicitly:
    ```bash
-   cd demo && dsh --profile tui --patch ../.dsh/factory.patch.yml
+   cd demo && dsh web --patch ../.dsh/factory.patch.yml
    ```
+   dsh ships no `tui` profile: `web` opens its chat in the browser (`--no-open` prints the URL instead).
    The plugin finds `tools/agents/hook.py` by walking up from `demo/`. Started at the repository root,
-   `tools/agents/run dsh` adds the same patch.
+   `tools/agents/run dsh` adds the same patch. At startup dsh reports `aeion-factory-compaction` as pending:
+   web keeps compaction inside each agent preset, so past 250k the agent asks you to type `/compact`
+   once its handover is verified.
 2. Paste [`../start/dsh/START.md`](../start/dsh/START.md) as the first message.
 
 ## Results by round

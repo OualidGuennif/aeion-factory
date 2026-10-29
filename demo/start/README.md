@@ -67,12 +67,13 @@ The hooks all call the same guards in `.claude/hooks/` and `tools/agents/hook.py
 ### dsh (DeepSeek Harness, 0.2.1+)
 - **Start command.** dsh loads project plugins only through a patch overlay, so from `demo/` pass it:
   ```bash
-  cd demo && dsh --profile tui --patch ../.dsh/factory.patch.yml
+  cd demo && dsh web --patch ../.dsh/factory.patch.yml
   ```
+  dsh ships no `tui` profile; `web` is its interactive chat, in the browser.
 - **Skills.** Found through `.agents/skills/` in a parent folder.
 - **Provider.** Connect it in dsh's own settings.
-- **Compaction.** The plugin compacts before the next step once the handover is verified past 250k, then
-  tells the agent to read its handover.
+- **Compaction.** Once the handover is verified past 250k, the agent asks you to type `/compact` (web keeps
+  compaction out of a plugin's reach; headless compacts by itself), then reads its handover.
 - **No sign-off at stop.** dsh has no hook for it, so the skill `sign-off` does that step.
 
 ## Check the hooks before round 00

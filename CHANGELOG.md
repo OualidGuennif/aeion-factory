@@ -8,6 +8,9 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 - Droid registers PreCompact: a compaction before a verified handover runs and closure (handover,
   `work/current.md`, docs, checkpoint) is owed right after it, as for Codex. Droid still has no 250k alert.
+- dsh starts with its `web` profile (it ships no `tui`; the demo's `--profile tui` command failed), and the
+  guards now run there: compaction is a separate plugin entry, since web keeps that service inside each
+  agent preset. Without it the agent asks the user for `/compact`, and a token fall marks the compaction.
 - The demo gains a dsh run (`demo/dsh/`, `demo/start/dsh/START.md`); every demo workspace has the 1.5.0 hooks,
   skills and tools (Codex and OpenCode keep their app and run state).
 

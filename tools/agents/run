@@ -51,8 +51,9 @@ if provider == 'pi':
         sys.exit('Æion Factory requires Pi 1.4.0+ for its extension events.')
     sys.exit(subprocess.run(['pi', *arguments], cwd=root, shell=False).returncode)
 if provider == 'dsh':
-    # dsh loads project plugins only from a patch overlay; the profile (tui, web, headless) comes first.
-    profile, rest = (arguments[0], arguments[1:]) if arguments and not arguments[0].startswith('-') else ('tui', arguments)
+    # dsh loads project plugins only from a patch overlay; the profile comes first. dsh ships no tui profile:
+    # web (a browser UI) is the interactive one, headless answers one task.
+    profile, rest = (arguments[0], arguments[1:]) if arguments and not arguments[0].startswith('-') else ('web', arguments)
     patch = ['--patch', str(root / '.dsh/factory.patch.yml')]
     sys.exit(subprocess.run(['dsh', '--profile', profile, *patch, *rest], cwd=root, shell=False).returncode)
 if provider == 'codex':

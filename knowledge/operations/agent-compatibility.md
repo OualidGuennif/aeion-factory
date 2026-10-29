@@ -83,14 +83,19 @@ directory does not establish loaded hooks or identical runtime guarantees.
   before compaction; the first refused compaction creates the skeleton to fill. Native token stops and strict pre-request 300k admission are unqualified.
 - dsh (DeepSeek Harness, CLI `dsh`, 0.2.1-rc.3) reads `AGENTS.md`/`CLAUDE.md` from the project root down
   to its folder and skills from `.dsh/skills` and `.agents/skills`, so the shared rules and skills need no
-  copy. It loads project plugins only from a patch overlay: `tools/agents/run dsh [tui|web|headless]`
-  passes `--patch .dsh/factory.patch.yml`, which inserts `.dsh/plugins/factory/index.js`. The plugin's
+  copy. It loads project plugins only from a patch overlay: `tools/agents/run dsh [web|headless]` (web, a
+  browser UI, by default; dsh ships no `tui` profile) passes `--patch .dsh/factory.patch.yml`, which
+  inserts `.dsh/plugins/factory/index.js` (the guards) and `compaction.js` (the compaction service, shared
+  through `seam.js`). The web profile keeps `compaction` inside each agent preset, not at its root, so there
+  the second entry stays pending ("waiting for service: compaction") while the guards run. The plugin's
   `ctx.tools.guard` sends every tool call as PreToolUse to `tools/agents/hook.py dsh` (a returned reason
   denies it and no later policy can undo that; a call without an agent is refused), with
   `ctx.tokenMeter.measure(session).totalTokens` as the usage; `tools/post-execute` sends PostToolUse.
   Once a verified handover asks for compaction, the next `agent/pre-step` sends PreCompact and, when
   allowed, compacts through `ctx.compaction.compactIfNeeded(agent, 'context-overflow')`, then steers a
-  message that resumes from the handover. `bash` is Bash, `read`/`write`/`edit` name `file_path`,
+  message that resumes from the handover. Without the root service (web) it steers the agent to ask the
+  user for `/compact`; a token measure that falls to under half between two calls marks that compaction,
+  so the next call sends SessionStart with `source: compact`. `bash` is Bash, `read`/`write`/`edit` name `file_path`,
   `str_replace_editor` is Edit (Read for `view`), `glob`/`grep` are Glob/Grep. dsh's own pressure
   compaction (about 55% of a 1M window) is not refused; past 300k only closure runs, so it is reached
   only if closure never completes. A dsh launched without the patch has no Æion Factory hooks.

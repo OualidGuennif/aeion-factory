@@ -2,14 +2,15 @@
 
 Task state only. One entry per open task, newest first. At most 150 lines, 10 per entry.
 Finished tasks are deleted: the commit message and knowledge/ keep what matters.
-Status: ACTIVE, WAITING-OWNER, MEASURING, BLOCKED, BACKLOG.
+Status: ACTIVE, WAITING-OWNER, MEASURING, BLOCKED, BACKLOG. An entry is `## <title> — <STATUS>`, then the
+lines `- Owner decision:`, `- State:`, `- Next:` (with who), `- Blocker:`, `- Evidence:`.
 
-## demo/ Idea Board run and feedback for Æion — ACTIVE
-- Owner decision: 2026-10-28, Claude Code builds the Idea Board in a git-less copy (demo/claude_code/workspace), journals each round, files feedback, fixes small ones in the base.
-- State: briefs in demo/plan/; rounds 00–02 done (2396a52, 64a466b); FB-006 fixed in 2c2fb1d; only demo/<harness>/workspace/ is git-ignored (FB-001–009); rounds 03–04 done and visually approved (page + island; votes); round 05 done and approved (tags, search, 72 tests); round 06 done (Docker, 5 container checks); round 07 done (Graphify, 14 Archify diagrams, gallery; FB-010); base fixes FB-002/004/005/007/008/009/010 committed (9d4f78c..87a27b0); READMEs, app snapshot (result/), demo/codex/ ready (ce7c8c6); docs/diagrams.html (cdd6991).
-- Next: OpenCode run done (rounds 00–07, FB-001–003); Codex rerun rounds 00–06 committed (c422ead..0cf38b7), round 07 in progress after a stalled compaction (fixed in 39da8c4); then Claude Code run 2 and Pi from demo/start/ (who: owner).
+## demo/ Idea Board run 2 — WAITING-OWNER
+- Owner decision: 2026-10-28, each harness builds the Idea Board in a git-less copy, journals each round and files feedback; 2026-10-29, the run 1 wrap-up plan and run 2 driven by one orchestrator session.
+- State: run 1 done and archived for all five harnesses (demo/<h>/archive/run-01/, comparison in demo/README.md); its feedback fixed in the factory (c3f586f, fd288e9) or in the run 2 brief (e1f30ad); orchestrator brief in cfc92e1.
+- Next: the owner says go, then a Claude Code session runs demo/start/orchestrator/START.md, one harness at a time (who: owner, then agent).
 - Blocker: none.
-- Evidence: work/handovers/35c6f26d-3a08-48c8-8457-2cb97c7285df.md
+- Evidence: demo/README.md; demo/start/orchestrator/START.md; work/handovers/b5bf5c06-1101-47fa-a0b7-f0ca1ac15381.md
 
 ## Live Devin, Droid, Antigravity and Pi hook qualification — WAITING-OWNER
 - Owner decision: 2026-10-27, support Devin, Droid and Antigravity; 2026-10-28, Pi 1.4.0; adapters use documented, not live-run, payloads.

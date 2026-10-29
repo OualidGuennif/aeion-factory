@@ -24,7 +24,7 @@ const bash = (command) => ({ type: 'tool_call', toolCallId: 'call-1', toolName: 
 test('Pi registers the start, tool and compaction events', () => {
   const { handlers } = load(root);
   assert.deepEqual(Object.keys(handlers).sort(),
-    ['before_agent_start', 'session_before_compact', 'session_compact', 'tool_call', 'tool_result']);
+    ['agent_before_settle', 'before_agent_start', 'session_before_compact', 'session_compact', 'tool_call', 'tool_result']);
 });
 
 test('Pi tool calls that read a secret are blocked before execution', async () => {
@@ -86,4 +86,26 @@ test('Pi compacts itself once the hook reports a verified handover, then resumes
   // Compacting aborts the running turn, so without this message the session would sit idle.
   assert.equal(sent.length, 1);
   assert.match(sent[0], /handover/);
+});
+
+test('Pi turns a sign-off finding at settlement into one more request (Pi FB-004)', async () => {
+  const folder = mkdtempSync(join(tmpdir(), 'pi-stop-'));
+  mkdirSync(join(folder, 'tools/agents'), { recursive: true });
+  writeFileSync(join(folder, 'tools/agents/hook.py'), [
+    'import json, sys',
+    'event = json.load(sys.stdin)',
+    "print(json.dumps({'decision': 'block', 'reason': 'Sign off: update CHANGELOG.md'} if event['hook_event_name'] == 'Stop' else {}))",
+  ].join('\n') + '\n');
+  const { handlers, ctx } = load(folder);
+  const result = await handlers.agent_before_settle({ type: 'agent_before_settle', entries: [], continue: false }, ctx);
+  rmSync(folder, { recursive: true, force: true });
+  assert.equal(result.continue, true);
+  assert.equal(result.entries[0].content, 'Sign off: update CHANGELOG.md');
+  // No finding lets the run settle.
+  const clean = mkdtempSync(join(tmpdir(), 'pi-stop-clear-'));
+  mkdirSync(join(clean, 'tools/agents'), { recursive: true });
+  writeFileSync(join(clean, 'tools/agents/hook.py'), 'import json\nprint(json.dumps({}))\n');
+  const quiet = load(clean);
+  assert.equal(await quiet.handlers.agent_before_settle({ type: 'agent_before_settle', entries: [], continue: false }, quiet.ctx), undefined);
+  rmSync(clean, { recursive: true, force: true });
 });

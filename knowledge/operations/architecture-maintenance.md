@@ -28,6 +28,12 @@ sources:
   - id: tests
     resource: ../../tools/architecture/tests/test_refresh.py
     title: "Coverage, provenance and failure regressions"
+  - resource: ../../tools/architecture/process.py
+    title: "process.py, which names this doc as its spec"
+  - resource: ../../tools/architecture/gallery
+    title: "Single-file diagram gallery"
+  - resource: ../../tools/architecture/tests/test_gallery.py
+    title: "Gallery inlining and refusals"
 ---
 
 # Architecture maintenance
@@ -68,6 +74,15 @@ the two steps directly, with the parent's toolchain: `.aeion/integrations/graphi
 tools/architecture/graph.py <root> <out> <manifest.json>` (the manifest lists `{path, required}`),
 then `node .aeion/integrations/archify/archify/bin/archify.mjs render <type> <input.json> <out.html>`
 and `browser-check <out.html>`. Archify's evidence links need a git SHA, so a plain folder's diagrams carry none.
+`archify examples` is not a listing: it rewrites the example HTML inside the Archify checkout (a sandbox
+refuses it). To learn a diagram type, read the pinned schema and example JSON files there instead.
+
+**Gallery.** `tools/architecture/gallery <render>` reads `<render>/diagrams/<name>.json` (Archify inputs; its
+receipts are skipped) with the rendered `<name>.html` beside each, plus an optional `catalog.json` list of
+`{name, question, group}`, and writes one `<render>/index.html` that inlines every diagram as a lazy iframe
+`srcdoc`. Browsers block iframes of sibling files from `file://`, so this is the page that opens from
+disk with no server. Rendered HTML is generated, never tracked: commit the JSON. A diagram without its
+render is refused, and nothing is written.
 
 **Working graph.** The baselines are immutable per commit. For questions while editing, the skill
 `graph` uses [`tools/architecture/ask`](../components/graph-queries.md): it rebuilds `.aeion/graph/`

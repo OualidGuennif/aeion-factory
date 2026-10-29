@@ -28,29 +28,15 @@ OpenCode builds the same Idea Board from [`../plan/`](../plan/00-start.md) as th
 3. Paste [`../start/opencode/START.md`](../start/opencode/START.md) as the first message.
 
 ## Results by round
-
-Run: 2026-10-28, one OpenCode session, all rounds pre-authorized by the owner. Factory 1.4.0
-(`578f4f3`), Deno 2.9.8, Docker 29.9.2. 51 tests at the end; no container/tests left running.
+Run 1 is archived in [`archive/run-01/`](archive/run-01/SUMMARY.md). Run 2 fills this table.
 
 | Round | Result | Tests | Guard refusals | Human help | Feedback |
 | --- | --- | --- | --- | --- | --- |
-| 00 setup | done | 736 factory cases, hook battery 0 failures | 1 (correct: `.env` read refused) | 1 (authorize all rounds) | none |
-| 01 scaffold | done | 3 + build + HTTP/dev smoke | 2 (correct: heredoc/pidfile intake) | 0 | FB-002 |
-| 02 ideas API | done | 24 + smoke | 0 | 0 | none |
-| 03 page | done | 31 + smoke | 0 | 0 | none |
-| 04 votes | done | 42 + 25/25 concurrent votes + smoke | 1 (correct: heredoc intake again) | 0 | FB-002 |
-| 05 filters/search | done | 51 + smoke | 0 | 1 (mid-round compact request; checkpoint verified) | none |
-| 06 Docker | done | 51 + 5 container checks (healthy, uid 1993, data survives restart, frozen lock) | 0 | 0 | none |
-| 07 architecture | done | 14 diagrams validate/render/browser-check; 5 graph answers | 1 (correct: `cat` dump after cd) | 0 | FB-001, FB-002, FB-003 |
-
-Findings worth keeping from this run:
-
-- Fresh 2 has no `ALL` handler key: a plain function is the catch-all (`app/routes/api/[...path].ts`).
-- `Deno.openKv` needs `"unstable": ["kv"]` **and** `deno.unstable` in the compiler `lib` when `lib` is
-  set explicitly, and it does not create the data folder (one module does: `app/store/kv.ts`).
-- Same-millisecond ULIDs are random: `monotonicUlid()` keeps KV key order = creation order.
-- Bounded optimistic retries cannot land 25 truly-concurrent votes (10 retries → 10 winners): a
-  per-id vote chain removes self-contention while the atomic check still guards other writers.
-- FB-001: `ask`'s incremental rebuild missed a frontmatter-only spec edit; deleting `.aeion/graph`
-  gave the correct answer (`ask` reported a spec gap that was already fixed).
-
+| 00 setup | not started | | | | |
+| 01 scaffold | not started | | | | |
+| 02 ideas API | not started | | | | |
+| 03 ideas page | not started | | | | |
+| 04 votes | not started | | | | |
+| 05 tags and search | not started | | | | |
+| 06 Docker | not started | | | | |
+| 07 architecture | not started | | | | |

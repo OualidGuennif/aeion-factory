@@ -7,7 +7,7 @@
     tools/knowledge/doc-links --diff BASE --worktree   the same, counting uncommitted changes too
 
 Doc to code: a concept's frontmatter `sources: - resource: ../../path`. Code to doc: one header line
-`Spec: knowledge/<doc>.md`. L3 passes when the doc changed too, or when a commit since BASE says
+`Spec: knowledge/<doc>.md`, whose doc must list the file (or a folder holding it) in its sources (L4). L3 passes when the doc changed too, or when a commit since BASE says
 `Docs-Checked: knowledge/<doc>.md` (with the reason). Directory sources are checked for existence
 only, so one file changing inside them asks for nothing. Spec: knowledge/policies/specs-first.md.
 """
@@ -21,7 +21,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / ".claude/hooks"))
 from secret_names import is_secret  # noqa: E402
 from project_files import git_active, project_files, inside, nested_projects  # noqa: E402
-RESOURCE_RE = re.compile(r"^\s*resource:\s*\"?([^\"\n]+?)\"?\s*$", re.MULTILINE)
+RESOURCE_RE = re.compile(r"^\s*(?:-\s+)?resource:\s*\"?([^\"\n]+?)\"?\s*$", re.MULTILINE)
 FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---\n", re.DOTALL)
 SPEC_RE = re.compile(r"\bSpec:\s*(knowledge/[\w./-]+\.md)")
 CHECKED_RE = re.compile(r"^Docs-Checked:[ \t]*(knowledge/[\w./-]+\.md)[ \t]+--[ \t]+\S[^\n]*$", re.MULTILINE)
@@ -137,12 +137,13 @@ def base_coverage(base, changed):
 
 def collect():
     """The broken links, and coverage: file -> the docs that cover it exactly (no directories)."""
-    problems, coverage = [], {}
+    problems, coverage, declared = [], {}, {}
     for doc in sorted((ROOT / "knowledge").rglob("*.md")):
         rel_doc = doc.relative_to(ROOT).as_posix()
         if rel_doc.startswith(SKIP_PREFIXES):
             continue
         for line, rel in doc_sources(doc):
+            declared.setdefault(rel_doc, set()).add(rel)
             target = ROOT / rel
             if not target.exists():
                 problems.append(f"RULE L2 {rel_doc}:{line} source {rel} does not exist; fix the path or drop the source.")
@@ -153,8 +154,12 @@ def collect():
             line = text[:m.start()].count("\n") + 1
             if not (ROOT / m.group(1)).is_file():
                 problems.append(f"RULE L1 {path}:{line} Spec: {m.group(1)} does not exist; point at the current doc.")
-            else:
-                coverage.setdefault(path, set()).add(m.group(1))
+                continue
+            coverage.setdefault(path, set()).add(m.group(1))
+            # The contract runs both ways: a file that names its spec is one of the spec's sources.
+            if not any(path == rel or path.startswith(rel + "/") for rel in declared.get(m.group(1), ())):
+                problems.append(f"RULE L4 {path}:{line} names {m.group(1)} as its spec, but the doc's sources omit it; "
+                                "add it as a `resource:` to that doc's frontmatter.")
     return problems, coverage
 
 

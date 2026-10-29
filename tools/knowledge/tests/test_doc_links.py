@@ -209,6 +209,17 @@ commit(t, "inline pointer baseline")
 commit(t, "behavior change with an inline pointer")
 check("an inline pointer cannot exempt executable changes", t, ["--diff", "HEAD~1"], 1, "RULE L3 src/app.ts")
 
+# A file that names its spec must be one of the spec's sources (Pi FB-004): the contract runs both ways.
+t = Path(tempfile.mkdtemp())
+(t / "knowledge/components").mkdir(parents=True)
+(t / "tools").mkdir()
+(t / "knowledge/components/tool.md").write_text("---\ntype: Component\ntitle: Tool\nsources:\n"
+                                                 "  - resource: ../../tools/listed.py\n    title: Listed first\n---\n\nBody.\n")
+(t / "tools/listed.py").write_text(f"# {TAG} knowledge/components/tool.md\n")
+check("a list-first resource is a source", t, [], 0, "PASS")
+(t / "tools/unlisted.py").write_text(f"# {TAG} knowledge/components/tool.md\n")
+check("a Spec line whose doc omits the file", t, [], 1, "RULE L4 tools/unlisted.py:1")
+
 for f in failures:
     print("FAIL:", f)
 print(f"{passes} passed, {len(failures)} failed")

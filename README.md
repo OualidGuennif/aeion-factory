@@ -79,7 +79,7 @@ policy before installing. CI analyses every main update either way.
    | Codex | `codex` | Trust the project, enable its hooks in `/hooks`, then restart Codex. Skills come from `.agents/skills`. |
    | OpenCode 2.1.4+ | `opencode` | Connect your provider in OpenCode. The root `opencode.json` and `.opencode/plugins/factory/` load on their own; on a database conflict, `tools/agents/run opencode --isolated`. |
    | Pi 1.4.0+ | `pi` | Accept the trust prompt, so `.pi/extensions/factory/` loads (the startup list names `factory`). Connect your provider in Pi. |
-   | dsh 0.2.1+ | `tools/agents/run dsh` | The launcher adds `--patch .dsh/factory.patch.yml`, which loads the adapter; skills come from `.agents/skills`. Connect your provider in dsh. |
+   | dsh 0.2.1+ | `tools/agents/run dsh` (web UI) | The launcher adds `--patch .dsh/factory.patch.yml`, which loads the adapter; skills come from `.agents/skills`. Connect your provider in dsh. Ports, option order and background servers: [dsh in detail](#deepseek-harness-dsh-in-detail). |
    | Devin CLI | `devin` | Approve the project hooks (`.devin/`). |
    | Droid (factory.ai) | `droid` | Approve the project hooks (`.factory/settings.json`). |
    | Google Antigravity | `agy` | Trust the folder; hooks come from `.agents/hooks.json`. |
@@ -131,7 +131,7 @@ policy before installing. CI analyses every main update either way.
    | Codex | `.codex/config.toml`, `.codex/hooks.json`, `.agents/skills` links | Trust the project, enable the hooks in `/hooks`, restart |
    | OpenCode | `opencode.json` (merged with yours), `.opencode/plugins/factory/` | Restart; reconnect the provider if you use `--isolated` |
    | Pi | `.pi/extensions/factory/`, `.agents/skills` links | Restart from the project root and accept the trust prompt |
-   | dsh | `.dsh/`, `.agents/skills` links | Start with `tools/agents/run dsh [profile]` |
+   | dsh | `.dsh/`, `.agents/skills` links | Start with `tools/agents/run dsh [web\|headless]`; see [dsh in detail](#deepseek-harness-dsh-in-detail) |
    | Devin, Droid, Antigravity | `.devin/`, `.factory/`, `.agents/hooks.json` | Approve the project hooks or trust the folder |
 
 5. Check the hooks as in a new project (step 3), then say yes to the Git hooks, Graphify and Archify
@@ -148,7 +148,7 @@ Run these from the repository root. Additional arguments are native CLI argument
 | Codex | `tools/agents/run codex` | Trusted `.codex/config.toml` / `hooks.json`, shared `.agents/skills` |
 | OpenCode | `tools/agents/run opencode` | Root `opencode.json`, native V2 plugin in `.opencode/plugins/factory/` |
 | Pi | `tools/agents/run pi` | Extension in `.pi/extensions/factory/`, loaded once the project is trusted |
-| dsh | `tools/agents/run dsh [tui\|web\|headless]` | Plugin in `.dsh/plugins/factory/`, loaded by `.dsh/factory.patch.yml` |
+| dsh | `tools/agents/run dsh [web\|headless]` | Plugin in `.dsh/plugins/factory/`, loaded by `.dsh/factory.patch.yml` |
 | Devin CLI | `tools/agents/run devin` | `.devin/hooks.v1.json` and `config.json`, `AGENTS.md`, shared `.agents/skills` |
 | Droid (factory.ai) | `tools/agents/run droid` | `.factory/settings.json` hooks, `AGENTS.md`, shared `.agents/skills` |
 | Google Antigravity | `tools/agents/run antigravity` | `.agents/hooks.json`, `AGENTS.md`, shared `.agents/skills` |
@@ -156,6 +156,45 @@ Run these from the repository root. Additional arguments are native CLI argument
 The launchers enter the project root and check the architecture baseline for the current commit;
 without one they recommend it and continue. The original Claude entry point, `tools/context/run`,
 also remains available.
+
+### DeepSeek Harness (dsh) in detail
+
+dsh needs more care than the other agents: it loads a project's plugins only from a patch overlay passed
+on its command line, and its profiles differ in what a plugin may reach.
+
+- **Profiles.** dsh 0.2.1 ships `web` (its interactive chat, in the browser), `headless` (one task, then
+  exit) and `desktop` (run only by the DeepSeek Harness app). There is no `tui` profile:
+  `dsh --profile tui` fails with `profile "tui" does not exist`. The desktop app does not load the patch,
+  so its sessions are not guarded; use `web`.
+- **Starts.** From the root, `tools/agents/run dsh` starts `web` and `tools/agents/run dsh headless "<task>"`
+  answers one task (`--session-id <id>` continues a session). From a subfolder, or with `dsh` itself, pass
+  the patch: `cd demo && dsh web --patch ../.dsh/factory.patch.yml`.
+- **Option order.** `--patch` is a launcher option: put it right after the profile, before the app's own
+  options. In `dsh web --no-open --patch ...` the launcher hands `--patch` to the web app, which fails with
+  `unknown option '--patch'`. Write `dsh web --patch <file> --no-open --port 0 ...`.
+- **Port.** `web` listens on 3080. A `dsh web` already running (a background server, another project)
+  makes a second one fail with `EADDRINUSE`; add `--port 0` for a free port.
+- **Headless.** No browser, no port: from the project (or a subfolder with the patch), each call answers
+  one task. `--json` prints the events, the first with the `sessionId`; `--session-id <id>` continues it.
+  ```bash
+  cd demo && dsh headless --patch ../.dsh/factory.patch.yml --json "$(cat start/dsh/START.md)"
+  dsh headless --patch ../.dsh/factory.patch.yml --session-id <id> "continue"
+  ```
+- **Sessions are guarded by their own folder.** The plugin finds `tools/agents/hook.py` above each
+  session's working directory, not the launch folder; a session outside an Æion Factory project is left
+  alone.
+- **Startup warning.** In `web`, dsh prints `aeion-factory-compaction ... pending (waiting for service:
+  compaction)`. That is expected: web keeps compaction inside each agent preset, out of a plugin's reach,
+  while the guards (entry `aeion-factory`) run. `headless` loads both entries.
+- **Compaction.** Past 250k with a verified handover, `headless` compacts by itself; in `web` the agent asks
+  you to type `/compact`, and the plugin sees the token count fall and resumes the session from its
+  handover.
+- **Check it is loaded.** Ask the agent to run `cat .env`: it must be refused by
+  `.claude/hooks/guard-bash.py`. If it runs, the patch is not loaded or the session is outside the project.
+- **Provider and versions.** Connect your provider in dsh's own settings. `npx @deepseek-ai/dsh` may run
+  another version than an installed `dsh` (`dsh --version`); both need 0.2.1+.
+
+Details: [agent compatibility](knowledge/operations/agent-compatibility.md).
 
 ## Available commands
 

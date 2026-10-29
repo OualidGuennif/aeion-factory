@@ -431,9 +431,33 @@ class HookTests(unittest.TestCase):
         self.call('droid',hook_event_name='PostToolUse',tool_name='Create',tool_input={'file_path':str(self.root/'b.py')})
         self.assertEqual(set(log.read_text().splitlines()),{'b.py'})
 
+    def test_droid_compaction_before_its_handover_owes_the_closure_after_it(self):
+        session = hook.key('droid', {'session_id': 'context-droid'})
+        handover = hook.budget.handover_path(self.root, session)
+        state_file = self.root / '.aeion/context' / f'{session}.json'
+        droid = lambda **changes: self.call('droid', session_id='context-droid', **changes)
+        edit = {'tool_name': 'Edit', 'tool_input': {'file_path': str(self.root / 'src.py')}}
+        denied = lambda result: result.get('hookSpecificOutput', {}).get('permissionDecision') == 'deny'
+        # Droid measures no tokens: work runs freely, and a compaction is never refused (Droid documents no refusal).
+        self.assertFalse(denied(droid(**edit)))
+        self.assertNotIn('continue', droid(hook_event_name='PreCompact', trigger='auto'))
+        droid(hook_event_name='SessionStart', source='compact')
+        # After it, only closure runs: the handover and work/current.md, not the code.
+        self.assertTrue(denied(droid(**edit)))
+        self.assertFalse(denied(droid(tool_name='Edit', tool_input={'file_path': str(self.root / 'work/current.md')})))
+        handover.write_text('## Scope\nx\n## Completed\nx\n## Remaining\nx\n## Constraints\nx\n## Evidence\nx\n')
+        state = json.loads(state_file.read_text())
+        state['checkpoint'] = {'tree': hook.budget.fingerprint(self.root),
+                               'handover': hook.budget.hashlib.sha256(handover.read_bytes()).hexdigest()}
+        hook.budget.atomic(state_file, json.dumps(state))
+        self.assertFalse(denied(droid(**edit)))
+        self.assertEqual(json.loads(state_file.read_text())['state'], 'RUNNING')
+        # A compaction after a verified handover owes nothing.
+        self.assertIn('verified handover', droid(hook_event_name='PreCompact', trigger='manual')['systemMessage'])
+
     def test_droid_settings_route_every_event_to_the_adapter(self):
         hooks=json.loads((ROOT/'.factory/settings.json').read_text())['hooks']
-        self.assertEqual(set(hooks),{'SessionStart','PreToolUse','PostToolUse','Stop'})
+        self.assertEqual(set(hooks),{'SessionStart','PreToolUse','PostToolUse','PreCompact','Stop'})
         # Each registration also names its event, so a payload without hook_event_name is still understood.
         for event, entries in hooks.items():
             self.assertTrue(all(h['command'].endswith(f'tools/agents/hook.py" droid {event}') for e in entries for h in e['hooks']))

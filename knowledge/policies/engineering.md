@@ -10,6 +10,12 @@ sources:
   - id: guide
     resource: ../../efficiency/1-quarks.md
     title: "Phase 1 of the guide"
+  - resource: ../../tools/git-hooks/pre-push
+    title: "pre-push, which names this doc as its spec"
+  - resource: ../../tools/release/release
+    title: "release, which names this doc as its spec"
+  - resource: ../../tools/repo-health/repo-health
+    title: "repo-health, which names this doc as its spec"
 ---
 
 # How code is written here

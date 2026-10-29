@@ -39,14 +39,26 @@ def edge(relation, origin, source_file, line):
             "source_file": source_file, "source_location": f"L{line}", "weight": 1.0}
 
 
-def spec_source_edges(nodes):
+def disk_frontmatter(root, doc, cached):
+    """The doc's frontmatter as it is on disk now, parsed as Graphify parses it. Graphify's cache keys a
+    page by its body alone, so after a frontmatter-only edit the page node keeps the old `sources`; a page
+    whose file is gone keeps what the node has."""
+    if not (root / doc).is_file():
+        return cached or {}
+    from graphify.extractors.markdown import _parse_frontmatter, _split_frontmatter
+    lines = (root / doc).read_text(encoding="utf-8", errors="replace").splitlines()
+    return _parse_frontmatter(_split_frontmatter(lines)[0])
+
+
+def spec_source_edges(nodes, root):
     """The spec -> file edges a doc's frontmatter `sources` declares, and the resources that name no
     file in the graph. Graphify keeps the frontmatter on the page node but links only the code names
     written in the body, so the factory's own spec <-> code contract would otherwise be missing."""
     files = file_nodes(nodes)
     edges, unresolved = [], []
     for node_id, data in nodes:
-        sources = (data.get("frontmatter") or {}).get("sources") if data.get("node_kind") == "page" else None
+        page = data.get("node_kind") == "page"
+        sources = disk_frontmatter(root, str(data["source_file"]), data.get("frontmatter")).get("sources") if page else None
         if not isinstance(sources, list):
             continue
         doc = str(data["source_file"])
@@ -201,7 +213,7 @@ def main():
         graph.add_node(f"file:{rel}", label=posixpath.basename(rel), source_file=rel, source_location="L1",
                        file_type="inventory")
     nodes = list(graph.nodes(data=True))
-    spec_edges, unresolved = spec_source_edges(nodes)
+    spec_edges, unresolved = spec_source_edges(nodes, root)
     line_edges, unresolved_lines = spec_line_edges(nodes, root)
     test_edges = test_name_edges(nodes, root)
     toolchain_edges, toolchain_status = toolchain_import_edges(nodes, root, [item["path"] for item in manifest])

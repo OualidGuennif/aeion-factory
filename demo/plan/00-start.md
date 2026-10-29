@@ -64,27 +64,42 @@ Each harness runs the same briefs in its own folder, so the runs can be compared
 ```
 demo/<harness>/
   README.md              the run: factory version, results by round, time, findings
-  journal/               00-setup.md, then one file per round (img/ for screenshots)
+  journal/               00-setup.md, then one file per round (img/ for screenshots); run.jsonl, the live log
   feedback_for_aeion/    FB-001-<slug>.md …: severity, evidence, proposed fix, status
-  render/                round 07 output: index.html, diagrams/, graphify/
+  render/                round 07 output: diagrams/*.json, graphify/; the HTML is generated
   workspace/             the factory copy without git (git archive HEAD); the app goes in workspace/app/
-  archive/run-NN/        after round 07: SUMMARY.md, journal/ and feedback_for_aeion/ of that run
+  workspace.run-NN/      an earlier run's copy, kept
+  archive/run-NN/        after round 07: SUMMARY.md, journal/, feedback_for_aeion/ and render/ of that run
 ```
 
-Only `workspace/` is ignored by the parent repository; everything else is committed. When a run ends,
-its `README.md` becomes `archive/run-NN/SUMMARY.md` beside its journal and feedback; `render/` and the
-app are dropped (git history keeps them), and the folder is reset for the next run.
+The parent repository ignores `workspace/`, `workspace.run-NN/`, live logs (`journal/*.jsonl`) and
+rendered HTML (`render/**/*.html`); everything else is committed. A tracked live log changes on every
+step, so every checkpoint receipt would be stale. When a run ends, its journal, feedback and render
+move to `archive/run-NN/` with a `SUMMARY.md`, and the folder is reset for the next run.
 
-Open the agent at the **repository root**, as the Claude Code run did, or in **`demo/`**. Both work
-because `demo/` sits inside the git repository: the agent loads the root `AGENTS.md` (Codex walks from
+Open the agent at the **repository root** (run 2 does). `demo/` also works for reading, because
+`demo/` sits inside the git repository: the agent loads the root `AGENTS.md` (Codex walks from
 the git root down; OpenCode takes the nearest one above, so `demo/` has none of its own), the hook
 commands resolve the root with `git rev-parse --show-toplevel`, and OpenCode's plugin finds
 `tools/agents/hook.py` above it. Opened in `demo/`, the agent's paths start at `demo/`
-(`<harness>/workspace/`), and a sandbox that writes only below its folder asks before a `git commit`.
+(`<harness>/workspace/`), and a sandbox that writes only below its folder refuses `.git` and the root
+`work/` that the 250k closure writes (dsh run 1).
 The agent writes the app under `demo/<harness>/workspace/` and its records beside it, and runs the
 copy's commands from inside the copy. Opening the agent inside `workspace/` does not isolate it: the
 copy has no `.git`, so the agent's project discovery and the hook commands still resolve to the parent
 repository. Its sandbox may also refuse writes to the `journal/` beside the copy.
+
+## Run rules (from run 1)
+
+- **One harness at a time.** Two sessions in one tree make each other's checkpoint receipts stale.
+- **One commit per round**, with only `demo/<harness>/` files, after the round's checks pass. When the
+  sandbox refuses the commit (a headless run has no approval channel), the agent stops with the staged
+  paths and the commit command, the driver runs it, and the round records one human help. Never a
+  workaround.
+- **The task entry and the handover have fixed shapes.** A `work/current.md` entry is
+  `## <title> — <STATUS>`, then `- Owner decision:`, `- State:`, `- Next:` (naming who), `- Blocker:`,
+  `- Evidence:`. A handover uses exactly the lines `## Scope`, `## Completed`, `## Remaining`,
+  `## Constraints`, `## Evidence`. `knowledge-check` and the 250k message say the same.
 
 Round 00 (setup) checks the factory copy itself before any app code:
 - run the copy's own test command (`tools/factory-tests`) inside `workspace/`;

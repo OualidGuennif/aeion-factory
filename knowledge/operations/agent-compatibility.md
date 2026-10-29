@@ -30,6 +30,10 @@ sources:
     title: "Droid hook registrations"
   - resource: ../../.agents/hooks.json
     title: "Antigravity hook registrations"
+  - resource: ../../.dsh/plugins/factory/compaction.js
+    title: "compaction.js, which names this doc as its spec"
+  - resource: ../../.dsh/plugins/factory/seam.js
+    title: "seam.js, which names this doc as its spec"
 generated:
   by: aeion-factory/1.2
   at: 2026-10-25
@@ -65,8 +69,9 @@ directory does not establish loaded hooks or identical runtime guarantees.
   Its compaction aborts the running turn, so once it is done the extension sends a message that resumes
   the task from the handover.
   The extension sends `ctx.getContextUsage()` to the shared rule and calls `ctx.compact()` at 250k once
-  the handover is verified. Like OpenCode, Pi has no
-  Stop sign-off: use the skill `sign-off`. Not yet qualified live: the events follow the 1.4.0 docs and
+  the handover is verified. `agent_before_settle` sends Stop: a sign-off finding becomes a displayed
+  `custom_message` entry with `continue: true` (one more request); the hook shows each finding once, so
+  the next settlement passes. Not yet qualified live: the events follow the 1.4.0 docs and
   published type declarations.
 - Token feedback (narration between tools, full-file rewrites; advisory, never blocking) covers
   Claude Code natively and Codex through its rollout transcript. Devin, Droid and Antigravity pass
@@ -83,17 +88,33 @@ directory does not establish loaded hooks or identical runtime guarantees.
   before compaction; the first refused compaction creates the skeleton to fill. Native token stops and strict pre-request 300k admission are unqualified.
 - dsh (DeepSeek Harness, CLI `dsh`, 0.2.1-rc.3) reads `AGENTS.md`/`CLAUDE.md` from the project root down
   to its folder and skills from `.dsh/skills` and `.agents/skills`, so the shared rules and skills need no
-  copy. It loads project plugins only from a patch overlay: `tools/agents/run dsh [tui|web|headless]`
-  passes `--patch .dsh/factory.patch.yml`, which inserts `.dsh/plugins/factory/index.js`. The plugin's
+  copy. It loads project plugins only from a patch overlay: `tools/agents/run dsh [web|headless]` (web, a
+  browser UI, by default; dsh ships no `tui` profile) passes `--patch .dsh/factory.patch.yml`, which
+  inserts `.dsh/plugins/factory/index.js` (the guards) and `compaction.js` (the compaction service, shared
+  through `seam.js`). The web profile keeps `compaction` inside each agent preset, not at its root, so there
+  the second entry stays pending ("waiting for service: compaction") while the guards run. One web server
+  serves many projects, so the plugin finds `tools/agents/hook.py` above each session's own directory
+  (`ctx.workingDirectory.get(session)`, which follows the working-directory tool), not the launch folder;
+  a session outside an Æion Factory project is left alone. The plugin's
   `ctx.tools.guard` sends every tool call as PreToolUse to `tools/agents/hook.py dsh` (a returned reason
   denies it and no later policy can undo that; a call without an agent is refused), with
   `ctx.tokenMeter.measure(session).totalTokens` as the usage; `tools/post-execute` sends PostToolUse.
+  dsh has no hook that adds text to the prompt, so the SessionStart context (the checkpoint profile and
+  recovery pointer) is steered to the agent on its first guarded call; `agent/turn-stopping` sends Stop,
+  and a sign-off finding is steered as one more step (shown once per session, so it cannot loop).
   Once a verified handover asks for compaction, the next `agent/pre-step` sends PreCompact and, when
   allowed, compacts through `ctx.compaction.compactIfNeeded(agent, 'context-overflow')`, then steers a
-  message that resumes from the handover. `bash` is Bash, `read`/`write`/`edit` name `file_path`,
+  message that resumes from the handover. Without the root service (web) it steers the agent to ask the
+  user for `/compact`; a token measure that falls to under half between two calls marks that compaction,
+  so the next call sends SessionStart with `source: compact`. `bash` is Bash, `read`/`write`/`edit` name `file_path`,
   `str_replace_editor` is Edit (Read for `view`), `glob`/`grep` are Glob/Grep. dsh's own pressure
   compaction (about 55% of a 1M window) is not refused; past 300k only closure runs, so it is reached
   only if closure never completes. A dsh launched without the patch has no Æion Factory hooks.
+  Its sandbox ("workspace-write") writes only below the launch folder and headless has no approval
+  channel: launched in a subfolder (`demo/`), it cannot write the root's `.git`, `work/current.md` or
+  `work/handovers/`, so whoever drives the run commits and writes the closure files there; launched at
+  the root, closure works. Programs that keep state in the home folder need it moved inside the
+  workspace, e.g. `DOCKER_CONFIG=$PWD/.docker` (with the CLI plugins linked) for `docker compose`.
 - Devin CLI reads `AGENTS.md` and `.agents/skills` natively. By default it also imports
   `.claude/settings.json` hooks, but its tools are named `exec`, `read`, `edit`, `write` and
   `apply_patch`, so Claude matchers never fire and the matcher-less Claude budget hook reads a
@@ -117,7 +138,10 @@ directory does not establish loaded hooks or identical runtime guarantees.
   names carrying a `command` string goes through the shell guard (and the path guard for a
   file). It refuses with `permissionDecision: deny`. As for Devin, each registration passes its
   event name and a payload without `session_id` uses one key per clone, so a missing field refuses
-  nothing by itself. Droid has no Æion Factory compaction checkpoint or token stop.
+  nothing by itself. Droid passes no token count, so it gets no 250k alert or 300k stop, but its
+  PreCompact (documented with `trigger` manual or auto) reaches the adapter: a compaction before a
+  verified handover runs, since Droid documents no way to refuse one, and its compact SessionStart
+  then allows only closure (handover, `work/current.md`, docs, checkpoint) until the checkpoint passes.
 - Google Antigravity (the `agy` CLI and the IDE) reads `AGENTS.md` and `.agents/skills`, and
   workspace hooks from `.agents/hooks.json` once the folder is trusted. One `aeion-factory` group
   sends PreToolUse and PostToolUse (matcher `.*`) and Stop to `tools/agents/hook.py antigravity

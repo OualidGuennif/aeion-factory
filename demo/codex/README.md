@@ -28,32 +28,15 @@ Codex builds the same Idea Board from [`../plan/`](../plan/00-start.md) as the
    before each `git commit`: approve it.
 
 ## Results by round
-
-All rounds are complete locally. The owner authorized rounds 01–07 together; no push.
-The application is retained in `workspace/app/` (git-ignored), and the gallery opens offline.
-The ordinary archive/reset step is deferred so these deliverables remain available for review.
-
-- [Run the app](workspace/app/README.md)
-- [Open the architecture gallery](render/index.html)
-- [Read the five graph investigations](render/graphify/use-cases.md)
-- [Final round journal and evidence](journal/07-architecture.md)
+Run 1 is archived in [`archive/run-01/`](archive/run-01/SUMMARY.md). Run 2 fills this table.
 
 | Round | Result | Tests | Guard refusals | Human help | Feedback |
 | --- | --- | --- | --- | --- | --- |
-| 00 | Workspace and hooks qualified | 743 factory assertions/tests; 2 skips; 10 hook cases pass, 5 informational | 5 expected synthetic denials; 0 during work | 0 | none new |
-| 01 | Fresh and Hono scaffold | 3 pass; app/build/HTTP/factory gates pass | 1 false positive | 1 shared authorization for all rounds | FB-001 |
-| 02 | Validated ideas API and KV | 28 pass; app/build/HTTP/factory gates pass | 0 | 0 additional | none new |
-| 03 | SSR and enhanced creation | 33 pass; app/build/HTTP/Chrome/factory gates pass | 0 | 0 additional | none new |
-| 04 | Atomic votes and sorting | 40 pass; app/build/HTTP/Chrome/factory gates pass | 0 | 0 additional | none new |
-| 05 | Indexed tags and bounded search | 49 pass; app/build/HTTP/Chrome/factory gates pass | 0 | 0 additional | none new |
-| 06 | Locked non-root Docker and durable volume | 49 pass; build/health/persistence/audit/factory gates pass | 1 false positive | 0 additional | FB-002 |
-| 07 | Source-checked graph report and 14 diagrams; API startup regression fixed | 50 pass; 14 validate/render/browser checks; offline gallery, app and rebuilt Docker gates pass | 1 sandbox refusal | 0 additional | FB-003 |
-
-Final validation: formatting, lint, types, 50 app tests and production build pass. Phone/desktop
-checks pass in light and dark; unique enhanced creation and vote readbacks pass. Final Docker
-readback preserved the exact idea across down/up, ran as UID 1993 and became healthy in 5.52 seconds.
-Only the isolated test container/network/volume were removed. No running demo service is left.
-
-Three open framework frictions are documented in [feedback](feedback_for_aeion/README.md).
-No base-factory fixes, new global tools, remote CI or push were part of this run. The final journal
-states the security/review limits; the workspace remains local, as the brief requires.
+| 00 setup | not started | | | | |
+| 01 scaffold | not started | | | | |
+| 02 ideas API | not started | | | | |
+| 03 ideas page | not started | | | | |
+| 04 votes | not started | | | | |
+| 05 tags and search | not started | | | | |
+| 06 Docker | not started | | | | |
+| 07 architecture | not started | | | | |

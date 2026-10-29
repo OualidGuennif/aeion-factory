@@ -36,6 +36,10 @@ docker compose exec web id -u                        # not 0
 docker compose down -v
 ```
 
+In a sandbox that cannot write `~/.docker` (dsh run 1), point Docker at a config folder it can
+write, for the commands above only: `DOCKER_CONFIG="$PWD/.docker-config" docker compose …`, with that
+folder git-ignored. Do not change the user's Docker settings.
+
 ## Tests required
 The commands above, run and kept in the round's journal (they are the container's tests).
 

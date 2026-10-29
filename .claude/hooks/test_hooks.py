@@ -187,6 +187,21 @@ expect("bash allow: a glob in a heredoc fed to a program is text",
        run_hook("guard-bash.py", {"command": "git commit -F - <<'EOF'\nfix head $PWD/sub/.e*\nEOF", "workdir": str(glob_dir)}), 0)
 expect("bash deny: a glob in a heredoc fed to a shell",
        run_hook("guard-bash.py", {"command": "bash <<'EOF'\nhead $PWD/sub/.e*\nEOF", "workdir": str(glob_dir)}), 2)
+# Prose written to a file by cat or tee names files without opening them (Codex FB-002); a reader still reads.
+expect("bash allow: prose naming a secret written to a file",
+       run_hook("guard-bash.py", {"command": "cat > notes.md <<'EOF'\n.env files and local data are excluded.\nEOF"}), 0)
+for command in ["cat .env > notes.md <<'EOF'\ntext\nEOF", "cat > notes.md <<EOF\n$(cat .env)\nEOF",
+                "python3 - <<'EOF'\nopen('.env').read()\nEOF", "bash <<'EOF'\ncat .env\nEOF"]:
+    expect(f"bash deny: secret in a heredoc that is read: {command[:24]}", run_hook("guard-bash.py", {"command": command}), 2)
+# A copy of the environment handed to a child process is not a dump (Codex FB-001); printing a copy is.
+for command in ["python3 -c \"import os,subprocess; r=subprocess.run(['deno','test'],env=dict(os.environ,DENO_DIR='/tmp/d'),capture_output=True,text=True); print(r.stdout)\"",
+                "python3 -c \"import os,subprocess; subprocess.run(['ls'], env={**os.environ, 'A': '1'})\"",
+                "python3 -c \"import os,subprocess; subprocess.run(['ls'], env=os.environ.copy())\""]:
+    expect(f"bash allow env copy: {command[40:70]}", run_hook("guard-bash.py", {"command": command}), 0)
+for command in ["python3 -c \"import os; print(dict(os.environ, A=1))\"",
+                "python3 -c \"import os; env=dict(os.environ); print(env)\"",
+                "python3 -c \"import os,subprocess; subprocess.run(['ls'], env=os.environ); print(os.environ)\""]:
+    expect(f"bash deny printed env copy: {command[20:50]}", run_hook("guard-bash.py", {"command": command}), 2)
 # A property access glued to code punctuation (Deno KV's entry.key) is not a file, in code or text heredocs only.
 for command in ["python3 - <<'PY'\nt = s.replace('a', '.map((entry) => entry.key)')\nPY",
                 "python3 - <<'PY'\nprint(keys, e.key)\nPY",
@@ -329,6 +344,11 @@ with tempfile.TemporaryDirectory() as intake_dir:
         expect("intake allows exact threshold cat", run_hook("guard-bash.py", {"command": f"cat '{boundary}'"}), 0)
     expect("intake respects native Bash workdir", run_hook("guard-bash.py", {"command": "cat many.log", "workdir": intake_dir}), 2)
     expect("intake refuses unknown cwd after cd", run_hook("guard-bash.py", {"command": f"cd '{intake}'; cat many.log"}), 2, stderr_has="after a cd")
+    # An absolute path is sized whatever the directory (OpenCode FB-002), captured or not.
+    expect("intake sizes an absolute cat after cd", run_hook("guard-bash.py", {"command": f"cd /tmp && cat '{small}'"}), 0)
+    expect("intake sizes a captured absolute cat after cd", run_hook("guard-bash.py", {"command": f"cd /tmp && x=$(cat '{small}') && echo $x"}), 0)
+    expect("intake refuses a large absolute cat after cd", run_hook("guard-bash.py", {"command": f"cd /tmp && cat '{many}'"}), 2, stderr_has="over 400 lines")
+    expect("intake refuses a mixed relative cat after cd", run_hook("guard-bash.py", {"command": f"cd /tmp && cat '{small}' many.log"}), 2, stderr_has="after a cd")
     expect("intake names a variable path as the cause", run_hook("guard-bash.py", {"command": 'cat "$S/serve03.pid" | head -n 1; echo'}), 2, stderr_has='cannot size "$S/serve03.pid" (a variable or glob path)')
     expect("intake names an oversized file", run_hook("guard-bash.py", {"command": f"cat '{many}'"}), 2, stderr_has='many.log" is over 400 lines')
     expect("intake keeps secret refusal ahead of limiter", run_hook("guard-bash.py", {"command": "cat .env | head -n 80"}), 2, stderr_has="secret")

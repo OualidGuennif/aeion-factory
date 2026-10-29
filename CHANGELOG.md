@@ -6,6 +6,31 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-10-29
+
+- Droid registers PreCompact: a compaction before a verified handover runs and closure (handover,
+  `work/current.md`, docs, checkpoint) is owed right after it, as for Codex. Droid still has no 250k alert.
+- dsh starts with its `web` profile (it ships no `tui`; the demo's `--profile tui` command failed), and the
+  guards now run there: compaction is a separate plugin entry, since web keeps that service inside each
+  agent preset. Without it the agent asks the user for `/compact`, and a token fall marks the compaction.
+  The plugin now guards each session by its own working directory, so one background `dsh web` server
+  (started anywhere with the patch's absolute path) guards the sessions opened in a factory project.
+- The demo gains a dsh run (`demo/dsh/`, `demo/start/dsh/START.md`); every demo workspace has the 1.5.0 hooks,
+  skills and tools (Codex and OpenCode keep their app and run state).
+- demo: run 1 of Codex, OpenCode, Pi and dsh archived with a comparison table; the run 2 brief opens every
+  harness at the repository root, one at a time, and an orchestrator brief drives them through their CLIs.
+- `tools/architecture/gallery <render>` builds one self-contained `index.html` from Archify diagrams: each
+  render is inlined as a lazy iframe `srcdoc`, so the gallery opens from `file://` with no server; a diagram
+  JSON without its rendered HTML is refused. It replaces the Pi run's own builder (Pi FB-003).
+- Fixes from the demo run 1 feedback. The Bash guard no longer refuses an environment copy passed to a child
+  process (`env=dict(os.environ, K=V)`), prose naming a secret file that `cat`/`tee` write to a file from a quoted
+  heredoc, or a `cat` of an absolute path after a `cd` (it is sized). `ask` reads each spec's `sources` from
+  disk, so a frontmatter-only edit is no longer hidden by Graphify's cache. `doc-links` reads `- resource:`
+  list entries and fails (L4) when a file's `Spec:` doc omits it from its sources. The 250k/300k messages name
+  the handover headings, a stale checkpoint receipt names the paths that changed, every harness's live
+  journal log is git-ignored, and `knowledge-check` prints the task entry shape. dsh steers the start context
+  and forwards a turn's close to the sign-off (`agent/turn-stopping`); Pi does it at `agent_before_settle`.
+
 ## [1.5.0] - 2026-10-29
 
 ### Fixed

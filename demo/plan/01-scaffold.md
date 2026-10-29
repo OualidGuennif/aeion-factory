@@ -32,6 +32,7 @@ with a health endpoint the later rounds (and Docker) rely on.
 ## Acceptance checks
 ```bash
 cd app
+deno install                      # first: npm packages and deno.lock, before any check
 deno fmt --check && deno lint && deno check
 deno test -A                      # api/health, unknown route, wrong method
 deno task build
@@ -39,6 +40,10 @@ deno task start &                 # then:
 curl -s localhost:8000/api/health # {"status":"ok","version":"0.1.0"}
 curl -s -o /dev/null -w '%{http_code}' localhost:8000/api/nope   # 404
 ```
+
+`deno install` comes first because the Fresh template sets `nodeModulesDir: "manual"`: `deno check`
+fails until the packages are installed, and the lock file is written there. Keep `manual` and say so
+in the spec.
 
 ## Tests required
 - `app/api/app_test.ts`: health body and content type; unknown route is a JSON 404; wrong method is a JSON 405.

@@ -2,20 +2,23 @@
 import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
+import { seam } from './seam.js';
 
 export const name = 'aeion-factory';
-export const inject = ['tools', 'tokenMeter', 'compaction'];
+export const inject = ['tools', 'tokenMeter', 'workingDirectory'];
 
 const UNAVAILABLE = 'Æion Factory hook unavailable; action refused.';
 const RESUME = 'Æion Factory: context compacted. Read your handover in work/handovers/ and continue the task.';
+const ASK = 'Æion Factory: handover verified. This dsh profile lets only the user compact: ask them to type /compact now, then wait.';
 // dsh's built-in tools under the names the shared guards know; glob only lists paths.
 const TOOLS = { bash: 'Bash', read: 'Read', write: 'Write', edit: 'Edit', str_replace_editor: 'Edit', glob: 'Glob', grep: 'Grep' };
 
-// dsh may start in a subfolder (demo/), so the hooks live in the nearest folder above that has them.
+// A session may work in a subfolder (demo/), so the hooks live in the nearest folder above that has them;
+// a session outside any Æion Factory project has none, and the plugin leaves it alone.
 function projectRoot(directory) {
   for (let folder = resolve(directory); ; folder = dirname(folder)) {
     if (existsSync(resolve(folder, 'tools/agents/hook.py'))) return folder;
-    if (dirname(folder) === folder) return directory;
+    if (dirname(folder) === folder) return undefined;
   }
 }
 
@@ -39,22 +42,43 @@ function toolName(exec) {
 }
 
 export function apply(ctx) {
-  const root = projectRoot(process.cwd());
+  // Each session's own directory, not the launch folder: one dsh web server serves many projects.
+  const rootOf = (agent) => projectRoot(ctx.workingDirectory.get(agent.session));
   // Sessions given the factory's start context; a compaction removes one, so its next call is told again.
   const started = new Set();
   const compacted = new Set();
   // Agents whose verified handover asked for a compaction; it runs before their next model step.
   const due = new Set();
 
+  // The last measure per session: a fall to under half means the user compacted (/compact), so its next call
+  // is told the start context again as after a compaction.
+  const last = new Map();
+
   const tokens = (agent) => ctx.tokenMeter.measure(agent.session).totalTokens;
 
-  function start(session) {
+  function observe(agent) {
+    const session = agent.session.id;
+    const now = tokens(agent);
+    if (last.get(session) > 2 * now && started.has(session)) {
+      started.delete(session);
+      compacted.add(session);
+    }
+    last.set(session, now);
+  }
+
+  // The factory's start context reaches the model as steering: dsh has no hook that adds it to the prompt.
+  const say = (agent, text) => agent.steer({ content: [{ type: 'text', text }], source: { kind: 'aeion-factory' } });
+
+  function start(root, agent) {
+    const session = agent.session.id;
     if (started.has(session)) return;
     const source = compacted.has(session) ? 'compact' : 'startup';
-    const { reason } = invoke(root, { session_id: session, hook_event_name: 'SessionStart', source });
+    const { output, reason } = invoke(root, { session_id: session, hook_event_name: 'SessionStart', source });
     if (reason) throw new Error(reason);
     started.add(session);
     compacted.delete(session);
+    const context = output.hookSpecificOutput?.additionalContext;
+    if (context) say(agent, context);
   }
 
   function toolEvent(exec, name) {
@@ -71,7 +95,10 @@ export function apply(ctx) {
     // A call without an agent has no session to account it to, so it is refused.
     if (!exec.agent) return UNAVAILABLE;
     try {
-      start(exec.agent.session.id);
+      const root = rootOf(exec.agent);
+      if (!root) return undefined;
+      observe(exec.agent);
+      start(root, exec.agent);
       return invoke(root, toolEvent(exec, 'PreToolUse')).reason || undefined;
     } catch (error) {
       return error.message || UNAVAILABLE;
@@ -82,6 +109,8 @@ export function apply(ctx) {
     const downstream = await next();
     if (!exec.agent || result?.isError) return downstream;
     try {
+      const root = rootOf(exec.agent);
+      if (!root) return downstream;
       const { output } = invoke(root, toolEvent(exec, 'PostToolUse'));
       if (output.aeion?.compact) due.add(exec.agent);
     } catch (error) {
@@ -90,19 +119,38 @@ export function apply(ctx) {
     return downstream;
   });
 
+  // The turn's close is the factory's Stop: a sign-off finding steers one more step; the hook shows each
+  // finding once per session, so a second close passes.
+  ctx.on('agent/turn-stopping', async ({ agent }) => {
+    try {
+      const root = rootOf(agent);
+      if (!root) return;
+      const { reason } = invoke(root, { session_id: agent.session.id, hook_event_name: 'Stop' });
+      if (reason) say(agent, reason);
+    } catch (error) {
+      ctx.logger?.warn?.(`aeion-factory: ${error.message || UNAVAILABLE}`);
+    }
+  });
+
   // A verified handover past 250k compacts now, not at dsh's own threshold near the model window.
   ctx.on('agent/pre-step', async ({ agent, signal }, next) => {
     if (!due.has(agent) || signal.aborted) return next();
     due.delete(agent);
     const session = agent.session.id;
     try {
+      const root = rootOf(agent);
       // The shared rule refuses the compaction unless the checkpoint is still verified.
       if (invoke(root, { session_id: session, hook_event_name: 'PreCompact' }).reason) return next();
+      // The web profile keeps compaction inside each agent preset, out of a plugin's reach: the user compacts.
+      if (!seam.compaction) {
+        say(agent, ASK);
+        return next();
+      }
       // dsh's overflow path compacts now whatever its own threshold; it is the step-time compaction dsh exposes.
-      await ctx.compaction.compactIfNeeded(agent, 'context-overflow', signal);
+      await seam.compaction.compactIfNeeded(agent, 'context-overflow', signal);
       started.delete(session);
       compacted.add(session);
-      agent.steer({ content: [{ type: 'text', text: RESUME }], source: { kind: 'aeion-factory' } });
+      say(agent, RESUME);
     } catch (error) {
       ctx.logger?.warn?.(`aeion-factory: compaction failed: ${error.message}`);
     }

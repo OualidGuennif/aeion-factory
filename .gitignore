@@ -20,3 +20,12 @@ node_modules/
 .venv/
 # demo/: everything is tracked except each harness's working copy of the factory.
 /demo/*/workspace/
+/demo/*/workspace.run-*/
+
+# A harness's live session log: it grows during a run, so it is not part of the project tree (and would
+# stale every checkpoint receipt).
+/demo/*/journal/*.jsonl
+/demo/*/archive/*/journal/*.jsonl
+# Rendered Archify/Graphify HTML is rebuilt from its diagram JSON (tools/architecture/gallery), never tracked.
+/demo/*/render/**/*.html
+/demo/*/archive/*/render/**/*.html

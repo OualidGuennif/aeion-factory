@@ -324,6 +324,27 @@ class BudgetTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "a section still reads TODO"):
             budget.checkpoint(self.root, "test-session", "HEAD")
 
+    def test_alerts_name_the_handover_headings(self):
+        # An agent that writes the handover itself never sees the template (Pi FB-002).
+        self.observe(250000)
+        self.assertIn("## Scope, ## Completed, ## Remaining, ## Constraints, ## Evidence", self.call()["systemMessage"])
+        self.observe(300000)
+        self.assertIn("## Evidence", self.call()["systemMessage"])
+
+    def test_stale_receipt_names_the_changed_paths(self):
+        # A live log in the tree stales every receipt; the refusal names it (dsh FB-007, OpenCode FB-003).
+        self.call(hook_event_name="PreCompact")
+        handover = budget.handover_path(self.root, "test-session")
+        state_file = self.root / ".aeion/context/test-session.json"
+        state = json.loads(state_file.read_text())
+        files = budget.tree_files(self.root)
+        state["checkpoint"] = {"tree": budget.fingerprint(self.root, files), "files": files,
+                               "handover": budget.hashlib.sha256(handover.read_bytes()).hexdigest()}
+        budget.atomic(state_file, json.dumps(state))
+        self.assertEqual(self.call(hook_event_name="PreCompact"), {})
+        (self.root / "run.jsonl").write_text("{}\n")
+        self.assertIn("run.jsonl changed since it", self.call(hook_event_name="PreCompact")["reason"])
+
     def test_sessions_are_isolated(self):
         self.observe(300000)
         self.call()

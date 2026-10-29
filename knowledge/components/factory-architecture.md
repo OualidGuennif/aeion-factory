@@ -42,8 +42,8 @@ Adopting projects keep their existing instructions and architecture.
 
 Claude Code retains its native hooks. Codex, OpenCode, Pi, dsh (DeepSeek Harness), Devin, Droid
 (factory.ai) and Google Antigravity load the same instructions and skills, with narrow adapters to
-the existing secret guards, edit checks and handover checkpoints (Devin, Droid and Antigravity have
-no compaction checkpoint). During closure, plain read commands (`cat`, `head`, `sed -n`, `rg` and
+the existing secret guards, edit checks and handover checkpoints (Devin and Antigravity have no
+compaction checkpoint; Droid, which reports no tokens, owes its closure after a compaction). During closure, plain read commands (`cat`, `head`, `sed -n`, `rg` and
 the like, without operators, globs or secret files) are closure tools, because Codex reads only
 through its shell. Droid owns `.factory/`, so
 Æion Factory's local state lives in the ignored `.aeion/`. A per-clone flow mode selects the team flow (PR, review, CI)
@@ -91,8 +91,8 @@ Only allowed tracked text enters extraction. Secret paths (one list for the guar
 the context fingerprint, `.claude/hooks/secret_names.py`) refuse analysis, symlinks
 are excluded, and unsupported formats remain explicitly inventory-only. Tool versions are pinned.
 The graph includes code and native Markdown structure/frontmatter/links; semantic inference by
-an LLM is outside the baseline. Each doc's frontmatter `sources` adds a `specifies` edge to the file
-it names (Graphify alone links only code names written in a body); `coverage.json` lists any
+an LLM is outside the baseline. Each doc's frontmatter `sources`, read from disk, adds a `specifies` edge to
+the file it names (Graphify alone links only code names written in a body); `coverage.json` lists any
 `resource` that names no file in the corpus. `refresh` runs only on a root that is its own git
 repository; a plain folder nested in another one is refused before any git call. This keeps the default independent of model credentials.
 `graph.py` also adds `specified_by` edges from `Spec:` lines, `names_file` edges from tests that name a
@@ -110,7 +110,7 @@ from another source; analysis refuses mismatched package provenance or a dirty A
 | Instructions and seven-phase guide | Owner precedence, scope and adoption | Markdown links; `CLAUDE.md` points to `AGENTS.md` |
 | Skills | Plan/spec/build/test/review/sign-off/ship and focused procedures | `.claude/skills/*/SKILL.md`; no second task ledger |
 | Hook adapter | Read event JSON and call a bounded local check | stdin/stdout JSON; failure blocks where supported |
-| Context budget | Usage, closure-only state, checkpoint receipt, 300k forced compaction | `.aeion/context/<session>.json`; per-session file lock |
+| Context budget | Usage, closure-only state, checkpoint receipt (with per-file digests, so a stale one names what changed), 300k forced compaction | `.aeion/context/<session>.json`; per-session file lock |
 | Handover | Recovery facts for the current session | Ignored `work/handovers/<session>.md`, created atomically only when closure needs it |
 | Knowledge/link/health checkers | Frontmatter, caps, traceability and diff coverage | Exit code + bounded diagnostics; no provider |
 | Optional loops | Select prompt/model/tools and run a managed headless task | Off unless enabled; outer loop reads production only through its configured read path |

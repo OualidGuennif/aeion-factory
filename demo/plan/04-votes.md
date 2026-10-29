@@ -22,6 +22,10 @@ A contributor votes for an idea; the list can be sorted by votes. Concurrent vot
 **Storage.** A secondary index `["ideas_by_votes", votes, id] → id`, written in the same atomic
 operation as the idea. A vote is an optimistic transaction: read the idea, `atomic().check(entry)`,
 set the idea, move its index key, commit; retry on conflict (at most 10 times, then `503` `{"error":"busy"}`).
+Votes on one idea are serialized inside the process (a per-id promise chain) before that transaction:
+ten retries cannot land 25 truly concurrent commits, and the chain removes the self-contention while the
+atomic check and the retry cap still guard other processes. Write the invariant test and the cap from
+these two numbers, and test the `503` path with a store that always conflicts.
 
 **Invariants.**
 1. N concurrent votes on one idea give exactly N more votes (test: 25 votes with `Promise.all`).

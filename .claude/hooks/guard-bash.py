@@ -131,6 +131,10 @@ ENV_WORD = re.compile(r"\b(environ|environb|ENVIRON)\b")
 INTERPRETER = re.compile(r"\b(python3?|node|deno|bun|tsx|ts-node|npx|ruby|perl)\b")
 ENV_IN_CODE = re.compile(r"process\.env\b|Deno\.env\b|%ENV\b|\bENV\b")
 JQ_ENV = re.compile(r"\bjq\b.*(\benv\b|\$ENV\b)", re.S)
+# The env= keyword argument of a call (subprocess) with os.environ copied, optionally with overrides: env=dict(os.environ,
+# K=V), env={**os.environ, K: V}, env=os.environ.copy() or env=os.environ. Overrides hold no parentheses.
+ENV_COPY = re.compile(r"([(,]\s*)env\s*=\s*(dict\(\s*os\.environ\b[^()]*\)|\{\s*\*\*os\.environ\b[^{}()]*\}"
+                      r"|os\.environ\.copy\(\)|os\.environ\b(?!\s*[.\[(]))")
 SEPARATOR_CHARS, REDIRECT_CHARS = set(";&|()\n"), set("<>&")
 WRAPPERS = {"sudo", "doas", "time", "nohup", "nice", "xargs", "command", "builtin", "exec", "watch",
             "timeout", "stdbuf", "setsid", "chroot"}
@@ -193,6 +197,26 @@ def text_heredoc(before, after):
         return False
     name = PurePosixPath(words[0]).name
     return name in CODE_READERS or name in {"cat", "tee"} and ">" in command
+
+
+def without_written_text(command):
+    """Drops the body of a quoted heredoc that cat or tee writes to a file: prose naming a secret file
+    is text the shell never opens. The command line itself is kept, so `cat .env > f <<'EOF'` is seen."""
+    out, end = [], None
+    for line in command.split("\n"):
+        if end is not None:
+            if line.strip() == end:
+                end = None
+                out.append(line)
+            continue
+        out.append(line)
+        m = HEREDOC.search(line)
+        if m and m.group(1):
+            before, after = line[:m.start()], line[m.end():]
+            name = PurePosixPath((re.split(r"[;&|(]", before)[-1].split() or [""])[0]).name
+            if name in {"cat", "tee"} and text_heredoc(before, after):
+                end = m.group(2)
+    return "\n".join(out)
 
 
 def without_code_accessors(command):
@@ -395,6 +419,8 @@ def prints_environment(words):
 
 
 def env_dump(command):
+    # A copy handed to a child process (env=dict(os.environ, K=V)) is not printed; printing it still is.
+    command = ENV_COPY.sub(r"\1env=child_env", command)
     if ENV_WORD.search(command) or JQ_ENV.search(command):
         return True
     if INTERPRETER.search(command) and ENV_IN_CODE.search(command):
@@ -691,9 +717,10 @@ def intake_dump(command, base, changed_directory=False):
             return "find -exec cat dumps every file it finds"
         if name not in {"cat", "less", "more"}:
             continue
-        if changed_directory:
-            return f"cannot size {name} after a cd (the path depends on the new directory); use head -n 80 <path>"
         paths = [w for w in words[1:] if not w.startswith("-")]
+        # An absolute path names the same file whatever the directory, so only a relative one needs the cwd.
+        if changed_directory and not (paths and all(PurePosixPath(p).is_absolute() for p in paths)):
+            return f"cannot size {name} after a cd (the path depends on the new directory); use head -n 80 <path>"
         if not paths:
             # Small literal heredocs construct prompt/body text; unknown stdin is not sized.
             if HEREDOC.search(command) and len(command.encode()) <= MAX_INTAKE_BYTES and len(command.splitlines()) <= MAX_INTAKE_LINES:
@@ -731,7 +758,7 @@ except Exception:
     deny("the hook input could not be read; refusing rather than guessing.")
 TOKEN_SPLIT = r"[\s'\"=;&|<>()`]+"
 tokens = [t for t in re.split(TOKEN_SPLIT, command) if t]
-secret_tokens = [t for t in re.split(TOKEN_SPLIT, without_code_accessors(command)) if t]
+secret_tokens = [t for t in re.split(TOKEN_SPLIT, without_code_accessors(without_written_text(command))) if t]
 workdir = event.get("tool_input", {}).get("workdir", event.get("tool_input", {}).get("cwd", event.get("cwd", ".")))
 try:
     # Quotes join a shell word (sub/'.e'*), so they are dropped rather than split on.

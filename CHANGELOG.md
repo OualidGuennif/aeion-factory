@@ -15,6 +15,8 @@ dates them at release time. Spec: knowledge/policies/engineering.md
   (started anywhere with the patch's absolute path) guards the sessions opened in a factory project.
 - The demo gains a dsh run (`demo/dsh/`, `demo/start/dsh/START.md`); every demo workspace has the 1.5.0 hooks,
   skills and tools (Codex and OpenCode keep their app and run state).
+- demo: run 1 of Codex, OpenCode, Pi and dsh archived with a comparison table; the run 2 brief opens every
+  harness at the repository root, one at a time, and an orchestrator brief drives them through their CLIs.
 - `tools/architecture/gallery <render>` builds one self-contained `index.html` from Archify diagrams: each
   render is inlined as a lazy iframe `srcdoc`, so the gallery opens from `file://` with no server; a diagram
   JSON without its rendered HTML is refused. It replaces the Pi run's own builder (Pi FB-003).

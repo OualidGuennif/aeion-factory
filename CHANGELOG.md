@@ -6,6 +6,8 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-10-29
+
 - Droid registers PreCompact: a compaction before a verified handover runs and closure (handover,
   `work/current.md`, docs, checkpoint) is owed right after it, as for Codex. Droid still has no 250k alert.
 - dsh starts with its `web` profile (it ships no `tui`; the demo's `--profile tui` command failed), and the

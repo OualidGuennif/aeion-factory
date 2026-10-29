@@ -34,3 +34,26 @@ To fill in as the rounds are done.
 
 | Round | Result | Tests | Guard refusals | Human help | Feedback |
 | --- | --- | --- | --- | --- | --- |
+| 00 setup | factory-tests and the hooks battery pass; no `Stop` hook, so `sign-off.py` never fires in a Pi session | factory-tests PASS; battery 15/15 | 1 | 1 (the owner switched the model) | none |
+| 01 scaffold | Fresh 2 + Vite titled Idea Board, Hono under `/api`, `GET /api/health`, `PORT` wrapper | 6 | 2 | 0 | FB-001 |
+| 02 ideas API | create, list, read on Deno KV; pure validation; monotonic ULIDs | 38 | 0 | 0 | none |
+| 03 ideas page | SSR page with a no-JavaScript form and one island; refusals keep what was typed | 50 | 1 | 0 | none |
+| 04 votes | atomic vote + vote index, `sort=recent\|votes`, 25 concurrent votes all count | 66 | 0 | 0 | none |
+| 05 tags and search | tag index, `tag=` + `q=` combining, clear link, tag chips | 79 | 0 | 0 | none |
+| 06 Docker | pinned image, `deno` user, named volume, self-answered health check | 79 + 5 container checks | 0 | 0 | none |
+| 07 architecture | 14 validated Archify diagrams, an offline gallery, five `ask` questions; the graph found a spec/source gap | 79 + 14/14 diagram gates | 1 | 0 | FB-002 |
+
+## What this run showed
+- **The context rule works end to end.** The 250k alert fired in round 07, refused every tool call
+except closure, and the session wrote its handover, updated `work/current.md`, passed
+`checkpoint --verify`, compacted and resumed the same round without losing a step. The one friction
+(handover headings that nothing documents) is FB-002.
+- **The one real gap against the Claude Code run.** Pi has no `Stop` event, so `sign-off.py` never
+runs. Nothing else differed: the guards, the bounded intake, the checkpoint and `repo-health` all
+behaved the same.
+- **The graph earned its place.** `ask files knowledge/components/idea-board-api.md` found a file
+naming a spec the spec did not list (fixed this round); the hand-written use cases agreed with the
+code on every other point.
+- **Graphify and Archify were already installed** in the copy; no setup ran, and no LLM-backed
+Graphify command did either. All fourteen diagrams pass `validate`, `finalize` and the browser
+check in Archify 3.2.0.

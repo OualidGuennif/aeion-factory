@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Idea Board — architecture atlas</title>
+<style>
+:root{color-scheme:light;--paper:#f7f4ec;--ink:#1d2f2a;--muted:#5a6a63;--line:#d9ded4;--accent:#8a3f1d}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.6 system-ui,sans-serif}
+main{max-width:1320px;margin:auto;padding:56px 24px}
+header{max-width:900px;margin-bottom:48px}
+.eyebrow,.kind{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--accent)}
+h1{font:clamp(38px,6vw,68px)/1.06 Georgia,serif;letter-spacing:-.035em;margin:14px 0 24px}
+h2{font:32px/1.2 Georgia,serif;margin:48px 0 20px}
+h3{font:25px/1.2 Georgia,serif;margin:10px 0}
+p{color:var(--muted)}
+a{color:var(--ink);text-underline-offset:4px}
+a:focus-visible{outline:3px solid var(--accent);outline-offset:4px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}
+article{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fffdf8}
+.preview{height:245px;overflow:hidden;background:#eef1ea;border-bottom:1px solid var(--line)}
+iframe{width:1200px;height:500px;transform:scale(.49);transform-origin:top left;border:0;pointer-events:none}
+.copy{padding:22px 24px 28px}
+.copy p{margin:10px 0 20px}
+.copy .kind{margin:0}
+.source{font-size:13px;color:var(--muted);margin-left:18px}
+footer{border-top:1px solid var(--line);margin-top:56px;padding-top:22px;color:var(--muted)}
+@media(max-width:750px){main{padding:32px 18px}.grid{grid-template-columns:1fr}.preview{height:180px}iframe{transform:scale(.31)}}
+</style>
+</head>
+<body>
+<main>
+<header>
+<p class="eyebrow">Pi demo · Round 07 · Local evidence</p>
+<h1>A small board.<br>A clear architecture.</h1>
+<p>Fourteen focused views of the Idea Board that rounds 01–06 built. Follow a request, inspect the
+key model, or see what survives a restart. Every preview and every diagram opens offline, from this
+folder.</p>
+<p><a href="graphify/use-cases.md">The five structural investigations</a> ·
+<a href="../journal/07-architecture.md">Round 07 journal</a> ·
+<a href="../README.md">Run report</a></p>
+</header>
+
+<section>
+<h2>System</h2>
+<div class="grid">
+<article>
+<div class="preview"><iframe src="diagrams/system-overview.html" title="Idea Board as one Deno process" loading="lazy"></iframe></div>
+<div class="copy"><p class="kind">architecture</p><h3>Idea Board as one Deno process</h3>
+<p>Where does browser behaviour meet server authority?</p>
+<a href="diagrams/system-overview.html">Open the diagram <span aria-hidden="true">↗</span></a>
+<a class="source" href="diagrams/system-overview.json">JSON</a></div>
+</article>
+<article>
+<div class="preview"><iframe src="diagrams/deployment.html" title="Idea Board in Docker" loading="lazy"></iframe></div>
+<div class="copy"><p class="kind">architecture · deployment</p><h3>Idea Board in Docker</h3>
+<p>What survives a container restart?</p>
+<a href="diagrams/deployment.html">Open the diagram <span aria-hidden="true">↗</span></a>
+<a class="source" href="diagrams/deployment.json">JSON</a></div>
+</article>
+</div>
+</section>
+
+<section>
+<h2>Sequences</h2>
+<div class="grid">
+<article>
+<div class="preview"><iframe src="diagrams/seq-page-load.html" title="Page load, server-rendered" loading="lazy"></iframe></div>
+<div class="copy"><p class="kind">sequence</p><h3>Page load, server-rendered</h3>
+<p>How is <code>GET /</code> rendered, and what is left for the browser?</p>
+<a href="diagrams/seq-page-load.html">Open the diagram <span aria-hidden="true">↗</span></a>
+<a class="source" href="diagrams/seq-page-load.json">JSON</a></div>
+</article>
+<article>
+<div class="preview"><iframe src="diagrams/seq-create.html" title="Create an idea: island to KV" loading="lazy"></iframe></div>
+<div class="copy"><p class="kind">sequence</p><h3>Create an idea: island to KV</h3>
+<p>What happens between a click and a stored idea?</p>
+<a href="diagrams/seq-create.html">Open the diagram <span aria-hidden="true">↗</span></a>
+<a class="source" href="diagrams/seq-create.json">JSON</a></div>
+</article>
+<article>
+<div class="preview"><iframe src="diagrams/seq-vote.html" title="A vote: optimistic, queued, retried" loading="lazy"></iframe></div>
+<div class="copy"><p class="kind">sequence</p><h3>A vote: optimistic, queued, retried</h3>
+<p>How do concurrent votes avoid lost updates?</p>
+<a href="diagrams/seq-vote.html">Open the diagram <span aria-hidden="true">↗</span></a>
+<a class="source" href="diagrams/seq-vote.json">JSON</a></div>
+</article>
+<article>
+<div class="preview"><iframe src="diagrams/seq-filter.html" title="Filters: tag index first, text within a window" loading="lazy"></iframe></div>
+<div class="copy"><p class="kind">sequence</p><h3>Filters: tag index first, text within a window</h3>
+<p>Which ideas can a search match, and at what cost?</p>
+<a href="diagrams/seq-filter.html">Open the diagram <span aria-hidden="true">↗</span></a>
+<a class="source" href="diagrams/seq-filter.json">JSON</a></div>
+</article>
+<article>
+<div class="preview"><iframe src="diagrams/seq-health.html" title="Health check inside the container" loading="lazy"></iframe></div>
+<div class="copy"><p class="kind">sequence</p><h3>Health check inside the container</h3>
+<p>What does the container health check actually prove?</p>
+<a href="diagrams/seq-health.html">Open the diagram <span aria-hidden="true">↗</span></a>
+<a class="source" href="diagrams/seq-health.json">JSON</a></div>
+</article>
+</div>
+</section>
+
+<section>
+<h2>Use cases</h2>
+<div class="grid">
+<article>
+<div class="preview"><iframe src="diagrams/use-case-visitor.html" title="Visitor use cases" loading="lazy"></iframe></div>
+<div class="copy"><p class="kind">architecture · use-case notation</p><h3>Visitor: read the board</h3>
+<p>What can a visitor do without an account or JavaScript?</p>
+<a href="diagrams/use-case-visitor.html">Open the diagram <span aria-hidden="true">↗</span></a>
+<a class="source" href="diagrams/use-case-visitor.json">JSON</a></div>
+</article>
+<article>
+<div class="preview"><iframe src="diagrams/use-case-contributor.html" title="Contributor use cases" loading="lazy"></iframe></div>
+<div class="copy"><p class="kind">architecture · use-case notation</p><h3>Contributor: create and vote</h3>
+<p>Which mutations exist, and what does a refusal look like?</p>
+<a href="diagrams/use-case-contributor.html">Open the diagram <span aria-hidden="true">↗</span></a>
+<a class="source" href="diagrams/use-case-contributor.json">JSON</a></div>
+</article>
+<article>
+<div class="preview"><iframe src="diagrams/use-case-operator.html" title="Operator use cases" loading="lazy"></iframe></div>
+<div class="copy"><p class="kind">architecture · use-case notation</p><h3>Operator: run and verify</h3>
+<p>How is the board started, checked and kept?</p>
+<a href="diagrams/use-case-operator.html">Open the diagram <span aria-hidden="true">↗</span></a>
+<a class="source" href="diagrams/use-case-operator.json">JSON</a></div>
+</article>
+</div>
+</section>
+
+<section>
+<h2>Models and delivery</h2>
+<div class="grid">
+<article>
+<div class="preview"><iframe src="diagrams/idea-lifecycle.html" title="Idea lifecycle" loading="lazy"></iframe></div>
+<div class="copy"><p class="kind">lifecycle</p><h3>Idea lifecycle</h3>
+<p>Which states, which refusals, and what can never change?</p>
+<a href="diagrams/idea-lifecycle.html">Open the diagram <span aria-hidden="true">↗</span></a>
+<a class="source" href="diagrams/idea-lifecycle.json">JSON</a></div>
+</article>
+<article>
+<div class="preview"><iframe src="diagrams/kv-model.html" title="Idea Board KV key model" loading="lazy"></iframe></div>
+<div class="copy"><p class="kind">tree</p><h3>Idea Board KV key model</h3>
+<p>How does KV support order, votes and tags?</p>
+<a href="diagrams/kv-model.html">Open the diagram <span aria-hidden="true">↗</span></a>
+<a class="source" href="diagrams/kv-model.json">JSON</a></div>
+</article>
+<article>
+<div class="preview"><iframe src="diagrams/request-dataflow.html" title="Request data through Idea Board" loading="lazy"></iframe></div>
+<div class="copy"><p class="kind">dataflow</p><h3>Request data through Idea Board</h3>
+<p>Where does untrusted input become a trusted idea?</p>
+<a href="diagrams/request-dataflow.html">Open the diagram <span aria-hidden="true">↗</span></a>
+<a class="source" href="diagrams/request-dataflow.json">JSON</a></div>
+</article>
+<article>
+<div class="preview"><iframe src="diagrams/aeion-round.html" title="The Æion round that built Idea Board" loading="lazy"></iframe></div>
+<div class="copy"><p class="kind">workflow</p><h3>The Æion round that built Idea Board</h3>
+<p>Which steps prove a change before it is committed?</p>
+<a href="diagrams/aeion-round.html">Open the diagram <span aria-hidden="true">↗</span></a>
+<a class="source" href="diagrams/aeion-round.json">JSON</a></div>
+</article>
+</div>
+</section>
+
+<footer>Rendered with the existing Archify 3.2.0 installation, which ran every validate, finalize and
+browser-check gate. Archify has no use-case type: the three use-case diagrams are architecture
+diagrams with actors kept outside the system boundary. The board is a local public demo, with no
+authentication and no per-visitor vote limit — the diagrams say so where it matters.</footer>
+</main>
+</body>
+</html>

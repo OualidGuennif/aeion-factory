@@ -2,7 +2,7 @@
 
 - **Severity:** low (one extra command; the error names it, but the brief's own checklist does not)
 - **Found in:** round 01
-- **Status:** open
+- **Status:** applied in the run 2 brief (demo/plan/, demo/start/)
 
 ## Evidence
 

@@ -35,25 +35,31 @@ a link to the full diagram. Each diagram is small (at most about 10 boxes) and a
 | Use case | Visitor; Contributor; Operator (actors outside, use cases inside the system boundary) |
 | Other | idea lifecycle; KV key model; request data flow; the Æion round that built it |
 
-Every diagram passes `archify validate` and `archify browser-check`. Archify has no "use case"
-type: draw use cases as an `architecture` diagram (actors as external components, use cases as
+Every diagram passes `archify finalize --browser-check` (validation, render and browser check, with a receipt).
+Expect two to four `finalize` rounds per diagram: apply its `supportedFixes` and rerun once per change,
+do not rewrite the JSON. Archify has no "use case" type: draw use cases as an `architecture` diagram (actors as external components, use cases as
 components inside a boundary) and say so on the card.
 
 ## Acceptance checks
 ```bash
 <factory>/tools/architecture/ask --root <workspace> status
-node <archify>/bin/archify.mjs validate <type> diagrams/<name>.json --quality showcase
-node <archify>/bin/archify.mjs render <type> diagrams/<name>.json diagrams/<name>.html --quality showcase
-node <archify>/bin/archify.mjs browser-check diagrams/<name>.html --summary
+node <archify>/bin/archify.mjs validate <type> diagrams/<name>.json --quality showcase   # quick gate
+node <archify>/bin/archify.mjs finalize <type> diagrams/<name>.json diagrams/<name>.html --browser-check --quality showcase
+<factory>/tools/architecture/gallery render --title "Idea Board"   # one index.html, opens from file://
 ```
 
-`tools/architecture/refresh` needs a git repository and refuses a plain folder: use the two steps
-above directly.
+`finalize --out-dir <dir>` keeps its receipts out of `diagrams/`. `tools/architecture/refresh`
+needs a git repository and refuses a plain folder: run `finalize` per diagram. `archify examples` is not
+a listing: it rewrites the example HTML inside the Archify install; read its example JSON files instead.
+
+Commit the diagram JSON (and `catalog.json` if you write one), never the HTML: the gallery and the
+diagrams are generated, and the parent repository ignores them.
 
 ## Out of scope
 Archify evidence links (`sources`): they need a git revision and a repository URL, which a plain
 folder does not have. LLM-inferred graph edges (the Bash guard refuses Graphify's LLM commands).
 
 ## Expected result
-`render/index.html` opens offline, every card loads its diagram, and `graphify/use-cases.md`
+`render/index.html`, built by `tools/architecture/gallery`, opens from `file://` with no server, every
+card loads its diagram (open it in a browser and say so in the journal), and `graphify/use-cases.md`
 answers the five questions with real output.

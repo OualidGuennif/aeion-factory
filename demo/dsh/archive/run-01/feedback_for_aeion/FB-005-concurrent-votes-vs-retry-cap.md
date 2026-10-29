@@ -3,7 +3,7 @@
 - **Severity:** medium (the brief's own invariant test fails with a correct implementation of its
   transaction)
 - **Found in:** round 04
-- **Status:** open
+- **Status:** applied in the run 2 brief (demo/plan/, demo/start/)
 
 ## Evidence
 

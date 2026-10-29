@@ -3,7 +3,7 @@
 - **Severity:** medium (it blocks the round protocol's commit every round, and the workaround is not
   in any file the agent reads)
 - **Found in:** round 00
-- **Status:** open
+- **Status:** applied in the run 2 brief (demo/plan/, demo/start/)
 
 ## Evidence
 

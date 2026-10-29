@@ -2,7 +2,7 @@
 
 - **Severity:** low (confusing, not broken)
 - **Found in:** round 01
-- **Status:** open
+- **Status:** applied (`tools/release/release --new-project` resets a copy's task state and history)
 
 ## Evidence
 The copied factory, now the Idea Board project, arrived with things that belong to Æion Factory, not to the new project:

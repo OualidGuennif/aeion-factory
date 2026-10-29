@@ -2,7 +2,7 @@
 
 - **Severity:** low (each item costs one retry or one wasted generator run, none blocks a round)
 - **Found in:** round 07, plus one from round 00 kept for this file
-- **Status:** open
+- **Status:** applied (Stop and L4 in c3f586f; brief, gallery and ignored HTML in the run 2 brief)
 
 ## 1. Pi never runs `sign-off.py` (round 00)
 The Pi extension registers `SessionStart`, `PreToolUse`, `PostToolUse` and `PreCompact`; Pi has no

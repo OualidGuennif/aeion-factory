@@ -24,3 +24,7 @@ node_modules/
 # A harness's live session log: it grows during a run, so it is not part of the project tree (and would
 # stale every checkpoint receipt).
 /demo/*/journal/*.jsonl
+/demo/*/archive/*/journal/*.jsonl
+# Rendered Archify/Graphify HTML is rebuilt from its diagram JSON (tools/architecture/gallery), never tracked.
+/demo/*/render/**/*.html
+/demo/*/archive/*/render/**/*.html

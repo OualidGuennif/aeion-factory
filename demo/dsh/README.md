@@ -30,8 +30,10 @@ dsh (DeepSeek Harness) builds the same Idea Board from [`../plan/`](../plan/00-s
    - **A background web server** (one server for every project, for example behind Tailscale): restart it
      once with the patch, by absolute path, keeping its other flags:
      ```bash
-     dsh web --no-open --patch /path/to/aeion-factory/.dsh/factory.patch.yml
+     dsh web --patch /path/to/aeion-factory/.dsh/factory.patch.yml --no-open
      ```
+     `--patch` is a launcher option: it goes right after `web`, before web's own options (`--no-open`,
+     `--port`, `--trusted-host`, `--public-url`), which dsh passes on to the app (`unknown option '--patch'`).
      The plugin guards each session by its own working directory, not the server's launch folder, so open
      the run's session in the `demo/` workspace (or have the agent change its working directory there
      first). Sessions outside an Æion Factory project are left alone.

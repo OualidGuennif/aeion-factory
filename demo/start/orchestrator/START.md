@@ -15,7 +15,7 @@ Read first, in this order:
 | --- | --- | --- | --- |
 | Claude Code | `claude -p` | Opus 5.5 (`claude-opus-5-5`) | `--effort high`; fast mode off |
 | Codex | `codex exec` | 6.1 SOL | `-c model_reasoning_effort="high"`; super speed off |
-| OpenCode | `opencode run` | DeepSeek 4.1 Flash | high |
+| OpenCode | `opencode2 run` (`~/.opencode/bin/opencode2`) | DeepSeek 4.1 Flash | `#high` on the model |
 | Pi | `pi -p` | DeepSeek 4.1 Flash | `:high` on the model |
 | dsh | `dsh headless --patch .dsh/factory.patch.yml` | DeepSeek 4.1 Flash | high, in dsh's settings |
 

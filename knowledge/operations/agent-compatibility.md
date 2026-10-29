@@ -35,8 +35,8 @@ sources:
   - resource: ../../.dsh/plugins/factory/seam.js
     title: "seam.js, which names this doc as its spec"
 generated:
-  by: aeion-factory/1.2
-  at: 2026-10-25
+  by: aeion-factory/1.6
+  at: 2026-10-29
 ---
 
 # Agent compatibility
@@ -205,8 +205,8 @@ qualification and setup commands are recorded below.
 
 ## Setup
 
-1. Follow the README common checks. Offer the recommended architecture baseline and install it
-   only on the user's yes ([architecture maintenance](architecture-maintenance.md)). Install the
+1. Follow the [getting-started checks](getting-started.md). Offer the recommended architecture
+   baseline and install it only on the user's yes ([architecture maintenance](architecture-maintenance.md)). Install the
    chosen native CLI separately; preserve user account/provider settings.
 2. Claude: trust the workspace, then `tools/agents/run claude`.
 3. Codex: trust the project in native settings, review/enable the local hooks in `/hooks`, restart,

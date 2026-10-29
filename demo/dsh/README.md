@@ -42,3 +42,4 @@ To fill in as the rounds are done.
 
 | Round | Result | Tests | Guard refusals | Human help | Feedback |
 | --- | --- | --- | --- | --- | --- |
+| 00 | done | factory-tests PASS (152 run, 150 passed, 2 skipped, 0 failed); hooks battery 15 cases, 0 failures | 1 | 1 | FB-001, FB-002, FB-003 |

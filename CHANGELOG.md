@@ -15,6 +15,9 @@ dates them at release time. Spec: knowledge/policies/engineering.md
   (started anywhere with the patch's absolute path) guards the sessions opened in a factory project.
 - The demo gains a dsh run (`demo/dsh/`, `demo/start/dsh/START.md`); every demo workspace has the 1.5.0 hooks,
   skills and tools (Codex and OpenCode keep their app and run state).
+- `tools/architecture/gallery <render>` builds one self-contained `index.html` from Archify diagrams: each
+  render is inlined as a lazy iframe `srcdoc`, so the gallery opens from `file://` with no server; a diagram
+  JSON without its rendered HTML is refused. It replaces the Pi run's own builder (Pi FB-003).
 - Fixes from the demo run 1 feedback. The Bash guard no longer refuses an environment copy passed to a child
   process (`env=dict(os.environ, K=V)`), prose naming a secret file that `cat`/`tee` write to a file from a quoted
   heredoc, or a `cat` of an absolute path after a `cd` (it is sized). `ask` reads each spec's `sources` from

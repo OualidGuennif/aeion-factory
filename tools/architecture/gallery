@@ -1,55 +1,23 @@
 #!/usr/bin/env python3
-"""Build render/index.html: one self-contained gallery with every diagram inlined.
+# Spec: knowledge/operations/architecture-maintenance.md
+"""Build <render>/index.html: one self-contained gallery with every Archify diagram inlined.
 
-The standalone diagram files need a readable file:// path (macOS protects the Desktop) and are
-blocked in iframes from disk, so the atlas inlines each diagram as JSON, sets it as an iframe
-srcdoc, and offers a full-window view of the same markup. No network, no server, no file access
-beyond this one HTML. Regenerate after changing a diagram: python3 build_gallery.py (the HTML is generated, not tracked)
+Browsers block iframes of sibling files opened from file:// and macOS protects ~/Desktop, so the page
+inlines each rendered diagram as JSON, sets it as a lazy iframe srcdoc and offers a full-window view.
+No network, no server, no file access beyond the one HTML. The HTML is generated, never tracked.
+
+Usage: gallery <render-dir> [--title T]
+Reads <render-dir>/diagrams/<name>.json (title, type, subtitle) and the rendered <name>.html beside it;
+an optional <render-dir>/catalog.json list of {name, question, group} sets order, questions and groups.
 """
+import argparse
+import html
 import json
 from pathlib import Path
+import sys
 
-HERE = Path(__file__).resolve().parent
-DIAGRAMS = HERE / "diagrams"
-
-GROUPS = [
-    ("System", [
-        ("system-overview", "architecture", "Idea Board as one Deno process",
-         "Where does browser behaviour meet server authority?"),
-        ("deployment", "architecture · deployment", "Idea Board in Docker",
-         "What survives a container restart?"),
-    ]),
-    ("Sequences", [
-        ("seq-page-load", "sequence", "Page load, server-rendered",
-         "How is GET / rendered, and what is left for the browser?"),
-        ("seq-create", "sequence", "Create an idea: island to KV",
-         "What happens between a click and a stored idea?"),
-        ("seq-vote", "sequence", "A vote: optimistic, queued, retried",
-         "How do concurrent votes avoid lost updates?"),
-        ("seq-filter", "sequence", "Filters: tag index first, text within a window",
-         "Which ideas can a search match, and at what cost?"),
-        ("seq-health", "sequence", "Health check inside the container",
-         "What does the container health check actually prove?"),
-    ]),
-    ("Use cases", [
-        ("use-case-visitor", "architecture · use-case notation", "Visitor: read the board",
-         "What can a visitor do without an account or JavaScript?"),
-        ("use-case-contributor", "architecture · use-case notation", "Contributor: create and vote",
-         "Which mutations exist, and what does a refusal look like?"),
-        ("use-case-operator", "architecture · use-case notation", "Operator: run and verify",
-         "How is the board started, checked and kept?"),
-    ]),
-    ("Models and delivery", [
-        ("idea-lifecycle", "lifecycle", "Idea lifecycle",
-         "Which states, which refusals, and what can never change?"),
-        ("kv-model", "tree", "Idea Board KV key model",
-         "How does KV support order, votes and tags?"),
-        ("request-dataflow", "dataflow", "Request data through Idea Board",
-         "Where does untrusted input become a trusted idea?"),
-        ("aeion-round", "workflow", "The Æion round that built Idea Board",
-         "Which steps prove a change before it is committed?"),
-    ]),
-]
+GROUPS = {"architecture": "System", "sequence": "Sequences"}
+OTHER = "Models and delivery"
 
 STYLE = """
 :root{color-scheme:light;--paper:#f7f4ec;--ink:#1d2f2a;--muted:#5a6a63;--line:#d9ded4;--accent:#8a3f1d}
@@ -145,70 +113,103 @@ document.addEventListener('keydown', (event) => {
 """
 
 
-def main():
-    parts = []
-    for name, kind, title, question in (entry for _, rows in GROUPS for entry in rows):
-        source = DIAGRAMS / f"{name}.html"
-        html = source.read_text(encoding="utf-8")
-        payload = json.dumps(html).replace("</", "<\\/")
-        parts.append(f'<script type="application/json" data-diagram="{name}">{payload}</script>')
+def diagrams(render):
+    """One entry per diagram JSON, in catalog order then by name; a JSON without its HTML is refused."""
+    folder = render / "diagrams"
+    catalog = render / "catalog.json"
+    extra = {row["name"]: row for row in json.loads(catalog.read_text(encoding="utf-8"))} if catalog.is_file() else {}
+    specs = {path.stem: json.loads(path.read_text(encoding="utf-8")) for path in sorted(folder.glob("*.json"))}
+    # Archify writes receipts (browser-check, finalize) beside the inputs; only inputs name a diagram_type.
+    specs = {name: spec for name, spec in specs.items() if isinstance(spec, dict) and spec.get("diagram_type")}
+    names = [name for name in extra if name in specs] + [name for name in specs if name not in extra]
+    entries, missing = [], []
+    for name in names:
+        page = folder / f"{name}.html"
+        if not page.is_file():
+            missing.append(page)
+            continue
+        spec, row = specs[name], extra.get(name, {})
+        meta, kind = spec.get("meta") or {}, spec["diagram_type"]
+        entries.append({
+            "name": name,
+            "kind": kind,
+            "title": row.get("title") or meta.get("title") or name,
+            "question": row.get("question") or meta.get("subtitle") or "",
+            "group": row.get("group") or GROUPS.get(kind, OTHER),
+            "html": page.read_text(encoding="utf-8"),
+        })
+    return entries, missing
 
-    sections = []
-    for group, rows in GROUPS:
-        cards = []
-        for name, kind, title, question in rows:
-            cards.append(
-                f'<article><div class="preview"><iframe data-diagram="{name}" '
-                f'title="{title}" loading="lazy"></iframe>'
-                f'<div class="empty" aria-hidden="true">Loading preview…</div></div>'
-                f'<div class="copy"><p class="kind">{kind}</p><h3>{title}</h3><p>{question}</p>'
-                f'<div class="actions"><button data-open="{name}" data-title="{title}">Open full size</button>'
-                f'<a href="diagrams/{name}.html">standalone file</a>'
-                f'<a class="source" href="diagrams/{name}.json">JSON</a></div></div></article>'
-            )
-        sections.append(f'<section><h2>{group}</h2><div class="grid">{"".join(cards)}</div></section>')
 
-    total = sum(len(part) for part in parts)
-    page = f"""<!doctype html>
+def card(entry):
+    name, title = html.escape(entry["name"]), html.escape(entry["title"])
+    return (f'<article><div class="preview"><iframe data-diagram="{name}" title="{title}" loading="lazy"></iframe>'
+            f'<div class="empty" aria-hidden="true">Loading preview…</div></div>'
+            f'<div class="copy"><p class="kind">{html.escape(entry["kind"])}</p><h3>{title}</h3>'
+            f'<p>{html.escape(entry["question"])}</p>'
+            f'<div class="actions"><button data-open="{name}" data-title="{title}">Open full size</button>'
+            f'<a href="diagrams/{name}.html">standalone file</a>'
+            f'<a class="source" href="diagrams/{name}.json">JSON</a></div></div></article>')
+
+
+def page(entries, title):
+    groups = {}
+    for entry in entries:
+        groups.setdefault(entry["group"], []).append(entry)
+    sections = "".join(f'<section><h2>{html.escape(group)}</h2><div class="grid">{"".join(map(card, rows))}</div></section>'
+                       for group, rows in groups.items())
+    # "</" inside a JSON string would close the script element early.
+    payloads = "".join(f'<script type="application/json" data-diagram="{html.escape(entry["name"])}">'
+                       + json.dumps(entry["html"]).replace("</", "<\\/") + "</script>" for entry in entries)
+    return f"""<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Idea Board — architecture atlas</title>
+<title>{html.escape(title)}</title>
 <style>{STYLE}</style>
 </head>
 <body>
 <main>
 <header>
-<p class="eyebrow">Pi demo · Round 07 · One file, no server</p>
-<h1>A small board.<br>A clear architecture.</h1>
-<p>Fourteen focused views of the Idea Board, inlined in this page: every preview and the
-full-size view work from a single <code>file://</code> path, with no server, no network and no
-access to the other files. The standalone diagram files are one click away.</p>
-<p><a href="graphify/use-cases.md">The five structural investigations</a> ·
-<a href="../journal/07-architecture.md">Round 07 journal</a> ·
-<a href="../README.md">Run report</a></p>
+<p class="eyebrow">{len(entries)} diagrams · one file, no server</p>
+<h1>{html.escape(title)}</h1>
+<p>Every diagram is inlined in this page: the previews and the full-size view work from a single
+<code>file://</code> path, with no server, no network and no access to the other files.</p>
 </header>
-{"".join(sections)}
-<footer>Rendered with the existing Archify 3.2.0 installation, which ran every validate, finalize
-and browser-check gate. Each diagram is embedded as JSON and drawn from an iframe <code>srcdoc</code>,
-so this page needs nothing from disk beyond itself. Archify has no use-case type: the three
-use-case diagrams are architecture diagrams with actors kept outside the system boundary. The
-board is a local public demo, with no authentication and no per-visitor vote limit.</footer>
+{sections}
+<footer>Rendered with Archify; built by <code>tools/architecture/gallery</code>. Regenerate after
+changing a diagram; this HTML is generated, not tracked.</footer>
 </main>
 <div id="viewer" aria-hidden="false">
 <div class="bar"><strong></strong><button class="prev" aria-label="Previous diagram">‹ Prev</button><button class="next" aria-label="Next diagram">Next ›</button><button class="close">Close (Esc)</button></div>
 <iframe title="Full-size diagram"></iframe>
 </div>
-{"".join(parts)}
+{payloads}
 <script>{SCRIPT}</script>
 </body>
 </html>
 """
-    out = HERE / "index.html"
-    out.write_text(page, encoding="utf-8")
-    print(f"{out.name}: {out.stat().st_size:,} bytes, 14 diagrams inlined ({total:,} bytes of JSON)")
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("render", type=Path, help="folder holding diagrams/<name>.json and .html")
+    parser.add_argument("--title", default="Architecture atlas")
+    args = parser.parse_args(argv)
+    # Read every diagram first: a missing render fails closed before anything is written.
+    entries, missing = diagrams(args.render)
+    if missing:
+        print("gallery: render these first (archify render): " + ", ".join(map(str, missing)), file=sys.stderr)
+        return 1
+    if not entries:
+        print(f"gallery: no diagrams/*.json under {args.render}", file=sys.stderr)
+        return 1
+    out = args.render / "index.html"
+    out.write_text(page(entries, args.title), encoding="utf-8")
+    print(f"{out}: {out.stat().st_size:,} bytes, {len(entries)} diagrams inlined")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

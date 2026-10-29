@@ -2,7 +2,7 @@
 
 - **Severity:** medium (a run's whole round-07 output is only usable from `file://` with a manual workaround; every harness will hit this)
 - **Found in:** round 07, after the owner tried to open the gallery
-- **Status:** open
+- **Status:** applied (tools/architecture/gallery)
 - **Requested by:** the owner, 2026-10-29 — "we want a serverless HTML thing like this, with all the details regarding the page and css"
 
 ## The problem

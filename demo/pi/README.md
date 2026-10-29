@@ -43,6 +43,18 @@ To fill in as the rounds are done.
 | 06 Docker | pinned image, `deno` user, named volume, self-answered health check | 79 + 5 container checks | 0 | 0 | none |
 | 07 architecture | 14 validated Archify diagrams, an offline gallery, five `ask` questions; the graph found a spec/source gap | 79 + 14/14 diagram gates | 1 | 0 | FB-002 |
 
+## Viewing the gallery
+`render/index.html` opens offline, but browsers refuse some `file://` paths (macOS protects the
+Desktop) and block local iframes, so a direct double-click can show "Access to the file was
+denied". Serve the folder instead:
+
+```bash
+cd demo/pi/render && python3 -m http.server 8137
+```
+
+Then open <http://localhost:8137/>. The diagrams themselves (`render/diagrams/*.html`) are
+self-contained, with no network request; served the same way they render everywhere.
+
 ## What this run showed
 - **The context rule works end to end.** The 250k alert fired in round 07, refused every tool call
 except closure, and the session wrote its handover, updated `work/current.md`, passed

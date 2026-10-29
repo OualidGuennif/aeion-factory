@@ -167,7 +167,10 @@ folder.</p>
 <footer>Rendered with the existing Archify 3.2.0 installation, which ran every validate, finalize and
 browser-check gate. Archify has no use-case type: the three use-case diagrams are architecture
 diagrams with actors kept outside the system boundary. The board is a local public demo, with no
-authentication and no per-visitor vote limit — the diagrams say so where it matters.</footer>
+authentication and no per-visitor vote limit — the diagrams say so where it matters.<br>Open this
+folder over HTTP (<code>cd demo/pi/render &amp;&amp; python3 -m http.server 8137</code>, then
+<code>http://localhost:8137/</code>): browsers refuse to read some <code>file://</code> paths and
+block local iframes, so the previews can stay blank when the page is opened from disk.</footer>
 </main>
 </body>
 </html>

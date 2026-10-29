@@ -6,6 +6,8 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+- Droid registers PreCompact: a compaction before a verified handover runs and closure (handover,
+  `work/current.md`, docs, checkpoint) is owed right after it, as for Codex. Droid still has no 250k alert.
 - The demo gains a dsh run (`demo/dsh/`, `demo/start/dsh/START.md`); every demo workspace has the 1.5.0 hooks,
   skills and tools (Codex and OpenCode keep their app and run state).
 

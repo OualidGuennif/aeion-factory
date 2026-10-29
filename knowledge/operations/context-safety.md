@@ -108,6 +108,7 @@ edit its own scripts/settings. Raw CLI launches outside the managed entry point 
 | OpenCode | the newest `session.step.ended` tokens (input, output, cache) | the plugin calls `session.compact` |
 | Pi | `ctx.getContextUsage().tokens` | the extension calls `ctx.compact()` |
 | dsh | `ctx.tokenMeter.measure(session).totalTokens` | the plugin compacts before the next step |
+| Droid | nothing (no 250k alert) | native; a compaction before the handover owes it after, as for Codex |
 
 A harness reports usage after the response that asked for a tool, so the adapter keeps the last count
 until a new one arrives (0 after a compaction). A malformed count or a rollout from another session

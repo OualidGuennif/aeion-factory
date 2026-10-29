@@ -42,8 +42,8 @@ Adopting projects keep their existing instructions and architecture.
 
 Claude Code retains its native hooks. Codex, OpenCode, Pi, dsh (DeepSeek Harness), Devin, Droid
 (factory.ai) and Google Antigravity load the same instructions and skills, with narrow adapters to
-the existing secret guards, edit checks and handover checkpoints (Devin, Droid and Antigravity have
-no compaction checkpoint). During closure, plain read commands (`cat`, `head`, `sed -n`, `rg` and
+the existing secret guards, edit checks and handover checkpoints (Devin and Antigravity have no
+compaction checkpoint; Droid, which reports no tokens, owes its closure after a compaction). During closure, plain read commands (`cat`, `head`, `sed -n`, `rg` and
 the like, without operators, globs or secret files) are closure tools, because Codex reads only
 through its shell. Droid owns `.factory/`, so
 Æion Factory's local state lives in the ignored `.aeion/`. A per-clone flow mode selects the team flow (PR, review, CI)

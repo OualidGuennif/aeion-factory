@@ -117,7 +117,10 @@ directory does not establish loaded hooks or identical runtime guarantees.
   names carrying a `command` string goes through the shell guard (and the path guard for a
   file). It refuses with `permissionDecision: deny`. As for Devin, each registration passes its
   event name and a payload without `session_id` uses one key per clone, so a missing field refuses
-  nothing by itself. Droid has no Æion Factory compaction checkpoint or token stop.
+  nothing by itself. Droid passes no token count, so it gets no 250k alert or 300k stop, but its
+  PreCompact (documented with `trigger` manual or auto) reaches the adapter: a compaction before a
+  verified handover runs, since Droid documents no way to refuse one, and its compact SessionStart
+  then allows only closure (handover, `work/current.md`, docs, checkpoint) until the checkpoint passes.
 - Google Antigravity (the `agy` CLI and the IDE) reads `AGENTS.md` and `.agents/skills`, and
   workspace hooks from `.agents/hooks.json` once the folder is trusted. One `aeion-factory` group
   sends PreToolUse and PostToolUse (matcher `.*`) and Stop to `tools/agents/hook.py antigravity

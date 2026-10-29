@@ -278,9 +278,10 @@ def handle(root, provider, event):
                 state['warning_pending'] = True
         budget.atomic(file, json.dumps(state, sort_keys=True) + '\n')
         if name == 'PreCompact':
-            if not budget.ready(root, session, state) and provider == 'codex':
-                # Codex ends its turn on a refused compaction and retries it before every turn, so a refusal
-                # would stall it for good: compaction runs, and the handover and checkpoint come right after.
+            if not budget.ready(root, session, state) and provider in {'codex', 'droid'}:
+                # Codex ends its turn on a refused compaction and retries it before every turn, and Droid documents
+                # no way to refuse one, so a refusal would stall them: compaction runs, and the handover and
+                # checkpoint come right after.
                 budget.ensure_handover(root, session)
                 state['closure_owed'] = 'pending'
                 budget.atomic(file, json.dumps(state, sort_keys=True) + '\n')
@@ -302,8 +303,10 @@ def handle(root, provider, event):
                 budget.atomic(file, json.dumps(state, sort_keys=True) + '\n')
             return {'systemMessage': f'Æion Factory verified handover: {handover.relative_to(root)}'}
         measured = {}
-        if provider in MEASURED and name in {'PreToolUse', 'PostToolUse', 'Stop'}:
-            usage = observed_usage(provider, event)
+        # Droid measures nothing, so only the closure owed after its compaction applies the shared rule.
+        owed = provider == 'droid' and state.get('closure_owed') == 'due'
+        if (provider in MEASURED or owed) and name in {'PreToolUse', 'PostToolUse', 'Stop'}:
+            usage = observed_usage(provider, event) if provider in MEASURED else None
             # Harnesses report usage after the response that asked for the tool: until then the last count holds.
             if usage is None:
                 usage = state.get('observed_tokens') or 0
@@ -331,8 +334,12 @@ def handle(root, provider, event):
         pointer = 'Handover' if handover.is_file() else 'Handover (created at the first refused compaction)'
         context = (f'Æion Factory {provider} checkpoint profile. {pointer}: {handover.relative_to(root)}. '
                    f'Checkpoint key: {session}. 250k handover/compact, 300k forced handover and compaction; not a strict ceiling.')
-        if provider in {'devin', 'droid', 'antigravity'}:
+        if provider in {'devin', 'antigravity'}:
             context = f'Æion Factory {provider} profile: shared guards and edit feedback; no compaction checkpoint or token stop.'
+        if provider == 'droid':
+            context = (f'Æion Factory droid profile: shared guards and edit feedback; no 250k alert. Before compacting, fill '
+                       f'{handover.relative_to(root)}, update work/current.md and verify: {budget.checkpoint_command(root, session)}. '
+                       f'A compaction without it owes that closure right after.')
         context += '\n' + result.get('hookSpecificOutput', {}).get('additionalContext', '')
         result['hookSpecificOutput'] = {'hookEventName': name, 'additionalContext': context}
         return result

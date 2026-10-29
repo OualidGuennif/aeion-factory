@@ -5,7 +5,7 @@ import { dirname, resolve } from 'node:path';
 import { seam } from './seam.js';
 
 export const name = 'aeion-factory';
-export const inject = ['tools', 'tokenMeter'];
+export const inject = ['tools', 'tokenMeter', 'workingDirectory'];
 
 const UNAVAILABLE = 'Æion Factory hook unavailable; action refused.';
 const RESUME = 'Æion Factory: context compacted. Read your handover in work/handovers/ and continue the task.';
@@ -13,11 +13,12 @@ const ASK = 'Æion Factory: handover verified. This dsh profile lets only the us
 // dsh's built-in tools under the names the shared guards know; glob only lists paths.
 const TOOLS = { bash: 'Bash', read: 'Read', write: 'Write', edit: 'Edit', str_replace_editor: 'Edit', glob: 'Glob', grep: 'Grep' };
 
-// dsh may start in a subfolder (demo/), so the hooks live in the nearest folder above that has them.
+// A session may work in a subfolder (demo/), so the hooks live in the nearest folder above that has them;
+// a session outside any Æion Factory project has none, and the plugin leaves it alone.
 function projectRoot(directory) {
   for (let folder = resolve(directory); ; folder = dirname(folder)) {
     if (existsSync(resolve(folder, 'tools/agents/hook.py'))) return folder;
-    if (dirname(folder) === folder) return directory;
+    if (dirname(folder) === folder) return undefined;
   }
 }
 
@@ -41,7 +42,8 @@ function toolName(exec) {
 }
 
 export function apply(ctx) {
-  const root = projectRoot(process.cwd());
+  // Each session's own directory, not the launch folder: one dsh web server serves many projects.
+  const rootOf = (agent) => projectRoot(ctx.workingDirectory.get(agent.session));
   // Sessions given the factory's start context; a compaction removes one, so its next call is told again.
   const started = new Set();
   const compacted = new Set();
@@ -64,7 +66,7 @@ export function apply(ctx) {
     last.set(session, now);
   }
 
-  function start(session) {
+  function start(root, session) {
     if (started.has(session)) return;
     const source = compacted.has(session) ? 'compact' : 'startup';
     const { reason } = invoke(root, { session_id: session, hook_event_name: 'SessionStart', source });
@@ -87,8 +89,10 @@ export function apply(ctx) {
     // A call without an agent has no session to account it to, so it is refused.
     if (!exec.agent) return UNAVAILABLE;
     try {
+      const root = rootOf(exec.agent);
+      if (!root) return undefined;
       observe(exec.agent);
-      start(exec.agent.session.id);
+      start(root, exec.agent.session.id);
       return invoke(root, toolEvent(exec, 'PreToolUse')).reason || undefined;
     } catch (error) {
       return error.message || UNAVAILABLE;
@@ -99,6 +103,8 @@ export function apply(ctx) {
     const downstream = await next();
     if (!exec.agent || result?.isError) return downstream;
     try {
+      const root = rootOf(exec.agent);
+      if (!root) return downstream;
       const { output } = invoke(root, toolEvent(exec, 'PostToolUse'));
       if (output.aeion?.compact) due.add(exec.agent);
     } catch (error) {
@@ -113,6 +119,7 @@ export function apply(ctx) {
     due.delete(agent);
     const session = agent.session.id;
     try {
+      const root = rootOf(agent);
       // The shared rule refuses the compaction unless the checkpoint is still verified.
       if (invoke(root, { session_id: session, hook_event_name: 'PreCompact' }).reason) return next();
       // The web profile keeps compaction inside each agent preset, out of a plugin's reach: the user compacts.

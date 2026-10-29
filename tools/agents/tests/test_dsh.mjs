@@ -21,19 +21,15 @@ function load(cwd, totalTokens = 1000, { root: service = true } = {}) {
   const ctx = {
     tools: { guard: (guard) => guards.push(guard) },
     tokenMeter: { measure: () => ({ totalTokens: meter.tokens }) },
+    // The session works in `cwd`, whatever folder the server was launched from.
+    workingDirectory: { get: () => cwd },
     compaction: { compactIfNeeded: async (agent, trigger) => compactions.push(trigger) },
     on: (name, handler) => { handlers[name] = handler; },
     logger: { warn: () => {} },
   };
-  const previous = process.cwd();
-  process.chdir(cwd);
   seam.compaction = undefined;
-  try {
-    apply(ctx);
-    if (service) compaction.apply(ctx);
-  } finally {
-    process.chdir(previous);
-  }
+  apply(ctx);
+  if (service) compaction.apply(ctx);
   const steered = [];
   const agent = { session: { id: sessionID }, steer: (message) => steered.push(message) };
   return { handlers, guard: guards[0], compactions, agent, steered, meter };
@@ -44,7 +40,7 @@ const call = (agent, name, args) => ({ name, arguments: args, agent, callId: 'ca
 test('dsh registers one guard and the step and result listeners', () => {
   const { handlers, guard } = load(root);
   // The guards wait for no compaction service: dsh web keeps it inside each agent preset.
-  assert.deepEqual(inject, ['tools', 'tokenMeter']);
+  assert.deepEqual(inject, ['tools', 'tokenMeter', 'workingDirectory']);
   assert.deepEqual(compaction.inject, ['compaction']);
   assert.equal(typeof guard, 'function');
   assert.deepEqual(Object.keys(handlers).sort(), ['agent/pre-step', 'tools/post-execute']);
@@ -55,6 +51,15 @@ test('dsh tool calls that read a secret are denied before execution', () => {
   assert.match(guard(call(agent, 'bash', { command: 'cat .env' })), /secret|Æion/);
   assert.ok(guard(call(agent, 'read', { file_path: `${root}/.env` })));
   assert.equal(guard(call(agent, 'bash', { command: 'git status --short' })), undefined);
+});
+
+test('dsh guards a session by its own directory and leaves one outside any factory project alone', () => {
+  const { guard, agent } = load(join(root, 'demo'));
+  assert.ok(guard(call(agent, 'bash', { command: 'cat .env' })));
+  const outside = mkdtempSync(join(tmpdir(), 'dsh-outside-'));
+  const other = load(outside);
+  assert.equal(other.guard(call(other.agent, 'bash', { command: 'cat .env' })), undefined);
+  rmSync(outside, { recursive: true, force: true });
 });
 
 test('dsh refuses a call that has no agent to account it to', () => {

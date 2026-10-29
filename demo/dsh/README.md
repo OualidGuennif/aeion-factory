@@ -20,16 +20,30 @@ dsh (DeepSeek Harness) builds the same Idea Board from [`../plan/`](../plan/00-s
 ## Starting dsh
 1. dsh 0.2.1+ with a provider already connected in its own settings. It reads the root `AGENTS.md` and
    `.agents/skills` from any folder below the root, but loads the factory plugin only through a patch
-   overlay, so from `demo/` the patch is passed explicitly:
-   ```bash
-   cd demo && dsh web --patch ../.dsh/factory.patch.yml
-   ```
-   dsh ships no `tui` profile: `web` opens its chat in the browser (`--no-open` prints the URL instead).
-   The plugin finds `tools/agents/hook.py` by walking up from `demo/`. Started at the repository root,
-   `tools/agents/run dsh` adds the same patch. At startup dsh reports `aeion-factory-compaction` as pending:
-   web keeps compaction inside each agent preset, so past 250k the agent asks you to type `/compact`
-   once its handover is verified.
-2. Paste [`../start/dsh/START.md`](../start/dsh/START.md) as the first message.
+   overlay, which every start below passes. dsh ships no `tui` profile.
+   - **Web** (chat in the browser; `--no-open` prints the URL instead):
+     ```bash
+     cd demo && dsh web --patch ../.dsh/factory.patch.yml
+     ```
+     Web listens on 3080. If a background `dsh web` already holds it (`EADDRINUSE`), add `--port 0`, or
+     use that server as below.
+   - **A background web server** (one server for every project, for example behind Tailscale): restart it
+     once with the patch, by absolute path, keeping its other flags:
+     ```bash
+     dsh web --no-open --patch /path/to/aeion-factory/.dsh/factory.patch.yml
+     ```
+     The plugin guards each session by its own working directory, not the server's launch folder, so open
+     the run's session in the `demo/` workspace (or have the agent change its working directory there
+     first). Sessions outside an Æion Factory project are left alone.
+   - **Headless** (one task per call; `--session-id` continues the same session):
+     ```bash
+     cd demo && dsh headless --patch ../.dsh/factory.patch.yml "$(cat start/dsh/START.md)"
+     ```
+   The plugin finds `tools/agents/hook.py` by walking up from the session's folder. Started at the
+   repository root, `tools/agents/run dsh [web|headless]` adds the same patch. In web, dsh reports
+   `aeion-factory-compaction` as pending at startup: web keeps compaction inside each agent preset, so past
+   250k the agent asks you to type `/compact` once its handover is verified. Headless compacts by itself.
+2. In web, paste [`../start/dsh/START.md`](../start/dsh/START.md) as the first message.
 
 ## Results by round
 To fill in as the rounds are done.

@@ -69,7 +69,11 @@ The hooks all call the same guards in `.claude/hooks/` and `tools/agents/hook.py
   ```bash
   cd demo && dsh web --patch ../.dsh/factory.patch.yml
   ```
-  dsh ships no `tui` profile; `web` is its interactive chat, in the browser.
+  dsh ships no `tui` profile; `web` is its interactive chat, in the browser. A background `dsh web` on
+  port 3080 makes this fail with `EADDRINUSE`: add `--port 0`, or restart that server with
+  `--patch <absolute path>/.dsh/factory.patch.yml` and open the session in the `demo/` workspace. Headless
+  works the same way: `dsh headless --patch ../.dsh/factory.patch.yml "<task>"`. See
+  [`../dsh/README.md`](../dsh/README.md).
 - **Skills.** Found through `.agents/skills/` in a parent folder.
 - **Provider.** Connect it in dsh's own settings.
 - **Compaction.** Once the handover is verified past 250k, the agent asks you to type `/compact` (web keeps

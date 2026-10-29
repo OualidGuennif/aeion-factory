@@ -11,6 +11,8 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 - dsh starts with its `web` profile (it ships no `tui`; the demo's `--profile tui` command failed), and the
   guards now run there: compaction is a separate plugin entry, since web keeps that service inside each
   agent preset. Without it the agent asks the user for `/compact`, and a token fall marks the compaction.
+  The plugin now guards each session by its own working directory, so one background `dsh web` server
+  (started anywhere with the patch's absolute path) guards the sessions opened in a factory project.
 - The demo gains a dsh run (`demo/dsh/`, `demo/start/dsh/START.md`); every demo workspace has the 1.5.0 hooks,
   skills and tools (Codex and OpenCode keep their app and run state).
 

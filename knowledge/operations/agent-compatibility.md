@@ -87,7 +87,10 @@ directory does not establish loaded hooks or identical runtime guarantees.
   browser UI, by default; dsh ships no `tui` profile) passes `--patch .dsh/factory.patch.yml`, which
   inserts `.dsh/plugins/factory/index.js` (the guards) and `compaction.js` (the compaction service, shared
   through `seam.js`). The web profile keeps `compaction` inside each agent preset, not at its root, so there
-  the second entry stays pending ("waiting for service: compaction") while the guards run. The plugin's
+  the second entry stays pending ("waiting for service: compaction") while the guards run. One web server
+  serves many projects, so the plugin finds `tools/agents/hook.py` above each session's own directory
+  (`ctx.workingDirectory.get(session)`, which follows the working-directory tool), not the launch folder;
+  a session outside an Æion Factory project is left alone. The plugin's
   `ctx.tools.guard` sends every tool call as PreToolUse to `tools/agents/hook.py dsh` (a returned reason
   denies it and no later policy can undo that; a call without an agent is refused), with
   `ctx.tokenMeter.measure(session).totalTokens` as the usage; `tools/post-execute` sends PostToolUse.

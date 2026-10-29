@@ -3,7 +3,7 @@
 Claude Code builds the same Idea Board again from [`../plan/`](../plan/00-start.md) as the
 [first Claude Code run](archive/run-01/SUMMARY.md), so the runs can be compared round by round.
 
-- **Factory copy:** `workspace/` (not tracked), made from `develop` at `578f4f3` (release 1.4.0). It has the base fixes
+- **Factory copy:** `workspace/` (not tracked), made from `develop` at `6e98daa` (release 1.5.0). It has the base fixes
   from the Claude Code run (FB-002, 004 to 010), Graphify 0.9.97 and Archify v3.2.0 pins, and
   `tools/architecture/ask` with `ask callers`, and the skill `graph`. The point of this run is to
   check that every fix from run 1 holds.

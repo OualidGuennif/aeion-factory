@@ -6,6 +6,9 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+- The demo gains a dsh run (`demo/dsh/`, `demo/start/dsh/START.md`); every demo workspace has the 1.5.0 hooks,
+  skills and tools (Codex and OpenCode keep their app and run state).
+
 ## [1.5.0] - 2026-10-29
 
 ### Fixed

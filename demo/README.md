@@ -27,10 +27,11 @@ on `develop`, each with a test, so the next harness starts from a better factory
 | Harness | Factory | Rounds done | Final tests | Feedback (fixed) | Human help | Run |
 | --- | --- | --- | --- | --- | --- | --- |
 | Claude Code, run 1 | 1.3.0 `fb2af90` | 8 of 8 | 72 + 5 container checks | 10 (8) | approvals, 3 checkpoints | [archive/run-01/](claude_code/archive/run-01/SUMMARY.md) |
-| Claude Code, run 2 | 1.4.0 `578f4f3`, every fix above | not started | | | | [claude_code/](claude_code/README.md) |
+| Claude Code, run 2 | 1.5.0 `6e98daa`, every fix above | not started | | | | [claude_code/](claude_code/README.md) |
 | Codex | 1.4.0 `578f4f3`, every fix above | not started | | | | [codex/](codex/README.md) |
 | OpenCode | 1.4.0 `578f4f3`, every fix above | not started | | | | [opencode/](opencode/README.md) |
-| Pi | 1.4.0 `578f4f3`, every fix above | not started | | | | [pi/](pi/README.md) |
+| Pi | 1.5.0 `6e98daa`, every fix above | not started | | | | [pi/](pi/README.md) |
+| dsh | 1.5.0 `6e98daa`, every fix above | not started | | | | [dsh/](dsh/README.md) |
 
 Shared tools: [`batteries/hooks_battery.py`](batteries/hooks_battery.py) feeds real payloads to a
 copy's Claude hooks.

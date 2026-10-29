@@ -3,8 +3,8 @@
 Pi builds the same Idea Board from [`../plan/`](../plan/00-start.md) as the
 [first Claude Code run](../claude_code/archive/run-01/SUMMARY.md), so the runs can be compared round by round.
 
-- **Factory copy:** `workspace/` (not tracked), made from `develop` at `578f4f3` (release 1.4.0). It has
-  the base fixes from the Claude Code run (FB-002, 004 to 010), Graphify 0.9.97 and Archify v3.2.0 pins,
+- **Factory copy:** `workspace/` (not tracked), made from `develop` at `6e98daa` (release 1.5.0). It has
+  the one 250k/300k context rule, Pi's resume after compaction, the base fixes from the Claude Code run (FB-002, 004 to 010), Graphify 0.9.97 and Archify v3.2.0 pins,
   `tools/architecture/ask` with `ask callers`, and the skill `graph`.
 - **Command:** `git archive HEAD -- . ':(exclude)demo'`. The copy has no `.git` and no app yet.
 - **Fresh state:** `tools/release/release --new-project` reset the copy (FB-003 of run 1, FB-001 of

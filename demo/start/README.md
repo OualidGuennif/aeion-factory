@@ -9,6 +9,7 @@ one harness:
 | Codex | [`codex/START.md`](codex/START.md) | `demo/` |
 | OpenCode | [`opencode/START.md`](opencode/START.md) | `demo/` |
 | Pi | [`pi/START.md`](pi/START.md) | `demo/`, with the extension flag below |
+| dsh | [`dsh/START.md`](dsh/START.md) | `demo/`, with the patch flag below |
 
 Every message assumes the agent was opened in `demo/`, and every path in it starts there.
 
@@ -62,6 +63,17 @@ The hooks all call the same guards in `.claude/hooks/` and `tools/agents/hook.py
 - **Live qualification.** Pi has never run live with the factory. This run is also that qualification,
   and any refusal or silence from the hooks is a feedback.
 - **No sign-off at stop.** Pi has no hook for it, so the skill `sign-off` does that step.
+
+### dsh (DeepSeek Harness, 0.2.1+)
+- **Start command.** dsh loads project plugins only through a patch overlay, so from `demo/` pass it:
+  ```bash
+  cd demo && dsh --profile tui --patch ../.dsh/factory.patch.yml
+  ```
+- **Skills.** Found through `.agents/skills/` in a parent folder.
+- **Provider.** Connect it in dsh's own settings.
+- **Compaction.** The plugin compacts before the next step once the handover is verified past 250k, then
+  tells the agent to read its handover.
+- **No sign-off at stop.** dsh has no hook for it, so the skill `sign-off` does that step.
 
 ## Check the hooks before round 00
 In any harness, ask the agent to run `cat .env`. The guard must refuse it and name its rule. If the

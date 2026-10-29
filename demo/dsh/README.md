@@ -43,3 +43,13 @@ To fill in as the rounds are done.
 | Round | Result | Tests | Guard refusals | Human help | Feedback |
 | --- | --- | --- | --- | --- | --- |
 | 00 | done | factory-tests PASS (152 run, 150 passed, 2 skipped, 0 failed); hooks battery 15 cases, 0 failures | 1 | 1 | FB-001, FB-002, FB-003 |
+| 01 | done | deno test 6 passed; fmt/lint/check/build PASS; health 200, unknown 404 JSON, POST 405 JSON | 0 | 0 | FB-004 |
+| 02 | done | deno test 29 passed; create 201, invalid 400, list, missing 404; KV survived a restart | 0 | 0 | — |
+| 03 | done | deno test 39 passed; page 200, form 303, invalid 400 with kept values, script title escaped | 0 | 0 | — |
+| 04 | done | deno test 52 passed (25 concurrent votes kept); 3 votes via curl, sort=votes, bad sort 400, page 303 | 0 | 0 | FB-005 |
+| 05 | done | deno test 79 passed (tag index, 500-idea search bound, literal `.*`); fmt/lint/check/build PASS; tag, q, bad tag 400, long q 400, page filters | 2 | 1 | FB-006, FB-007 |
+| 06 | done | container acceptance PASS: healthy, create, idea kept across `down`/`up`, `id -u` 1993, stale lock refused the build, `down -v` | 1 | 0 | FB-008 |
+| 07 | done | Graphify: 1,520 nodes / 2,667 edges, 5 questions with real output, 6 stale spec links found and fixed; Archify: 14/14 diagrams validate, render and browser-check, gallery opens offline | 1 | 0 | FB-009 |
+
+All eight rounds are done. The owner runs each journal's commit command; no commit was made by the
+agent. The app's final state is 79 tests, fmt/lint/check/build green, and a healthy Compose service.

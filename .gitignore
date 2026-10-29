@@ -20,3 +20,6 @@ node_modules/
 .venv/
 # demo/: everything is tracked except each harness's working copy of the factory.
 /demo/*/workspace/
+
+# The live dsh session log of the demo: it grows during a run, so it is not part of the project tree.
+demo/dsh/journal/run.jsonl

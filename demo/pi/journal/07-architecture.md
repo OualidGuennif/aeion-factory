@@ -89,6 +89,22 @@ in its own command (knowledge/policies/bounded-intake.md).
 ## Feedback
 FB-002 new: a verified checkpoint requires handover headings that nothing states.
 
+## Follow-up after the owner opened the gallery
+- Opening `render/diagrams/system-overview.html` from the Desktop showed "Access to the file was
+denied": macOS withholds the Desktop folder from the browser, so any `file://` read there fails.
+The diagram itself needs nothing — no `fetch`, no external script, only inline SVG and scripts — so
+a server was never required either; it was a workaround for that permission.
+- The gallery is now one self-contained file. `render/build_gallery.py` inlines the fourteen HTML
+documents as JSON and draws each one from an iframe `srcdoc`, with an "Open full size" viewer that
+reuses the same markup; nothing is read from disk but the page itself.
+- HTML is generated, not tracked: `render/.gitignore` covers `*.html` and `diagrams/*.html`, and
+`git rm --cached` dropped the files committed earlier in this round. Git keeps the JSON diagrams,
+the builder, `use-cases.md` and its `raw/` outputs; the earlier commit keeps the HTML in history.
+- Verified on `file://` with headless Chrome at a 1500×26000 window: 14 iframes, 14 with a rendered
+`<svg>`, 809–826 KB of markup each, every inner title matching its diagram. PASS.
+- Serving the folder stays possible for anyone who wants it:
+`python3 -m http.server 8137 --bind ::` (IPv6 and IPv4, so `localhost` and `127.0.0.1` both work).
+
 ## Result
 
 ```text

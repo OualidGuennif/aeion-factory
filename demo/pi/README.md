@@ -44,18 +44,21 @@ To fill in as the rounds are done.
 | 07 architecture | 14 validated Archify diagrams, an offline gallery, five `ask` questions; the graph found a spec/source gap | 79 + 14/14 diagram gates | 1 | 0 | FB-002 |
 
 ## Viewing the gallery
-`render/index.html` opens offline, but browsers refuse some `file://` paths (macOS protects the
-Desktop) and block local iframes, so a direct double-click can show "Access to the file was
-denied". Serve the folder instead, in a terminal you leave open:
+The HTML is generated, not tracked: the diagram JSONs, `use-cases.md` and `build_gallery.py` are
+what git holds.
 
 ```bash
-cd demo/pi/render && python3 -m http.server 8137 --bind ::
+cd demo/pi/render && python3 build_gallery.py
 ```
 
-Then open <http://127.0.0.1:8137/>. `--bind ::` listens on IPv6 and IPv4, so `localhost` works
-too; without it Python listens on IPv4 only, which is what makes Firefox report a failed
-connection on `localhost:8137`. The diagrams themselves (`render/diagrams/*.html`) are
-self-contained, with no network request; served the same way they render everywhere.
+It writes `index.html`: one self-contained page with all fourteen diagrams inlined as iframe
+`srcdoc`, so it opens from a plain `file://` path with no server, no network and no access to the
+other files. "Open full size" reuses the same inlined markup. The `diagrams/*.html` files are still
+written beside it for anyone who serves the folder. Verified with headless Chrome on `file://`:
+14/14 iframes rendered their SVG.
+
+macOS still has to allow the browser to read the Desktop folder before any `file://` page opens;
+that permission, not the HTML, is what produced "Access to the file was denied".
 
 ## What this run showed
 - **The context rule works end to end.** The 250k alert fired in round 07, refused every tool call

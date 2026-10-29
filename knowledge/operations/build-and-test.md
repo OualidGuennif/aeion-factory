@@ -13,6 +13,26 @@ sources:
   - id: lsp
     resource: ../../tools/claude-plugins/native-lsp/.lsp.json
     title: "Language-server registrations"
+  - resource: ../../.claude/hooks/after-edit.py
+    title: "after-edit.py, which names this doc as its spec"
+  - resource: ../../.claude/hooks/project_files.py
+    title: "project_files.py, which names this doc as its spec"
+  - resource: ../../.claude/hooks/session-start.py
+    title: "session-start.py, which names this doc as its spec"
+  - resource: ../../.claude/hooks/sign-off.py
+    title: "sign-off.py, which names this doc as its spec"
+  - resource: ../../tools/claude-plugins/deno-lsp/scripts/deno-lsp
+    title: "deno-lsp, which names this doc as its spec"
+  - resource: ../../tools/claude-plugins/native-lsp/scripts/jdtls-launch
+    title: "jdtls-launch, which names this doc as its spec"
+  - resource: ../../tools/claude-plugins/native-lsp/scripts/tsc-lsp
+    title: "tsc-lsp, which names this doc as its spec"
+  - resource: ../../tools/efficiency/bundle
+    title: "bundle, which names this doc as its spec"
+  - resource: ../../tools/factory-tests
+    title: "factory-tests, which names this doc as its spec"
+  - resource: ../../tools/git-hooks/pre-commit
+    title: "pre-commit, which names this doc as its spec"
 ---
 
 # Build and test

@@ -66,13 +66,19 @@ export function apply(ctx) {
     last.set(session, now);
   }
 
-  function start(root, session) {
+  // The factory's start context reaches the model as steering: dsh has no hook that adds it to the prompt.
+  const say = (agent, text) => agent.steer({ content: [{ type: 'text', text }], source: { kind: 'aeion-factory' } });
+
+  function start(root, agent) {
+    const session = agent.session.id;
     if (started.has(session)) return;
     const source = compacted.has(session) ? 'compact' : 'startup';
-    const { reason } = invoke(root, { session_id: session, hook_event_name: 'SessionStart', source });
+    const { output, reason } = invoke(root, { session_id: session, hook_event_name: 'SessionStart', source });
     if (reason) throw new Error(reason);
     started.add(session);
     compacted.delete(session);
+    const context = output.hookSpecificOutput?.additionalContext;
+    if (context) say(agent, context);
   }
 
   function toolEvent(exec, name) {
@@ -92,7 +98,7 @@ export function apply(ctx) {
       const root = rootOf(exec.agent);
       if (!root) return undefined;
       observe(exec.agent);
-      start(root, exec.agent.session.id);
+      start(root, exec.agent);
       return invoke(root, toolEvent(exec, 'PreToolUse')).reason || undefined;
     } catch (error) {
       return error.message || UNAVAILABLE;
@@ -113,6 +119,19 @@ export function apply(ctx) {
     return downstream;
   });
 
+  // The turn's close is the factory's Stop: a sign-off finding steers one more step; the hook shows each
+  // finding once per session, so a second close passes.
+  ctx.on('agent/turn-stopping', async ({ agent }) => {
+    try {
+      const root = rootOf(agent);
+      if (!root) return;
+      const { reason } = invoke(root, { session_id: agent.session.id, hook_event_name: 'Stop' });
+      if (reason) say(agent, reason);
+    } catch (error) {
+      ctx.logger?.warn?.(`aeion-factory: ${error.message || UNAVAILABLE}`);
+    }
+  });
+
   // A verified handover past 250k compacts now, not at dsh's own threshold near the model window.
   ctx.on('agent/pre-step', async ({ agent, signal }, next) => {
     if (!due.has(agent) || signal.aborted) return next();
@@ -124,14 +143,14 @@ export function apply(ctx) {
       if (invoke(root, { session_id: session, hook_event_name: 'PreCompact' }).reason) return next();
       // The web profile keeps compaction inside each agent preset, out of a plugin's reach: the user compacts.
       if (!seam.compaction) {
-        agent.steer({ content: [{ type: 'text', text: ASK }], source: { kind: 'aeion-factory' } });
+        say(agent, ASK);
         return next();
       }
       // dsh's overflow path compacts now whatever its own threshold; it is the step-time compaction dsh exposes.
       await seam.compaction.compactIfNeeded(agent, 'context-overflow', signal);
       started.delete(session);
       compacted.add(session);
-      agent.steer({ content: [{ type: 'text', text: RESUME }], source: { kind: 'aeion-factory' } });
+      say(agent, RESUME);
     } catch (error) {
       ctx.logger?.warn?.(`aeion-factory: compaction failed: ${error.message}`);
     }

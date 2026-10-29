@@ -146,26 +146,38 @@ def checkpoint_command(root, session):
     return command + f" --base {'origin/develop' if develop else 'origin/main'} --verify"
 
 
-def fingerprint(root):
-    # Include untracked task files and tracked bytes, without following symlinks.
-    # A plain folder has no HEAD: its files alone make the fingerprint.
-    digest = hashlib.sha256(git(root, "rev-parse", "HEAD") if git_active(root) else b"no-git")
+def tree_files(root):
+    """{path: digest} for untracked task files and tracked bytes, without following symlinks."""
+    files = {}
     for rel in project_files(root, untracked=True):
-        raw = os.fsencode(rel)
-        if rel.startswith(("work/handovers/", ".aeion/")):
-            continue
-        name = Path(rel).name
-        if is_secret(name):
+        if rel.startswith(("work/handovers/", ".aeion/")) or is_secret(Path(rel).name):
             continue
         path = root / rel
-        digest.update(raw + b"\0")
         if path.is_symlink():
-            digest.update(os.fsencode(os.readlink(path)))
+            files[rel] = "link:" + os.readlink(path)
         elif path.is_file():
-            digest.update(hashlib.sha256(path.read_bytes()).digest())
+            files[rel] = hashlib.sha256(path.read_bytes()).hexdigest()
         else:
-            digest.update(b"deleted")
+            files[rel] = "deleted"
+    return files
+
+
+def fingerprint(root, files=None):
+    # A plain folder has no HEAD: its files alone make the fingerprint.
+    digest = hashlib.sha256(git(root, "rev-parse", "HEAD") if git_active(root) else b"no-git")
+    for rel, value in (tree_files(root) if files is None else files).items():
+        digest.update(os.fsencode(rel) + b"\0" + value.encode())
     return digest.hexdigest()
+
+
+def changed_paths(before, after, limit=5):
+    """The paths whose bytes differ between two tree_files maps, named so a live log is easy to spot."""
+    paths = sorted(rel for rel in before.keys() | after.keys() if before.get(rel) != after.get(rel))
+    return ", ".join(paths[:limit]) + (f" and {len(paths) - limit} more" if len(paths) > limit else "")
+
+
+HEADINGS = ("Scope", "Completed", "Remaining", "Constraints", "Evidence")
+SHAPE = "the handover uses the exact lines " + ", ".join(f"## {h}" for h in HEADINGS)
 
 
 def handover_path(root, session):
@@ -175,8 +187,7 @@ def handover_path(root, session):
 def ensure_handover(root, session):
     path = handover_path(root, session)
     if not path.exists():
-        atomic(path, f"# Handover {session}\n\n## Scope\nTODO\n\n## Completed\nTODO\n\n"
-               "## Remaining\nTODO\n\n## Constraints\nTODO\n\n## Evidence\nTODO\n")
+        atomic(path, f"# Handover {session}\n\n" + "".join(f"## {h}\nTODO\n\n" for h in HEADINGS).rstrip("\n") + "\n")
     return path
 
 
@@ -301,17 +312,19 @@ def apply_usage(root, session, state, name, event, usage):
         if name == "PreCompact":
             if not ready(root, session, state):
                 ensure_handover(root, session)
-                result = stop(name, f"Fill {handover.relative_to(root)}, then create a verified checkpoint before compaction: {checkpoint_command(root, session)}")
+                moved = changed_paths(state.get("checkpoint", {}).get("files", {}), tree_files(root)) if state.get("checkpoint") else ""
+                stale = f" The receipt is stale: {moved} changed since it (git-ignore a live log)." if moved else ""
+                result = stop(name, f"Fill {handover.relative_to(root)}, then create a verified checkpoint before compaction: {checkpoint_command(root, session)}.{stale}")
         elif state["state"] in {"HANDOVER_REQUIRED", "COMPACT_REQUIRED"}:
             ensure_handover(root, session)
             first = state.pop("warning_pending", False)
             call = {**event, "session_id": session}
             if state["state"] == "COMPACT_REQUIRED":
                 message = (f"Æion Factory 300k: write {handover.relative_to(root)} and verify the checkpoint now "
-                           f"({checkpoint_command(root, session)}); compaction follows.")
+                           f"({checkpoint_command(root, session)}); compaction follows; {SHAPE}.")
                 allowed = compact_tool(root, call)
             else:
-                message = f"Æion Factory 250k alert: finish closure only, update {handover.relative_to(root)}, work/current.md and affected docs; verify the checkpoint before compaction."
+                message = f"Æion Factory 250k alert: finish closure only, update {handover.relative_to(root)}, work/current.md and affected docs; verify the checkpoint before compaction; {SHAPE}."
                 allowed = closure_tool(root, call)
             if name == "PreToolUse" and not allowed:
                 result = {"hookSpecificOutput": {"hookEventName": name, "permissionDecision": "deny", "permissionDecisionReason": message}}
@@ -389,12 +402,13 @@ def checkpoint(root, session, base):
         handover = ensure_handover(root, session)
         text = handover.read_text()
         # Name each fault: a heading spelled `## Completed (commits)` reads as complete to a person.
-        missing = [f"## {key}" for key in ("Scope", "Completed", "Remaining", "Constraints", "Evidence") if f"## {key}\n" not in text]
+        missing = [f"## {key}" for key in HEADINGS if f"## {key}\n" not in text]
         if missing or "TODO" in text:
             faults = ([f"missing heading{'s' if len(missing) > 1 else ''}: {', '.join(missing)} (exact line)"] if missing else []) \
                 + (["a section still reads TODO"] if "TODO" in text else [])
             raise ValueError(f"complete all handover sections first: {'; '.join(faults)}")
-        before = fingerprint(root)
+        files = tree_files(root)
+        before = fingerprint(root, files)
         diff = (("tools/knowledge/doc-links", "--diff", base, "--worktree"),) if repository else ()
         for command in (*CHECKS, *diff):
             subprocess.run(command, cwd=root, check=True, timeout=30, stdout=subprocess.DEVNULL)
@@ -405,9 +419,11 @@ def checkpoint(root, session, base):
         local = not repository or subprocess.run(["git", "config", "--local", "--get", "aeion.mode"], cwd=root, capture_output=True, text=True).stdout.strip() == "local"
         if changed and not local and "work/current.md" not in changed:
             raise ValueError("update work/current.md before checkpointing")
-        if fingerprint(root) != before:
-            raise ValueError("files changed during checkpoint validation")
-        state["checkpoint"] = {"tree": before, "handover": hashlib.sha256(handover.read_bytes()).hexdigest()}
+        after = tree_files(root)
+        if fingerprint(root, after) != before:
+            raise ValueError(f"files changed during checkpoint validation: {changed_paths(files, after) or 'HEAD'} "
+                             "(a live log in the tree makes every receipt stale: git-ignore it)")
+        state["checkpoint"] = {"tree": before, "files": files, "handover": hashlib.sha256(handover.read_bytes()).hexdigest()}
         atomic(file, json.dumps(state, sort_keys=True) + "\n")
 
 

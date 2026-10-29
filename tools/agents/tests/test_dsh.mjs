@@ -43,7 +43,7 @@ test('dsh registers one guard and the step and result listeners', () => {
   assert.deepEqual(inject, ['tools', 'tokenMeter', 'workingDirectory']);
   assert.deepEqual(compaction.inject, ['compaction']);
   assert.equal(typeof guard, 'function');
-  assert.deepEqual(Object.keys(handlers).sort(), ['agent/pre-step', 'tools/post-execute']);
+  assert.deepEqual(Object.keys(handlers).sort(), ['agent/pre-step', 'agent/turn-stopping', 'tools/post-execute']);
 });
 
 test('dsh tool calls that read a secret are denied before execution', () => {
@@ -133,4 +133,41 @@ test('dsh treats a token fall to under half as a compaction and restarts the ses
   const starts = events().filter((event) => event.hook_event_name === 'SessionStart').map((event) => event.source);
   rmSync(folder, { recursive: true, force: true });
   assert.deepEqual(starts, ['startup', 'compact']);
+});
+
+// A stand-in adapter that answers each event with `replies[event]`, as the shared hook would.
+function answering(replies) {
+  const folder = mkdtempSync(join(tmpdir(), 'dsh-answer-'));
+  mkdirSync(join(folder, 'tools/agents'), { recursive: true });
+  writeFileSync(join(folder, 'replies.json'), JSON.stringify(replies));
+  writeFileSync(join(folder, 'tools/agents/hook.py'), [
+    'import json, sys',
+    'event = json.load(sys.stdin)',
+    "print(json.dumps(json.load(open('replies.json')).get(event['hook_event_name'], {})))",
+  ].join('\n') + '\n');
+  return folder;
+}
+
+test('dsh steers the SessionStart context to the model once per start (dsh FB-001)', () => {
+  const folder = answering({ SessionStart: { hookSpecificOutput: { additionalContext: 'Recovery: work/handovers/x.md' } } });
+  const { guard, agent, steered } = load(folder);
+  agent.session.id = `${sessionID}-context`;
+  guard(call(agent, 'bash', { command: 'true' }));
+  guard(call(agent, 'bash', { command: 'true' }));
+  rmSync(folder, { recursive: true, force: true });
+  assert.deepEqual(steered.map((message) => message.content[0].text), ['Recovery: work/handovers/x.md']);
+});
+
+test('dsh forwards a turn close to Stop and steers its sign-off finding (dsh FB-002)', async () => {
+  const blocked = answering({ Stop: { decision: 'block', reason: 'Sign off: update CHANGELOG.md' } });
+  const first = load(blocked);
+  await first.handlers['agent/turn-stopping']({ agent: first.agent, turn: 1, signal: new AbortController().signal });
+  rmSync(blocked, { recursive: true, force: true });
+  assert.deepEqual(first.steered.map((message) => message.content[0].text), ['Sign off: update CHANGELOG.md']);
+  // No finding leaves the turn to close.
+  const clear = answering({});
+  const second = load(clear);
+  await second.handlers['agent/turn-stopping']({ agent: second.agent, turn: 1, signal: new AbortController().signal });
+  rmSync(clear, { recursive: true, force: true });
+  assert.deepEqual(second.steered, []);
 });

@@ -10,6 +10,8 @@ sources:
   - id: tool
     resource: ../../tools/knowledge/doc-links
     title: "The link checker"
+  - resource: ../../tools/knowledge/knowledge-check
+    title: "knowledge-check, which names this doc as its spec"
 ---
 
 # Specs first
@@ -38,14 +40,16 @@ before its code is written, has these sections in this order:
 
 - **Doc to code:** the doc's frontmatter `sources` lists the files it describes
   (`resource: ../../src/area/file.ts`). A directory source is checked for existence only.
-- **Code to doc:** a described file carries one header line `Spec: knowledge/<doc>.md`.
-- `tools/knowledge/doc-links` fails when a pointer or a source does not resolve, and with
+- **Code to doc:** a described file carries one header line `Spec: knowledge/<doc>.md`, and that doc
+  lists the file (or a folder holding it) in its `sources`: the contract runs both ways (L4).
+- `tools/knowledge/doc-links` fails when a pointer or a source does not resolve, when a `Spec:` doc's
+  sources omit the file that names it, and with
   `--diff origin/develop` (or `origin/main` without develop) when a file changed while a doc covering it did not. Updating the doc, or a
   commit trailer `Docs-Checked: knowledge/<doc>.md -- <why no documented fact changed>`, passes.
 - A link is a pointer, never copied content.
 - Git enumeration, history and diff failures return nonzero with a short diagnostic. An unreadable
   repository (a `.git` git cannot read) or missing comparison base is not an empty change set and
-  never produces PASS. A plain folder without git is walked from disk (L1/L2 only; `--diff` needs git).
+  never produces PASS. A plain folder without git is walked from disk (L1, L2 and L4; `--diff` needs git).
 - A project nested in this one (a folder with its own `AGENTS.md` and `knowledge/index.md`, such as a
   demo copy) owns its `Spec:` pointers: they name its own `knowledge/`, so this root skips its files
   in L1 and L3, and the nested project's own `doc-links` checks them.

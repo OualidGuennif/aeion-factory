@@ -273,6 +273,26 @@ class ExtractionTests(unittest.TestCase):
             self.assertEqual((coverage["unresolved_spec_lines"], coverage["unresolved_spec_sources"]), ([], []))
             shutil.rmtree(root / ".aeion")
 
+    def test_frontmatter_only_edit_updates_spec_sources(self):
+        # Graphify caches a page by its body, so the sources must come from the file on disk (OpenCode FB-001).
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "knowledge").mkdir()
+            (root / "tools").mkdir()
+            spec = "---\ntitle: Tool\nsources:\n  - id: code\n    resource: ../tools/{}\n---\n\n# Tool\n"
+            (root / "knowledge/tool.md").write_text(spec.format("old.py"))
+            (root / "tools/old.py").write_text("def old():\n    return 1\n")
+            (root / "tools/new.py").write_text("def new():\n    return 2\n")
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                self.assertEqual(ask.main(["--root", str(root), "spec", "tools/old.py"]), 0)
+                (root / "knowledge/tool.md").write_text(spec.format("new.py"))
+                self.assertEqual(ask.main(["--root", str(root), "spec", "tools/new.py"]), 0)
+                self.assertEqual(ask.main(["--root", str(root), "spec", "tools/old.py"]), 0)
+            gap = "knowledge/tool.md  [in the spec's sources; no Spec: line (gap)]"
+            self.assertEqual(out.getvalue().splitlines(), [gap, gap, "no spec names tools/old.py, and it names none"])
+            shutil.rmtree(root / ".aeion")
+
 
 if __name__ == "__main__":
     unittest.main()

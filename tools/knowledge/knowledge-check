@@ -109,6 +109,10 @@ def main(argv):
             if entry.strip().count("\n") + 1 > 11:
                 problems.append(f"work/current.md: '{title}' over 10 lines")
             problems += [f"work/current.md: '{title}' lacks '{f}'" for f in WORK_FIELDS if f not in entry]
+        # Name the whole shape once, so an agent that never saw a valid entry can write one.
+        if any("' lacks '" in p for p in problems):
+            problems.append("work/current.md: an entry is '## <title> — <STATUS>' then the lines "
+                            + " / ".join(WORK_FIELDS) + " (Next names who: agent or owner)")
 
     for p in problems:
         print(f"FAIL {p}")

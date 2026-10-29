@@ -75,6 +75,19 @@ export default function (pi) {
     return { content: [...event.content, { type: 'text', text: `Æion Factory feedback: ${message}` }], structuredContent: event.structuredContent };
   });
 
+  // The run's settlement is the factory's Stop: a sign-off finding asks for one more model request. The hook
+  // shows each finding once per session, so the next settlement passes and this cannot loop.
+  pi.on('agent_before_settle', async (event, ctx) => {
+    try {
+      const { reason } = invoke(projectRoot(ctx.cwd), { session_id: ctx.sessionManager.getSessionId(), hook_event_name: 'Stop' });
+      if (!reason) return undefined;
+      return { entries: [{ type: 'custom_message', customType: 'aeion-factory', content: reason, display: true }], continue: true };
+    } catch (error) {
+      ctx.ui.notify(error.message || UNAVAILABLE, 'error');
+      return undefined;
+    }
+  });
+
   pi.on('session_before_compact', async (event, ctx) => {
     const session = ctx.sessionManager.getSessionId();
     let reason;

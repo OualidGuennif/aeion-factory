@@ -36,7 +36,8 @@ their existing secret guards; editing a large file is not a full read. Known lar
 and `more` calls, dynamic/glob dumps and `find -exec cat` are refused without a bounded terminal
 pipeline. Use `head -n 80`, `head -c 65536`, `tail -n 80` or a summary such as `wc -l`.
 Keep the bounded pipeline separate from unrelated shell commands. Use `cp` for file copies. The
-refusal names its cause: the file over the limit, a variable or glob path, or a `cat` after a `cd`.
+refusal names its cause: the file over the limit, a variable or glob path, or a `cat` of a relative path
+after a `cd` (an absolute path is sized whatever the directory).
 Tests remain runnable; quiet/fail-fast flags and error summaries are guidance in this version.
 
 Token feedback (`.claude/hooks/token-feedback.py`) never refuses. After a tool call it adds one line

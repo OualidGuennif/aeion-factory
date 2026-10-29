@@ -28,6 +28,8 @@ sources:
   - id: tests
     resource: ../../tools/architecture/tests/test_refresh.py
     title: "Coverage, provenance and failure regressions"
+  - resource: ../../tools/architecture/process.py
+    title: "process.py, which names this doc as its spec"
 ---
 
 # Architecture maintenance
@@ -68,6 +70,8 @@ the two steps directly, with the parent's toolchain: `.aeion/integrations/graphi
 tools/architecture/graph.py <root> <out> <manifest.json>` (the manifest lists `{path, required}`),
 then `node .aeion/integrations/archify/archify/bin/archify.mjs render <type> <input.json> <out.html>`
 and `browser-check <out.html>`. Archify's evidence links need a git SHA, so a plain folder's diagrams carry none.
+`archify examples` is not a listing: it rewrites the example HTML inside the Archify checkout (a sandbox
+refuses it). To learn a diagram type, read the pinned schema and example JSON files there instead.
 
 **Working graph.** The baselines are immutable per commit. For questions while editing, the skill
 `graph` uses [`tools/architecture/ask`](../components/graph-queries.md): it rebuilds `.aeion/graph/`

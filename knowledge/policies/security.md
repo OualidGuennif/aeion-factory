@@ -12,6 +12,12 @@ sources:
     title: "OWASP: secrets management"
   - resource: ../../.claude/hooks/secret_names.py
     title: "The shared secret file names"
+  - resource: ../../.claude/hooks/guard-bash.py
+    title: "guard-bash.py, which names this doc as its spec"
+  - resource: ../../.claude/hooks/guard-path.py
+    title: "guard-path.py, which names this doc as its spec"
+  - resource: ../../.gitleaksignore
+    title: ".gitleaksignore, which names this doc as its spec"
 ---
 
 # Security

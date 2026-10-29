@@ -210,7 +210,8 @@ class SpecSourceTests(unittest.TestCase):
                  ("one", {"source_file": "app/one.ts", "label": "one.ts"}),
                  ("one_run", {"source_file": "app/one.ts", "label": "run()"}),
                  ("two", {"source_file": "app/two.ts", "label": "two.ts"})]
-        edges, unresolved = graph.spec_source_edges(nodes)
+        # No file on disk under this root: the node's own frontmatter is what there is.
+        edges, unresolved = graph.spec_source_edges(nodes, Path(tempfile.gettempdir()) / "no-such-root")
         self.assertEqual([(s, t, d["relation"]) for s, t, d in edges], [("spec", "one", "specifies"), ("spec", "two", "specifies")])
         self.assertEqual(unresolved, ["knowledge/components/a.md: ../../app/gone.ts"])
 

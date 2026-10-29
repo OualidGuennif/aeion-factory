@@ -42,7 +42,7 @@ which stay immutable and feed Archify. Intent and rules still come from `knowled
 | --- | --- | --- | --- |
 | Project files | `project_files(root, untracked=True)`: git's list, or the plain-folder walk | the project | each call (fingerprint) |
 | Graphify 0.9.97 | native AST, Markdown and config extraction; no LLM | `tools/architecture/requirements.txt` | pinned |
-| Spec frontmatter `sources` | `specifies` edges, spec → file | knowledge docs | each rebuild |
+| Spec frontmatter `sources`, read from the file on disk (Graphify's cache keys a page by its body) | `specifies` edges, spec → file | knowledge docs | each rebuild |
 | `Spec:` comment lines (first 20 lines, the line holds only the pointer, as `doc-links` reads it) | `specified_by` edges, file → spec | each code file | each rebuild |
 | Test files' text | `names_file` edges when a test names a project path literally (scripts run as subprocesses) | the tests | each rebuild |
 | `deno info --json` | exact `imports` edges of a Deno project, when `deno` and `deno.json` exist | Deno toolchain | each rebuild |
@@ -85,7 +85,7 @@ symbol label (`checkpoint_call()`), or a node id.
 | The graph is rebuilt if and only if the files' fingerprint (path, size, mtime) changed. | `test_rebuild_only_on_change` |
 | `path` names a hop with no edge instead of skipping it, and prefers imports, then calls. | `test_path_names_each_hop` |
 | `tests` and `untested` tell a test that imports a file from one that reaches it through others or names it. | `test_tests_and_untested` |
-| `spec` reports each spec from frontmatter and from the `Spec:` comment line; it marks a gap (a code file with no `Spec:` line, or a `Spec:` line the spec's sources omit) and a file shared by two specs, never a conflict. A file no extractor reads still resolves. | `test_spec_both_directions`, `test_real_build_adds_spec_line_and_test_name_edges` |
+| `spec` reports each spec from frontmatter and from the `Spec:` comment line; it marks a gap (a code file with no `Spec:` line, or a `Spec:` line the spec's sources omit) and a file shared by two specs, never a conflict. A file no extractor reads still resolves. | `test_spec_both_directions`, `test_real_build_adds_spec_line_and_test_name_edges`, `test_frontmatter_only_edit_updates_spec_sources` |
 | `hubs` leaves out tests, documents and external modules. | `test_hubs_exclude_noise` |
 | Output order is stable: sorted, never in dictionary order. | `test_output_is_stable` |
 | `callers` finds the name exactly in the file (several definitions give exit 3 with their lines, none gives exit 4), picks the server from the nearest `deno.json` or the project's TypeScript 7 install, and exits 1 without installing anything when there is none. | `test_callers_resolve_by_type`, `test_callers_refuse_without_server` |

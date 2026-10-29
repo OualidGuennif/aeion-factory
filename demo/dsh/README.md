@@ -25,21 +25,11 @@ dsh (DeepSeek Harness) builds the same Idea Board from [`../plan/`](../plan/00-s
      ```bash
      cd demo && dsh web --patch ../.dsh/factory.patch.yml
      ```
-     Web listens on 3080. If a background `dsh web` already holds it (`EADDRINUSE`), add `--port 0`, or
-     use that server as below.
-   - **A background web server** (one server for every project, for example behind Tailscale): restart it
-     once with the patch, by absolute path, keeping its other flags:
+     Web listens on 3080; if another `dsh web` already holds it (`EADDRINUSE`), add `--port 0`.
+   - **Headless** (one task per call, no browser or port; the first `--json` event gives the `sessionId`):
      ```bash
-     dsh web --patch /path/to/aeion-factory/.dsh/factory.patch.yml --no-open
-     ```
-     `--patch` is a launcher option: it goes right after `web`, before web's own options (`--no-open`,
-     `--port`, `--trusted-host`, `--public-url`), which dsh passes on to the app (`unknown option '--patch'`).
-     The plugin guards each session by its own working directory, not the server's launch folder, so open
-     the run's session in the `demo/` workspace (or have the agent change its working directory there
-     first). Sessions outside an Æion Factory project are left alone.
-   - **Headless** (one task per call; `--session-id` continues the same session):
-     ```bash
-     cd demo && dsh headless --patch ../.dsh/factory.patch.yml "$(cat start/dsh/START.md)"
+     cd demo && dsh headless --patch ../.dsh/factory.patch.yml --json "$(cat start/dsh/START.md)" | tee dsh/journal/run.jsonl
+     dsh headless --patch ../.dsh/factory.patch.yml --session-id <id> "continue"
      ```
    The plugin finds `tools/agents/hook.py` by walking up from the session's folder. Started at the
    repository root, `tools/agents/run dsh [web|headless]` adds the same patch. In web, dsh reports

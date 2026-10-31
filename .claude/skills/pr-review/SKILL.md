@@ -1,25 +1,28 @@
 ---
 name: pr-review
-description: Reviews a change with a fresh subagent, verifies every finding, and records one short verdict (Review OK or NOT OK with at most five findings and file:line). Use before each push of develop, on each release pull request, and after each push of fixes.
+description: Reviews a diff or pull request using concrete failure evidence and a bounded finding list. Use for requested local review, before a develop push or release; never creates reviewer agents automatically.
 ---
 
 # Review a change
 
 ## Overview
-A fresh context catches what the author's context hides. One comment, one verdict. Flow: `knowledge/policies/engineering.md`.
+Independent review and a local self-assessment are different evidence. One verdict per exact target. Flow: `knowledge/policies/engineering.md`.
 
 ## Process
 Two targets, same review. **Develop push:** the range `origin/develop..HEAD` (`git log`, `git diff`).
 **Release:** the pull request `develop → main` (`gh pr view <n>`, `gh pr diff <n>`, `gh pr checks <n>`).
-1. Collect the diff and the files it touches.
-2. Start ONE fresh, read-only reviewer subagent with: the diff, `AGENTS.md`, and the docs
-   `tools/knowledge/doc-links --for <file>` names. Ask for findings ranked by severity, each with path:line
-   and a concrete failure scenario.
+1. Name the target: local changes (including untracked files), an exact commit range or a PR head.
+   Read [the review checklist](references/review-checklist.md) and the touched contracts/callers/tests.
+2. Review in the current context by default. An agent profile from the pool is optional reading,
+   not permission to spawn a reviewer. If an independent reviewer is explicitly authorized and
+   available, give it the target, project rules and relevant docs without seeding intended findings.
+   Without that independent pass, label the result a local assessment; do not issue the formal
+   `Review: OK` receipt required by the existing push gate. Never simulate independence.
 3. A sensitive diff: also skill `security-scan` on the changes, or say it was not run.
 4. Verify every finding yourself; drop what you cannot confirm.
    Trace suggestions against the code/spec before implementing them; disagree with an unsupported
    fix. For context/architecture work, verify claimed guarantees and exact-SHA artifact coverage.
-5. Write the verdict, first line exactly `Review: OK` or `Review: NOT OK`:
+5. For an authorized formal review with the required independent pass, write the verdict, first line exactly `Review: OK` or `Review: NOT OK`:
    ```
    Review: OK            (or)   Review: NOT OK
    - <high|medium|low> path:line -- the finding (at most five)
@@ -41,6 +44,12 @@ Two targets, same review. **Develop push:** the range `origin/develop..HEAD` (`g
 
 ## Red flags
 Approving through the forge's review API; merging on red CI; a secret in a comment.
+
+## Finding contract
+Every finding needs an exact location, reachable trigger, consequence and analysis of existing guards.
+Zero findings is valid. Use the checklist to reject speculative nits and generic thresholds.
+No model is imposed; no upstream tool grant or mandatory delegation is inherited.
+Publishing a review or changing forge state still needs the task's authorization.
 
 ## Verification
 - [ ] The verdict is recorded for the exact commit (develop) or on the PR (release), with the checks line.

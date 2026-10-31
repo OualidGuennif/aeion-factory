@@ -243,3 +243,22 @@ its pre-compaction receipt is consumed per attempt. Pi's extension maps `tool_ca
 `tool_result`, `before_agent_start` and `session_before_compact` to the same guards and cancels a
 compaction without a verified handover. Loop cancellation terminates the ordinary
 child process group as well as enforcing deadlines. No SDK dependency is bundled for the plugin.
+
+## Versioned skill library
+
+The root `skills/` directory is a passive, self-contained source library: 525 physical
+skill folders, 99 physical agent profiles, support files, copied licenses and a provenance
+catalog. These are not symlinks into another repository. Reading, searching and checking
+work in a Factory-only checkout. `tools/skills/pool.py` manages materialization and integrity;
+only a refresh needs the four allowed source copies. The optional external lifecycle folder
+contains the human/LLM maintenance brief only and is never a runtime dependency.
+
+The 16 native task skills remain under `.claude/skills`; `skill-route` is the single added
+native selector, shared through `.agents/skills`. Native rules take precedence over pooled
+methods. Profile files never launch agents or choose models by themselves. See
+[skill selection](../operations/skill-selection.md) for authority and licensing boundaries.
+
+The materializer applies three reviewed comment-only SAST annotations from
+`tools/skills/annotations.json`, each bound to an exact original file hash. Source
+changes require renewed review. Original/materialized hashes are both retained;
+search and checking remain offline and no source execution or broad scan exemption is added.

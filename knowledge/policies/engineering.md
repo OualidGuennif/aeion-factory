@@ -63,8 +63,7 @@ tests for what changed still run.
 
 - Daily work is committed on `develop`; a parallel session uses a worktree on `task/<slug>` cut from
   `develop` and merges back locally. Small commits, each with its `CHANGELOG.md` line under Unreleased.
-- Before each push of `develop`, the skill `pr-review` reviews `origin/develop..HEAD` with a fresh
-  subagent, verifies every finding and records `Review: OK` or `Review: NOT OK` (at most five findings)
+- Before each push of `develop`, the skill `pr-review` reviews `origin/develop..HEAD`, verifies every finding and records `Review: OK` or `Review: NOT OK` (at most five findings)
   for the exact commit in `.aeion/reviews/<sha>.md`, then posts it on the commit. The hook
   `tools/git-hooks/pre-push` (`git config core.hooksPath tools/git-hooks`) refuses a push of `develop`
   without `Review: OK` and any direct push to `main`. CI runs only for `main` and for pull requests,
@@ -77,6 +76,8 @@ tests for what changed still run.
   empty `Unreleased`, and `work/current.md` holding only the "Adapt Æion Factory to this project" entry,
   dated today. It refuses in Æion Factory's own clone (origin `OualidGuennif/aeion-factory`), and running
   it twice changes nothing.
+- Independent review requires an authorized independent pass. Reading a pool agent profile does
+  not authorize creating an agent; local self-assessment cannot issue the independent push-gate receipt.
 - A deploy or a human decision waits for that human. The owner's comments become preferences
   (skill `pr-taste`).
 - Limit: the review record is written by the agent that ran the review; the hook checks that one
@@ -86,3 +87,10 @@ tests for what changed still run.
 
 Locate the current owner of the behaviour, its tests and its spec; change the minimum; keep
 existing contracts unless the task requires changing them. No abstraction is created "for later".
+
+## Passive upstream data
+
+The root `skills/` pool preserves source skill/agent/resource files as data with their original
+licenses and fingerprints. Repository source-size/comment heuristics apply to authored code,
+including `tools/skills/`, while the identified passive pool has its own mandatory integrity
+check in `tools/factory-tests`. No upstream executable is run by indexing/search/validation.

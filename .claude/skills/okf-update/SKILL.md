@@ -14,3 +14,9 @@ Format: `knowledge/policies/specs-first.md` and `tools/knowledge/knowledge-check
 5. A new doc goes in its folder's `index.md`.
 6. `tools/knowledge/knowledge-check` and `tools/knowledge/doc-links`.
 7. Task state goes in `work/current.md`, never in a knowledge doc.
+
+## Keep provenance useful
+Record source paths and observed facts in the owning concept; do not copy entire upstream
+skills into Knowledge. A source pin/hash proves identity, not successful integration. Distinguish
+planned, locally checked and deployed behavior. Remove or qualify stale claims when evidence
+changes, and inspect inbound links before renaming or retiring a concept.

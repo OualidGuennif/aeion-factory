@@ -18,3 +18,17 @@ description: Investigates a reproducible bug, failed check or unexpected runtime
 
 Adapted from the investigation sequence in obra/Superpowers `systematic-debugging` (MIT).
 Attribution: `CREDITS.md`. Æion Factory's existing authority, test and sign-off rules still apply.
+
+## Diagnosis and stopping conditions
+For an intermittent failure, vary one factor at a time: input/state, dependency version,
+execution order or concurrency. Compare the same command in isolation and in the failing
+sequence before blaming the environment. Preserve a small sanitized repro artifact.
+
+If a hypothesis fails, record what falsified it and remove diagnostic changes before trying
+another. Do not stack speculative fixes. For stateful bugs, exercise duplicate/retry and
+partial-failure recovery, not only the eventual success. If evidence remains insufficient,
+report the smallest missing observation and an instrumentation/reproduction proposal.
+
+Completion evidence: observed failure, confirmed cause (or remaining hypothesis), smallest
+fix, regression command/result and scope not tested. Addy Osmani's debugging-and-error-recovery
+and ECC's diagnostic profiles supply techniques; they do not launch specialist agents.

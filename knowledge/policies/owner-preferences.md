@@ -38,7 +38,10 @@ under its heading: `- <preference> (<source>, YYYY-MM-DD)`.
 
 ## Engineering
 
-- (none yet)
+- Keep the minimum active native skills; use the large shared skill/agent pool as passive
+  reference material, with no automatic agent launching, imposed model or generic source-derived
+  thresholds. Enrich only from ECC, Addy Osmani agent-skills and the two Anthropic plugin
+  repositories; local develop edits authorized, no push requested (chat, 2026-10-31).
 
 ## UI
 

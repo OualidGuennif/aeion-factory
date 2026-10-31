@@ -36,3 +36,14 @@ A plan with no checks; a plan that adds an abstraction "for later"; editing befo
 - [ ] Every file in the plan was opened and read.
 - [ ] The plan names the commands that will prove it.
 - [ ] A human said yes.
+
+## Make the plan reviewable
+Separate observations from assumptions and unresolved decisions. Identify the owning entrypoint,
+callers and persisted/public contracts, then compare the smallest change with retaining the
+current behavior. Name a rollback or recovery step for stateful changes and an observable
+acceptance case for each behavior change. Do not invent files, tools or required infrastructure.
+
+Use the skill-route selector only when guidance is missing. Borrow a decomposition technique
+from the pool without importing an orchestrator or parallel agents. A broad task benefits from
+independently verifiable slices, not necessarily more workers. When scope changes materially,
+revise only the affected plan and obtain a new decision for that changed scope.

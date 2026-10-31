@@ -41,3 +41,20 @@
 - GitHub docs: security policies, CODEOWNERS.
 
 Mistakes in how these ideas are combined here are ours, not theirs.
+
+## Selective skill maintenance
+
+- **affaan-m / ECC contributors** (MIT): review evidence, false-positive filtering and scoped
+  engineering checks informed the native review checklist. Source: https://github.com/affaan-m/ECC
+- **Addy Osmani / agent-skills contributors** (MIT): task-specific debugging, behavioral test
+  selection and source-based workflow discovery. Existing attribution above is retained.
+- **Anthropic official plugins / security-guidance contributors** (Apache-2.0 for that plugin):
+  data-flow-oriented security inspection. Plugin-specific terms still apply; proprietary
+  `claude-security` definitions are not transplanted into the cross-host pool.
+- **Anthropic knowledge-work-plugins contributors** (upstream component terms apply): passive
+  specialist workflow references. https://github.com/anthropics/knowledge-work-plugins
+
+The versioned skills/catalog.json records exact source commits, entrypoint fingerprints and license
+files. Native Factory text is selectively adapted, not a wholesale copy of upstream prompts. The separate passive pool contains upstream skill/agent files and supporting resources,
+with three source-hash-bound scanner annotation comments recorded in tools/skills/annotations.json, with license texts under skills/licenses/.
+No upstream agent-launch mandate, model setting or generic threshold is adopted.

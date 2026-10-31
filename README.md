@@ -32,6 +32,7 @@ Claude Code also accepts `/plan`; Codex accepts `$plan`.
 
 | You want to… | Skills |
 | --- | --- |
+| Select task guidance without launching agents | [skill-route](.claude/skills/skill-route/SKILL.md) — native first, optional passive pool |
 | Bring Æion Factory into an existing project | [adopt](.claude/skills/adopt/SKILL.md) |
 | Plan a change and define its expected behaviour | [plan](.claude/skills/plan/SKILL.md) · [spec](.claude/skills/spec/SKILL.md) |
 | Implement, test or fix a bug | [build](.claude/skills/build/SKILL.md) · [test](.claude/skills/test/SKILL.md) · [debug](.claude/skills/debug/SKILL.md) |

@@ -32,3 +32,18 @@ Assertions removed in a fix; tests that only check that nothing threw; skipped t
 ## Verification
 - [ ] The new test failed before the change and passes after.
 - [ ] No assertion was weakened without a spec change.
+
+## Select the behavioral boundary
+Discover the actual runner, fixtures and assertions from this repository's tests/CI before
+choosing a command. Select the main success path, important rejection, boundary values and
+observable side effects. For async/stateful code include retries, duplicates, cancellation or
+concurrent writers only where the implementation has those failure paths.
+
+Mock an unavailable external service at its transport boundary, not the function whose bug
+you are trying to expose. Use isolated temporary state and deterministic time/seeds when
+needed. A test that only matches implementation wording or repeats a getter is not useful
+coverage. Do not invent a universal coverage percentage or require a service fleet for a unit fix.
+
+Record the command, failure reason before the fix, pass after it and unresolved integration
+limits. If the old state cannot be executed, say what substitutes for that regression proof.
+Retain real flaky-failure evidence; repeat only when investigating timing or order dependence.

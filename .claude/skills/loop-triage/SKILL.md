@@ -12,3 +12,10 @@ Protocol: `loops/issue-protocol.md`.
 3. Label: `loop:outer`, `severity:<high|medium|low>`, and `agent-ready` only when the fix is clear, small and needs no human decision; otherwise `needs-owner`.
 4. Write the body to `.aeion/loop-bodies/<slug>.md` (the only body path read-only loops may
    publish), then `gh issue create --title ... --body-file .aeion/loop-bodies/<slug>.md --label ...`.
+
+## Triage before assigning readiness
+Distinguish a reproducible defect from a hypothesis, stale observation or optional improvement.
+Deduplicate by root cause and affected contract, not just title similarity. Name the exact
+revision/environment and the check that would close the issue. agent-ready means a bounded,
+verifiable task without a missing owner decision; it does not authorize launching an agent.
+External issue creation/commenting requires the invoked workflow's actual authorization.

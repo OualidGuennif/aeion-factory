@@ -18,3 +18,13 @@ description: Applies the Æion efficiency guide to an existing repository one ph
 Read the README runtime matrix before setup. Preserve the original Claude integration; load
 Codex project/hook trust and shared skills through .agents, the local OpenCode plugin/config, or the Pi extension in .pi/.
 Verify native discovery/denial behavior. A folder existing is not proof that callbacks are loaded.
+
+## Preserve native integration boundaries
+Confirm which host discovers skills and which hooks it actually trusts. Shared skill links
+should resolve to one maintained definition; do not copy a second policy set per harness.
+If the project-local skills pool is present, use its files as optional guidance only, never register
+hundreds of source skills or agent profiles globally. A missing pool must not break adoption.
+
+Run a harmless allowed action and a safe refused fixture through the available native adapter
+when authorized; otherwise qualify only the static configuration. Keep an inventory of retained
+owner rules and the exact edits needed for this repository, not a blanket upstream scaffold.

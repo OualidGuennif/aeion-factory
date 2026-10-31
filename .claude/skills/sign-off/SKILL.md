@@ -26,3 +26,13 @@ Done means proven and documented, not "the code is written". Reasons: `AGENTS.md
 ## Verification
 - [ ] Each check above ran, with its result in the review's checks line.
 - [ ] `doc-links --diff` passes.
+
+## Report only what the evidence supports
+Inspect the final working diff, staged changes and new files so omitted artifacts do not hide
+behind a clean `git diff`. Check that requested behavior, compatibility and meaningful refusal
+paths are covered. Summarize what changed, why, exact checks and unverified runtime/host limits.
+
+A syntax pass is not a behavioral qualification; a synthetic replay is not production evidence.
+Distinguish local assessment from independent review and installed configuration from trusted
+activation. If no push/release was authorized, stop at local delivery after the appropriate
+checks rather than performing step 6 automatically. No automatic agent launch is part of sign-off.

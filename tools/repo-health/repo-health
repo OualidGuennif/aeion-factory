@@ -49,7 +49,12 @@ def longest_comment_block(text):
 
 def main(argv):
     files = tracked()
-    sources = [p for p in files if is_source(p) and not p.name.startswith("test_")]
+    candidates = [p for p in files if is_source(p) and not p.name.startswith("test_")]
+    # The versioned passive library preserves upstream formatting; its own integrity check is mandatory.
+    catalog = ROOT / "skills/catalog.json"
+    passive_pool = (catalog.is_file() and not catalog.is_symlink()
+                    and json.loads(catalog.read_text()).get("generator") == "aeion-skill-files-v2")
+    sources = [p for p in candidates if not (passive_pool and p.relative_to(ROOT).parts[0] == "skills")]
     big, blocks = [], []
     for p in sources:
         text = p.read_text(encoding="utf-8", errors="replace")
@@ -61,6 +66,7 @@ def main(argv):
     top = sorted({p.relative_to(ROOT).parts[0] for p in files if len(p.relative_to(ROOT).parts) > 1 and not p.relative_to(ROOT).parts[0].startswith(".")})
     card = {"agents_md_lines": lines("AGENTS.md"), "work_current_lines": lines("work/current.md"),
             "source_files_checked": len(sources), "source_suffixes": sorted(SOURCE),
+            "passive_pool_source_files_excluded": len(candidates) - len(sources),
             "files_over_1500_lines": big, "comment_blocks_over_20_lines": blocks, "top_level_folders": top}
     if "--json" in argv:
         print(json.dumps(card, indent=2))

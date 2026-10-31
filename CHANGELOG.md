@@ -6,12 +6,18 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+## [1.8.2] - 2026-10-31
+
 - dsh and Pi: a terminal stop (`continue: false`) ends the turn with its reason instead of being steered
-  as another request; the dsh adapter re-steered every stop answer and looped for hundreds of turns when
-  the 300k profile stopped it, while a sign-off finding still steers once.
-- At 300k a failing closure check no longer blocks the compaction that ends the closure: the compaction
-  runs, code edits stay open in the new epoch, and the closure stays owed — Stop is refused until a
-  verified checkpoint — so a check that failed before the session can be repaired instead of deadlocking.
+  as another request; the dsh adapter re-steered every stop answer, and a live headless run against a hook
+  that always stops sent 51 Stops in 90 seconds without exiting, where the fixed adapter sends one. A
+  sign-off finding still steers once, and Pi keeps its bounded three-request closure alert.
+- At 300k a failing closure check no longer blocks the compaction that ends the closure: the hook signals
+  that compaction whether or not the checkpoint verifies, code edits stay open in the new epoch, and the
+  closure stays owed — Stop is refused until a verified checkpoint, and Codex and Droid keep their own
+  early-compaction path — so a check that failed before the session can be repaired instead of deadlocking.
+  The web profile asks the user to compact in the hook's own words, so it no longer claims a verified
+  handover it does not have.
 
 ## [1.8.1] - 2026-10-31
 

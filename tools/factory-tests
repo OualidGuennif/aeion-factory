@@ -27,5 +27,6 @@ run python3 tools/agents/tests/test_hooks.py
 run node --test tools/agents/tests/test_opencode.mjs
 run node --test tools/agents/tests/test_pi.mjs
 run node --test tools/agents/tests/test_dsh.mjs
+run python3 tools/evals/tests/test_evals.py
 run python3 tools/loops/tests/test_loops.py
 echo "factory-tests: PASS"

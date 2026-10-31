@@ -6,6 +6,8 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+- Add a local evaluation record and report for the golden task set, with tests and a runbook; no model calls.
+
 ## [1.7.0] - 2026-10-31
 
 - Strengthen the 16 native skills with evidence-led review, diagnostic/test boundaries and honest

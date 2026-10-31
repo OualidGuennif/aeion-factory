@@ -1,0 +1,117 @@
+#!/usr/bin/env python3
+"""Fixture tests for tools/evals/record and tools/evals/report, run through subprocess.
+
+Run with: python3 tools/evals/tests/test_evals.py
+"""
+import json
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
+import unittest
+
+EVALS = Path(__file__).resolve().parents[1]
+RECORD = EVALS / "record"
+REPORT = EVALS / "report"
+
+
+class EvalTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.folder = Path(self.tmp.name)
+        self.file = self.folder / "nested" / "results.jsonl"
+
+    def run_tool(self, tool, *args):
+        return subprocess.run([sys.executable, str(tool), *args], capture_output=True, text=True)
+
+    def record(self, *args):
+        return self.run_tool(RECORD, "--task", "golden", "--harness", "claude-code",
+                             "--success", "yes", "--minutes", "10", "--file", str(self.file), *args)
+
+    def lines(self):
+        return self.file.read_text(encoding="utf-8").splitlines()
+
+    def test_valid_record_appends_one_parseable_line(self):
+        result = self.record("--model", "m", "--tokens", "100", "--cost-usd", "0.5",
+                             "--human-interventions", "2", "--notes", "n")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(result.stdout.startswith(str(self.file) + ": golden"))
+        self.assertEqual(len(self.lines()), 1)
+        row = json.loads(self.lines()[0])
+        self.assertEqual((row["task"], row["harness"], row["success"], row["minutes"]), ("golden", "claude-code", True, 10.0))
+        self.assertEqual((row["tokens"], row["cost_usd"], row["human_interventions"]), (100, 0.5, 2))
+        self.assertTrue(row["recorded_at"].endswith("Z"))
+        self.assertTrue(row["factory"])
+
+    def test_invalid_task_slug_exits_two_and_writes_nothing(self):
+        result = self.run_tool(RECORD, "--task", "Bad_Task", "--harness", "claude-code",
+                               "--success", "yes", "--minutes", "1", "--file", str(self.file))
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("--task", result.stderr)
+        self.assertFalse(self.file.exists())
+
+    def test_missing_required_flag_exits_two(self):
+        result = self.run_tool(RECORD, "--task", "golden", "--harness", "claude-code",
+                               "--success", "yes", "--file", str(self.file))
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("--minutes", result.stderr)
+        self.assertFalse(self.file.exists())
+
+    def test_two_records_make_two_lines(self):
+        self.assertEqual(self.record().returncode, 0)
+        self.assertEqual(self.record("--success", "no").returncode, 0)
+        self.assertEqual(len(self.lines()), 2)
+        self.assertEqual([json.loads(line)["success"] for line in self.lines()], [True, False])
+
+    def test_dry_run_prints_json_and_writes_nothing(self):
+        result = self.record("--dry-run")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout)["task"], "golden")
+        self.assertFalse(self.file.exists())
+        self.assertFalse(self.file.parent.exists())
+
+    def test_report_over_three_fixtures(self):
+        rows = [
+            {"task": "a", "harness": "claude-code", "success": True, "minutes": 10, "cost_usd": 1.5,
+             "human_interventions": 1, "defects_after_done": 0, "factory": "1.7.0", "recorded_at": "2026-10-31T00:00:00Z"},
+            {"task": "b", "harness": "claude-code", "success": False, "minutes": 20, "cost_usd": 2.5,
+             "human_interventions": 2, "defects_after_done": 1, "factory": "1.7.0", "recorded_at": "2026-10-31T00:00:00Z"},
+            {"task": "a", "harness": "pi", "success": True, "minutes": 5, "factory": "1.7.0",
+             "recorded_at": "2026-10-31T00:00:00Z"},
+        ]
+        self.file.parent.mkdir(parents=True)
+        self.file.write_text("\n".join(json.dumps(row) for row in rows) + "\n\n", encoding="utf-8")
+        result = self.run_tool(REPORT, "--file", str(self.file))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("claude-code", result.stdout)
+        self.assertIn("pi", result.stdout)
+        self.assertIn("| All |", result.stdout)
+        self.assertIn("| 15.0 |", result.stdout)  # median of 5, 10, 20
+        self.assertIn("| 67% |", result.stdout)  # 2 successes of 3
+        self.assertIn("| 3 |", result.stdout)  # human interventions of the All row
+        as_json = self.run_tool(REPORT, "--file", str(self.file), "--json")
+        self.assertEqual(as_json.returncode, 0, as_json.stderr)
+        report = json.loads(as_json.stdout)
+        self.assertEqual([row["harness"] for row in report["harnesses"]], ["claude-code", "pi"])
+        self.assertEqual(report["all"]["runs"], 3)
+        self.assertEqual(report["all"]["median_minutes"], 10.0)
+        self.assertEqual(report["all"]["cost_usd"], 4.0)
+
+    def test_report_over_an_empty_file(self):
+        self.file.parent.mkdir(parents=True)
+        self.file.write_text("", encoding="utf-8")
+        result = self.run_tool(REPORT, "--file", str(self.file))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("No evaluation records.", result.stdout)
+
+    def test_report_over_a_malformed_line_exits_two(self):
+        self.file.parent.mkdir(parents=True)
+        self.file.write_text('{"harness": "pi"}\nnot json\n', encoding="utf-8")
+        result = self.run_tool(REPORT, "--file", str(self.file))
+        self.assertEqual(result.returncode, 2)
+        self.assertIn(":2:", result.stderr)
+
+
+if __name__ == "__main__":
+    unittest.main()

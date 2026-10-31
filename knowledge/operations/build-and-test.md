@@ -48,7 +48,7 @@ it and fails when the committed bundle differs.
 | Knowledge | `tools/knowledge/knowledge-check` | the root |
 | Docs and code links | `tools/knowledge/doc-links` (`--diff origin/develop` before a push) | the root |
 | Comments, file size, caps | `tools/repo-health/repo-health` | the root |
-| The factory's own test suites (hooks, tools, push gate, release, context, analysis and graph queries, adapters including the OpenCode, Pi and dsh plugins, loops) | `tools/factory-tests` (each suite also runs alone; the script lists them) | root; Node 18+ |
+| The factory's own test suites (hooks, tools, evals, push gate, release, context, analysis and graph queries, adapters including the OpenCode, Pi and dsh plugins, loops) | `tools/factory-tests` (each suite also runs alone; the script lists them) | root; Node 18+ |
 | Efficiency bundle | `tools/efficiency/bundle`, then `git diff --exit-code efficiency/efficiency-bundle.md` | the root |
 | Source analysis (CI on every main update; local run recommended) | `tools/architecture/refresh --target HEAD --base origin/main` after committing | pinned tools installed on the user's yes, Node and Chrome required |
 | Your code | add your build, lint and test commands here, copied from CI | |

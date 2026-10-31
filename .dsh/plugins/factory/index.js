@@ -9,7 +9,7 @@ export const inject = ['tools', 'tokenMeter', 'workingDirectory'];
 
 const UNAVAILABLE = 'Æion Factory hook unavailable; action refused.';
 const RESUME = 'Æion Factory: context compacted. Read your handover in work/handovers/ and continue the task.';
-const ASK = 'Æion Factory: handover verified. This dsh profile lets only the user compact: ask them to type /compact now, then wait.';
+const ASK = 'This dsh profile lets only the user compact: ask them to type /compact now, then wait.';
 // dsh's built-in tools under the names the shared guards know; glob only lists paths.
 const TOOLS = { bash: 'Bash', read: 'Read', write: 'Write', edit: 'Edit', str_replace_editor: 'Edit', glob: 'Glob', grep: 'Grep' };
 
@@ -120,13 +120,14 @@ export function apply(ctx) {
   });
 
   // The turn's close is the factory's Stop: a sign-off finding steers one more step; the hook shows each
-  // finding once per session, so a second close passes.
+  // finding once per session, so a second close passes. `continue: false` is the hook's terminal stop, and
+  // steering it would start another turn that closes the same way.
   ctx.on('agent/turn-stopping', async ({ agent }) => {
     try {
       const root = rootOf(agent);
       if (!root) return;
-      const { reason } = invoke(root, { session_id: agent.session.id, hook_event_name: 'Stop' });
-      if (reason) say(agent, reason);
+      const { output, reason } = invoke(root, { session_id: agent.session.id, hook_event_name: 'Stop' });
+      if (reason && output.continue !== false) say(agent, reason);
     } catch (error) {
       ctx.logger?.warn?.(`aeion-factory: ${error.message || UNAVAILABLE}`);
     }
@@ -139,11 +140,13 @@ export function apply(ctx) {
     const session = agent.session.id;
     try {
       const root = rootOf(agent);
-      // The shared rule refuses the compaction unless the checkpoint is still verified.
-      if (invoke(root, { session_id: session, hook_event_name: 'PreCompact' }).reason) return next();
+      // The shared rule refuses the compaction unless the checkpoint is verified, and allows it at 300k with the
+      // closure owed; its own words say which, so they reach the user instead of a fixed "verified" claim.
+      const { output, reason } = invoke(root, { session_id: session, hook_event_name: 'PreCompact' });
+      if (reason) return next();
       // The web profile keeps compaction inside each agent preset, out of a plugin's reach: the user compacts.
       if (!seam.compaction) {
-        say(agent, ASK);
+        say(agent, `${output.systemMessage || 'Æion Factory: closure pending.'} ${ASK}`);
         return next();
       }
       // dsh's overflow path compacts now whatever its own threshold; it is the step-time compaction dsh exposes.

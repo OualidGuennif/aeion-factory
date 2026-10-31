@@ -103,8 +103,15 @@ export default function (pi) {
         settles.delete(session);
         return undefined;
       }
-      // Only the closure alert repeats until the checkpoint; a sign-off finding is already shown once per session.
+      // Only the closure alert repeats until the checkpoint, bounded; a sign-off finding is already shown once
+      // per session. The closure alert is a terminal stop too, and it is the one that earns a few more requests.
       if (!reason.includes('250k alert') && !reason.includes('300k')) {
+        // Any other terminal stop ends the run here; continuing would ask for a request that settles the same way.
+        if (output.continue === false) {
+          settles.delete(session);
+          ctx.ui.notify(reason, 'error');
+          return undefined;
+        }
         return { entries: [{ type: 'custom_message', customType: 'aeion-factory', content: reason, display: true }], continue: true };
       }
       const count = (settles.get(session) || 0) + 1;

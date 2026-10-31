@@ -271,10 +271,13 @@ def handle(root, provider, event):
             state.pop('observed_tokens', None)
             state['epoch'] += 1
             state['state'] = 'RECOVERING'
-            # A compaction let through before its handover owes the closure first thing after it.
+            # A compaction let through before its handover owes the closure first thing after it. Codex and Droid
+            # resume in closure; every other provider resumes editable, because frozen code over a check that
+            # already failed is the deadlock the 300k stopgap exists to prevent.
             if state.pop('closure_owed', None):
                 state['closure_owed'] = 'due'
-                state['state'] = 'HANDOVER_REQUIRED'
+                if provider in {'codex', 'droid'}:
+                    state['state'] = 'HANDOVER_REQUIRED'
                 state['warning_pending'] = True
         budget.atomic(file, json.dumps(state, sort_keys=True) + '\n')
         if name == 'PreCompact':
@@ -289,6 +292,21 @@ def handle(root, provider, event):
                                          f'{handover.relative_to(root)} and verify the checkpoint before any other work.'}
             if not budget.ready(root, session, state):
                 budget.ensure_handover(root, session)
+                if state['state'] == 'COMPACT_REQUIRED':
+                    # 300k stopgap: code is frozen here, so a check that failed before this session could be neither
+                    # verified nor repaired. The compaction runs, the epoch stays editable, and the debt stays owed.
+                    state['closure_owed'] = 'due'
+                    # OpenCode sends no compact SessionStart, so this allowed compaction starts its own epoch.
+                    if provider == 'opencode':
+                        state.pop('checkpoint', None)
+                        state.pop('observed_tokens', None)
+                        state['epoch'] += 1
+                        state['state'] = 'RECOVERING'
+                    budget.atomic(file, json.dumps(state, sort_keys=True) + '\n')
+                    return {'systemMessage': f'Æion Factory 300k: compacting before a verified checkpoint; the closure '
+                                             f'stays owed until the failing check is fixed and '
+                                             f'{handover.relative_to(root)} is verified: '
+                                             + budget.checkpoint_command(root, session)}
                 return fail(provider, name, f'Fill {handover.relative_to(root)} and verify the docs before compaction: '
                             + budget.checkpoint_command(root, session))
             # A verified compaction owes no closure after it.
@@ -332,8 +350,10 @@ def handle(root, provider, event):
                 reason = None
             if reason:
                 return fail(provider, name, reason)
-            # Pi, OpenCode and dsh start compaction themselves once a closure's checkpoint is verified.
-            if state['state'] in {'HANDOVER_REQUIRED', 'COMPACT_REQUIRED'} and budget.ready(root, session, state):
+            # Pi, OpenCode and dsh start compaction themselves: at 250k once the checkpoint is verified, and at
+            # 300k always, because that compaction is what the stopgap uses to release a frozen session.
+            if state['state'] == 'COMPACT_REQUIRED' \
+                    or (state['state'] == 'HANDOVER_REQUIRED' and budget.ready(root, session, state)):
                 measured['aeion'] = {'compact': True}
     if name == 'SessionStart':
         result = script(root, 'session-start.py', normalized)

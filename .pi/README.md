@@ -14,5 +14,7 @@ the factory context once per session and again after a compaction, and cancels a
 verified handover. The 250k alert names the checkpoint command, and closure admits a project's own
 Markdown docs. Use the shared sign-off skill at task completion. Pi controls its own compaction
 window (`compaction.reserveTokens`), but the extension compacts first: at 250k, once the handover is
-verified, it calls `ctx.compact()`; at 300k only the handover and its checkpoint remain. A settlement
-that still owes closure is continued at most three times, then settles with the reason in the UI.
+verified, it calls `ctx.compact()`; at 300k only the handover and its checkpoint remain, and Pi compacts
+there whether or not the checkpoint verifies. A settlement that still owes closure is continued at most
+three times, then settles with the reason in the UI; any other terminal stop (`continue: false`) settles
+at once with its reason shown, never as another request.

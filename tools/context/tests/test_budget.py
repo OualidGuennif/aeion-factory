@@ -284,7 +284,7 @@ class BudgetTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'broken'):
                 budget.checkpoint(self.root, 'test-session', 'HEAD')
 
-    def test_precompact_always_requires_current_checkpoint(self):
+    def test_precompact_requires_a_current_checkpoint_below_the_forced_band(self):
         result = self.call(hook_event_name="PreCompact")
         self.assertEqual(result["decision"], "block")
         handover = budget.handover_path(self.root, "test-session")
@@ -296,6 +296,45 @@ class BudgetTests(unittest.TestCase):
         self.assertEqual(self.call(hook_event_name="PreCompact"), {})
         (self.root / "new.py").write_text("print('change')\n")
         self.assertEqual(self.call(hook_event_name="PreCompact")["decision"], "block")
+
+    def test_300k_stopgap_compacts_and_keeps_the_closure_owed(self):
+        # The 300k profile freezes code, so a check that failed before this session would leave no verified
+        # checkpoint and no way to repair it. The compaction runs; the closure stays owed.
+        self.observe(300000)
+        self.call()
+        result = self.call(hook_event_name="PreCompact")
+        self.assertNotIn("decision", result)
+        self.assertIn("closure stays owed", result["systemMessage"])
+        start = self.call(hook_event_name="SessionStart", source="compact")
+        self.assertIn("Closure still owed", start["hookSpecificOutput"]["additionalContext"])
+        # The new epoch admits the code edit that repairs the failing check.
+        self.observe(1)
+        self.assertEqual(self.call(tool_input={"file_path": str(self.root / "src.py")}), {})
+        # A stop is refused while the closure is owed, and it names the command that settles it.
+        stop = self.call(hook_event_name="Stop")
+        self.assertFalse(stop["continue"])
+        self.assertIn("closure is still owed", stop["stopReason"])
+        self.assertIn("checkpoint --session test-session", stop["stopReason"])
+
+    def test_a_verified_checkpoint_settles_the_owed_closure(self):
+        self.observe(300000)
+        self.call()
+        self.call(hook_event_name="PreCompact")
+        self.call(hook_event_name="SessionStart", source="compact")
+        self.observe(1)
+        self.call()
+        handover = budget.ensure_handover(self.root, "test-session")
+        handover.write_text(handover.read_text().replace("TODO", "Fixture evidence"))
+        (self.root / "work").mkdir(exist_ok=True)
+        (self.root / "work/current.md").write_text("# Current work\n\nFixture\n")
+        state_file = self.root / ".aeion/context/test-session.json"
+        with patch.object(budget, "CHECKS", ((budget.sys.executable, "-c", "pass"),)), \
+                patch.object(budget, "git_active", lambda root: False):
+            budget.checkpoint(self.root, "test-session", None)
+            # The receipt settles the debt when the next event reads it, not when the command writes it.
+            self.assertEqual(json.loads(state_file.read_text())["closure_owed"], "due")
+            self.assertEqual(self.call(hook_event_name="Stop"), {})
+        self.assertNotIn("closure_owed", json.loads(state_file.read_text()))
 
     def test_document_edits_allowed_and_shell_injection_denied_during_closure(self):
         self.observe(250000)

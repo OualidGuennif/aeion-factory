@@ -90,10 +90,11 @@ test('Pi compacts itself once the hook reports a verified handover, then resumes
 
 test('Pi bounds a repeated closure refusal instead of looping one alert', async () => {
   // Regression: a settlement that never verified its checkpoint re-injected the same 250k alert forever.
+  // The closure refusal is a terminal stop too, and it is the one that still earns a few more requests.
   const folder = mkdtempSync(join(tmpdir(), 'pi-settle-loop-'));
   mkdirSync(join(folder, 'tools/agents'), { recursive: true });
   writeFileSync(join(folder, 'tools/agents/hook.py'),
-    'import json\nprint(json.dumps({"decision": "block", "reason": "Æion Factory 250k alert: fill the handover and verify the checkpoint"}))\n');
+    'import json\nprint(json.dumps({"continue": False, "stopReason": "Æion Factory 250k alert: fill the handover and verify the checkpoint"}))\n');
   const { handlers, notes, ctx } = load(folder);
   const outcomes = [];
   for (let attempt = 0; attempt < 4; attempt += 1) {
@@ -140,4 +141,23 @@ test('Pi turns a sign-off finding at settlement into one more request (Pi FB-004
   const quiet = load(clean);
   assert.equal(await quiet.handlers.agent_before_settle({ type: 'agent_before_settle', entries: [], continue: false }, quiet.ctx), undefined);
   rmSync(clean, { recursive: true, force: true });
+});
+
+test('Pi settles a terminal stop instead of turning it into another request (Pi FB-005)', async () => {
+  const folder = mkdtempSync(join(tmpdir(), 'pi-stop-terminal-'));
+  mkdirSync(join(folder, 'tools/agents'), { recursive: true });
+  writeFileSync(join(folder, 'tools/agents/hook.py'), [
+    'import json, sys',
+    'event = json.load(sys.stdin)',
+    "print(json.dumps({'continue': False, 'stopReason': 'Æion Factory context run is stopped'} if event['hook_event_name'] == 'Stop' else {}))",
+  ].join('\n') + '\n');
+  const { handlers, notes, ctx } = load(folder);
+  const outcomes = [];
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    outcomes.push(await handlers.agent_before_settle({ type: 'agent_before_settle', entries: [], continue: false }, ctx));
+  }
+  rmSync(folder, { recursive: true, force: true });
+  // Settling twice, never a new request, and the user is told why the run ended.
+  assert.deepEqual(outcomes, [undefined, undefined]);
+  assert.deepEqual(notes.map((note) => note[1]), ['Æion Factory context run is stopped', 'Æion Factory context run is stopped']);
 });

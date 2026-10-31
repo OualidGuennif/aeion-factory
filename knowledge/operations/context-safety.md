@@ -50,8 +50,16 @@ discards system messages. Only closure work
 (docs/task/handover edits and fixed verification commands) remains available. At an observed
 300k closure narrows to the handover and its checkpoint (reads stay open), Stop is refused, and the
 message asks for the handover and compaction now. 300k never stops the run: once the checkpoint is
-verified, compaction runs again and the session continues from its handover. The session
-state and active handover survive restart. Each session has its own file lock and atomic state.
+verified, compaction runs again and the session continues from its handover. A failing check does not
+recreate that stop at 300k: code is frozen there, so a check that failed before the session could be
+neither verified nor repaired. At 300k the hook signals the adapters to compact whether or not the
+checkpoint verifies, lets that compaction through, records that the closure is still owed
+(`closure_owed`), and admits code edits in the new epoch with a warning that names the checkpoint
+command; Stop stays refused until a verified receipt settles the debt on the next event that reads the
+receipt. Codex and Droid keep their own early-compaction path, which still resumes in closure. Below
+300k the refusal is unchanged, so a session that must repair code compacts at 300k. The checkpoint
+itself is not weakened: it still runs every check over the whole tree and refuses on any failure. The
+session state and active handover survive restart. Each session has its own file lock and atomic state.
 Tool events carrying `agent_id` use a separate parent/agent key and that child's transcript,
 including the documented nested `subagents/agent-<id>.jsonl` layout and a workflow's
 `subagents/workflows/<run>/agent-<id>.jsonl`. Missing child usage refuses

@@ -47,3 +47,12 @@ sources:
 - GitHub docs: security policies, CODEOWNERS.
 
 Mistakes in how these ideas are combined here are ours, not theirs.
+
+## Bounded skill maintenance sources
+
+Native skill enrichment and the passive, versioned `skills/` pool use only ECC, Addy Osmani
+agent-skills, Anthropic claude-plugins-official and knowledge-work-plugins. The pool catalog
+records exact commits, copied resource hashes and nearest license files. CREDITS retains
+attribution; plugin-specific restrictions override repository-level licenses. Ten proprietary
+Claude Security definitions are metadata-only, not materialized for cross-host use.
+No model, automatic agent-launch obligation or generic quality threshold is imported.

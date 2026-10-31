@@ -12,6 +12,8 @@ run() {
 
 run python3 tools/knowledge/tests/test_doc_links.py
 run python3 tools/knowledge/tests/test_knowledge_check.py
+run python3 tools/skills/tests/test_pool.py
+run python3 tools/skills/pool.py check
 run python3 .claude/hooks/test_hooks.py
 run python3 .claude/hooks/test_token_feedback.py
 run python3 tools/repo-health/tests/test_repo_health.py

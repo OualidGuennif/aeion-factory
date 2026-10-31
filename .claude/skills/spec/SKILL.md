@@ -29,3 +29,13 @@ An invariant with no test; an output section without its errors.
 ## Verification
 - [ ] The eight sections exist; each invariant names a test.
 - [ ] The new acceptance tests fail before the change.
+
+## Specify observable failure behavior
+For a changed boundary, state who may call it, accepted data, stable outputs/errors and
+side effects. Identify compatibility for existing callers and stored records. For retries
+or concurrent writers, name identity/deduplication, transaction/ordering assumptions and
+recovery after partial failure; do not claim exactly-once delivery without a guarantee.
+
+Map each acceptance case to an observable result and an actual owning test/command. Where
+behavior is already specified, amend that contract instead of creating a parallel document.
+For documentation-only work use relevant structure/link checks, not contrived failing code tests.

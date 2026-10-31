@@ -8,7 +8,6 @@ Keep reasoning private. Do not narrate plans, progress, or tool calls.
 Do not emit intermediate JSON notes.
 Use tools directly. Speak only when a user decision is necessary or to deliver the final result,
 validation and unresolved limits. Keep visible communication concise.
-
 **Precedence.** Instructions that existed in this repository before Æion Factory, and anything the
 owner says, win over Æion Factory's defaults. When they conflict, keep theirs and note it in
 `knowledge/policies/owner-preferences.md`.
@@ -23,6 +22,7 @@ knowledge/    canonical knowledge (index.md first): policies, components, decisi
 work/         current.md, the state of open tasks only
 tech-watch/   the technical watch: method, and pending dated packages
 loops/        orchestrator.sh and its prompts, schedules, issue protocol, Decisions API client (off)
+skills/       versioned passive skills and agent profiles; no automatic agent launching
 demo/         playground: plan/ briefs; per harness a journal, feedback_for_aeion/ and a local workspace/
 tools/        knowledge/link/health checks, agent adapters, architecture and local language servers
 .claude/      original hooks, maintained skills, path-scoped rules, hookify examples
@@ -53,6 +53,7 @@ open that file and follow it.
 | Task | Open first |
 | --- | --- |
 | Agent setup and runtime differences | [Compatibility](knowledge/operations/agent-compatibility.md); README setup |
+| Task guidance | `.agents/skills/skill-route/SKILL.md`: native first, optional passive pool; no automatic agents |
 | Any change | `knowledge/index.md`, then the doc of the area; `.agents/skills/plan/SKILL.md` |
 | A feature or component | `knowledge/policies/specs-first.md`; `.agents/skills/spec/SKILL.md` |
 | Tracing code before changing it | `.agents/skills/graph/SKILL.md`; `tools/architecture/ask` (no LLM) |

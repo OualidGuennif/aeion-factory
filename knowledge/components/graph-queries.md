@@ -119,3 +119,9 @@ tools/architecture/ask --root demo/claude_code/workspace callers app/store/ideas
   server would hold a graph that goes stale as files are edited.
 - Graphify's LLM extraction, community labels and SCIP ingestion. SCIP ingestion is an unwired
   skeleton in 0.9.97.
+
+## Skill-level interpretation
+
+Graph results select candidate tests and evidence, not automatic mandatory new tests.
+A missing structural edge is not proof of absence or a runtime authorization finding.
+The native graph skill now names these boundaries explicitly; query behavior is unchanged.

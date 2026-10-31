@@ -29,3 +29,10 @@ A squash-merged release; a tag on a commit other than the merged main; a deploy 
 ## Verification
 - [ ] The deployed commit has a green CI run.
 - [ ] The rollback command is known before the deploy.
+
+## Bind the release to explicit authority
+Before a push, merge, published release or deployment, confirm that the owner's current scope
+authorizes that action; a plan, green checks or local branch edits alone are insufficient.
+Prepare exact artifacts and validation before any missing approval is requested. For an
+authorized release verify the reviewed head still matches, handle a changed head by re-review,
+and identify compatibility/migration recovery before applying state changes.

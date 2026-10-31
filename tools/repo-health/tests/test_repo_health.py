@@ -45,6 +45,20 @@ class RepoHealthTests(unittest.TestCase):
         result = self.check_health("--json")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
+    def test_only_identified_passive_pool_is_exempt_from_authored_source_caps(self):
+        (self.root / "skills").mkdir()
+        (self.root / "skills/vendor.py").write_text("value = 1\n" * 1501)
+        self.assertEqual(self.check_health().returncode, 1)
+        (self.root / "skills/catalog.json").write_text(json.dumps({"generator": "aeion-skill-files-v2"}))
+        result = self.check_health("--json")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout)["passive_pool_source_files_excluded"], 1)
+        (self.root / "tools/skills").mkdir()
+        (self.root / "tools/skills/pool.py").write_text("value = 1\n" * 1501)
+        result = self.check_health()
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("tools/skills/pool.py", result.stderr)
+
     def test_build_named_source_below_the_root_is_walked(self):
         # Only the root's build output is skipped; a source folder named build deeper is the project's code.
         (self.root / "src/build").mkdir(parents=True)

@@ -113,3 +113,13 @@ type error reported then cleared, and the same after a fresh session. Roll back 
 Agent-specific setup and qualification: [compatibility](agent-compatibility.md). Integration pins
 require Python 3.12+ excluding 3.14.1. `knowledge-check` also validates public root/setup docs and
 the portable efficiency bundle; its bundled Superpowers notice is self-contained.
+
+## Passive pool checks
+
+`tools/factory-tests` runs `tools/skills/tests/test_pool.py` and the real offline pool check
+`python3 tools/skills/pool.py check`. They verify materialized files, support resources, license
+restrictions, local-edit preservation and operation without third-party/lifecycle folders.
+The root `skills/` data preserves upstream formatting; authored-source size/comment heuristics
+exclude this identified pool and report the excluded count. Native code under `tools/skills/`
+remains checked. This is not a security-scan exemption. Source refresh is an explicit maintenance
+action; normal CI/search/integrity checks need no external source repository.

@@ -21,3 +21,10 @@ Copying transcript text; storing personal data or a secret; ten new rules a week
 
 ## Verification
 - [ ] Each change cites its evidence line.
+
+## Prove that a rule is worth keeping
+Use only authorized project-local evidence; never scan all users' histories or provider state.
+Prefer a narrow correction to the owning skill over another skill or hook. Check whether the
+error came from missing instructions, missing tools, unavailable permission or a wrong runtime
+assumption before adding prose. Record the evidence and a realistic counterexample so the rule
+does not block legitimate work. Do not claim token/time improvements without comparable runs.

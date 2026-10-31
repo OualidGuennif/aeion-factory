@@ -10,3 +10,9 @@ description: Turns the owner's pull request comments into durable preferences in
 3. Checkable (a forbidden pattern, a required header): a warn rule `.claude/hookify.<name>.local.md` when `hookify` is installed; otherwise under "Checkable, no hook yet".
 4. Never record a secret, private data, or anything the owner did not say.
 5. Commit on a task branch, open a PR, skill `pr-review`.
+
+## Avoid overgeneralizing a correction
+Separate an explicit durable preference from a one-off request, an inferred taste and a rule
+limited to one component. Record the original scope and evidence without private transcript
+content. A new hook needs a reproducible positive and negative case; start with a warning and
+measure noise. Do not turn a reviewer nit into a repository-wide prohibition.

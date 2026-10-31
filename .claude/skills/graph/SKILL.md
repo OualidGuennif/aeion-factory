@@ -49,7 +49,7 @@ tools/agents/tests/test_hooks.py  [names_file at tools/agents/tests/test_hooks.p
 ## Before a change
 1. `ask rdeps <file> --depth 2`: the impact. Each caller you will touch gets a targeted read.
 2. `ask tests <file>`: the exact tests to run, `direct` first; `named` means the test runs the file as
-   a script. No test listed: write one (skill `test`).
+   a script. No test listed: inspect the owning tests and decide whether meaningful regression coverage is needed (skill `test`).
 3. `ask spec <file>`: the doc to update in the same change (skill `okf-update`). `frontmatter only` or
    `Spec: line only` is a contract half written: fix the missing side.
 
@@ -79,3 +79,9 @@ tools/agents/tests/test_hooks.py  [names_file at tools/agents/tests/test_hooks.p
 - [ ] Each structural claim cites a `file:line` you opened.
 - [ ] The tests `ask tests` listed ran, and their result is stated.
 - [ ] The spec `ask spec` named is updated, or the change does not touch what it states.
+
+## Bounds of graph evidence
+Choose tests for actual behavioral risk even if the graph has no direct test edge; a prose-only
+change does not require a new implementation-mirroring test. A dependency edge does not prove
+a route is reachable, authorized or executed in production. Verify the relevant hop in code
+and configuration before turning an inferred path into a review finding.

@@ -6,6 +6,8 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+- Make `AGENTS.md` a procedure: a five-question self-check, stop-and-ask triggers, recently changed
+  pointers, and four inline rules with the rest owned by their docs.
 - Add a local evaluation record and report for the golden task set, with tests and a runbook; no model calls.
 
 ## [1.7.0] - 2026-10-31

@@ -60,6 +60,8 @@ word (an attached `-Fpath` is refused), so an injected
 instruction cannot publish another local file. A configured production reader must be an exact, single trusted command;
 put complex reads in the approved read-only script rather than interpolating shell pipelines.
 Native sandbox/credentials remain separate boundaries; this is not a universal shell sandbox.
+No loop deploys, restarts, migrates data or changes a setting: a finding that needs one becomes an
+issue for the owner instead.
 The writing jobs are wider still: `inner` allows any `git`, `python3` and `tools/` command, which
 is a shell in practice; only the shared guards (secrets, hook and force-push bypasses, dumps) and
 the review/CI gate bound it.

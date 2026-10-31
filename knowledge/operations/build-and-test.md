@@ -3,6 +3,7 @@ type: Runbook
 title: "Build and test"
 description: "Every gate of this repository, where to run it, and the language servers."
 status: stable
+review_after: 2027-01-29
 generated:
   by: aeion-factory/1.0
   at: 2026-10-20T00:00:00Z
@@ -33,6 +34,10 @@ sources:
     title: "factory-tests, which names this doc as its spec"
   - resource: ../../tools/git-hooks/pre-commit
     title: "pre-commit, which names this doc as its spec"
+  - resource: ../../tools/knowledge/orphans
+    title: "orphans, which names this doc as its spec"
+  - resource: ../../tools/knowledge/stale
+    title: "stale, which names this doc as its spec"
 ---
 
 # Build and test
@@ -46,6 +51,8 @@ it and fails when the committed bundle differs.
 | Layer | Gate | From |
 | --- | --- | --- |
 | Knowledge | `tools/knowledge/knowledge-check` | the root |
+| Knowledge freshness | `tools/knowledge/stale`: a `review_after` date that has passed | the root |
+| Knowledge reachability | `tools/knowledge/orphans`: a document nothing links | the root |
 | Docs and code links | `tools/knowledge/doc-links` (`--diff origin/develop` before a push) | the root |
 | Comments, file size, caps | `tools/repo-health/repo-health` | the root |
 | The factory's own test suites (hooks, tools, evals, push gate, release, context, analysis and graph queries, adapters including the OpenCode, Pi and dsh plugins, loops) | `tools/factory-tests` (each suite also runs alone; the script lists them) | root; Node 18+ |

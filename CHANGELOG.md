@@ -6,6 +6,8 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+- Add `tools/knowledge/stale` and `tools/knowledge/orphans`, with fixture tests, and date the
+  volatile operations and references documents with `review_after`.
 - Make `AGENTS.md` a procedure: a five-question self-check, stop-and-ask triggers, recently changed
   pointers, and four inline rules with the rest owned by their docs.
 - Add a local evaluation record and report for the golden task set, with tests and a runbook; no model calls.

@@ -3,6 +3,7 @@ type: Reference
 title: "Native skills and passive source guidance"
 description: "Native-first skill selection, selective enrichment and the boundary between a role document and an authorized agent execution."
 status: stable
+review_after: 2027-01-29
 generated:
   by: aeion-factory/local-skill-maintenance
   at: 2026-10-31

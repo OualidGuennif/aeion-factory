@@ -3,6 +3,7 @@ type: Runbook
 title: "The loops"
 description: "Inner, middle and outer loops: the orchestrator's jobs, their models, tools and schedules, and what keeps the outer loop read-only."
 status: stable
+review_after: 2027-01-29
 generated:
   by: aeion-factory/1.0
   at: 2026-10-20T00:00:00Z

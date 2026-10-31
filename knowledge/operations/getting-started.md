@@ -3,6 +3,7 @@ type: Runbook
 title: "Getting started with Æion Factory"
 description: "First-run setup, new and existing projects, managed launch commands and dsh troubleshooting."
 status: stable
+review_after: 2027-01-29
 generated:
   by: aeion-factory/1.6
   at: 2026-10-29

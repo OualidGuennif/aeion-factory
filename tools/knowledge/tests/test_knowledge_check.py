@@ -32,6 +32,26 @@ check("a missing field prints the shape", "## A task — ACTIVE\n- State: x\n", 
       "an entry is '## <title> — <STATUS>' then the lines - Owner decision: / - State: / - Next: / - Blocker: / - Evidence:")
 check("an entry over 10 lines", "## A task — ACTIVE\n" + FIELDS + "- more\n" * 6, 1, "over 10 lines")
 
+
+def check_doc(name, extra, want_code, want_text=""):
+    global passes
+    root = Path(tempfile.mkdtemp())
+    (root / "knowledge/policies").mkdir(parents=True)
+    (root / "knowledge/policies/volatile.md").write_text(
+        "---\ntype: Reference\ntitle: \"Volatile\"\ndescription: \"Volatile.\"\nstatus: draft\n"
+        + extra + "---\n\nBody.\n")
+    r = subprocess.run([sys.executable, str(TOOL), "--root", str(root)], capture_output=True, text=True)
+    if r.returncode == want_code and want_text in r.stdout:
+        passes += 1
+    else:
+        failures.append(f"{name}: exit {r.returncode}, stdout {r.stdout!r}")
+
+
+check_doc("a review_after date is accepted", "review_after: 2027-01-29\n", 0, "PASS")
+check_doc("a missing review_after is not a problem", "", 0, "PASS")
+check_doc("a malformed review_after is named", "review_after: 2027-1-9\n", 1,
+          "review_after '2027-1-9' is not a YYYY-MM-DD date")
+
 for f in failures:
     print("FAIL:", f)
 print(f"{passes} passed, {len(failures)} failed")

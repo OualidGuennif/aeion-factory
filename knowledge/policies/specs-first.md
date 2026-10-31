@@ -38,6 +38,8 @@ before its code is written, has these sections in this order:
 
 # Links between docs and code
 
+- **Datation:** a volatile document may carry `review_after: YYYY-MM-DD` in its frontmatter;
+  `tools/knowledge/stale` fails once the date passed, and a document without the key is exempt.
 - **Doc to code:** the doc's frontmatter `sources` lists the files it describes
   (`resource: ../../src/area/file.ts`). A directory source is checked for existence only.
 - **Code to doc:** a described file carries one header line `Spec: knowledge/<doc>.md`, and that doc

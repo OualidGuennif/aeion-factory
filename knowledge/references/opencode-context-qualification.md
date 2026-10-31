@@ -3,6 +3,7 @@ type: Reference
 title: "OpenCode 300k admission experiment — 2026-10-26"
 description: "Real paid DeepSeek V4.1 Flash transport, accounting and tool-continuation tests; narrow evidence, not an enabled Æion Factory strict profile."
 status: stable
+review_after: 2027-01-29
 generated:
   by: aeion-factory/1.1
   at: 2026-10-26

@@ -3,6 +3,7 @@ type: Runbook
 title: "Local evaluation harness"
 description: "One appended record per run, a report of three numbers, and the task folder that makes runs comparable. Self-reported, local, no model calls."
 status: draft
+review_after: 2027-01-29
 generated:
   by: aeion-factory/1.7
   at: 2026-10-31

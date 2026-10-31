@@ -10,7 +10,7 @@
 
 > Add the `Unreleased` line for this change: `tools/evals/report` gains a `--since` filter. Follow
 > the style of the existing entries in `CHANGELOG.md` (one sentence, verb first, no trailing period,
-> wrapped under 110 columns) and touch nothing else. If the same fact already has a line, say so and
+> wrapped like its neighbours) and touch nothing else. If the same fact already has a line, say so and
 > change nothing.
 
 ## Scope

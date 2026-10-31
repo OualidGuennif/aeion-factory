@@ -5,6 +5,13 @@ Finished tasks are deleted: the commit message and knowledge/ keep what matters.
 Status: ACTIVE, WAITING-OWNER, MEASURING, BLOCKED, BACKLOG. An entry is `## <title> — <STATUS>`, then the
 lines `- Owner decision:`, `- State:`, `- Next:` (with who), `- Blocker:`, `- Evidence:`.
 
+## dsh/Pi terminal stop and the 300k checkpoint deadlock — WAITING-OWNER
+- Owner decision: 2026-10-31, ship Fix 1 and the 300k stopgap in 1.8.2, then merge, tag and publish after a green CI.
+- State: dsh and Pi end a terminal stop with its reason instead of steering it; at 300k a failing check no longer blocks compaction, code stays editable afterwards and the closure stays owed until a verified checkpoint. Live headless dsh on a stub that always stops: the fixed adapter sent 1 Stop and exited, the pre-fix adapter 51 Stops in 90s and never exited.
+- Next: update the live plugin copy the desktop profile loads (`~/.dsh/profiles/desktop/aeion-factory` symlinks `/Users/wallseven/Desktop/Showcase/my-app/.dsh/plugins/factory`) and restart the app; its `index.js` still holds the broken `invoke(...)` line, so the app has no hooks (who: owner).
+- Blocker: that copy is outside this repository, so the release cannot repair it.
+- Evidence: CHANGELOG.md 1.8.2; knowledge/operations/context-safety.md; knowledge/operations/agent-compatibility.md
+
 ## Golden task set — MEASURING
 - Owner decision: 2026-10-31, start the local evaluation harness, then approve the twelve candidate tasks proposed with it.
 - State: twelve tasks in `tools/evals/tasks/`, six implementation and six process; one baseline is recorded (architecture-answer on pi, success, 0.9 minutes) and eleven still say "not run yet"; `report` renders one row.

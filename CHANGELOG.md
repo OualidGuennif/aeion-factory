@@ -6,6 +6,13 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+- dsh and Pi: a terminal stop (`continue: false`) ends the turn with its reason instead of being steered
+  as another request; the dsh adapter re-steered every stop answer and looped for hundreds of turns when
+  the 300k profile stopped it, while a sign-off finding still steers once.
+- At 300k a failing closure check no longer blocks the compaction that ends the closure: the compaction
+  runs, code edits stay open in the new epoch, and the closure stays owed — Stop is refused until a
+  verified checkpoint — so a check that failed before the session can be repaired instead of deadlocking.
+
 ## [1.8.1] - 2026-10-31
 
 - Pi: the 250k alert and the settlement refusal name the checkpoint command, so an agent is no longer

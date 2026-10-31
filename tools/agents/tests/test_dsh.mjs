@@ -120,6 +120,20 @@ test('dsh without a root compaction service asks the user for /compact instead o
   assert.match(steered[0].content[0].text, /\/compact/);
 });
 
+test('dsh asks the user to compact with the hook\'s own words, verified or owed (dsh FB-004)', async () => {
+  // The 300k stopgap allows a compaction the checkpoint did not verify: the user must not be told it did.
+  const owed = answering({
+    PostToolUse: { aeion: { compact: true } },
+    PreCompact: { systemMessage: 'Æion Factory 300k: compacting before a verified checkpoint' },
+  });
+  const first = load(owed, 300000, { root: false });
+  await first.handlers['tools/post-execute'](call(first.agent, 'bash', { command: 'true' }), {}, async () => ({}));
+  await first.handlers['agent/pre-step']({ agent: first.agent, signal: new AbortController().signal }, async () => {});
+  rmSync(owed, { recursive: true, force: true });
+  assert.match(first.steered[0].content[0].text, /^Æion Factory 300k: compacting before a verified checkpoint/);
+  assert.match(first.steered[0].content[0].text, /\/compact/);
+});
+
 test('dsh treats a token fall to under half as a compaction and restarts the session as compacted', () => {
   const { folder, events } = recorder();
   const { guard, agent, meter } = load(folder, 260000, { root: false });
@@ -170,4 +184,12 @@ test('dsh forwards a turn close to Stop and steers its sign-off finding (dsh FB-
   await second.handlers['agent/turn-stopping']({ agent: second.agent, turn: 1, signal: new AbortController().signal });
   rmSync(clear, { recursive: true, force: true });
   assert.deepEqual(second.steered, []);
+});
+
+test('dsh does not steer a terminal stop (dsh FB-003)', async () => {
+  const folder = answering({ Stop: { continue: false, stopReason: '300k: write the handover' } });
+  const { handlers, agent, steered } = load(folder);
+  await handlers['agent/turn-stopping']({ agent, turn: 1, signal: new AbortController().signal });
+  rmSync(folder, { recursive: true, force: true });
+  assert.deepEqual(steered, []);
 });

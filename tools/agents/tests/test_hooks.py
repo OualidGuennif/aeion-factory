@@ -226,6 +226,63 @@ class HookTests(unittest.TestCase):
             self.assertFalse(denied(self.measure(provider, 1_000, **edit)), provider)
             self.assertEqual(json.loads(state_file.read_text())['state'], 'RUNNING')
 
+    def test_300k_stopgap_compacts_and_keeps_the_closure_owed(self):
+        # The incident: a check that failed before the session froze code at 300k, and the checkpoint that would
+        # release it failed on that same check. The compaction runs, the epoch stays editable, the debt stays owed.
+        session = hook.key('dsh', {'session_id': 'context-dsh'})
+        state_file = self.root / '.aeion/context' / f'{session}.json'
+        edit = {'tool_name': 'Edit', 'tool_input': {'file_path': str(self.root / 'src.py')}}
+        denied = lambda result: result.get('hookSpecificOutput', {}).get('permissionDecision') == 'deny'
+        self.assertTrue(denied(self.measure('dsh', 300_000, **edit)))
+        # The adapter asks for the compaction only when the hook signals it, so an unverified 300k must say so.
+        self.assertEqual(self.measure('dsh', 300_000, hook_event_name='PostToolUse')['aeion'], {'compact': True})
+        allowed = self.measure('dsh', 300_000, hook_event_name='PreCompact')
+        self.assertNotIn('continue', allowed)
+        self.assertIn('closure stays owed', allowed['systemMessage'])
+        self.assertEqual(json.loads(state_file.read_text())['closure_owed'], 'due')
+        # The new epoch admits the code edit that repairs the failing check.
+        self.measure('dsh', 0, hook_event_name='SessionStart', source='compact')
+        self.assertFalse(denied(self.measure('dsh', 1_000, **edit)))
+        # The run cannot sign off before a verified receipt settles the debt, and the refusal names the command.
+        stop = self.measure('dsh', 1_000, hook_event_name='Stop')
+        self.assertFalse(stop['continue'])
+        self.assertIn('closure is still owed', stop['stopReason'])
+        self.assertIn('checkpoint --session', stop['stopReason'])
+
+    def test_300k_stopgap_starts_a_new_epoch_for_opencode(self):
+        # OpenCode sends no compact SessionStart, so the allowed compaction itself must leave the closure band, or
+        # compact_tool would keep code frozen and the debt could never be settled.
+        session = hook.key('opencode', {'session_id': 'context-opencode'})
+        state_file = self.root / '.aeion/context' / f'{session}.json'
+        edit = {'tool_name': 'Edit', 'tool_input': {'file_path': str(self.root / 'src.py')}}
+        denied = lambda result: result.get('hookSpecificOutput', {}).get('permissionDecision') == 'deny'
+        self.assertTrue(denied(self.measure('opencode', 300_000, **edit)))
+        self.assertNotIn('continue', self.measure('opencode', 300_000, hook_event_name='PreCompact'))
+        state = json.loads(state_file.read_text())
+        self.assertEqual((state['state'], state['closure_owed']), ('RECOVERING', 'due'))
+        self.assertFalse(denied(self.measure('opencode', 1_000, **edit)))
+        self.assertFalse(self.measure('opencode', 1_000, hook_event_name='Stop')['continue'])
+
+    def test_a_real_checkpoint_settles_the_codex_closure_instead_of_stranding_it(self):
+        # Codex resumes in closure after its early compaction and only the receipt releases it: a checkpoint that
+        # cleared the debt itself would leave the flag gone and the state frozen for every later call.
+        session = hook.key('codex', {'session_id': 'context-codex'})
+        handover = hook.budget.handover_path(self.root, session)
+        state_file = self.root / '.aeion/context' / f'{session}.json'
+        edit = {'tool_name': 'Edit', 'tool_input': {'file_path': str(self.root / 'src.py')}}
+        denied = lambda result: result.get('hookSpecificOutput', {}).get('permissionDecision') == 'deny'
+        self.measure('codex', 231_000, **edit)
+        self.measure('codex', 231_000, hook_event_name='PreCompact')
+        self.measure('codex', 0, hook_event_name='SessionStart', source='compact')
+        self.assertTrue(denied(self.measure('codex', 20_000, **edit)))
+        handover.write_text('## Scope\nx\n## Completed\nx\n## Remaining\nx\n## Constraints\nx\n## Evidence\nx\n')
+        # The receipt is taken and read under the same git view, as it is in a real run.
+        with patch.object(hook.budget, 'CHECKS', ((sys.executable, '-c', 'pass'),)), \
+                patch.object(hook.budget, 'git_active', lambda root: False):
+            hook.budget.checkpoint(self.root, session, None)
+            self.assertFalse(denied(self.measure('codex', 20_000, **edit)))
+        self.assertEqual(json.loads(state_file.read_text())['state'], 'RUNNING')
+
     def test_codex_compaction_before_its_handover_runs_and_owes_the_closure_after_it(self):
         session = hook.key('codex', {'session_id': 'context-codex'})
         handover = hook.budget.handover_path(self.root, session)

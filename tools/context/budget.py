@@ -312,6 +312,9 @@ def apply_usage(root, session, state, name, event, usage):
             result = stop(name, reason)
     else:
         state["bootstrapped"] = True
+        # A verified receipt settles the debt the 300k stopgap deferred; the state machine then continues as before.
+        if state.get("closure_owed") == "due" and ready(root, session, state):
+            state.pop("closure_owed", None)
         # 300k never stops the run: it narrows closure to the handover and forces compaction again.
         if usage >= LIMIT and state["state"] != "COMPACT_REQUIRED":
             state["state"] = "COMPACT_REQUIRED"
@@ -322,9 +325,17 @@ def apply_usage(root, session, state, name, event, usage):
         if name == "PreCompact":
             if not ready(root, session, state):
                 ensure_handover(root, session)
-                moved = changed_paths(state.get("checkpoint", {}).get("files", {}), tree_files(root)) if state.get("checkpoint") else ""
-                stale = f" The receipt is stale: {moved} changed since it (git-ignore a live log)." if moved else ""
-                result = stop(name, f"Fill {handover.relative_to(root)}, then create a verified checkpoint before compaction: {checkpoint_command(root, session)}.{stale}")
+                if state["state"] == "COMPACT_REQUIRED":
+                    # 300k stopgap: code is already frozen here, so a check that failed before this session would
+                    # leave no way to verify and no way to repair. The compaction runs, the closure stays owed.
+                    state["closure_owed"] = "due"
+                    result = {"systemMessage": f"Æion Factory 300k: compacting before a verified checkpoint; the "
+                                               f"closure stays owed until the failing check is fixed and "
+                                               f"{handover.relative_to(root)} is verified: {checkpoint_command(root, session)}."}
+                else:
+                    moved = changed_paths(state.get("checkpoint", {}).get("files", {}), tree_files(root)) if state.get("checkpoint") else ""
+                    stale = f" The receipt is stale: {moved} changed since it (git-ignore a live log)." if moved else ""
+                    result = stop(name, f"Fill {handover.relative_to(root)}, then create a verified checkpoint before compaction: {checkpoint_command(root, session)}.{stale}")
         elif state["state"] in {"HANDOVER_REQUIRED", "COMPACT_REQUIRED"}:
             ensure_handover(root, session)
             first = state.pop("warning_pending", False)
@@ -349,6 +360,10 @@ def apply_usage(root, session, state, name, event, usage):
                 result["systemMessage"] = message
         elif state["state"] == "RECOVERING":
             state["state"] = "RUNNING"
+        # A closure the 300k stopgap deferred is still owed: the run ends with its receipt, or not at all.
+        if not result and name in {"Stop", "SubagentStop"} and state.get("closure_owed") == "due" and not ready(root, session, state):
+            result = stop(name, f"Æion Factory 300k: closure is still owed; fix the failing check and verify the "
+                                f"checkpoint: {checkpoint_command(root, session)}. Task has not been signed off.")
     return result
 
 
@@ -374,7 +389,11 @@ def handle(root, event):
         handover = handover_path(root, session)
         compact_verified = name == "SessionStart" and event.get("source") == "compact" and ready(root, session, state)
         if name == "SessionStart" and event.get("source") == "compact" and state.get("state") != "STOPPED":
+            # A compaction the 300k stopgap let through still owes its closure; the new epoch must not forget it.
+            owed = state.get("closure_owed") == "due"
             state = {"epoch": state["epoch"] + 1, "state": "RECOVERING", "warning_pending": state.get("warning_pending", False)}
+            if owed:
+                state["closure_owed"] = "due"
         result = {}
         if state.get("state") == "STOPPED":
             result = stop(name, "Æion Factory context run is stopped; start a new validated session from its handover.")
@@ -382,6 +401,9 @@ def handle(root, event):
             context = "Æion Factory checkpoint profile: 250k handover/compact, 300k forced handover and compaction; not a strict ceiling."
             if handover.is_file():
                 context += f" Recovery: {handover.relative_to(root)}"
+            if state.get("closure_owed") == "due":
+                context += (f" Closure still owed from a 300k compaction: fix the failing check, then verify the "
+                            f"checkpoint: {checkpoint_command(root, session)}.")
             result = {"hookSpecificOutput": {"hookEventName": name, "additionalContext": context}}
             if state.pop("warning_pending", False):
                 message = ("Æion Factory 250k alert: a verified handover was retained before compaction." if compact_verified
@@ -445,6 +467,8 @@ def checkpoint(root, session, base):
             raise ValueError(f"files changed during checkpoint validation: {changed_paths(files, after) or 'HEAD'} "
                              "(a live log in the tree makes every receipt stale: git-ignore it)")
         state["checkpoint"] = {"tree": before, "files": files, "handover": hashlib.sha256(handover.read_bytes()).hexdigest()}
+        # `closure_owed` stays until the next event reads this receipt: Codex and Droid leave their closure state
+        # only on that event, so dropping the flag here would strand them in a closure that is already satisfied.
         atomic(file, json.dumps(state, sort_keys=True) + "\n")
 
 

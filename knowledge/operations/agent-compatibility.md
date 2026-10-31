@@ -73,7 +73,9 @@ directory does not establish loaded hooks or identical runtime guarantees.
   the handover is verified; the 250k alert names the checkpoint command, and closure admits a project's
   Markdown docs. `agent_before_settle` sends Stop: a sign-off finding becomes a displayed
   `custom_message` entry with `continue: true` (one more request); the hook shows each finding once, so
-  the next settlement passes. A closure refusal repeats at most three times and then settles with the
+  the next settlement passes. A terminal stop (`continue: false`: a stopped run, invalid or unavailable
+  usage) settles at once and shows its reason in the UI, never as another request. A closure refusal
+  repeats at most three times and then settles with the
   reason in the UI, so one alert cannot spin forever. Not yet qualified live: the events follow the
   1.4.0 docs and published type declarations.
 - Token feedback (narration between tools, full-file rewrites; advisory, never blocking) covers
@@ -104,7 +106,9 @@ directory does not establish loaded hooks or identical runtime guarantees.
   `ctx.tokenMeter.measure(session).totalTokens` as the usage; `tools/post-execute` sends PostToolUse.
   dsh has no hook that adds text to the prompt, so the SessionStart context (the checkpoint profile and
   recovery pointer) is steered to the agent on its first guarded call; `agent/turn-stopping` sends Stop,
-  and a sign-off finding is steered as one more step (shown once per session, so it cannot loop).
+  and a sign-off finding is steered as one more step (shown once per session, so it cannot loop). An
+  answer of `continue: false` is the hook's terminal stop: the turn ends with its reason and is never
+  steered, because a steered terminal stop starts a turn that closes the same way.
   Once a verified handover asks for compaction, the next `agent/pre-step` sends PreCompact and, when
   allowed, compacts through `ctx.compaction.compactIfNeeded(agent, 'context-overflow')`, then steers a
   message that resumes from the handover. Without the root service (web) it steers the agent to ask the

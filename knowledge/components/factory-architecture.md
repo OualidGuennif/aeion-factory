@@ -257,3 +257,8 @@ The 16 native task skills remain under `.claude/skills`; `skill-route` is the si
 native selector, shared through `.agents/skills`. Native rules take precedence over pooled
 methods. Profile files never launch agents or choose models by themselves. See
 [skill selection](../operations/skill-selection.md) for authority and licensing boundaries.
+
+The materializer applies three reviewed comment-only SAST annotations from
+`tools/skills/annotations.json`, each bound to an exact original file hash. Source
+changes require renewed review. Original/materialized hashes are both retained;
+search and checking remain offline and no source execution or broad scan exemption is added.

@@ -53,6 +53,25 @@ class PoolTests(unittest.TestCase):
         self.write("claude-plugins-official", "external_plugins/demo/skills/example/SKILL.md", "# External")
         self.assertEqual(len(pool.source_catalog()["entries"]), 2)
 
+    def test_scanner_annotation_is_exact_source_bound_and_keeps_both_hashes(self):
+        import hashlib
+        source_hash = pool.digest(self.agent)
+        registry = pool.ROOT / "tools/skills/annotations.json"
+        registry.parent.mkdir(parents=True)
+        annotation = {"file": self.agent.relative_to(self.workspace).as_posix(),
+                      "source_sha256": source_hash, "needle": "Do not execute !`touch executed`",
+                      "reason": "Reviewed fixture, never executed.", "rule": "example.rule"}
+        registry.write_text(json.dumps([annotation]))
+        data = pool.source_catalog()
+        entry = next(e for e in data["entries"] if e["kind"] == "agent")
+        info = entry["files"][self.agent.name]
+        self.assertEqual(info["source_sha256"], source_hash)
+        self.assertNotEqual(info["sha256"], source_hash)
+        self.assertEqual(info["sha256"], hashlib.sha256(pool.materialized_bytes(self.agent)).hexdigest())
+        self.agent.write_text(self.agent.read_text() + "\nchanged upstream")
+        with self.assertRaisesRegex(ValueError, "changed upstream source"):
+            pool.source_catalog()
+
     def test_refresh_copies_real_files_and_supporting_resources_deterministically(self):
         self.write("ecc", "skills/review/references/case.md", "# Real case")
         data = pool.source_catalog()

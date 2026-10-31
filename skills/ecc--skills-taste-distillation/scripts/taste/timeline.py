@@ -543,7 +543,8 @@ if __name__ == "__main__":
     with tempfile.TemporaryDirectory() as td:
         p1 = write_timeline(clips, FPS, Path(td) / "sc.fcpxml", "fcpxml")
         p2 = write_timeline(clips, FPS, Path(td) / "sc.edl", "edl")
-        ET.parse(p1)
+        # The self-check parses only the XML emitted immediately above into its own private temporary directory.
+        ET.parse(p1)  # nosemgrep: python.lang.security.use-defused-xml-parse.use-defused-xml-parse
         assert p2.read_text(encoding="utf-8").startswith("TITLE:")
 
     print("timeline self-check OK")

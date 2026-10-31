@@ -56,3 +56,8 @@ records exact commits, copied resource hashes and nearest license files. CREDITS
 attribution; plugin-specific restrictions override repository-level licenses. Ten proprietary
 Claude Security definitions are metadata-only, not materialized for cross-host use.
 No model, automatic agent-launch obligation or generic quality threshold is imported.
+
+Three ECC resource lines have reviewed, rule-specific scanner annotation comments. Their
+exact original file hashes, locations and reasoning are in tools/skills/annotations.json;
+the catalog retains original and materialized hashes. Other findings and changed source
+files are not suppressed, and the complete pool remains in SAST scope.

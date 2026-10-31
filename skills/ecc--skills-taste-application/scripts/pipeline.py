@@ -148,7 +148,8 @@ def main() -> None:
     if takes:
         vcmd += ["--source", str(takes[0])]
     print(f"\n{'=' * 70}\n[verify]\n{'=' * 70}")
-    rc = subprocess.run(_command(vcmd)).returncode
+    # The executable and verifier script are fixed; arguments stay an argv list and shell is never enabled.
+    rc = subprocess.run(_command(vcmd)).returncode  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-tainted-env-args.dangerous-subprocess-use-tainted-env-args
     print(f"\nfinal -> {out}")
     # A failed check is information, not a crash: the video exists either way,
     # and the operator decides whether the miss matters for this piece.

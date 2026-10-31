@@ -33,6 +33,26 @@ def digest(path):
         return hashlib.file_digest(stream, 'sha256').hexdigest()
 
 
+def materialized_bytes(path):
+    """Apply only reviewed, exact-source-bound scanner annotations; preserve runtime behavior."""
+    data = path.read_bytes()
+    registry = ROOT / 'tools/skills/annotations.json'
+    annotations = json.loads(registry.read_text()) if registry.exists() else []
+    for annotation in annotations:
+        if path.relative_to(WORKSPACE).as_posix() != annotation['file']:
+            continue
+        if hashlib.sha256(data).hexdigest() != annotation['source_sha256']:
+            raise ValueError(f'Review annotation against changed upstream source: {path}')
+        text = data.decode('utf-8')
+        needle = annotation['needle']
+        if text.count(needle) != 1:
+            raise ValueError(f'Annotation target is missing or ambiguous: {path}')
+        indent = needle[:len(needle) - len(needle.lstrip())]
+        replacement = indent + '# ' + annotation['reason'] + '\n' + needle + '  # nosemgrep: ' + annotation['rule']
+        return text.replace(needle, replacement, 1).encode('utf-8')
+    return data
+
+
 def inside(path, root):
     if not path.resolve().is_relative_to(root.resolve()) or path.is_symlink():
         raise ValueError(f'Unexpected source symlink or escaping path: {path}')
@@ -111,7 +131,9 @@ def source_catalog():
                         inside(candidate, root)
                         if candidate.is_file() and candidate.name != '.DS_Store':
                             key = candidate.relative_to(path.parent).as_posix() if kind == 'skill' else path.name
-                            files[key] = {'sha256': digest(candidate), 'executable': bool(candidate.stat().st_mode & 0o111)}
+                            files[key] = {'sha256': hashlib.sha256(materialized_bytes(candidate)).hexdigest(),
+                                          'source_sha256': digest(candidate),
+                                          'executable': bool(candidate.stat().st_mode & 0o111)}
                 entries.append({'id': identifier, 'source': source, 'kind': kind, 'title': title,
                                 'description': description, 'upstream_file': relative,
                                 'file': path.relative_to(WORKSPACE).as_posix(), 'sha256': digest(path),
@@ -209,7 +231,7 @@ def refresh(data):
                 location = candidate / entry['link']
                 target = location / relative if entry['kind'] == 'skill' else location
                 target.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copyfile(original, target)
+                target.write_bytes(materialized_bytes(original))
                 target.chmod(0o755 if info['executable'] else 0o644)
                 if digest(target) != info['sha256']:
                     raise ValueError('Source changed during copy; retry after sync')

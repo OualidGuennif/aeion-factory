@@ -83,3 +83,13 @@ A refresh refuses modified or unknown local pool files. It validates the moved p
 snapshot again before installing the replacement, and retains that snapshot under
 `.aeion/skill-pool-backup-*/skills/` so an editor write racing the swap is not deleted.
 Backups are local/ignored and are not automatically pruned. Normal use does not refresh.
+
+## Three narrowly scoped scanner annotations
+
+Three copied ECC resource lines carry rule-specific `nosemgrep` comments. The verifier
+subprocess uses a fixed interpreter/script and an argv list without a shell; the two XML
+parses are self-checks reading XML generated immediately above in private temporary folders.
+The native scanner still scans the pool. `tools/skills/annotations.json` records each exact
+path, source-file SHA-256, rule ID and reviewed reason. Refresh refuses if an annotated
+upstream file changes. Both original and materialized hashes remain in the catalog;
+there is no folder-wide exclusion, rule disable or executable behavior change.

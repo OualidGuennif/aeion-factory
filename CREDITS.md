@@ -55,6 +55,6 @@ Mistakes in how these ideas are combined here are ours, not theirs.
   specialist workflow references. https://github.com/anthropics/knowledge-work-plugins
 
 The versioned skills/catalog.json records exact source commits, entrypoint fingerprints and license
-files. Native Factory text is selectively adapted, not a wholesale copy of upstream prompts. The separate passive pool contains unmodified
-upstream skill/agent files and supporting resources, with license texts under skills/licenses/.
+files. Native Factory text is selectively adapted, not a wholesale copy of upstream prompts. The separate passive pool contains upstream skill/agent files and supporting resources,
+with three source-hash-bound scanner annotation comments recorded in tools/skills/annotations.json, with license texts under skills/licenses/.
 No upstream agent-launch mandate, model setting or generic threshold is adopted.

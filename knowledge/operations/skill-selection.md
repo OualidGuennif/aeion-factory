@@ -9,6 +9,8 @@ generated:
 sources:
   - resource: ../../.claude/skills/
     title: "Maintained native definitions"
+  - resource: ../../tools/skills/annotations.json
+    title: "Exact-source-bound scanner annotations"
   - resource: ../../tools/skills/pool.py
     title: "Deterministic pool inventory and search"
   - resource: ../../.agents/skills/
@@ -68,3 +70,8 @@ A refresh verifies the existing physical pool, materializes a new snapshot, then
 the moved previous snapshot before installing. Previous trees remain in ignored
 `.aeion/skill-pool-backup-*` storage; unknown files or local content edits cause a refusal.
 The test suite includes concurrent-edit and post-rename interruption regressions.
+
+The three reviewed ECC SAST false positives use per-rule inline annotations, not a pool
+exclusion: a fixed verifier argv call and two generated-XML self-checks. The registry
+binds each comment to an exact original file hash and line. Catalog entries retain both
+original and materialized hashes; a changed upstream file requires renewed review.

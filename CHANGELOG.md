@@ -9,10 +9,12 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 ## [1.7.0] - 2026-10-31
 
 - Strengthen the 16 native skills with evidence-led review, diagnostic/test boundaries and honest
-  completion checks; add one native-first selector for the optional passive lifecycle pool. Source
+  completion checks; add one native-first selector for the optional passive project-local pool. Source
   agent profiles do not authorize delegation, model changes, installs or generic numeric gates.
 - Ship a self-contained pool of 525 skill folders and 99 agent profiles with resources, licenses,
   source pins and offline integrity/search tooling; the lifecycle folder is not a dependency.
+- Keep SAST enabled for the pool, with three reviewed per-rule annotation comments bound to
+  original source hashes; source changes require renewed review rather than silent suppression.
 
 ## [1.6.2] - 2026-10-29
 

@@ -6,6 +6,8 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+## [1.8.1] - 2026-10-31
+
 - Pi: the 250k alert and the settlement refusal name the checkpoint command, so an agent is no longer
   asked to verify a receipt it cannot discover; a settlement that still owes closure is continued three
   times, not forever; closure admits a project's own Markdown docs, never code.

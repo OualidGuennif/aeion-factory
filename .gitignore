@@ -5,6 +5,8 @@ env.local
 !.env.example
 # Generated and local state.
 .aeion/
+# Evaluation records grow with every run and stay on this machine.
+tools/evals/results.jsonl
 # .factory/ belongs to Factory's Droid; only its config is tracked, older local state stays ignored.
 .factory/*
 !.factory/settings.json

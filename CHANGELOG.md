@@ -6,6 +6,24 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-10-31
+
+- Validate evaluation report input and preserve unknown optional metrics as `N/A` / JSON `null`
+  instead of zero; document separate datasets for baseline comparisons.
+- Refuse missing knowledge roots, a missing orphan-check entry index and explicitly empty review dates.
+- Preserve JSONL record separation when appending after a missing final newline; correct the
+  handover evaluation check to expect ignored recovery state.
+
+- Add `tools/knowledge/stale` and `tools/knowledge/orphans`, with fixture tests, and date the
+  volatile operations and references documents with `review_after`.
+- Make `AGENTS.md` a procedure: a five-question self-check, stop-and-ask triggers, recently changed
+  pointers, and four inline rules with the rest owned by their docs.
+- Add a local evaluation record and report for the golden task set, with tests and a runbook; no model calls.
+- Refuse `nan` and `inf` for the evaluation record's float flags, so one run cannot write a JSONL line no parser reads.
+- Ship twelve evaluation tasks, each with a fixed prompt, the gate that decides it and an empty baseline.
+- Add `tools/skills/lint` and its fixture tests, so every native skill's name, trigger, description
+  and body caps are checked.
+
 ## [1.7.0] - 2026-10-31
 
 - Strengthen the 16 native skills with evidence-led review, diagnostic/test boundaries and honest

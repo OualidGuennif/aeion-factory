@@ -22,3 +22,4 @@ generated:
 
 - [Claude Code, Codex, OpenCode, Pi and other agents](agent-compatibility.md)
 - [GitHub main protection](github-protection.md)
+- [Local evaluation harness](evals.md)

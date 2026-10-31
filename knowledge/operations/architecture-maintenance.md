@@ -3,6 +3,7 @@ type: Runbook
 title: "Graphify and Archify maintenance"
 description: "Recommended local baseline installed only on the user's yes, and the CI exact-commit refresh after every main update, without model credentials."
 status: stable
+review_after: 2027-01-29
 generated:
   by: aeion-factory/1.1
   at: 2026-10-25

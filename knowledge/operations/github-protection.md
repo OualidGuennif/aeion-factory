@@ -3,6 +3,7 @@ type: Runbook
 title: "GitHub main protection"
 description: "Required pull requests and real CI checks on main, including administrators, and how to verify adopted repositories."
 status: stable
+review_after: 2027-01-29
 generated:
   by: aeion-factory/1.2
   at: 2026-10-25

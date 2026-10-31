@@ -3,6 +3,7 @@ type: Reference
 title: "Native skills and passive source guidance"
 description: "Native-first skill selection, selective enrichment and the boundary between a role document and an authorized agent execution."
 status: stable
+review_after: 2027-01-29
 generated:
   by: aeion-factory/local-skill-maintenance
   at: 2026-10-31
@@ -13,6 +14,8 @@ sources:
     title: "Exact-source-bound scanner annotations"
   - resource: ../../tools/skills/pool.py
     title: "Deterministic pool inventory and search"
+  - resource: ../../tools/skills/lint
+    title: "Native skill front matter, trigger and body-size gate"
   - resource: ../../.agents/skills/
     title: "Shared discovery links"
 ---
@@ -51,6 +54,16 @@ receipt. Existing exact-commit gate mechanics remain unchanged.
 Native-only proprietary plugins remain native-only; absent tools are coverage
 limits. Installing a plugin, sending source to an external scanner and publishing
 findings each keep their own authorization boundary.
+
+## The native set, linted
+
+`tools/skills/lint` checks every folder under `.agents/skills/` that holds a `SKILL.md`:
+a `name` matching its folder, a description of at most 1024 characters that names its
+trigger, a body of at most 150 lines, and no name declared twice. It prints one
+`FAIL <folder>: <reason>` line per violation and exits 1, or `PASS: 17 skills`. The trigger
+rule accepts the forms the native set uses: `when`, `whenever`, `before`, `after`,
+`monthly`, `weekly`, `periodic` or `at the end`. `tools/skills/tests/test_lint.py` holds the
+fixtures and `tools/factory-tests` runs it.
 
 ## Maintenance and evidence
 

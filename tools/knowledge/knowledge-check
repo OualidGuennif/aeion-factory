@@ -4,8 +4,8 @@
     tools/knowledge/knowledge-check [--root DIR]
 
 Fails on: a concept without valid frontmatter or a required field; an unknown status; a
-description over 250 characters; more than 3 `verified` entries or one over 300 characters; a body
-over 600 lines; a broken relative Markdown link; a stable concept missing from its folder index;
+description over 250 characters; a `review_after` that is not a real YYYY-MM-DD date; more than 3
+`verified` entries or one over 300 characters; a body over 600 lines; a broken relative Markdown link; a stable concept missing from its folder index;
 a Component without the eight spec sections; AGENTS.md over 120 lines; CLAUDE.md that is neither a
 link to AGENTS.md nor `@AGENTS.md`; work/current.md over 150 lines or an entry over 10 lines or
 without its five fields. Spec: knowledge/policies/specs-first.md
@@ -13,6 +13,7 @@ without its five fields. Spec: knowledge/policies/specs-first.md
 import argparse
 import re
 import sys
+from datetime import date
 from pathlib import Path
 
 FM_RE = re.compile(r"^---\n(.*?)\n---\n", re.DOTALL)
@@ -42,6 +43,15 @@ def check_concept(path, root, problems):
             problems.append(f"{rel}: frontmatter lacks '{key}'")
     if field(block, "status") and field(block, "status") not in STATUSES:
         problems.append(f"{rel}: status '{field(block, 'status')}' is not one of {sorted(STATUSES)}")
+    # Optional: a volatile doc dates its own review, and a date the other checks cannot parse is a trap.
+    reviewed = field(block, "review_after")
+    if re.search(r"^review_after:", block, re.MULTILINE):
+        try:
+            if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", reviewed):
+                raise ValueError
+            date.fromisoformat(reviewed)
+        except ValueError:
+            problems.append(f"{rel}: review_after '{reviewed}' is not a YYYY-MM-DD date")
     if len(field(block, "description")) > 250:
         problems.append(f"{rel}: description over 250 characters")
     whats = re.findall(r"^\s+what:\s*\"?(.*?)\"?\s*$", block, re.MULTILINE)

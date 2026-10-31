@@ -3,6 +3,7 @@ type: Runbook
 title: "Build and test"
 description: "Every gate of this repository, where to run it, and the language servers."
 status: stable
+review_after: 2027-01-29
 generated:
   by: aeion-factory/1.0
   at: 2026-10-20T00:00:00Z
@@ -33,6 +34,10 @@ sources:
     title: "factory-tests, which names this doc as its spec"
   - resource: ../../tools/git-hooks/pre-commit
     title: "pre-commit, which names this doc as its spec"
+  - resource: ../../tools/knowledge/orphans
+    title: "orphans, which names this doc as its spec"
+  - resource: ../../tools/knowledge/stale
+    title: "stale, which names this doc as its spec"
 ---
 
 # Build and test
@@ -46,16 +51,24 @@ it and fails when the committed bundle differs.
 | Layer | Gate | From |
 | --- | --- | --- |
 | Knowledge | `tools/knowledge/knowledge-check` | the root |
+| Knowledge freshness | `tools/knowledge/stale`: a `review_after` date that has passed | the root |
+| Knowledge reachability | `tools/knowledge/orphans`: a document nothing links | the root |
 | Docs and code links | `tools/knowledge/doc-links` (`--diff origin/develop` before a push) | the root |
 | Comments, file size, caps | `tools/repo-health/repo-health` | the root |
-| The factory's own test suites (hooks, tools, push gate, release, context, analysis and graph queries, adapters including the OpenCode, Pi and dsh plugins, loops) | `tools/factory-tests` (each suite also runs alone; the script lists them) | root; Node 18+ |
+| The factory's own test suites (hooks, tools, evals, push gate, release, context, analysis and graph queries, adapters including the OpenCode, Pi and dsh plugins, loops) | `tools/factory-tests` (each suite also runs alone; the script lists them) | root; Node 18+ |
 | Efficiency bundle | `tools/efficiency/bundle`, then `git diff --exit-code efficiency/efficiency-bundle.md` | the root |
 | Source analysis (CI on every main update; local run recommended) | `tools/architecture/refresh --target HEAD --base origin/main` after committing | pinned tools installed on the user's yes, Node and Chrome required |
 | Your code | add your build, lint and test commands here, copied from CI | |
 
-The pre-commit (`git config core.hooksPath tools/git-hooks`) runs the first three, and the pre-push
-refuses a push of `develop` without a recorded `Review: OK` and any direct push to `main`; CI runs
-all of them and the security scans, for `main` only.
+`stale` and `orphans` reject a missing root or `knowledge/` directory with a nonzero exit;
+`orphans` also requires `knowledge/index.md`. An absent tree is not a successful empty check.
+A valid knowledge directory with no dated documents still passes `stale`.
+
+The pre-commit (`git config core.hooksPath tools/git-hooks`) runs `knowledge-check`, `doc-links`
+and `repo-health`. The pre-push refuses a push of `develop` without a recorded `Review: OK`
+and any direct push to `main`. CI runs those three checks, `factory-tests`, the efficiency-bundle
+check and security scans on pushes to `main` and pull requests targeting `main` or `develop`.
+`stale` and `orphans` remain manual checks; CI exercises their fixtures through `factory-tests`.
 
 Many people run Æion Factory in a plain folder, without git. The link and health checks, the context
 fingerprint, the code graph (`tools/architecture/ask`) and the session-start summary then walk the files on disk (skipping `.git`, `.aeion`,
@@ -115,6 +128,10 @@ require Python 3.12+ excluding 3.14.1. `knowledge-check` also validates public r
 the portable efficiency bundle; its bundled Superpowers notice is self-contained.
 
 ## Passive pool checks
+
+The seventeen native skills are checked by `tools/skills/lint`: `name` against its folder, a
+description of at most 1024 characters that names its trigger, a body of at most 150 lines and no
+duplicate name; `tools/skills/tests/test_lint.py` is in `tools/factory-tests`.
 
 `tools/factory-tests` runs `tools/skills/tests/test_pool.py` and the real offline pool check
 `python3 tools/skills/pool.py check`. They verify materialized files, support resources, license

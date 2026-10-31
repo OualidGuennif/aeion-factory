@@ -3,6 +3,7 @@ type: Runbook
 title: "Context safety and handover"
 description: "One 250k/300k rule for Claude, Codex, OpenCode, Pi and dsh: closure, verified handover, compaction, and its limits."
 status: stable
+review_after: 2027-01-29
 generated:
   by: aeion-factory/1.1
   at: 2026-10-25

@@ -3,6 +3,7 @@ type: Reference
 title: "Sources behind Æion Factory"
 description: "The research, docs and tools the guide's recommendations rest on, with links."
 status: stable
+review_after: 2027-01-29
 generated:
   by: aeion-factory/1.0
   at: 2026-10-20T00:00:00Z

@@ -3,6 +3,7 @@ type: Runbook
 title: "Claude Code, Codex, OpenCode, Pi, dsh, Devin, Droid and Antigravity"
 description: "One Æion Factory instruction/skill source, runtime-specific adapters, setup and explicitly bounded guarantees."
 status: stable
+review_after: 2027-01-29
 sources:
   - resource: ../../tools/agents/hook.py
     title: "Native payload adapter"

@@ -49,6 +49,9 @@ def check_doc(name, extra, want_code, want_text=""):
 
 check_doc("a review_after date is accepted", "review_after: 2027-01-29\n", 0, "PASS")
 check_doc("a missing review_after is not a problem", "", 0, "PASS")
+for value in ('', '""', '"  "'):
+    check_doc("an explicitly empty review_after is invalid", f"review_after: {value}\n", 1,
+              "is not a YYYY-MM-DD date")
 check_doc("a malformed review_after is named", "review_after: 2027-1-9\n", 1,
           "review_after '2027-1-9' is not a YYYY-MM-DD date")
 

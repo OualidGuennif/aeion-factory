@@ -10,7 +10,9 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 - Validate evaluation report input and preserve unknown optional metrics as `N/A` / JSON `null`
   instead of zero; document separate datasets for baseline comparisons.
-- Refuse missing knowledge roots and a missing orphan-check entry index instead of reporting PASS.
+- Refuse missing knowledge roots, a missing orphan-check entry index and explicitly empty review dates.
+- Preserve JSONL record separation when appending after a missing final newline; correct the
+  handover evaluation check to expect ignored recovery state.
 
 - Add `tools/knowledge/stale` and `tools/knowledge/orphans`, with fixture tests, and date the
   volatile operations and references documents with `review_after`.

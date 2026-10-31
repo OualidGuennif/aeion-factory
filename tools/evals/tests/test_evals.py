@@ -73,6 +73,17 @@ class EvalTests(unittest.TestCase):
         self.assertEqual(len(self.lines()), 2)
         self.assertEqual([json.loads(line)["success"] for line in self.lines()], [True, False])
 
+    def test_append_preserves_a_record_without_a_final_newline(self):
+        self.assertEqual(self.record("--notes", "first évaluation").returncode, 0)
+        before = self.file.read_bytes().rstrip(b"\n")
+        self.file.write_bytes(before)
+        self.assertEqual(self.record("--success", "no").returncode, 0)
+        self.assertTrue(self.file.read_bytes().startswith(before + b"\n"))
+        self.assertEqual([json.loads(line)["success"] for line in self.lines()], [True, False])
+        result = self.run_tool(REPORT, "--file", str(self.file), "--json")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout)["all"]["runs"], 2)
+
     def test_dry_run_prints_json_and_writes_nothing(self):
         result = self.record("--dry-run")
         self.assertEqual(result.returncode, 0, result.stderr)

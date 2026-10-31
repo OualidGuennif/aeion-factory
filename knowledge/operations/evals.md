@@ -57,6 +57,7 @@ the repository root, not the current directory), adds `recorded_at` in UTC with 
 takes `factory` from `VERSION` unless given. An invalid slug, a `--success` other than `yes`/`no`,
 a negative number, a non-finite number (`nan`, `inf`) or a missing required flag exits 2 and writes
 nothing. `--dry-run` prints the record and writes nothing.
+Appending also separates an existing final record that has no trailing newline; its bytes are preserved.
 
 `report` validates the required record fields, slug and string fields, timezone-aware timestamps,
 non-negative finite numbers and integer counters before aggregating; an invalid row exits 2 with

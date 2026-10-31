@@ -5,6 +5,7 @@ import argparse
 from datetime import datetime, timezone
 import json
 import math
+import os
 from pathlib import Path
 import re
 import sys
@@ -101,8 +102,13 @@ def main(argv):
         print(line)
         return 0
     path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a", encoding="utf-8") as stream:
-        stream.write(line + "\n")
+    with path.open("a+b") as stream:
+        separator = b""
+        if stream.tell():
+            stream.seek(-1, os.SEEK_END)
+            if stream.read(1) != b"\n":
+                separator = b"\n"
+        stream.write(separator + line.encode("utf-8") + b"\n")
     print(f"{path}: {args.task}")
     return 0
 

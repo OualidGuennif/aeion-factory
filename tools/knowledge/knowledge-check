@@ -45,7 +45,7 @@ def check_concept(path, root, problems):
         problems.append(f"{rel}: status '{field(block, 'status')}' is not one of {sorted(STATUSES)}")
     # Optional: a volatile doc dates its own review, and a date the other checks cannot parse is a trap.
     reviewed = field(block, "review_after")
-    if reviewed:
+    if re.search(r"^review_after:", block, re.MULTILINE):
         try:
             if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", reviewed):
                 raise ValueError

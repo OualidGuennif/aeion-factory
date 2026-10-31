@@ -71,6 +71,32 @@ class EvalTests(unittest.TestCase):
         self.assertFalse(self.file.exists())
         self.assertFalse(self.file.parent.exists())
 
+    def assert_non_finite_refused(self, flag, value):
+        result = self.record(flag, value)
+        self.assertEqual(result.returncode, 2)
+        self.assertIn(flag, result.stderr)
+        self.assertFalse(self.file.exists())
+
+    def test_nan_minutes_exits_two_and_writes_nothing(self):
+        self.assert_non_finite_refused("--minutes", "nan")
+
+    def test_infinite_minutes_exits_two_and_writes_nothing(self):
+        self.assert_non_finite_refused("--minutes", "inf")
+
+    def test_nan_cost_exits_two_and_writes_nothing(self):
+        self.assert_non_finite_refused("--cost-usd", "nan")
+
+    def test_infinite_cost_exits_two_and_writes_nothing(self):
+        self.assert_non_finite_refused("--cost-usd", "inf")
+
+    def test_non_finite_cost_leaves_an_existing_file_unchanged(self):
+        self.assertEqual(self.record().returncode, 0)
+        before = self.file.read_text(encoding="utf-8")
+        result = self.record("--cost-usd", "nan")
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("--cost-usd", result.stderr)
+        self.assertEqual(self.file.read_text(encoding="utf-8"), before)
+
     def test_report_over_three_fixtures(self):
         rows = [
             {"task": "a", "harness": "claude-code", "success": True, "minutes": 10, "cost_usd": 1.5,

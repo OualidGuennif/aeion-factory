@@ -54,8 +54,8 @@ tools/evals/report [--file PATH] [--json]
 `record` appends one compact JSON object to `tools/evals/results.jsonl` (git-ignored, resolved from
 the repository root, not the current directory), adds `recorded_at` in UTC with a `Z` suffix, and
 takes `factory` from `VERSION` unless given. An invalid slug, a `--success` other than `yes`/`no`,
-a negative number or a missing required flag exits 2 and writes nothing. `--dry-run` prints the
-record and writes nothing.
+a negative number, a non-finite number (`nan`, `inf`) or a missing required flag exits 2 and writes
+nothing. `--dry-run` prints the record and writes nothing.
 
 `report` reads the file skipping blank lines, groups by `harness` and prints one Markdown table with
 an `All` row: runs, successes, success rate as integer percent, median `minutes` to one decimal,

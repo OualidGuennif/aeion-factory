@@ -4,6 +4,7 @@
 import argparse
 from datetime import datetime, timezone
 import json
+import math
 from pathlib import Path
 import re
 import sys
@@ -16,6 +17,12 @@ DEFAULT_FILE = "tools/evals/results.jsonl"
 def slug(parser, name, value):
     if not SLUG.fullmatch(value):
         parser.error(f"--{name} must match {SLUG.pattern}")
+    return value
+
+
+def finite(parser, name, value):
+    if value is not None and not math.isfinite(value):
+        parser.error(f"--{name} must be a finite number")
     return value
 
 
@@ -79,6 +86,9 @@ def main(argv):
 
     slug(parser, "task", args.task)
     slug(parser, "harness", args.harness)
+    # NaN and inf pass a zero comparison but json.dumps writes them unparseable, so refuse them first.
+    for name in ("minutes", "cost_usd"):
+        finite(parser, name.replace("_", "-"), getattr(args, name))
     for name in ("minutes", "tokens", "cost_usd", "human_interventions", "rework_commits", "defects_after_done"):
         non_negative(parser, name.replace("_", "-"), getattr(args, name))
     if args.factory is None:

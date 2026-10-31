@@ -6,6 +6,8 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-10-31
+
 - Add `tools/knowledge/stale` and `tools/knowledge/orphans`, with fixture tests, and date the
   volatile operations and references documents with `review_after`.
 - Make `AGENTS.md` a procedure: a five-question self-check, stop-and-ask triggers, recently changed
@@ -14,7 +16,7 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 - Refuse `nan` and `inf` for the evaluation record's float flags, so one run cannot write a JSONL line no parser reads.
 - Ship twelve evaluation tasks, each with a fixed prompt, the gate that decides it and an empty baseline.
 - Add `tools/skills/lint` and its fixture tests, so every native skill's name, trigger, description
-  and body caps are checked; add the seventeen-skill portfolio map with its overlaps and gaps.
+  and body caps are checked.
 
 ## [1.7.0] - 2026-10-31
 

@@ -123,6 +123,10 @@ the portable efficiency bundle; its bundled Superpowers notice is self-contained
 
 ## Passive pool checks
 
+The seventeen native skills are checked by `tools/skills/lint`: `name` against its folder, a
+description of at most 1024 characters that names its trigger, a body of at most 150 lines and no
+duplicate name; `tools/skills/tests/test_lint.py` is in `tools/factory-tests`.
+
 `tools/factory-tests` runs `tools/skills/tests/test_pool.py` and the real offline pool check
 `python3 tools/skills/pool.py check`. They verify materialized files, support resources, license
 restrictions, local-edit preservation and operation without third-party/lifecycle folders.

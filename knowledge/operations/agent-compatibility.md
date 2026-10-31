@@ -70,10 +70,12 @@ directory does not establish loaded hooks or identical runtime guarantees.
   Its compaction aborts the running turn, so once it is done the extension sends a message that resumes
   the task from the handover.
   The extension sends `ctx.getContextUsage()` to the shared rule and calls `ctx.compact()` at 250k once
-  the handover is verified. `agent_before_settle` sends Stop: a sign-off finding becomes a displayed
+  the handover is verified; the 250k alert names the checkpoint command, and closure admits a project's
+  Markdown docs. `agent_before_settle` sends Stop: a sign-off finding becomes a displayed
   `custom_message` entry with `continue: true` (one more request); the hook shows each finding once, so
-  the next settlement passes. Not yet qualified live: the events follow the 1.4.0 docs and
-  published type declarations.
+  the next settlement passes. A closure refusal repeats at most three times and then settles with the
+  reason in the UI, so one alert cannot spin forever. Not yet qualified live: the events follow the
+  1.4.0 docs and published type declarations.
 - Token feedback (narration between tools, full-file rewrites; advisory, never blocking) covers
   Claude Code natively and Codex through its rollout transcript. Devin, Droid and Antigravity pass
   no transcript the hook can read and the OpenCode and Pi extensions pass no assistant text, so they get the

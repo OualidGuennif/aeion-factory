@@ -324,6 +324,12 @@ def handle(root, provider, event):
             measured = budget.apply_usage(root, session, state, name, call, usage)
             budget.atomic(file, json.dumps(state, sort_keys=True) + '\n')
             reason = measured.get('stopReason') or measured.get('hookSpecificOutput', {}).get('permissionDecisionReason')
+            # Pi compacts from a settlement too: a verified checkpoint at Stop signals it instead of refusing
+            # the settlement, so a missed tool-result signal cannot leave the context growing.
+            if name in {'Stop', 'SubagentStop'} and provider == 'pi' and reason \
+                    and state['state'] in {'HANDOVER_REQUIRED', 'COMPACT_REQUIRED'} and budget.ready(root, session, state):
+                measured = {'aeion': {'compact': True}}
+                reason = None
             if reason:
                 return fail(provider, name, reason)
             # Pi, OpenCode and dsh start compaction themselves once a closure's checkpoint is verified.
@@ -385,7 +391,7 @@ def handle(root, provider, event):
         return alert({'hookSpecificOutput': {'hookEventName': name, 'additionalContext': '\n'.join(messages)}} if messages else {}, measured)
     if name == 'Stop':
         advisory(root, normalized)
-        return script(root, 'sign-off.py', normalized)
+        return alert(script(root, 'sign-off.py', normalized), measured)
     return {}
 
 

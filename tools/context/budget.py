@@ -133,17 +133,26 @@ def git(root, *args):
     return subprocess.run(["git", *args], cwd=root, capture_output=True, check=True).stdout
 
 
+def base_ref(root):
+    """A ref this work merges into that actually exists: origin/develop, then origin/main, then HEAD."""
+    for ref in ("origin/develop", "origin/main", "HEAD"):
+        if subprocess.run(["git", "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"], cwd=root,
+                          capture_output=True, check=False).returncode == 0:
+            return ref
+    return None
+
+
 def checkpoint_command(root, session):
-    """The closure command for this folder: work merges into develop when it exists, else main; no git, no base."""
+    """The closure command for this folder: an existing base ref under git, and no base in a plain folder."""
     command = f"python3 tools/context/budget.py checkpoint --session {session}"
     try:
         if not git_active(root):
             return command + " --verify"
     except subprocess.SubprocessError:
         pass
-    develop = subprocess.run(["git", "rev-parse", "--verify", "--quiet", "origin/develop"], cwd=root,
-                             capture_output=True, check=False).returncode == 0
-    return command + f" --base {'origin/develop' if develop else 'origin/main'} --verify"
+    base = base_ref(root)
+    # A repository without a commit has no base; the refusal names --base rather than inventing one.
+    return command + (f" --base {base}" if base else "") + " --verify"
 
 
 def tree_files(root):
@@ -210,7 +219,8 @@ def closure_tool(root, event):
         if not path.is_relative_to(root):
             return False
         rel = path.relative_to(root).as_posix()
-        return rel in DOC_FILES or rel.startswith(DOC_ROOTS)
+        # "Affected docs" includes a project's own Markdown wherever it lives; code edits stay closed.
+        return rel in DOC_FILES or rel.startswith(DOC_ROOTS) or path.suffix.lower() in {".md", ".mdx"}
     if tool == "Bash":
         command = data.get("command", "")
         if not isinstance(command, str):
@@ -324,12 +334,15 @@ def apply_usage(root, session, state, name, event, usage):
                            f"({checkpoint_command(root, session)}); compaction follows; {SHAPE}.")
                 allowed = compact_tool(root, call)
             else:
-                message = f"Æion Factory 250k alert: finish closure only, update {handover.relative_to(root)}, work/current.md and affected docs; verify the checkpoint before compaction; {SHAPE}."
+                message = (f"Æion Factory 250k alert: finish closure only, update {handover.relative_to(root)}, work/current.md and affected docs; "
+                           f"verify the checkpoint before compaction ({checkpoint_command(root, session)}); {SHAPE}.")
                 allowed = closure_tool(root, call)
             if name == "PreToolUse" and not allowed:
                 result = {"hookSpecificOutput": {"hookEventName": name, "permissionDecision": "deny", "permissionDecisionReason": message}}
             elif name in {"Stop", "SubagentStop"}:
-                result = stop(name, message + " Task has not been signed off.")
+                # An agent can claim closure without running the command; name the missing receipt, so it cannot.
+                missing = "" if ready(root, session, state) else " No verified checkpoint receipt exists for this session yet."
+                result = stop(name, message + missing + " Task has not been signed off.")
             elif first and name in {"PreToolUse", "PostToolUse", "UserPromptSubmit"}:
                 result = {"systemMessage": message, "hookSpecificOutput": {"hookEventName": name, "additionalContext": message}}
             if first:
@@ -394,7 +407,10 @@ def checkpoint(root, session, base):
     if repository and base is None:
         raise ValueError("--base is required in a git repository")
     if repository:
-        base = git(root, "rev-parse", "--verify", "--end-of-options", f"{base}^{{commit}}").decode().strip()
+        try:
+            base = git(root, "rev-parse", "--verify", "--end-of-options", f"{base}^{{commit}}").decode().strip()
+        except subprocess.CalledProcessError:
+            raise ValueError(f"--base {base!r} is not a commit here; use {base_ref(root) or 'an existing ref'}") from None
     with locked(root, session) as file:
         state = json.loads(file.read_text())
         if state["state"] == "STOPPED":
@@ -410,8 +426,13 @@ def checkpoint(root, session, base):
         files = tree_files(root)
         before = fingerprint(root, files)
         diff = (("tools/knowledge/doc-links", "--diff", base, "--worktree"),) if repository else ()
+        # The check's own output is the only actionable part of a refusal; a bare exit status loops the agent.
         for command in (*CHECKS, *diff):
-            subprocess.run(command, cwd=root, check=True, timeout=30, stdout=subprocess.DEVNULL)
+            result = subprocess.run(command, cwd=root, timeout=30, capture_output=True, text=True)
+            if result.returncode:
+                detail = " ".join((result.stdout + result.stderr).split())[-800:]
+                raise ValueError(f"{command[0]} failed (exit {result.returncode})"
+                                 + (f": {detail}" if detail else ""))
         changed = set() if not repository else set(git(root, "diff", "--name-only", "-z", base).decode().split("\0")) - {""}
         changed |= {os.fsdecode(path) for path in (git(root, "ls-files", "--others", "--exclude-standard", "-z") if repository else b"").split(b"\0")
                     if path and not os.fsdecode(path).startswith((".aeion/", "work/handovers/"))}

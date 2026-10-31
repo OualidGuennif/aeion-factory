@@ -135,7 +135,11 @@ closure docs and fixed check commands remain. A checkpoint validates handover se
 doc links, repository health and current task updates, then hashes source and handover bytes.
 Any later source or handover change invalidates readiness. PreCompact refuses an absent/stale
 checkpoint. A compact SessionStart begins RECOVERING and supplies the handover pointer; new
-positive native usage permits RUNNING. Resume alone does not clear STOPPED.
+positive native usage permits RUNNING. Resume alone does not clear STOPPED. The 250k and 300k alerts
+name the checkpoint command; a settlement that still owes closure names the missing receipt; closure
+admits a project's own Markdown docs, never code. The suggested base is an existing ref
+(`origin/develop`, `origin/main`, else `HEAD`), and a refused checkpoint reports the failing check's
+bounded output.
 
 Observed usage at 300k or invalid complete usage latches STOPPED. Unavailable usage after bootstrap
 blocks the current action and can recover after a valid observation. A PreCompact refusal uses

@@ -62,17 +62,21 @@ Before any compaction, fill `work/handovers/<session-id>.md`, update `work/curre
 docs, and run `python3 tools/context/budget.py checkpoint --session <id> --base <git-ref> --verify`
 (`--base` only under git; a plain folder skips the diff and task-state checks).
 The command runs knowledge/link/health checks and binds readiness to the current source diff
-and handover hash. Later edits invalidate it. Compaction is refused without a current receipt,
-and the refusal names the paths changed since it: a live session log inside the tree changes on
-every event, so it is git-ignored (`/demo/*/journal/*.jsonl`) or written outside the project.
+and handover hash. Later edits invalidate it. A refused check names the check and a bounded tail of
+its output, so the agent can fix the failure instead of retrying a bare exit status. Compaction is
+refused without a current receipt, and the refusal names the paths changed since it: a live session
+log inside the tree changes on every event, so it is git-ignored (`/demo/*/journal/*.jsonl`) or
+written outside the project.
 Local mode (`git config aeion.mode local`, read with `--local` so includes and the global config
 do not count) keeps no `work/current.md` entry, so its checkpoint
 does not require one. During closure a command the shell cannot parse is denied, never a stop.
-The checkpoint is admitted from any working directory when its path resolves to this root's
-`budget.py` (relative to the shell's folder, absolute, or after a `cd <root> &&` prefix), and a bare
-`cd <root>` is admitted; any other `cd`, chain or session is denied. The handover has the exact lines
-`## Scope`, `## Completed`, `## Remaining`, `## Constraints` and `## Evidence`; the 250k and 300k
-messages name them, and a refused checkpoint names each missing heading and any remaining TODO.
+Closure admits edits to any Markdown file in the project, so a project's own docs can be updated,
+and never a code file. The checkpoint is admitted from any working directory when its path resolves
+to this root's `budget.py` (relative to the shell's folder, absolute, or after a `cd <root> &&`
+prefix), and a bare `cd <root>` is admitted; any other `cd`, chain or session is denied. The
+handover has the exact lines `## Scope`, `## Completed`, `## Remaining`, `## Constraints` and
+`## Evidence`; the 250k and 300k messages name the checkpoint command and those lines, and a
+refused checkpoint names each missing heading and any remaining TODO.
 The skeleton appears only when closure needs it (the 250k alert, the 300k forced closure, a refused
 compaction or the first checkpoint command), so ordinary sessions and subagents leave none; replace each TODO. Keep outcomes, remaining
 work, constraints and evidence concise. These local handovers are ignored by Git; durable facts
@@ -90,7 +94,9 @@ their native earlier limit. The guard does not expand a model's capacity.
 Claude Code exposes no qualified before-every-request admission callback here. A large tool
 result or response may cross a threshold before another hook runs. `tools/context/run --strict`
 therefore refuses execution rather than advertising unsupported strict protection. Codex, OpenCode and Pi apply the same rule through `tools/agents/hook.py`, from the context size
-each harness measures; see [compatibility](agent-compatibility.md). A live Claude 250k/300k long-session run remains unverified.
+each harness measures; see [compatibility](agent-compatibility.md). A Pi settlement that still owes
+closure is continued three times, then settles with the reason shown instead of repeating one alert.
+A live Claude 250k/300k long-session run remains unverified.
 
 The [2026-10-26 OpenCode experiment](../references/opencode-context-qualification.md) exercised a
 real paid DeepSeek V4.1 Flash call with 278,859 input tokens and a native refusal after a tool result

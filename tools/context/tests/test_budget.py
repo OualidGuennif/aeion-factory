@@ -185,7 +185,10 @@ class BudgetTests(unittest.TestCase):
             current.write_text('# Current work\nTask updated.\n')
             budget.checkpoint(self.root, 'test-session', 'HEAD')
 
-    def test_checkpoint_command_names_develop_when_it_exists(self):
+    def test_checkpoint_command_uses_an_existing_base(self):
+        # A clone without remotes must not be told to diff against a branch that does not exist.
+        self.assertIn('--base HEAD --verify', budget.checkpoint_command(self.root, 'test-session'))
+        budget.git(self.root, 'update-ref', 'refs/remotes/origin/main', 'HEAD')
         self.assertIn('--base origin/main --verify', budget.checkpoint_command(self.root, 'test-session'))
         budget.git(self.root, 'update-ref', 'refs/remotes/origin/develop', 'HEAD')
         self.assertIn('--base origin/develop --verify', budget.checkpoint_command(self.root, 'test-session'))
@@ -252,6 +255,34 @@ class BudgetTests(unittest.TestCase):
     def test_compaction_boundary_does_not_reuse_old_usage(self):
         self.transcript.write_text(self.transcript.read_text() + json.dumps({"type": "system", "subtype": "compact_boundary"}) + "\n")
         self.assertIsNone(budget.native_usage(self.transcript, "test-session"))
+
+    def test_closure_alert_and_settlement_name_the_checkpoint_command(self):
+        self.observe(250000)
+        command = budget.checkpoint_command(self.root, 'test-session')
+        # An agent that is never told the command cannot run it; exploration commands are denied in closure.
+        self.assertIn(command, self.call()['hookSpecificOutput']['permissionDecisionReason'])
+        stop = self.call(hook_event_name='Stop')
+        self.assertIn(command, stop['stopReason'])
+        # A claimed checkpoint without a receipt is named as missing, so the claim cannot pass as verification.
+        self.assertIn('No verified checkpoint receipt', stop['stopReason'])
+
+    def test_closure_admits_project_markdown_but_not_code(self):
+        self.observe(250000)
+        allowed = ('cockpit/README.md', 'docs/guide.mdx')
+        for path in allowed:
+            result = self.call(tool_name='Edit', tool_input={'file_path': str(self.root / path)})
+            self.assertNotIn('permissionDecision', result.get('hookSpecificOutput', {}), path)
+        denied = self.call(tool_name='Edit', tool_input={'file_path': str(self.root / 'cockpit/lib/app.ts')})
+        self.assertEqual(denied['hookSpecificOutput']['permissionDecision'], 'deny')
+
+    def test_checkpoint_refusal_reports_the_failing_check_output(self):
+        self.call()
+        handover = budget.ensure_handover(self.root, 'test-session')
+        handover.write_text(handover.read_text().replace('TODO', 'Fixture evidence'))
+        failing = (budget.sys.executable, '-c', "print('FAIL knowledge/index.md: broken'); raise SystemExit(1)")
+        with patch.object(budget, 'CHECKS', (failing,)):
+            with self.assertRaisesRegex(ValueError, 'broken'):
+                budget.checkpoint(self.root, 'test-session', 'HEAD')
 
     def test_precompact_always_requires_current_checkpoint(self):
         result = self.call(hook_event_name="PreCompact")

@@ -88,6 +88,38 @@ test('Pi compacts itself once the hook reports a verified handover, then resumes
   assert.match(sent[0], /handover/);
 });
 
+test('Pi bounds a repeated closure refusal instead of looping one alert', async () => {
+  // Regression: a settlement that never verified its checkpoint re-injected the same 250k alert forever.
+  const folder = mkdtempSync(join(tmpdir(), 'pi-settle-loop-'));
+  mkdirSync(join(folder, 'tools/agents'), { recursive: true });
+  writeFileSync(join(folder, 'tools/agents/hook.py'),
+    'import json\nprint(json.dumps({"decision": "block", "reason": "Æion Factory 250k alert: fill the handover and verify the checkpoint"}))\n');
+  const { handlers, notes, ctx } = load(folder);
+  const outcomes = [];
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    outcomes.push(await handlers.agent_before_settle({ type: 'agent_before_settle', entries: [], continue: false }, ctx));
+  }
+  rmSync(folder, { recursive: true, force: true });
+  assert.deepEqual(outcomes.map((outcome) => outcome?.continue ?? false), [true, true, true, false]);
+  assert.equal(notes.length, 1);
+  assert.match(notes[0][1], /checkpoint/);
+});
+
+test('Pi compacts at settlement when the checkpoint is verified', async () => {
+  const folder = mkdtempSync(join(tmpdir(), 'pi-settle-compact-'));
+  mkdirSync(join(folder, 'tools/agents'), { recursive: true });
+  writeFileSync(join(folder, 'tools/agents/hook.py'), 'import json\nprint(json.dumps({"aeion": {"compact": True}}))\n');
+  const { handlers, ctx, sent } = load(folder);
+  let compacted = 0;
+  const compact = (options) => { compacted += 1; options.onComplete({}); };
+  const result = await handlers.agent_before_settle({ type: 'agent_before_settle', entries: [], continue: false }, { ...ctx, compact });
+  rmSync(folder, { recursive: true, force: true });
+  assert.equal(result, undefined);
+  assert.equal(compacted, 1);
+  assert.equal(sent.length, 1);
+  assert.match(sent[0], /handover/);
+});
+
 test('Pi turns a sign-off finding at settlement into one more request (Pi FB-004)', async () => {
   const folder = mkdtempSync(join(tmpdir(), 'pi-stop-'));
   mkdirSync(join(folder, 'tools/agents'), { recursive: true });

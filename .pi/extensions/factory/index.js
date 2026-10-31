@@ -5,6 +5,8 @@ import { dirname, resolve } from 'node:path';
 
 const UNAVAILABLE = 'Æion Factory hook unavailable; action refused.';
 const RESUME = 'Æion Factory: context compacted. Read your handover in work/handovers/ and continue the task.';
+// A closure refusal at settlement asks for a few more requests, then settles instead of looping on one alert.
+const SETTLE_LIMIT = 3;
 // Pi's built-in tools under the names the shared guards know; find and ls only list paths.
 const TOOLS = { bash: 'Bash', powershell: 'Bash', read: 'Read', edit: 'Edit', write: 'Write', grep: 'Grep', find: 'Glob', ls: 'LS' };
 
@@ -42,6 +44,7 @@ export default function (pi) {
   // Sessions given the factory's start context; a compaction removes one, so its next run is told again.
   const started = new Set();
   const compacted = new Set();
+  const settles = new Map();
 
   pi.on('before_agent_start', async (event, ctx) => {
     const session = ctx.sessionManager.getSessionId();
@@ -69,18 +72,48 @@ export default function (pi) {
     const { reason, output } = invoke(projectRoot(ctx.cwd), toolEvent(event, ctx, 'PostToolUse'));
     // A verified handover past 250k compacts now, not at Pi's own threshold near the model window.
     // Compacting aborts the running turn, so the session is told to resume from its handover once it is done.
-    if (output.aeion?.compact) ctx.compact({ onComplete: () => pi.sendUserMessage(RESUME) });
+    if (output.aeion?.compact) {
+      ctx.compact({
+        onComplete: () => pi.sendUserMessage(RESUME),
+        onError: (error) => ctx.ui.notify(error.message || UNAVAILABLE, 'error'),
+      });
+    }
     const message = reason || output.hookSpecificOutput?.additionalContext;
     if (!message) return undefined;
     return { content: [...event.content, { type: 'text', text: `Æion Factory feedback: ${message}` }], structuredContent: event.structuredContent };
   });
 
   // The run's settlement is the factory's Stop: a sign-off finding asks for one more model request. The hook
-  // shows each finding once per session, so the next settlement passes and this cannot loop.
+  // shows each finding once per session, so the next settlement passes. A closure refusal is different: it
+  // repeats until the checkpoint runs, so it asks a bounded number of times and then settles with the reason.
   pi.on('agent_before_settle', async (event, ctx) => {
+    const session = ctx.sessionManager.getSessionId();
     try {
-      const { reason } = invoke(projectRoot(ctx.cwd), { session_id: ctx.sessionManager.getSessionId(), hook_event_name: 'Stop' });
-      if (!reason) return undefined;
+      const { output, reason } = invoke(projectRoot(ctx.cwd), { session_id: session, hook_event_name: 'Stop' });
+      // A verified checkpoint past 250k compacts at settlement instead of spinning on continuation.
+      if (output.aeion?.compact) {
+        settles.delete(session);
+        ctx.compact({
+          onComplete: () => pi.sendUserMessage(RESUME),
+          onError: (error) => ctx.ui.notify(error.message || UNAVAILABLE, 'error'),
+        });
+        return undefined;
+      }
+      if (!reason) {
+        settles.delete(session);
+        return undefined;
+      }
+      // Only the closure alert repeats until the checkpoint; a sign-off finding is already shown once per session.
+      if (!reason.includes('250k alert') && !reason.includes('300k')) {
+        return { entries: [{ type: 'custom_message', customType: 'aeion-factory', content: reason, display: true }], continue: true };
+      }
+      const count = (settles.get(session) || 0) + 1;
+      settles.set(session, count);
+      if (count > SETTLE_LIMIT) {
+        settles.delete(session);
+        ctx.ui.notify(reason, 'error');
+        return undefined;
+      }
       return { entries: [{ type: 'custom_message', customType: 'aeion-factory', content: reason, display: true }], continue: true };
     } catch (error) {
       ctx.ui.notify(error.message || UNAVAILABLE, 'error');
@@ -102,7 +135,9 @@ export default function (pi) {
   });
 
   pi.on('session_compact', async (event, ctx) => {
-    started.delete(ctx.sessionManager.getSessionId());
-    compacted.add(ctx.sessionManager.getSessionId());
+    const session = ctx.sessionManager.getSessionId();
+    started.delete(session);
+    compacted.add(session);
+    settles.delete(session);
   });
 }

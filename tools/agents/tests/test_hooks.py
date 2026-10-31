@@ -212,6 +212,12 @@ class HookTests(unittest.TestCase):
                                    'handover': hook.budget.hashlib.sha256(handover.read_bytes()).hexdigest()}
             hook.budget.atomic(state_file, json.dumps(state))
             self.assertEqual(self.measure(provider, 300_000, hook_event_name='PostToolUse')['aeion'], {'compact': True})
+            if provider == 'pi':
+                # A verified checkpoint must compact even if the tool-result signal was missed.
+                settled = self.measure(provider, 300_000, hook_event_name='Stop')
+                self.assertEqual(settled.get('aeion'), {'compact': True}, provider)
+                self.assertNotIn('continue', settled, provider)
+                self.assertNotIn('stopReason', settled, provider)
             self.assertNotIn('continue', self.measure(provider, 300_000, hook_event_name='PreCompact'))
             # OpenCode sends no compact SessionStart: the allowed compaction itself ends the closure.
             if provider == 'opencode':

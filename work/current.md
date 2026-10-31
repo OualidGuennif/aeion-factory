@@ -7,10 +7,10 @@ lines `- Owner decision:`, `- State:`, `- Next:` (with who), `- Blocker:`, `- Ev
 
 ## Golden task set — MEASURING
 - Owner decision: 2026-10-31, start the local evaluation harness, then approve the twelve candidate tasks proposed with it.
-- State: twelve tasks in `tools/evals/tasks/`, six implementation and six process; every `BASELINE.md` still says "not run yet", so no record exists and `report` prints nothing.
-- Next: run one baseline per harness on a fixed commit and record each result (who: owner; an agent prepares the run).
-- Blocker: no baseline yet, so no workflow change can be compared with what came before.
-- Evidence: knowledge/operations/evals.md; tools/evals/tasks/
+- State: twelve tasks in `tools/evals/tasks/`, six implementation and six process; one baseline is recorded (architecture-answer on pi, success, 0.9 minutes) and eleven still say "not run yet"; `report` renders one row.
+- Next: one baseline per harness on the same fixed commit, then compare (who: owner; an agent prepares each run).
+- Blocker: one harness measured, so no across-harness comparison is possible yet.
+- Evidence: knowledge/operations/evals.md; tools/evals/tasks/architecture-answer/BASELINE.md
 
 ## demo/ Idea Board run 2 — WAITING-OWNER
 - Owner decision: 2026-10-28, each harness builds the Idea Board in a git-less copy, journals each round and files feedback; 2026-10-29, the run 1 wrap-up plan and run 2 driven by one orchestrator session.

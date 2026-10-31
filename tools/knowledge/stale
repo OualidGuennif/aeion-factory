@@ -31,8 +31,11 @@ def main(argv):
     parser.add_argument("--root", default=str(Path(__file__).resolve().parents[2]))
     root = Path(parser.parse_args(argv).root).resolve()
     kb = root / "knowledge"
+    if not kb.is_dir():
+        print(f"FAIL {kb}: knowledge directory not found", file=sys.stderr)
+        return 1
     today, reviewed, problems = date.today(), 0, []
-    for path in sorted(kb.rglob("*.md")) if kb.is_dir() else []:
+    for path in sorted(kb.rglob("*.md")):
         value = review_after(path)
         if value is None:
             continue

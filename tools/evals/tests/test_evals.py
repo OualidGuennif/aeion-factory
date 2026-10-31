@@ -32,6 +32,15 @@ class EvalTests(unittest.TestCase):
     def lines(self):
         return self.file.read_text(encoding="utf-8").splitlines()
 
+    def report_rows(self, rows, *args):
+        self.file.parent.mkdir(parents=True, exist_ok=True)
+        self.file.write_text("".join(json.dumps(row) + "\n" for row in rows), encoding="utf-8")
+        return self.run_tool(REPORT, "--file", str(self.file), *args)
+
+    def valid_row(self, **fields):
+        return dict(task="a", harness="pi", success=True, minutes=1,
+                    factory="1.8.0", recorded_at="2026-10-31T00:00:00Z", **fields)
+
     def test_valid_record_appends_one_parseable_line(self):
         result = self.record("--model", "m", "--tokens", "100", "--cost-usd", "0.5",
                              "--human-interventions", "2", "--notes", "n")
@@ -115,14 +124,76 @@ class EvalTests(unittest.TestCase):
         self.assertIn("| All |", result.stdout)
         self.assertIn("| 15.0 |", result.stdout)  # median of 5, 10, 20
         self.assertIn("| 67% |", result.stdout)  # 2 successes of 3
-        self.assertIn("| 3 |", result.stdout)  # human interventions of the All row
+        self.assertIn("| N/A | N/A | N/A |", result.stdout)
         as_json = self.run_tool(REPORT, "--file", str(self.file), "--json")
         self.assertEqual(as_json.returncode, 0, as_json.stderr)
         report = json.loads(as_json.stdout)
         self.assertEqual([row["harness"] for row in report["harnesses"]], ["claude-code", "pi"])
         self.assertEqual(report["all"]["runs"], 3)
         self.assertEqual(report["all"]["median_minutes"], 10.0)
-        self.assertEqual(report["all"]["cost_usd"], 4.0)
+        self.assertEqual(report["harnesses"][0]["cost_usd"], 4.0)
+        self.assertIsNone(report["all"]["cost_usd"])
+        self.assertIsNone(report["all"]["human_interventions"])
+
+    def test_missing_optional_metrics_stay_unknown(self):
+        result = self.report_rows([self.valid_row()], "--json")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        row = json.loads(result.stdout)["all"]
+        for key in ("cost_usd", "human_interventions", "defects_after_done"):
+            self.assertIsNone(row[key], key)
+        table = self.run_tool(REPORT, "--file", str(self.file))
+        self.assertEqual(table.returncode, 0, table.stderr)
+        self.assertIn("| N/A | N/A | N/A |", table.stdout)
+
+    def test_explicit_zero_and_complete_totals_remain_numeric(self):
+        rows = [self.valid_row(cost_usd=0, human_interventions=0, defects_after_done=0),
+                self.valid_row(cost_usd=1.5, human_interventions=2, defects_after_done=1)]
+        result = self.report_rows(rows, "--json")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        row = json.loads(result.stdout)["all"]
+        self.assertEqual((row["cost_usd"], row["human_interventions"], row["defects_after_done"]), (1.5, 2, 1))
+        zero = self.report_rows(rows[:1], "--json")
+        self.assertEqual(json.loads(zero.stdout)["all"]["cost_usd"], 0)
+
+    def test_partial_metric_is_unknown_even_within_one_harness(self):
+        result = self.report_rows([self.valid_row(cost_usd=2), self.valid_row()], "--json")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        report = json.loads(result.stdout)
+        self.assertIsNone(report["all"]["cost_usd"])
+        self.assertIsNone(report["harnesses"][0]["cost_usd"])
+
+    def test_each_missing_required_field_names_its_line_and_field(self):
+        for key in ("task", "harness", "success", "minutes", "factory", "recorded_at"):
+            with self.subTest(field=key):
+                row = self.valid_row()
+                del row[key]
+                result = self.report_rows([self.valid_row(), row], "--json")
+                self.assertEqual(result.returncode, 2, result.stdout)
+                self.assertIn(f"{self.file}:2:", result.stderr)
+                self.assertIn(key, result.stderr)
+
+    def test_invalid_record_types_and_numbers_are_refused(self):
+        cases = [("task", "Bad_Task"), ("harness", ""), ("success", "yes"),
+                 ("minutes", True), ("minutes", "1"), ("minutes", -1),
+                 ("minutes", float("nan")), ("minutes", float("inf")),
+                 ("cost_usd", None), ("cost_usd", -1), ("cost_usd", float("nan")),
+                 ("tokens", 1.5), ("human_interventions", True),
+                 ("rework_commits", -1), ("defects_after_done", "0"), ("notes", {})]
+        for key, value in cases:
+            with self.subTest(field=key, value=value):
+                row = dict(self.valid_row(), **{key: value})
+                result = self.report_rows([row], "--json")
+                self.assertEqual(result.returncode, 2, result.stdout)
+                self.assertIn(f"{self.file}:1:", result.stderr)
+                self.assertIn(key, result.stderr)
+
+    def test_non_object_and_invalid_timestamps_are_refused(self):
+        for row in [[], None, dict(self.valid_row(), recorded_at="not-a-date"),
+                    dict(self.valid_row(), recorded_at="2026-10-31")]:
+            with self.subTest(row=row):
+                result = self.report_rows([row], "--json")
+                self.assertEqual(result.returncode, 2, result.stdout)
+                self.assertIn(f"{self.file}:1:", result.stderr)
 
     def test_report_over_an_empty_file(self):
         self.file.parent.mkdir(parents=True)
@@ -133,7 +204,7 @@ class EvalTests(unittest.TestCase):
 
     def test_report_over_a_malformed_line_exits_two(self):
         self.file.parent.mkdir(parents=True)
-        self.file.write_text('{"harness": "pi"}\nnot json\n', encoding="utf-8")
+        self.file.write_text(json.dumps(self.valid_row()) + '\nnot json\n', encoding="utf-8")
         result = self.run_tool(REPORT, "--file", str(self.file))
         self.assertEqual(result.returncode, 2)
         self.assertIn(":2:", result.stderr)

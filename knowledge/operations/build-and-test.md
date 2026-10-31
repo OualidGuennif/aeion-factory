@@ -60,9 +60,15 @@ it and fails when the committed bundle differs.
 | Source analysis (CI on every main update; local run recommended) | `tools/architecture/refresh --target HEAD --base origin/main` after committing | pinned tools installed on the user's yes, Node and Chrome required |
 | Your code | add your build, lint and test commands here, copied from CI | |
 
-The pre-commit (`git config core.hooksPath tools/git-hooks`) runs the first three, and the pre-push
-refuses a push of `develop` without a recorded `Review: OK` and any direct push to `main`; CI runs
-all of them and the security scans, for `main` only.
+`stale` and `orphans` reject a missing root or `knowledge/` directory with a nonzero exit;
+`orphans` also requires `knowledge/index.md`. An absent tree is not a successful empty check.
+A valid knowledge directory with no dated documents still passes `stale`.
+
+The pre-commit (`git config core.hooksPath tools/git-hooks`) runs `knowledge-check`, `doc-links`
+and `repo-health`. The pre-push refuses a push of `develop` without a recorded `Review: OK`
+and any direct push to `main`. CI runs those three checks, `factory-tests`, the efficiency-bundle
+check and security scans on pushes to `main` and pull requests targeting `main` or `develop`.
+`stale` and `orphans` remain manual checks; CI exercises their fixtures through `factory-tests`.
 
 Many people run Æion Factory in a plain folder, without git. The link and health checks, the context
 fingerprint, the code graph (`tools/architecture/ask`) and the session-start summary then walk the files on disk (skipping `.git`, `.aeion`,

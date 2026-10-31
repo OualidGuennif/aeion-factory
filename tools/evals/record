@@ -60,7 +60,7 @@ def build(args):
         "defects_after_done": args.defects_after_done,
         "notes": args.notes,
     }
-    # Optional fields stay absent rather than becoming null, so a missing number reads as zero.
+    # Omit unknown optional metrics so reporting can distinguish them from measured zero.
     record = {key: value for key, value in fields.items() if value is not None}
     record["recorded_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     return record

@@ -2,8 +2,11 @@
 # Spec: knowledge/operations/evals.md
 """Summarize evaluation records by harness: runs, success rate, median minutes, cost and defects."""
 import argparse
+from datetime import datetime
 import json
+import math
 from pathlib import Path
+import re
 import statistics
 import sys
 
@@ -18,26 +21,55 @@ def target(value):
     return path if path.is_absolute() else ROOT / path
 
 
-def number(record, key):
-    value = record.get(key)
-    if isinstance(value, bool) or not isinstance(value, (int, float)):
-        return 0.0
-    return float(value)
+def validate(record):
+    """Reject unusable records before they can alter the reported statistics."""
+    if not isinstance(record, dict):
+        raise ValueError("record must be an object")
+    for key in ("task", "harness", "factory", "recorded_at"):
+        if not isinstance(record.get(key), str):
+            raise ValueError(f"{key} must be a string")
+    for key in ("task", "harness"):
+        if not re.fullmatch(r"[a-z0-9][a-z0-9-]*", record[key]):
+            raise ValueError(f"{key} must be a lowercase slug")
+    if type(record.get("success")) is not bool:
+        raise ValueError("success must be a boolean")
+    for key in ("minutes", "cost_usd", "tokens", "human_interventions", "rework_commits", "defects_after_done"):
+        if key != "minutes" and key not in record:
+            continue
+        value = record.get(key)
+        types = (int, float) if key in ("minutes", "cost_usd") else (int,)
+        if type(value) not in types or value < 0 or not math.isfinite(value):
+            raise ValueError(f"{key} must be a finite non-negative {'number' if float in types else 'integer'}")
+    for key in ("model", "notes"):
+        if key in record and not isinstance(record[key], str):
+            raise ValueError(f"{key} must be a string")
+    try:
+        timestamp = datetime.fromisoformat(record["recorded_at"].replace("Z", "+00:00"))
+    except ValueError:
+        raise ValueError("recorded_at must be a valid timestamp") from None
+    if timestamp.tzinfo is None:
+        raise ValueError("recorded_at must include a timezone")
+
+
+def total(rows, key):
+    """A total is known only when every contributing run reports the metric."""
+    return sum(row[key] for row in rows) if rows and all(key in row for row in rows) else None
 
 
 def summarize(name, rows):
     runs = len(rows)
     successes = sum(1 for row in rows if row.get("success") is True)
-    minutes = [number(row, "minutes") for row in rows]
+    minutes = [row["minutes"] for row in rows]
+    cost = total(rows, "cost_usd")
     return {
         "harness": name,
         "runs": runs,
         "successes": successes,
         "success_rate": round(100 * successes / runs) if runs else 0,
         "median_minutes": round(statistics.median(minutes), 1) if minutes else 0.0,
-        "cost_usd": round(sum((number(row, "cost_usd") for row in rows), 0.0), 2),
-        "human_interventions": int(sum(number(row, "human_interventions") for row in rows)),
-        "defects_after_done": int(sum(number(row, "defects_after_done") for row in rows)),
+        "cost_usd": round(cost, 2) if cost is not None else None,
+        "human_interventions": total(rows, "human_interventions"),
+        "defects_after_done": total(rows, "defects_after_done"),
     }
 
 
@@ -51,11 +83,12 @@ def load(path):
             continue
         try:
             record = json.loads(line)
+            validate(record)
         except json.JSONDecodeError as error:
             print(f"FAIL {path}:{index}: malformed JSON record ({error.msg})", file=sys.stderr)
             sys.exit(2)
-        if not isinstance(record, dict) or not isinstance(record.get("harness"), str):
-            print(f"FAIL {path}:{index}: a record needs a string 'harness'", file=sys.stderr)
+        except (ValueError, OverflowError) as error:
+            print(f"FAIL {path}:{index}: invalid record ({error})", file=sys.stderr)
             sys.exit(2)
         records.append(record)
     return records
@@ -67,9 +100,11 @@ def grouped(records):
 
 
 def cells(row):
+    cost = f"{row['cost_usd']:.2f}" if row["cost_usd"] is not None else "N/A"
+    counts = tuple(str(row[key]) if row[key] is not None else "N/A"
+                   for key in ("human_interventions", "defects_after_done"))
     return (row["harness"], str(row["runs"]), str(row["successes"]), f"{row['success_rate']}%",
-            f"{row['median_minutes']:.1f}", f"{row['cost_usd']:.2f}",
-            str(row["human_interventions"]), str(row["defects_after_done"]))
+            f"{row['median_minutes']:.1f}", cost, *counts)
 
 
 def markdown(rows):

@@ -24,8 +24,15 @@ tools/evals/report            # markdown table, one row per harness plus All
 tools/evals/report --json     # the same numbers as one JSON object
 ```
 
+Unknown optional metrics remain unknown: if any run omits a metric, its aggregate is `N/A`
+in the table and `null` in JSON. Explicit zero remains zero. The reader rejects invalid
+required fields, timestamps, types, negative numbers and non-finite values with a line number.
+For before/after comparisons, use separate `--file` datasets with matched tasks and recorded
+baseline commits; rows group by harness, not by task or version.
+
 `changelog-line` above is one of the shipped tasks; the rest sit beside it in `tools/evals/tasks/`,
-every one still at the "not run yet" baseline. One record line looks like this (`--dry-run` prints it
+eleven still at the "not run yet" baseline; `architecture-answer` records one Pi run.
+One record line looks like this (`--dry-run` prints it
 without writing):
 
 ```json

@@ -43,9 +43,15 @@ def main(argv):
     parser.add_argument("--root", default=str(Path(__file__).resolve().parents[2]))
     root = Path(parser.parse_args(argv).root).resolve()
     kb = root / "knowledge"
-    docs = sorted(kb.rglob("*.md")) if kb.is_dir() else []
+    if not kb.is_dir():
+        print(f"FAIL {kb}: knowledge directory not found", file=sys.stderr)
+        return 1
     start = kb / "index.md"
-    seen, queue = ({start} if start.is_file() else set()), [start] if start.is_file() else []
+    if not start.is_file():
+        print(f"FAIL {start}: knowledge index not found", file=sys.stderr)
+        return 1
+    docs = sorted(kb.rglob("*.md"))
+    seen, queue = {start}, [start]
     while queue:
         for target in links(queue.pop(), kb):
             if target not in seen:

@@ -58,13 +58,22 @@ takes `factory` from `VERSION` unless given. An invalid slug, a `--success` othe
 a negative number, a non-finite number (`nan`, `inf`) or a missing required flag exits 2 and writes
 nothing. `--dry-run` prints the record and writes nothing.
 
-`report` reads the file skipping blank lines, groups by `harness` and prints one Markdown table with
+`report` validates the required record fields, slug and string fields, timezone-aware timestamps,
+non-negative finite numbers and integer counters before aggregating; an invalid row exits 2 with
+its line number. Optional fields may be absent, but an explicit null or a wrong type is invalid.
+It reads the file skipping blank lines, groups by `harness` and prints one Markdown table with
 an `All` row: runs, successes, success rate as integer percent, median `minutes` to one decimal,
 total `cost_usd` to two decimals, the sums of `human_interventions` and `defects_after_done`.
-Missing optional numbers count as zero. A malformed line exits 2 and names its line number; a
+An optional total is unknown if any contributing run omits it: the table shows `N/A` and JSON
+uses `null`. Explicit zero remains zero; incomplete totals are never presented as complete.
+A malformed line exits 2 and names its line number; a
 missing file exits 2 rather than reporting an empty result. `--json` prints one object with
 `harnesses` and `all`; an empty file prints `No evaluation records.` (except with `--json`, which
 keeps its shape). The record shape is [schema.json](../../tools/evals/schema.json).
+
+For before/after comparisons, record matched tasks into separate `--file` datasets and label
+their baseline commits. The report groups only by harness; mixing versions or task sets in one
+file does not establish a performance improvement. No stored record is rewritten by reporting.
 
 ## The task set
 

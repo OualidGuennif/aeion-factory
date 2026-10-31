@@ -26,7 +26,7 @@ def root(*docs):
 def check(name, tmp, want_code, want_text=""):
     global passes
     r = subprocess.run([sys.executable, str(TOOL), "--root", str(tmp)], capture_output=True, text=True)
-    if r.returncode == want_code and want_text in r.stdout:
+    if r.returncode == want_code and want_text in r.stdout + r.stderr:
         passes += 1
     else:
         failures.append(f"{name}: exit {r.returncode}, want {want_code} with '{want_text}'\n{r.stdout}{r.stderr}")
@@ -37,6 +37,12 @@ def dated(when):
 
 
 FIELDS = "type: Runbook\ntitle: \"A doc\"\ndescription: \"A doc.\"\nstatus: stable"
+
+check("a missing root fails", root() / "missing", 1, "knowledge directory not found")
+check("a root without knowledge fails", root(), 1, "knowledge directory not found")
+empty = root()
+(empty / "knowledge").mkdir()
+check("an existing empty knowledge tree has no dated documents", empty, 0, "PASS: 0 documents reviewed")
 
 check("today and later pass, undated docs ignored",
       root(("knowledge/operations/today.md", FIELDS + "\n" + dated(TODAY)),

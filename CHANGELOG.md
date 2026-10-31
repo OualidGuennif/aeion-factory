@@ -8,6 +8,10 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [1.8.0] - 2026-10-31
 
+- Validate evaluation report input and preserve unknown optional metrics as `N/A` / JSON `null`
+  instead of zero; document separate datasets for baseline comparisons.
+- Refuse missing knowledge roots and a missing orphan-check entry index instead of reporting PASS.
+
 - Add `tools/knowledge/stale` and `tools/knowledge/orphans`, with fixture tests, and date the
   volatile operations and references documents with `review_after`.
 - Make `AGENTS.md` a procedure: a five-question self-check, stop-and-ask triggers, recently changed

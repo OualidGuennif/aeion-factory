@@ -25,7 +25,7 @@ def root(files):
 def check(name, tmp, want_code, want_text=""):
     global passes
     r = subprocess.run([sys.executable, str(TOOL), "--root", str(tmp)], capture_output=True, text=True)
-    if r.returncode == want_code and want_text in r.stdout:
+    if r.returncode == want_code and want_text in r.stdout + r.stderr:
         passes += 1
     else:
         failures.append(f"{name}: exit {r.returncode}, want {want_code} with '{want_text}'\n{r.stdout}{r.stderr}")
@@ -37,6 +37,14 @@ BASE = {
     "knowledge/policies/index.md": "# Policies\n\n- [Rule](rule.md)\n",
     "knowledge/policies/rule.md": "# Rule\n",
 }
+
+check("a missing root fails", root({}) / "missing", 1, "knowledge directory not found")
+check("a root without knowledge fails", root({}), 1, "knowledge directory not found")
+empty = root({})
+(empty / "knowledge").mkdir()
+check("a knowledge tree without its entry index fails", empty, 1, "knowledge index not found")
+check("an index-only knowledge tree is valid", root({"knowledge/index.md": "# Knowledge\n"}),
+      0, "PASS: 1 documents reachable")
 
 check("index to folder index to document reaches all three",
       root(BASE), 0, "PASS: 4 documents reachable")

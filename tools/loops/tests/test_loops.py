@@ -11,6 +11,34 @@ import time
 
 ROOT=Path(__file__).resolve().parents[3]
 
+# The read-only allowlist every non-writing job starts from, exactly as loops/orchestrator.sh spells it.
+READ_ONLY=("Read,Grep,Glob,Write(.aeion/loop-bodies/**),Bash(git log -5 --oneline),"
+           "Bash(git diff --stat),Bash(git diff --check),Bash(git status --short),"
+           "Bash(tools/knowledge/knowledge-check),Bash(tools/knowledge/doc-links),"
+           "Bash(tools/knowledge/doc-links --for *),Bash(tools/repo-health/repo-health),"
+           "Bash(gh issue list *),Bash(gh issue view *),Bash(gh issue create *),Bash(gh issue comment *)")
+
+# One golden per job: the settings --dry-run prints and the exact argv the native runner receives.
+# setUp's fake gh answers severity:high, so inner's real run routes to opus/high while its dry run
+# prints the label-free default; both are recorded, because both are what the script really builds.
+GOLDEN={
+    'inner': dict(prompt='inner.md',extra=('--issue','42'),issue=42,
+                  dry=('sonnet','medium','acceptEdits'),run=('opus','high','acceptEdits'),
+                  tools="Read,Grep,Glob,Edit,Write,Agent,Bash(git *),Bash(gh issue *),Bash(gh pr *),Bash(tools/*),Bash(python3 *)"),
+    'middle': dict(prompt='middle.md',extra=(),dry=('sonnet','medium','dontAsk'),run=('sonnet','medium','dontAsk'),
+                   tools=READ_ONLY+",Agent,Bash(gh pr list *),Bash(gh pr view *),Bash(gh pr checks *),Bash(gh pr diff *),Bash(gh pr comment *)"),
+    'outer': dict(prompt='outer.md',extra=(),dry=('haiku','low','dontAsk'),run=('haiku','low','dontAsk'),
+                  tools=READ_ONLY+",Bash(gh issue *),Bash(gh run list *)"),
+    'docs': dict(prompt='docs.md',extra=(),dry=('haiku','low','dontAsk'),run=('haiku','low','dontAsk'),
+                 tools=READ_ONLY+",Bash(gh issue *)"),
+    'security': dict(prompt='security.md',extra=(),dry=('opus','high','dontAsk'),run=('opus','high','dontAsk'),
+                     tools=READ_ONLY+",Agent,Skill,Bash(gh issue *)"),
+    'watch': dict(prompt='watch.md',extra=(),dry=('sonnet','medium','acceptEdits'),run=('sonnet','medium','acceptEdits'),
+                  tools=READ_ONLY+",WebSearch,WebFetch,Write(tech-watch/**),Edit(tech-watch/**),Bash(git *),Bash(gh pr create *)"),
+    'retro': dict(prompt='retro.md',extra=(),dry=('sonnet','medium','acceptEdits'),run=('sonnet','medium','acceptEdits'),
+                  tools=READ_ONLY+",Agent,Write(knowledge/**),Edit(knowledge/**),Write(.claude/**),Edit(.claude/**),Bash(git *),Bash(gh pr *),Bash(gh api *)"),
+}
+
 
 class LoopTests(unittest.TestCase):
     def setUp(self):
@@ -32,6 +60,50 @@ class LoopTests(unittest.TestCase):
 
     def configure(self,extra=''):
         (self.root/'env.local').write_text('LOOPS_ENABLED=true\n'+extra)
+
+    def golden(self,job):
+        # The dry-run settings, then the exact native argv, in the order the script builds them.
+        spec=GOLDEN[job]
+        self.configure()
+        dry=self.call(job,*spec['extra'],'--dry-run')
+        self.assertEqual(dry.returncode,0,dry.stderr)
+        model,effort,mode=spec['dry']
+        self.assertEqual(dry.stderr.splitlines(),[
+            f'job={job} model={model} effort={effort} mode={mode} budget=none max_turns=30 timeout=900',
+            f'tools={spec["tools"]}','dry run: nothing executed'],job)
+        self.assertFalse((self.root/'invocation.json').exists(),f'{job}: --dry-run launched the native runner')
+        real=self.call(job,*spec['extra'])
+        self.assertEqual(real.returncode,0,real.stderr)
+        prompt=(ROOT/'loops/prompts'/spec['prompt']).read_text().rstrip('\n')
+        if spec.get('issue'):
+            prompt+=f"\n\nThe issue to fix: #{spec['issue']}."
+        model,effort,mode=spec['run']
+        self.assertEqual(json.loads((self.root/'invocation.json').read_text()),
+                         ['-p',prompt,'--model',model,'--effort',effort,'--permission-mode',mode,
+                          '--allowedTools',spec['tools'],'--output-format','text','--max-turns','30'],job)
+
+    def test_golden_command_inner(self):self.golden('inner')
+
+    def test_golden_command_middle(self):self.golden('middle')
+
+    def test_golden_command_outer(self):self.golden('outer')
+
+    def test_golden_command_docs(self):self.golden('docs')
+
+    def test_golden_command_security(self):self.golden('security')
+
+    def test_golden_command_watch(self):self.golden('watch')
+
+    def test_golden_command_retro(self):self.golden('retro')
+
+    def test_kill_switch_runs_nothing_for_every_job_and_argument(self):
+        (self.root/'env.local').write_text('LOOPS_ENABLED=false\n')
+        for job,extra in (('inner',('--issue','42')),('middle',()),('outer',()),('docs',()),
+                          ('security',()),('watch',()),('retro',())):
+            result=self.call(job,*extra)
+            self.assertEqual(result.returncode,0,f'{job}: {result.stderr}')
+            self.assertIn('LOOPS_ENABLED is not true',result.stderr,job)
+            self.assertFalse((self.root/'invocation.json').exists(),f'{job} launched the native runner')
 
     def test_disabled_and_dry_runs_never_launch_agent(self):
         self.assertEqual(self.call('outer').returncode,0)

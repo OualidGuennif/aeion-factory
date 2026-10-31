@@ -17,18 +17,19 @@ that decides success and what counts as failure), `BASELINE.md` (the last known 
 ## Commands
 
 ```sh
-tools/evals/record --task docs-link --harness claude-code --success yes --minutes 12.5 \
+tools/evals/record --task changelog-line --harness claude-code --success yes --minutes 12.5 \
   --model claude-sonnet-4-5 --tokens 48000 --cost-usd 0.42 --human-interventions 1 \
   --defects-after-done 0 --notes "first slice"
 tools/evals/report            # markdown table, one row per harness plus All
 tools/evals/report --json     # the same numbers as one JSON object
 ```
 
-`docs-link` above is an example slug; create its folder under `tools/evals/tasks/` before the
-first run. One record line looks like this (`--dry-run` prints it without writing):
+`changelog-line` above is one of the shipped tasks; the rest sit beside it in `tools/evals/tasks/`,
+every one still at the "not run yet" baseline. One record line looks like this (`--dry-run` prints it
+without writing):
 
 ```json
-{"task":"docs-link","harness":"claude-code","success":true,"minutes":12.5,"factory":"1.7.0","recorded_at":"2026-10-31T09:12:44Z"}
+{"task":"changelog-line","harness":"claude-code","success":true,"minutes":12.5,"factory":"1.7.0","recorded_at":"2026-10-31T09:12:44Z"}
 ```
 
 Records go to `tools/evals/results.jsonl` (git-ignored, resolved from the repository root);

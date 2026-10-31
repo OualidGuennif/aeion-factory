@@ -71,8 +71,9 @@ One folder per task under `tools/evals/tasks/`, three short files:
 [TASK.md](../../tools/evals/tasks/TEMPLATE/TASK.md) is the exact prompt an owner would give plus the
 starting commit and scope; `CHECK.md` is the command or human judgment that decides success and what
 counts as failure; `BASELINE.md` holds the last known date, harness, model, result, cost, minutes and
-notes, where "not run yet" is a valid baseline. `TEMPLATE/` is the only folder shipped today; a task
-is added when it is first run, with its brief.
+notes, where "not run yet" is a valid baseline. `TEMPLATE/` holds the empty forms; the shipped tasks
+are the recurring shapes of work in this repository, each with the gate that decides it, and the owner
+adds one, with its brief, when a new shape appears.
 
 ## The three numbers
 

@@ -5,12 +5,12 @@ Finished tasks are deleted: the commit message and knowledge/ keep what matters.
 Status: ACTIVE, WAITING-OWNER, MEASURING, BLOCKED, BACKLOG. An entry is `## <title> — <STATUS>`, then the
 lines `- Owner decision:`, `- State:`, `- Next:` (with who), `- Blocker:`, `- Evidence:`.
 
-## Golden task set — BACKLOG
-- Owner decision: 2026-10-31, start the local evaluation harness; the owner chooses the 10-15 representative tasks.
-- State: `tools/evals/` records and reports; `TEMPLATE/` exists; no task folder and no baseline yet.
-- Next: pick 10-15 real tasks, copy the template, run one baseline per harness (who: owner, then agent).
-- Blocker: none.
-- Evidence: knowledge/operations/evals.md; tools/evals/README.md
+## Golden task set — MEASURING
+- Owner decision: 2026-10-31, start the local evaluation harness, then approve the twelve candidate tasks proposed with it.
+- State: twelve tasks in `tools/evals/tasks/`, six implementation and six process; every `BASELINE.md` still says "not run yet", so no record exists and `report` prints nothing.
+- Next: run one baseline per harness on a fixed commit and record each result (who: owner; an agent prepares the run).
+- Blocker: no baseline yet, so no workflow change can be compared with what came before.
+- Evidence: knowledge/operations/evals.md; tools/evals/tasks/
 
 ## demo/ Idea Board run 2 — WAITING-OWNER
 - Owner decision: 2026-10-28, each harness builds the Idea Board in a git-less copy, journals each round and files feedback; 2026-10-29, the run 1 wrap-up plan and run 2 driven by one orchestrator session.

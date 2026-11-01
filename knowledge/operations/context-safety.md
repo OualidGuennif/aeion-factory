@@ -46,7 +46,9 @@ a transient write; a malformed complete record is invalid.
 
 Every event latches the first observed 250k crossing, including PreCompact. The hook alerts both
 agent and user at the next supported event; PreCompact retains a pending alert because that event
-discards system messages. Only closure work
+discards system messages. A harness that compacts without the adapter seeing its compact SessionStart
+(dsh does) would otherwise keep the latch forever: an observed size back under the threshold ends it,
+and the closure it owed survives as `closure_owed`, which the settlement still enforces. Only closure work
 (docs/task/handover edits and fixed verification commands) remains available. At an observed
 300k closure narrows to the handover and its checkpoint (reads stay open), Stop is refused, and the
 message asks for the handover and compaction now. 300k never stops the run: once the checkpoint is

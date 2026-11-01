@@ -6,6 +6,32 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+## [1.8.4] - 2026-11-01
+
+- The 250k/300k rule no longer stalls a harness that cannot compact: the dsh web plugin tells the
+  shared rule that its profile offers no compaction service, so the gate is advisory there and the
+  harness compacts on its own instead of waiting for a human to type `/compact`; the handover stays
+  required for recovery.
+- Pi no longer cancels its own compaction at the model window when the checkpoint is unverified: the
+  compaction runs, resumes editable, and owes the receipt after it, as Codex and Droid already did.
+- `tools/agents/dsh-install` installs the desktop dsh plugin from a release tag and links the profile
+  at that copy instead of the working tree, so a broken `develop` cannot reach the app; `--check`
+  names a hand-edited copy, a missing file and a link that names no tag.
+- `tools/agents/adapter-check` reports `UNIDENTIFIED` for a `steer` call that carries no id: dsh
+  persists such a message and then refuses to reopen the session that holds it.
+- `tools/agents/adapter-check --ref <tag|main|develop>` checks every connector against a git
+  reference instead of the working tree, so a project on a branch verifies the same way a pinned one
+  does; a file the reference predates is skipped rather than failed.
+- `tools/agents/template-update` moves an adopted project to a release: it writes the connector files
+  a harness loads, writes `VERSION`, and only names the files the project owns (`AGENTS.md`, merged
+  settings, `knowledge/`, `work/`, `CHANGELOG.md`) for a human to merge.
+- Pi headless: `pi -p` never trusts the project, so discovery loads no extension and the session runs
+  with no Æion Factory hook; pass `-e .pi/extensions/factory/index.js` explicitly. A headless JSON run
+  with `-e` injected the checkpoint profile and the bash guard refused an environment dump; without it
+  the same session was unguarded.
+- Skill `template-update` states the three file classes and the rule behind them: the project's own
+  text wins, the harness connector files are the factory's, byte for byte.
+
 ## [1.8.3] - 2026-11-01
 
 - `tools/agents/adapter-check` names a connector copy that drifted from the factory and a native config

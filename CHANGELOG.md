@@ -6,7 +6,7 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
-## [1.8.10] - 2026-11-01
+## [1.9.0] - 2026-11-01
 
 - The 250k latch stays escapable once closure is owed: 1.8.9 cleared `HANDOVER_REQUIRED` under the threshold
   only while `closure_owed` was unset, so a session that climbed back over 250k and compacted a second time
@@ -23,6 +23,8 @@ dates them at release time. Spec: knowledge/policies/engineering.md
   latched with no way to compact. It keeps `closure_owed` until a fresh receipt, so Stop still refuses an
   unverified end. The dsh plugin also keeps its pending request when `PreCompact` refuses (it used to drop it
   after one refusal), tries both spellings of the compact command, and says so when the command did not run.
+- Auto-compact is finally really working with dsh: handover, compact, keep going. Six releases to teach a
+  latch how to let go.
 
 ## [1.8.9] - 2026-11-01
 

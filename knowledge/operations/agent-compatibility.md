@@ -138,6 +138,11 @@ directory does not establish loaded hooks or identical runtime guarantees.
   dsh's own compaction continues ungated instead of waiting for a human to type `/compact`; a token
   measure that falls to under half between two calls marks that compaction, so the next call sends
   SessionStart with `source: compact`.
+  dsh compaction is not dependable in every profile, so the steered start context and every 250k/300k
+  gate message also name the recovery: once the handover, `work/current.md` and the checkpoint verify,
+  stop the session and start a new one from the handover rather than working past 250k. The web
+  command path repeats that instruction when its `/compact` did not run. It is guidance to the user,
+  not a forced stop.
   `bash` is Bash, `read`/`write`/`edit` name `file_path`,
   `str_replace_editor` is Edit (Read for `view`), `glob`/`grep` are Glob/Grep. dsh's own pressure
   compaction (about 55% of a 1M window) is not refused; past 300k only closure runs, so it is reached
@@ -289,12 +294,19 @@ tools/agents/adapter-check --root ../app --ref main     # or a branch somebody w
 
 It prints one line per connector: `ok`, `DRIFT` with both sizes and the exact `cp` that repairs it,
 `UNWIRED` for a native config that names a file which is not there, `invalid` for a config that
-is not valid JSON, and `UNIDENTIFIED` with its line for a `steer`/`inject`/`followup` call that
-carries no id and `UNROLED` for one that carries no role. A
+is not valid JSON, `LINKED` for a connector or one of its parent folders that is a symlink, `MODE`
+for a launcher that lost its executable bit, and `UNIDENTIFIED` with its line for a
+`steer`/`inject`/`followup` call that carries no id and `UNROLED` for one that carries no role. A
 connector the project does not carry is `absent`: listed under `--verbose`, and
 a failure only under `--strict`, because a Claude-only project legitimately has no Pi extension.
-Exit code 0 is clean, 1 is drift, broken wiring or an unidentified/unroled steer, 2 is a bad root or the
-script's own copy.
+Exit code 0 is clean, 1 is drift, broken wiring, a linked connector, a non-executable launcher, or
+an unidentified/unroled steer, 2 is a bad root or the script's own copy.
+
+A connector must be a regular file owned by the project. A symlink is reported as `LINKED` and
+never followed: comparing the file it points at would call a file outside the project a match. The
+same rule protects the update below, which refuses a linked destination instead of writing through
+it. The executable bit is part of the contract: `tools/agents/run` is recorded as `100755` in the
+release tree, and a copy that reads `0644` fails `MODE` even when every byte matches.
 
 Configs a project merges with its own settings are not compared byte for byte —
 `.claude/settings.json`, `.codex/config.toml`, `.devin/config.json` — but their commands are: every
@@ -318,58 +330,78 @@ knowledge next to them. An update must move the copies and leave the project's o
 
 ### Intent
 
-Move a project from the release it adopted to another reference, writing only the files a harness
-loads and naming the rest, so a local instruction, setting or document survives the update.
+Move a project from one factory reference to another, writing only the files a harness loads and
+naming the rest, so a local instruction, setting or document survives the update. The application's
+`VERSION` is not factory provenance: it is neither read as the baseline nor written.
 
 ### Data sources
 
 | Source | What is read | Owner | Freshness |
 | --- | --- | --- | --- |
-| the project's `VERSION` | the release it adopted | the project | at each update |
-| the reference's tree | every contract file's bytes | the release, or `main`/`develop` | at each update |
-| the diff between the two | which merge files the factory changed | the factory | at each update |
+| the explicit `--from-ref` | the factory release or commit the project adopted | the caller, from the project's records | at each update |
+| the project's tree | contract bytes, executable modes and link status | the project | at each update |
+| the target reference's tree | every contract file's bytes and git mode | the release, or `main`/`develop` | at each update |
+| the diff between the two references | which merge files the factory changed | the factory | at each update |
 
 ### Inputs
 
 ```bash
-tools/agents/template-update --ref v1.8.4 --root ../app
-tools/agents/template-update --ref main --root ../app --check
+tools/agents/template-update --from-ref v1.8.5 --ref v1.9.1 --root ../app
+tools/agents/template-update --from-ref v1.8.5 --ref main --root ../app --check
 ```
 
-- `--ref`: a tag, `main`, `develop` or a commit id. A branch moves, so `--check` reports when it did.
+- `--from-ref`: the factory reference the project adopted, required. It is the upstream side of the
+  merge comparison and the source of the baseline version; it is never guessed from the project's
+  `VERSION`, which names the application's own release.
+- `--ref`: the target tag, `main`, `develop` or a commit id. A branch moves, so `--check` reports
+  when it did.
 - `--root`: the project that adopted the factory.
-- `--repo`: the factory repository holding the reference (default: this checkout).
-- `--check` writes nothing; `--force` permits moving to an older release.
+- `--repo`: the factory repository holding both references (default: this checkout).
+- `--check` writes nothing; `--force` permits moving to an older factory release.
 
 ### Outputs
 
-One line per contract file: `written <file>`, or `skipped <file> — not in <ref>` when the reference
-predates the file. One `merge <file>` line per project-owned file the factory changed between the
-project's reference and the target, with the `untouched:` list naming `knowledge/`, `work/`,
-`CHANGELOG.md` and the merge set. The project's `VERSION` is written from the reference, so the next
-update starts there. Exit code 0 when nothing needs a human, 1 in `--check` when a file differs or
-when a merge is owed, and 2 on a refusal: `no such reference: <ref>`,
-`not an adopted project: no VERSION in <path>`, `refusing to downgrade <a> to <b>`, and
+One line per contract file: `written <file>`, `mode <file> → executable` when a matching launcher
+needed its bit restored, or `skipped <file> — not in <ref>` when the target predates the file. One
+`merge <file>` line per project-owned file the factory changed between `--from-ref` and `--ref`,
+with the `untouched:` list naming `VERSION`, `knowledge/`, `work/`, `CHANGELOG.md` and the merge set. The
+project's `VERSION` is never read or written. Exit code 0 when nothing needs a human, 1 when
+`--check` finds a differing or non-executable contract file or when any merge is owed (a write
+returns 1 while a merge remains), and 2 on a refusal: `no such reference: <ref>`,
+`no VERSION at --from-ref <ref>`, `not an adopted project: no factory connector in <path>`,
+`refusing linked connector destination <path> below <root>`,
+`refusing non-regular connector destination <relative>`,
+`refusing to downgrade <a> to <b>`, and
 `<path> is the factory itself, not a project that adopted it`.
 
 ### Invariants
 
-1. The project's `AGENTS.md`, `knowledge/` and `CHANGELOG.md` are never written —
-   `test_writes_the_reference_and_keeps_the_project_text`.
+1. The project's `AGENTS.md`, `knowledge/`, `CHANGELOG.md` and `VERSION` are never written —
+   `test_writes_the_reference_and_keeps_the_project_text`,
+   `test_the_application_version_is_never_written`.
 2. `--check` writes nothing —
    `test_check_writes_nothing`.
-3. A branch is a valid reference —
+3. Both references are validated and a branch is valid on either side —
    `test_a_branch_is_a_valid_reference`.
 4. A downgrade needs `--force` —
-   `test_it_refuses_a_downgrade`.
-5. A project without `VERSION` is refused —
-   `test_it_refuses_a_project_with_no_version`.
-6. The factory refuses to update itself —
+   `test_it_refuses_a_downgrade`, `test_a_downgrade_with_force_is_allowed`.
+5. The explicit baseline is required —
+   `test_it_requires_an_explicit_from_ref`.
+6. Repeating the same from/to pair keeps naming an unpaid merge even when every connector matches —
+   `test_a_merge_only_check_keeps_naming_the_merge`.
+7. A linked connector file or parent is refused before the first write —
+   `test_a_linked_connector_is_refused_before_any_write`, `test_a_linked_parent_is_refused`.
+8. A created or repaired launcher carries the reference's executable mode —
+   `test_a_missing_launcher_is_written_executable`,
+   `test_a_launcher_that_lost_its_mode_is_repaired`.
+9. A directory with no connector is not an adopted project, and the factory refuses to update
+   itself — `test_it_refuses_a_project_with_no_connector`,
    `test_it_refuses_the_factory_itself`.
 
 ### Determinism
 
-deterministic: bytes come from git, the file list is sorted, and nothing is stamped with a clock.
+deterministic: bytes and regular-file modes come from git objects, destination links are checked
+before the first write, the file list is sorted, and nothing is stamped with a clock.
 
 ### Acceptance checks
 

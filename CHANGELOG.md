@@ -6,6 +6,22 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+- `PreCompact` now makes the same stale-receipt decision through the native adapter as through the shared
+  budget: a complete handover verified before an edit compacts and keeps `closure_owed` for dsh, Pi and
+  OpenCode, instead of refusing and leaving scheduled compaction blocked. A missing receipt and an
+  incomplete handover are still refused; Codex/Droid early compaction and Pi's native-window path are
+  unchanged.
+- dsh users get a way out when compaction does not land: the start context and every 250k/300k gate message
+  say to stop the session once the handover, `work/current.md` and the checkpoint verify, then resume from
+  the handover; the web plugin says the same when its `/compact` command did not run.
+- `tools/agents/template-update` takes the adopted factory reference explicitly as `--from-ref` and no longer
+  treats the application's `VERSION` as factory provenance. It leaves `VERSION` untouched, so an application
+  release keeps its own version, and repeating the same from/to pair keeps reporting merge files until they
+  are merged.
+- The updater refuses a connector file or parent that is a symlink before writing anything, and restores a
+  launcher's executable bit from the chosen git reference; `adapter-check` fails the same linked destinations
+  and non-executable launchers instead of passing a copy it read through a link.
+
 ## [1.9.0] - 2026-11-01
 
 - The 250k latch stays escapable once closure is owed: 1.8.9 cleared `HANDOVER_REQUIRED` under the threshold

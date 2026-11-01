@@ -20,6 +20,21 @@ sources:
 
 # How code is written here
 
+## Three passes
+
+A change is made in one order, and each pass keeps its result:
+
+1. **Make it work.** The smallest edit that solves the problem; one decision in one place; a test
+   written first, and seen failing for the expected reason, when an honest test is practical.
+2. **Make it right.** The root cause, not the symptom; the structure that makes the illegal state
+   unrepresentable and checks data once, where it enters.
+3. **Follow practice.** The project's rules for naming, tests, docs, review and release.
+
+Before the passes: write the premise in one sentence. When two fixes that share a premise fail the
+same check, attack the premise instead of trying a third fix, and subtract what the change no longer
+needs. When the work is not obvious at a glance, build the small tool that does one unit, then let
+it do the rest.
+
 ## Code reads top to bottom
 
 A function that chains steps writes them one after the other, one call per step, each preceded

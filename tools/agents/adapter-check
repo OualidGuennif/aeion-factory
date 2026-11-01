@@ -29,6 +29,7 @@ VENDORED = (
     ".claude/hooks/guard-bash.py",
     ".claude/hooks/guard-path.py",
     ".claude/hooks/project_files.py",
+    ".claude/hooks/prompt-defense.py",
     ".claude/hooks/secret_names.py",
     ".claude/hooks/session-start.py",
     ".claude/hooks/sign-off.py",

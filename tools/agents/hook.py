@@ -67,6 +67,21 @@ def advisory(root, event):
         return {}
 
 
+# A tool whose name says it reads outside text; its result may carry an injected instruction.
+NETWORK_TOOL = re.compile(r'fetch|search|browse|scrape|mcp', re.I)
+
+
+def defense(root, event):
+    """Flag a fetched result that carries an injected instruction; an advisory may fail, never stop work."""
+    if not NETWORK_TOOL.search(str(event.get('tool_name', ''))):
+        return ''
+    try:
+        result = script(root, 'prompt-defense.py', event)
+    except Exception:  # noqa: BLE001 - a warning that fails must not become a refusal.
+        return ''
+    return result.get('hookSpecificOutput', {}).get('additionalContext', '')
+
+
 def script(root, name, event):
     result = subprocess.run([sys.executable, str(root / '.claude/hooks' / name)], cwd=root,
                             input=json.dumps(event), capture_output=True, text=True, timeout=4)
@@ -406,6 +421,9 @@ def handle(root, provider, event):
             if context:
                 messages.append(context)
         context = advisory(root, normalized).get('hookSpecificOutput', {}).get('additionalContext')
+        if context:
+            messages.append(context)
+        context = defense(root, normalized)
         if context:
             messages.append(context)
         return alert({'hookSpecificOutput': {'hookEventName': name, 'additionalContext': '\n'.join(messages)}} if messages else {}, measured)

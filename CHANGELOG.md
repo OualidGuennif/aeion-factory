@@ -6,6 +6,8 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+## [1.8.8] - 2026-11-01
+
 - A verified handover releases the hard gate: 1.8.7 made the 250k/300k gate hard for dsh web and then kept
   denying every call after the receipt verified, so a session whose compaction never landed stayed locked
   for good. The gate now owes exactly one verified handover and stops denying once `ready` matches; the

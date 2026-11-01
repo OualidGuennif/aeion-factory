@@ -13,7 +13,6 @@ plugin into the profile and links the entry at that copy.
 import argparse
 import os
 import shutil
-import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -26,42 +25,8 @@ PREFIX = ENTRY + "-"
 DISPLACED = ENTRY + ".replaced"
 
 
-class Refused(Exception):
-    """A condition this tool does not act on, reported to the caller with exit code 2."""
-
-
-def git(repo, *arguments, text=False):
-    result = subprocess.run(["git", "--no-pager", *arguments], cwd=repo, capture_output=True, text=text)
-    if result.returncode:
-        message = (result.stderr or "").strip()
-        if isinstance(message, bytes):
-            message = message.decode("utf-8", "replace")
-        raise Refused(message or f"git {arguments[0]} failed")
-    return result.stdout
-
-
-def require_repository(repo):
-    if not repo.is_dir():
-        raise Refused(f"no such repository: {repo}")
-    if subprocess.run(["git", "--no-pager", "rev-parse", "--git-dir"], cwd=repo,
-                      capture_output=True).returncode:
-        raise Refused(f"not a git repository: {repo}")
-
-
-def tag_exists(repo, tag):
-    return subprocess.run(["git", "--no-pager", "rev-parse", "--verify", "--quiet", f"refs/tags/{tag}"],
-                          cwd=repo, capture_output=True).returncode == 0
-
-
-def tag_files(repo, tag):
-    """The plugin's paths at one tag, sorted, exactly as the tag names them."""
-    listing = git(repo, "ls-tree", "-r", "--name-only", tag, "--", PLUGIN, text=True)
-    return sorted(line for line in listing.splitlines() if line.strip())
-
-
-def tag_bytes(repo, tag, relative):
-    """One file's bytes at one tag; git stores them as written, with no checkout filter."""
-    return git(repo, "show", f"{tag}:{relative}")
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from refs import Refused, ref_bytes, ref_exists, ref_files, require_repository, tag_exists  # noqa: E402
 
 
 def discard(path):
@@ -72,17 +37,19 @@ def discard(path):
 
 
 def materialize(repo, tag, destination):
-    for relative in tag_files(repo, tag):
+    for relative in ref_files(repo, tag, PLUGIN):
         target = destination / relative[len(PLUGIN) + 1:]
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes(tag_bytes(repo, tag, relative))
+        target.write_bytes(ref_bytes(repo, tag, relative))
 
 
 def install(repo, profiles, profile, tag, force):
     require_repository(repo)
     if not tag_exists(repo, tag):
-        raise Refused(f"no such tag: {tag}")
-    if not tag_files(repo, tag):
+        # A branch moves under the app, which is the failure this pin exists to prevent.
+        raise Refused(f"no such tag: {tag}" if not ref_exists(repo, tag)
+                      else f"{tag} is not a tag; pin a release, not a branch")
+    if not ref_files(repo, tag, PLUGIN):
         raise Refused(f"tag {tag} has no {PLUGIN}")
     folder = profiles / profile
     if not folder.is_dir():
@@ -141,14 +108,16 @@ def check(repo, profiles, profile):
         raise Refused(f"link does not name a vendored tag: {target}")
     tag = destination.name[len(PREFIX):]
     if not tag_exists(repo, tag):
-        raise Refused(f"no such tag: {tag}")
-    expected = {relative[len(PLUGIN) + 1:]: relative for relative in tag_files(repo, tag)}
+        # A branch moves under the app, which is the failure this pin exists to prevent.
+        raise Refused(f"no such tag: {tag}" if not ref_exists(repo, tag)
+                      else f"{tag} is not a tag; pin a release, not a branch")
+    expected = {relative[len(PLUGIN) + 1:]: relative for relative in ref_files(repo, tag, PLUGIN)}
     drifted, missing = [], []
     for relative, source in sorted(expected.items()):
         found = destination / relative
         if not found.is_file():
             missing.append(relative)
-        elif found.read_bytes() != tag_bytes(repo, tag, source):
+        elif found.read_bytes() != ref_bytes(repo, tag, source):
             drifted.append(relative)
     present = {str(path.relative_to(destination)) for path in destination.rglob("*") if path.is_file()}
     extra = sorted(present - set(expected))

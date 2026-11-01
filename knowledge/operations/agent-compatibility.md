@@ -13,6 +13,12 @@ sources:
     title: "Connector copy drift check"
   - resource: ../../tools/agents/dsh-install
     title: "Tag-pinned desktop plugin install"
+  - resource: ../../tools/agents/template-update
+    title: "Project update to a new release"
+  - resource: ../../tools/agents/connectors.py
+    title: "The connector and merge file lists"
+  - resource: ../../tools/agents/refs.py
+    title: "Reading a git reference without a checkout"
   - resource: ../../.codex/config.toml
     title: "Codex native compaction config"
   - resource: ../../.codex/hooks.json
@@ -64,7 +70,11 @@ directory does not establish loaded hooks or identical runtime guarantees.
 - Pi 1.4.0+ reads `AGENTS.md`/`CLAUDE.md` from its folder and every parent, and project
   `.agents/skills` from its folder or a parent, so the shared rules and skills need no copy. It loads
   `.pi/extensions/factory/index.js` from **its start folder only**, once the project is trusted; started
-  elsewhere (`demo/`), pass it explicitly: `pi -e ../.pi/extensions/factory/index.js`. The extension sends
+  elsewhere (`demo/`), pass it explicitly: `pi -e ../.pi/extensions/factory/index.js`. A headless run
+  (`pi -p`) is never a trusted project, so discovery loads nothing there: pass the extension explicitly,
+  `tools/agents/run pi -p -e .pi/extensions/factory/index.js "task"`, and add `--mode json` when a caller
+  needs the event stream. Without `-e`, a headless Pi session runs with no Æion Factory hook at all and
+  nothing in the transcript says so. The extension sends
   `before_agent_start` (once per session, and again after a compaction) as SessionStart, `tool_call` as
   PreToolUse (`{block: true, reason}`, also on any hook failure), `tool_result` as PostToolUse (feedback
   appended, `structuredContent` kept) and `session_before_compact` as PreCompact (`{cancel: true}` and a
@@ -93,8 +103,10 @@ directory does not establish loaded hooks or identical runtime guarantees.
   Inside a git repository a subfolder such as `demo/` works: the hook commands resolve the git root,
   and the OpenCode and Pi extensions use the nearest folder above their start folder that has
   `tools/agents/hook.py`.
-- Both adapters enforce supported Bash/path refusals, edit feedback and a verified handover
-  before compaction; the first refused compaction creates the skeleton to fill. Native token stops and strict pre-request 300k admission are unqualified.
+- Both adapters enforce supported Bash/path refusals, edit feedback and a verified handover,
+  and a Pi compaction the checkpoint did not verify still runs and owes that closure after it
+  instead of trapping the session at its window; the first refused compaction creates the skeleton to fill.
+  Native token stops and strict pre-request 300k admission are unqualified.
 - dsh (DeepSeek Harness, CLI `dsh`, 0.2.1-rc.3) reads `AGENTS.md`/`CLAUDE.md` from the project root down
   to its folder and skills from `.dsh/skills` and `.agents/skills`, so the shared rules and skills need no
   copy. It loads project plugins only from a patch overlay: `tools/agents/run dsh [web|headless]` (web, a
@@ -115,9 +127,12 @@ directory does not establish loaded hooks or identical runtime guarantees.
   steered, because a steered terminal stop starts a turn that closes the same way.
   Once a verified handover asks for compaction, the next `agent/pre-step` sends PreCompact and, when
   allowed, compacts through `ctx.compaction.compactIfNeeded(agent, 'context-overflow')`, then steers a
-  message that resumes from the handover. Without the root service (web) it steers the agent to ask the
-  user for `/compact`; a token measure that falls to under half between two calls marks that compaction,
-  so the next call sends SessionStart with `source: compact`. `bash` is Bash, `read`/`write`/`edit` name `file_path`,
+  message that resumes from the handover. Without the root service (web) the plugin cannot start a
+  compaction, so it tells the shared rule that compaction is unavailable: the 250k/300k gate becomes
+  advisory, the handover stays required for recovery, and dsh's own compaction continues ungated
+  instead of waiting for a human to type `/compact`; a token measure that falls to under half between
+  two calls marks that compaction, so the next call sends SessionStart with `source: compact`.
+  `bash` is Bash, `read`/`write`/`edit` name `file_path`,
   `str_replace_editor` is Edit (Read for `view`), `glob`/`grep` are Glob/Grep. dsh's own pressure
   compaction (about 55% of a 1M window) is not refused; past 300k only closure runs, so it is reached
   only if closure never completes. A dsh launched without the patch has no Æion Factory hooks.
@@ -262,6 +277,8 @@ in, by exact bytes:
 tools/agents/adapter-check                  # this repository
 tools/agents/adapter-check --root ../app    # a project that adopted the factory
 tools/agents/adapter-check --root ../app --strict --verbose
+tools/agents/adapter-check --root ../app --ref v1.8.4   # against a release, not this working tree
+tools/agents/adapter-check --root ../app --ref main     # or a branch somebody works from
 ```
 
 It prints one line per connector: `ok`, `DRIFT` with both sizes and the exact `cp` that repairs it,
@@ -285,6 +302,80 @@ steered message and its loader then rejects the whole session for holding one it
 connector that omits the `id` turns every session it touched into history that will not reopen.
 Every `steer({...})` the factory ships carries an `id`; a call without one is reported as
 `UNIDENTIFIED <file> — steer() without an id at line N` and fails the check.
+
+## Updating a project to a new release
+
+An adopted project carries its own copies of every connector, and its own instructions, settings and
+knowledge next to them. An update must move the copies and leave the project's own text alone.
+
+### Intent
+
+Move a project from the release it adopted to another reference, writing only the files a harness
+loads and naming the rest, so a local instruction, setting or document survives the update.
+
+### Data sources
+
+| Source | What is read | Owner | Freshness |
+| --- | --- | --- | --- |
+| the project's `VERSION` | the release it adopted | the project | at each update |
+| the reference's tree | every contract file's bytes | the release, or `main`/`develop` | at each update |
+| the diff between the two | which merge files the factory changed | the factory | at each update |
+
+### Inputs
+
+```bash
+tools/agents/template-update --ref v1.8.4 --root ../app
+tools/agents/template-update --ref main --root ../app --check
+```
+
+- `--ref`: a tag, `main`, `develop` or a commit id. A branch moves, so `--check` reports when it did.
+- `--root`: the project that adopted the factory.
+- `--repo`: the factory repository holding the reference (default: this checkout).
+- `--check` writes nothing; `--force` permits moving to an older release.
+
+### Outputs
+
+One line per contract file: `written <file>`, or `skipped <file> — not in <ref>` when the reference
+predates the file. One `merge <file>` line per project-owned file the factory changed between the
+project's reference and the target, with the `untouched:` list naming `knowledge/`, `work/`,
+`CHANGELOG.md` and the merge set. The project's `VERSION` is written from the reference, so the next
+update starts there. Exit code 0 when nothing needs a human, 1 in `--check` when a file differs or
+when a merge is owed, and 2 on a refusal: `no such reference: <ref>`,
+`not an adopted project: no VERSION in <path>`, `refusing to downgrade <a> to <b>`, and
+`<path> is the factory itself, not a project that adopted it`.
+
+### Invariants
+
+1. The project's `AGENTS.md`, `knowledge/` and `CHANGELOG.md` are never written —
+   `test_writes_the_reference_and_keeps_the_project_text`.
+2. `--check` writes nothing —
+   `test_check_writes_nothing`.
+3. A branch is a valid reference —
+   `test_a_branch_is_a_valid_reference`.
+4. A downgrade needs `--force` —
+   `test_it_refuses_a_downgrade`.
+5. A project without `VERSION` is refused —
+   `test_it_refuses_a_project_with_no_version`.
+6. The factory refuses to update itself —
+   `test_it_refuses_the_factory_itself`.
+
+### Determinism
+
+deterministic: bytes come from git, the file list is sorted, and nothing is stamped with a clock.
+
+### Acceptance checks
+
+```bash
+python3 tools/agents/tests/test_template_update.py
+python3 tools/agents/tests/test_adapter_check.py
+tools/factory-tests
+```
+
+### Out of scope
+
+- merging a file for the project: a merge file is named, never edited.
+- committing, pushing or opening a pull request.
+- creating the tag: `tools/release/release` owns the version.
 
 ## Installing the desktop plugin at a tag
 
@@ -395,7 +486,11 @@ integrations verified on Devin 3000.11.3. To qualify, in a disposable clone ask 
 and to edit a file: the first must be refused with the guard's reason, the second must name the
 covering doc. Devin cloud sessions do not read `.devin/` and are not covered.
 
-Pi is not yet qualified live either: no Pi ran in the change that added it. The events, results and
+Pi is qualified live headless only through an explicit extension: `tools/agents/run pi -p --mode json
+-e .pi/extensions/factory/index.js` injected the checkpoint profile (`Æion Factory pi checkpoint
+profile`) into the session, which only the extension writes, and the bash guard then refused an
+environment dump; without `-e`, discovery loads no extension in a headless run and the same session
+was unguarded. Trust-based discovery and the interactive path remain unqualified. The events, results and
 tool inputs follow the 1.4.0 docs and its published type declarations (`types.d.ts`, the tool schemas).
 Unverified: that a thrown `before_agent_start` handler stops the run (the tool guards refuse anyway),
 and that symlinked `.agents/skills` folders are followed. Qualify it like Devin with `tools/agents/run

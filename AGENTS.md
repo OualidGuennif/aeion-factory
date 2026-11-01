@@ -58,6 +58,7 @@ A skill is `.agents/skills/<name>/SKILL.md`; open it when your agent does not of
 | Task | Open first |
 | --- | --- |
 | Agent setup and runtime differences | [Compatibility](knowledge/operations/agent-compatibility.md); README setup |
+| Updating an adopted project to a new release | `.agents/skills/template-update/SKILL.md`; `tools/agents/template-update` |
 | Task guidance | `.agents/skills/skill-route/SKILL.md`: native first, optional passive pool; no automatic agents |
 | Any change | `knowledge/index.md`, then the doc of the area; `.agents/skills/plan/SKILL.md` |
 | A feature or component | `knowledge/policies/specs-first.md`; `.agents/skills/spec/SKILL.md` |

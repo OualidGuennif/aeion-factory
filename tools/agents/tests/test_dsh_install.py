@@ -88,14 +88,14 @@ class DshInstallTests(unittest.TestCase):
 
     def test_a_failed_copy_keeps_the_old_link(self):
         self.assertEqual(self.run_tool('--tag', 'v1.0.0')[0], 0)
-        original = install_tool.tag_bytes
+        original = install_tool.ref_bytes
 
         def failing(repository, tag, relative):
             if relative.endswith('compaction.js'):
                 raise RuntimeError('object store unavailable')
             return original(repository, tag, relative)
 
-        with patch.object(install_tool, 'tag_bytes', failing):
+        with patch.object(install_tool, 'ref_bytes', failing):
             code, output = self.run_tool('--tag', 'v2.0.0')
         self.assertEqual(code, 2, output)
         self.assertEqual(self.target_of(), 'vendor/aeion-factory-v1.0.0')

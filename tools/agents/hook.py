@@ -261,6 +261,10 @@ def alert(result, measured):
         result['systemMessage'] = measured['systemMessage']
     if measured.get('aeion'):
         result['aeion'] = measured['aeion']
+    # The rule's own hookSpecificOutput must survive: a guard's answer wins field by field, and dropping the rest
+    # silently disarmed the additionalContext the rule had asked for.
+    if measured.get('hookSpecificOutput'):
+        result['hookSpecificOutput'] = {**measured['hookSpecificOutput'], **result.get('hookSpecificOutput', {})}
     return result
 
 

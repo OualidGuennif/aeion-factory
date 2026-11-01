@@ -370,6 +370,8 @@ class BudgetTests(unittest.TestCase):
                    (f"cd {root} && python3 tools/context/budget.py {tail}", root / "demo/copy"),
                    (f"cd ../.. && python3 tools/context/budget.py {tail}", root / "demo/copy"),
                    ("python3 tools/context/budget.py checkpoint --session test-session --verify", root),
+                   # The token is not compared to this session: `ready` opens the gate, never the spelling.
+                   ("python3 tools/context/budget.py checkpoint --session other-session --verify", root),
                    (f"cd {root}", root / "demo/copy")]
         for command, cwd in allowed:
             self.assertEqual(self.call(tool_name="Bash", tool_input={"command": command}, cwd=str(cwd)), {}, command)
@@ -377,7 +379,7 @@ class BudgetTests(unittest.TestCase):
                    (f"cd /tmp && python3 {root}/tools/context/budget.py {tail}", root),
                    (f"cd {root} && python3 tools/context/budget.py {tail} && rm -rf x", root),
                    (f"cd {root}; python3 tools/context/budget.py {tail}", root),
-                   (f"python3 tools/context/budget.py checkpoint --session other-session --verify", root),
+                   (f"python3 tools/context/budget.py checkpoint --session a/b --verify", root),
                    (f"python3 tools/context/budget.py checkpoint --session test-session --base 'a;b' --verify", root),
                    ("cd /tmp", root)]
         for command, cwd in refused:

@@ -129,7 +129,7 @@ edit its own scripts/settings. Raw CLI launches outside the managed entry point 
 | Codex | the rollout's newest `token_count` after the newest `compacted` record | native at 250000 (`model_auto_compact_token_limit`); a compaction before the handover owes it after |
 | OpenCode | the newest `session.step.ended` tokens (input, output, cache) | the plugin calls `session.compact` |
 | Pi | `ctx.getContextUsage().tokens` | the extension calls `ctx.compact()`; its own threshold compaction runs and owes the closure |
-| dsh | `ctx.tokenMeter.measure(session).totalTokens` | the plugin compacts before the next step; the web profile gives it no service, so the gate is advisory and dsh compacts itself |
+| dsh | `ctx.tokenMeter.measure(session).totalTokens` | the plugin compacts before the next step, through the root service (headless) or the per-agent one the web profile mounts (`agent.ctx.get('compaction')`) |
 | Droid | nothing (no 250k alert) | native; a compaction before the handover owes it after, as for Codex |
 
 A harness reports usage after the response that asked for a tool, so the adapter keeps the last count
@@ -139,10 +139,12 @@ OpenCode compact themselves on the hook's `aeion.compact` signal, sent once a cl
 is verified, so the context never waits for the model window. Pi never cancels its own compaction at
 the model window: it runs and the closure is owed after it. OpenCode sends no compact SessionStart, so
 its allowed compaction itself ends the closure (state RECOVERING, usage cleared). The dsh web profile
-keeps `compaction` inside each agent preset, out of the plugin's reach: the plugin tells the shared
-rule that compaction is unavailable, so the 250k/300k gate is advisory there, the handover stays
-required for recovery, and dsh's own compaction runs ungated instead of waiting for a human to type
-`/compact`. Codex ends its turn on a
+keeps `compaction` inside each agent preset, out of the plugin's root injection, so the plugin looks it
+up on the agent's own context (`agent.ctx.get('compaction')`) and tells the shared rule that compaction
+is available; the 250k/300k gate then holds as it does for the other harnesses — handover and verified
+checkpoint before compaction, then a compact and a resume — instead of staying advisory and waiting for
+dsh's own compaction. Only a profile that exposes no compaction service to an agent (neither the root's
+nor its preset's) gets the advisory gate and lets dsh compact itself. Codex ends its turn on a
 refused compaction and retries it before every turn, so it would stall: when Codex compacts before its
 handover is verified (owner decision 2026-10-28), the compaction runs and the session resumes in closure,
 allowed only the handover, `work/current.md`, docs and the checkpoint until the checkpoint passes. The OpenCode stream and compaction

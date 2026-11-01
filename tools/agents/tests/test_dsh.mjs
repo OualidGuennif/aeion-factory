@@ -12,18 +12,20 @@ const root = fileURLToPath(new URL('../../../', import.meta.url));
 const sessionID = `factory-dsh-plugin-test-${process.pid}`;
 
 // A stand-in for the dsh Cordis context: it records the guard, the listeners and compactions. `meter.tokens`
-// can change between calls; `root: false` is a profile without a root compaction service (web).
+// can change between calls; `root: false` is a profile without a root compaction service (web), where the
+// per-agent service is reachable through `agent.ctx.get('compaction')` instead.
 function load(cwd, totalTokens = 1000, { root: service = true } = {}) {
   const meter = { tokens: totalTokens };
   const handlers = {};
   const guards = [];
   const compactions = [];
+  const compact = { compactIfNeeded: async (agent, trigger) => compactions.push(trigger) };
   const ctx = {
     tools: { guard: (guard) => guards.push(guard) },
     tokenMeter: { measure: () => ({ totalTokens: meter.tokens }) },
     // The session works in `cwd`, whatever folder the server was launched from.
     workingDirectory: { get: () => cwd },
-    compaction: { compactIfNeeded: async (agent, trigger) => compactions.push(trigger) },
+    compaction: compact,
     on: (name, handler) => { handlers[name] = handler; },
     logger: { warn: () => {} },
   };
@@ -31,7 +33,13 @@ function load(cwd, totalTokens = 1000, { root: service = true } = {}) {
   apply(ctx);
   if (service) compaction.apply(ctx);
   const steered = [];
-  const agent = { session: { id: sessionID }, steer: (message) => steered.push(message) };
+  // The web profile mounts compaction inside each agent preset, not the root: the plugin reaches it through
+  // the agent's own context, exactly as `agent.ctx.get('compaction')` resolves it there.
+  const agent = {
+    session: { id: sessionID },
+    steer: (message) => steered.push(message),
+    ctx: { get: (name) => (name === 'compaction' ? compact : undefined) },
+  };
   return { handlers, guard: guards[0], compactions, agent, steered, meter };
 }
 
@@ -117,27 +125,30 @@ function recorder() {
   return { folder, events };
 }
 
-test('dsh without a root compaction service keeps working and never asks for /compact', async () => {
+test('dsh web compacts through the per-agent service, then resumes', async () => {
+  // The web profile has no root compaction service, but each agent preset mounts one reachable through
+  // agent.ctx: the plugin uses it, so the verified-handover flow compacts and resumes instead of stopping.
   const { folder, events } = recorder();
   const { handlers, compactions, agent, steered } = load(folder, 260000, { root: false });
-  agent.session.id = `${sessionID}-web`;
+  agent.session.id = `${sessionID}-web-compact`;
   await handlers['tools/post-execute'](call(agent, 'bash', { command: 'true' }), {}, async () => ({}));
   let stepped = 0;
   await handlers['agent/pre-step']({ agent, signal: new AbortController().signal }, async () => { stepped += 1; });
   const recorded = events();
   rmSync(folder, { recursive: true, force: true });
-  assert.deepEqual(compactions, []);
+  assert.deepEqual(compactions, ['context-overflow']);
   assert.equal(stepped, 1);
-  // The shared rule is told the truth, so it stops gating work the plugin cannot finish.
-  assert.ok(recorded.filter((event) => event.hook_event_name !== 'SessionStart')
-    .every((event) => event.compaction_unavailable === true));
+  // It compacts directly through the service; it never orders the user to type /compact.
   assert.ok(!steered.some((message) => /type \/compact|ask them to/i.test(message.content[0].text)));
-  assert.match(steered[0].content[0].text, /compacts on its own/);
+  assert.match(steered[0].content[0].text, /handover/);
+  // The shared rule is told compaction is available, so the 250k/300k gate holds instead of staying advisory.
+  assert.ok(recorded.filter((event) => event.hook_event_name !== 'SessionStart')
+    .every((event) => event.compaction_unavailable === false));
 });
 
 test('dsh never tells the user to type /compact, verified or owed (dsh FB-004)', async () => {
-  // The 300k stopgap allows a compaction the checkpoint did not verify. In a profile with no compaction service
-  // the plugin must not order a human command either way: the harness compacts on its own.
+  // The 300k stopgap allows a compaction the checkpoint did not verify. The plugin compacts through the
+  // service and resumes; it never orders a human /compact command either way.
   const owed = answering({
     PostToolUse: { aeion: { compact: true } },
     PreCompact: { systemMessage: 'Æion Factory 300k: compacting before a verified checkpoint' },
@@ -146,8 +157,9 @@ test('dsh never tells the user to type /compact, verified or owed (dsh FB-004)',
   await first.handlers['tools/post-execute'](call(first.agent, 'bash', { command: 'true' }), {}, async () => ({}));
   await first.handlers['agent/pre-step']({ agent: first.agent, signal: new AbortController().signal }, async () => {});
   rmSync(owed, { recursive: true, force: true });
+  assert.deepEqual(first.compactions, ['context-overflow']);
   assert.equal(first.steered.length, 1);
-  assert.match(first.steered[0].content[0].text, /compacts on its own/);
+  assert.match(first.steered[0].content[0].text, /handover/);
   assert.doesNotMatch(first.steered[0].content[0].text, /type \/compact|ask them to/i);
 });
 

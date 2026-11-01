@@ -6,6 +6,8 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+## [1.8.3] - 2026-11-01
+
 - `tools/agents/adapter-check` names a connector copy that drifted from the factory and a native config
   that points at a missing script, and refuses a project's own copy of itself; `tools/factory-tests`
   runs it with `--self`.

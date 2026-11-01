@@ -203,7 +203,7 @@ class HookTests(unittest.TestCase):
         stopped=self.measure('dsh',250_000,session_id='no-service-dsh',compaction_unavailable=True,hook_event_name='Stop')
         self.assertNotIn('continue',stopped)
 
-
+    def test_compaction_resets_receipt_but_keeps_recovery_pointer(self):
         self.call()
         key=hook.key('codex',self.event)
         state_file=self.root/'.aeion/context'/f'{key}.json'

@@ -44,18 +44,20 @@ SHELL = re.compile(r"^(bash|execute|shell|exec)$", re.I)
 NETWORK_COMMAND = re.compile(r"\b(curl|wget|httpie|http|https|fetch|nc|ncat|ssh|scp|dig|nslookup|ftp)\b", re.I)
 
 
-def text_of(value, sink, limit):
-    """Append the strings a tool result carries, bounded, in the order the result holds them."""
-    if len(sink) >= limit:
+def text_of(value, parts, budget):
+    """Append the strings a tool result carries until the budget is spent, in the order they appear."""
+    if budget[0] <= 0:
         return
     if isinstance(value, str):
-        sink.append(value[:limit])
+        piece = value[:budget[0]]
+        parts.append(piece)
+        budget[0] -= len(piece)
     elif isinstance(value, dict):
         for item in value.values():
-            text_of(item, sink, limit)
+            text_of(item, parts, budget)
     elif isinstance(value, (list, tuple)):
         for item in value:
-            text_of(item, sink, limit)
+            text_of(item, parts, budget)
 
 
 def categories(text):
@@ -119,9 +121,9 @@ def main():
     tool = str(event.get("tool_name", ""))
     if not reads_outside(event):
         return 0
-    sink = []
-    text_of(event.get("tool_response"), sink, MAX_TEXT)
-    found = categories("\n".join(sink))
+    parts = []
+    text_of(event.get("tool_response"), parts, [MAX_TEXT])
+    found = categories("\n".join(parts))
     if not found:
         return 0
     session = re.sub(r"[^A-Za-z0-9_-]", "", str(event.get("session_id", "")))[:64] or "local"

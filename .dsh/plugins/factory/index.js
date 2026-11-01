@@ -13,10 +13,8 @@ const ASK = 'This dsh profile lets only the user compact: ask them to type /comp
 // dsh's built-in tools under the names the shared guards know; glob only lists paths.
 const TOOLS = { bash: 'Bash', read: 'Read', write: 'Write', edit: 'Edit', str_replace_editor: 'Edit', glob: 'Glob', grep: 'Grep' };
 
-// A tool whose name says it reads outside text; only its result is worth scanning for injected instructions.
-const NETWORK = /fetch|search|browse|scrape|mcp/i;
-// A shell command can fetch a page too; the adapter decides whether its command really reads the network.
-const SHELL = /^(bash|execute|shell|exec)$/i;
+// A local file tool reads the project's own text; any other result may have come from outside.
+const LOCAL = new Set(['Read', 'Grep', 'Glob', 'LS', 'Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
 // The hook refuses a payload over 2 MB; a larger result is not forwarded rather than truncated mid-text.
 const MAX_RESULT = 256 * 1024;
 
@@ -97,7 +95,7 @@ export function apply(ctx) {
       observed_tokens: tokens(exec.agent),
     };
     // The prompt-defense scan reads a fetched result; any other result stays off the hook payload.
-    if (result !== undefined && (NETWORK.test(tool) || SHELL.test(tool))) {
+    if (result !== undefined && !LOCAL.has(tool)) {
       try {
         if (JSON.stringify(result).length <= MAX_RESULT) event.tool_response = result;
       } catch { /* a result that cannot be serialized carries no text to scan */ }

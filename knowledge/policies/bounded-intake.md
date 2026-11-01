@@ -49,9 +49,10 @@ refusal names its cause: the file over the limit, a variable or glob path, or a 
 after a `cd` (an absolute path is sized whatever the directory).
 Tests remain runnable; quiet/fail-fast flags and error summaries are guidance in this version.
 
-Prompt defense (`.claude/hooks/prompt-defense.py`) never refuses either: it reads at most 64 KiB of
-a fetched or shell-fetched tool result, flags hidden characters, role markers, override phrases and
-an encoded payload once per session, and stays silent when a harness passes no result.
+Prompt defense (`.claude/hooks/prompt-defense.py`) never refuses either: it reads at most 64 KiB in
+total of a tool result the harness forwards, flags hidden characters, role markers, override phrases
+and an encoded payload once per session, and stays silent when no result arrives. The adapters forward
+a result under 256 KiB, so a larger one is not scanned.
 
 Token feedback (`.claude/hooks/token-feedback.py`) never refuses. Keep reasoning private and use
 tools directly; do not emit optional progress narration or intermediate JSON notes. After a tool

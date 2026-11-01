@@ -266,7 +266,7 @@ It prints one line per connector: `ok`, `DRIFT` with both sizes and the exact `c
 `UNWIRED` for a native config that names a file which is not there, and `invalid` for a config that
 is not valid JSON. A connector the project does not carry is `absent`: listed under `--verbose`, and
 a failure only under `--strict`, because a Claude-only project legitimately has no Pi extension.
-Exit code 0 is clean, 1 is drift or broken wiring, 2 is a root that does not exist.
+Exit code 0 is clean, 1 is drift or broken wiring, 2 is a bad root or the script's own copy.
 
 Configs a project merges with its own settings are not compared byte for byte —
 `.claude/settings.json`, `.codex/config.toml`, `.devin/config.json` — but their commands are: every

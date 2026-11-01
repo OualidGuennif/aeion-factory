@@ -48,7 +48,14 @@ Every event latches the first observed 250k crossing, including PreCompact. The 
 agent and user at the next supported event; PreCompact retains a pending alert because that event
 discards system messages. A harness that compacts without the adapter seeing its compact SessionStart
 (dsh does) would otherwise keep the latch forever: an observed size back under the threshold ends it,
-and the closure it owed survives as `closure_owed`, which the settlement still enforces. Only closure work
+and the closure it owed survives as `closure_owed`, which the settlement still enforces. The debt
+never re-latches a later fall: a session that climbs over 250k again and compacts again is released
+again, because Stop enforces the debt while the threshold no longer justifies the gate. A latch a
+harness set because its own compaction resumed it in closure (Codex, Droid) is the exception:
+`resumed_in_closure` keeps it latched until the handover verifies. PreCompact refuses an absent
+checkpoint, and a stale one whose handover is incomplete; a complete handover that was verified before
+the tree moved still compacts, and owes `closure_owed` until a fresh receipt, because the gate admits
+only the checkpoint command that could refresh it. Only closure work
 (docs/task/handover edits and fixed verification commands) remains available. At an observed
 300k closure narrows to the handover and its checkpoint (reads stay open), Stop is refused, and the
 message asks for the handover and compaction now. 300k never stops the run: once the checkpoint is
@@ -58,7 +65,9 @@ neither verified nor repaired. At 300k the hook signals the adapters to compact 
 checkpoint verifies, lets that compaction through, records that the closure is still owed
 (`closure_owed`), and admits code edits in the new epoch with a warning that names the checkpoint
 command; Stop stays refused until a verified receipt settles the debt on the next event that reads the
-receipt. Codex and Droid keep their own early-compaction path, which still resumes in closure; a Pi
+receipt. That settlement keeps the receipt while the session is still at or above 250k: the same event
+re-latches the alert, and dropping the receipt would close the gate before the compaction it owes.
+Codex and Droid keep their own early-compaction path, which still resumes in closure; a Pi
 compaction the checkpoint did not verify runs too, resumes editable and owes its receipt, because
 freezing code over a check that already failed is the deadlock the stopgap exists to prevent. Below
 300k the refusal is unchanged, so a session that must repair code compacts at 300k. The checkpoint

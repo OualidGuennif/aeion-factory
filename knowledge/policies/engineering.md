@@ -86,7 +86,9 @@ tests for what changed still run.
   green CI; then the local `develop` pulls it before new commits.
 - A release (skill `ship`): `tools/release/release <part>` bumps `VERSION` (SemVer) and dates the
   changelog; a pull request `develop → main` is reviewed again and merged with a merge commit after a
-  green CI; the merged commit is tagged `vX.Y.Z` with its changelog section as release notes.
+  green CI; the merged commit is tagged `vX.Y.Z` with its changelog section as release notes. The GitHub
+  release is named exactly `vX.Y.Z` — never a sentence, never a summary — and its body is that section,
+  unedited: the same simple bullet list as the first releases.
 - A new project or a demo copy starts with `tools/release/release --new-project`: `VERSION` 0.1.0, an
   empty `Unreleased`, and `work/current.md` holding only the "Adapt Æion Factory to this project" entry,
   dated today. It refuses in Æion Factory's own clone (origin `OualidGuennif/aeion-factory`), and running

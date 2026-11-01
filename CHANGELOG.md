@@ -8,9 +8,10 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [1.8.6] - 2026-11-01
 
-- dsh web no longer stalls the 250k/300k gate as advisory: the plugin reaches the per-agent compaction
-  service through `agent.ctx.get('compaction')` (the web profile keeps it inside each agent preset), so a
-  verified handover compacts and resumes instead of waiting for dsh's own pressure compaction.
+- dsh web no longer stalls the 250k/300k gate as advisory: the web profile isolates its compaction service
+  inside an agent-preset group, so the plugin runs the `/compact` command once the agent is idle (that
+  command is the one entry point across the isolation), and a verified handover compacts and resumes
+  instead of waiting for dsh's own pressure compaction.
 
 ## [1.8.5] - 2026-11-01
 

@@ -130,7 +130,8 @@ directory does not establish loaded hooks or identical runtime guarantees.
   Once a verified handover asks for compaction, the next `agent/pre-step` sends PreCompact and, when
   allowed, compacts through `compactIfNeeded(agent, 'context-overflow')`, then steers a
   message that resumes from the handover. The service is the root one in headless, or, in the web profile
-  where the preset keeps `compaction` per agent, the one reached through `agent.ctx.get('compaction')`.
+  where the preset isolates `compaction` inside an agent-preset group, the plugin runs the `/compact`
+  command once the agent is idle, since that command is the one entry point across the isolation.
   Only a profile that exposes no compaction service to the agent (neither the root's nor its preset's)
   tells the shared rule that compaction is unavailable: the 250k/300k gate then becomes advisory and
   dsh's own compaction continues ungated instead of waiting for a human to type `/compact`; a token

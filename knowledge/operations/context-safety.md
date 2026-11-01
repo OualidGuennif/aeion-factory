@@ -143,7 +143,11 @@ keeps `compaction` inside each agent preset, out of the plugin's root injection,
 up with the `/compact` command (the service itself is isolated inside that group) and tells the shared rule that compaction
 is available; the 250k/300k gate then holds as it does for the other harnesses — handover and verified
 checkpoint before compaction, then a compact and a resume — instead of staying advisory and waiting for
-dsh's own compaction. Only a profile that exposes no compaction service to an agent (neither the root's
+dsh's own compaction. A hard gate owes exactly one verified handover: once the receipt matches, the
+gate stops denying and the session works while the compaction is on its way, because a compaction the
+plugin cannot guarantee must never be able to hold a session hostage. The exit command is likewise
+admitted whatever session token it carries — `ready` opens the gate, never the spelling. Only a
+profile that exposes no compaction service to an agent (neither the root's
 nor its preset's) gets the advisory gate and lets dsh compact itself. Codex ends its turn on a
 refused compaction and retries it before every turn, so it would stall: when Codex compacts before its
 handover is verified (owner decision 2026-10-28), the compaction runs and the session resumes in closure,

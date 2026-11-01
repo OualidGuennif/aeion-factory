@@ -267,7 +267,12 @@ def checkpoint_call(root, event, words):
     if len(words) < 2 or words[0] != "python3" or (here / words[1]).resolve() != root / "tools/context/budget.py":
         return False
     rest = words[2:]
-    if rest[:3] != ["checkpoint", "--session", event["session_id"]] or rest[-1:] != ["--verify"]:
+    if rest[:2] != ["checkpoint", "--session"] or rest[-1:] != ["--verify"]:
+        return False
+    # The session token is not compared against this session: the CLI refuses a key that names no session, and the
+    # gate opens on this session's verified receipt (`ready`), never on the spelling. Comparing it refused the exit
+    # command of an agent that wrote the raw identifier instead of the hashed key, with no way back.
+    if re.fullmatch(r"[A-Za-z0-9_-]{1,200}", rest[2]) is None:
         return False
     # A plain folder has no base; a repository names one ref.
     return len(rest) == 4 or (len(rest) == 6 and rest[3] == "--base"
@@ -350,14 +355,17 @@ def apply_usage(root, session, state, name, event, usage):
                 if first or name in {"Stop", "SubagentStop"}:
                     result = {"systemMessage": message, "hookSpecificOutput": {"hookEventName": name, "additionalContext": message}}
             else:
+                # The gate exists to obtain one verified handover. Once the receipt matches, denying further calls
+                # only holds the session hostage until a compaction the plugin cannot guarantee actually lands.
+                verified = ready(root, session, state)
                 if state["state"] == "COMPACT_REQUIRED":
                     message = (f"Æion Factory 300k: write {handover.relative_to(root)} and verify the checkpoint now "
                                f"({checkpoint_command(root, session)}); compaction follows; {SHAPE}.")
-                    allowed = compact_tool(root, call)
+                    allowed = verified or compact_tool(root, call)
                 else:
                     message = (f"Æion Factory 250k alert: finish closure only, update {handover.relative_to(root)}, work/current.md and affected docs; "
                                f"verify the checkpoint before compaction ({checkpoint_command(root, session)}); {SHAPE}.")
-                    allowed = closure_tool(root, call)
+                    allowed = verified or closure_tool(root, call)
                 if name == "PreToolUse" and not allowed:
                     result = {"hookSpecificOutput": {"hookEventName": name, "permissionDecision": "deny", "permissionDecisionReason": message}}
                 elif name in {"Stop", "SubagentStop"}:

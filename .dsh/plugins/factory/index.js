@@ -61,10 +61,13 @@ export function apply(ctx) {
 
   const tokens = (agent) => ctx.tokenMeter.measure(agent.session).totalTokens;
 
-  // The compaction service this agent can reach: the root one (headless) or the one each agent preset
-  // mounts in the web profile. The factory's root injection cannot see the per-agent service, so the
-  // guards must look it up on the agent's own context instead of assuming it is absent.
-  const compaction = (agent) => seam.compaction || agent.ctx?.get?.('compaction');
+  // The compaction service is reachable directly only at the root (headless). The web profile isolates it
+  // inside the agent preset (isolate: compaction), out of a plugin's reach, so there the plugin runs the
+  // /compact command instead: it is the one entry point that crosses that boundary, and it needs an idle
+  // agent, so the idle listener below owns it. `canCompact` asks whether a compaction is actually reachable
+  // for this agent, so the shared rule gates only work the plugin can finish.
+  const commands = () => ctx.get?.('commands');
+  const canCompact = (agent) => Boolean(seam.compaction || commands()?.find?.(agent, 'compact'));
 
   function observe(agent) {
     const session = agent.session.id;
@@ -100,7 +103,7 @@ export function apply(ctx) {
       observed_tokens: tokens(exec.agent),
       // Only a profile that exposes no compaction service to this agent (neither the root's nor its
       // preset's) is told so; the shared rule then gates work the plugin cannot finish.
-      compaction_unavailable: !compaction(exec.agent),
+      compaction_unavailable: !canCompact(exec.agent),
     };
     // Any result a local file tool did not produce is forwarded; the adapter decides what reads outside.
     if (result !== undefined && !LOCAL.has(tool)) {
@@ -156,16 +159,18 @@ export function apply(ctx) {
       const root = rootOf(agent);
       if (!root) return;
       const { output, reason } = invoke(root, { session_id: agent.session.id, hook_event_name: 'Stop',
-        compaction_unavailable: !compaction(agent) });
+        compaction_unavailable: !canCompact(agent) });
       if (reason && output.continue !== false) say(agent, reason);
     } catch (error) {
       ctx.logger?.warn?.(`aeion-factory: ${error.message || UNAVAILABLE}`);
     }
   });
 
-  // A verified handover past 250k compacts now, not at dsh's own threshold near the model window.
+  // A verified handover past 250k compacts now, not at dsh's own threshold near the model window. Only the
+  // root service (headless) compacts inside a step; the web profile's /compact needs an idle agent, so the
+  // idle listener below owns it there and this step keeps its due.
   ctx.on('agent/pre-step', async ({ agent, signal }, next) => {
-    if (!due.has(agent) || signal.aborted) return next();
+    if (!due.has(agent) || signal.aborted || !seam.compaction) return next();
     due.delete(agent);
     const session = agent.session.id;
     try {
@@ -173,17 +178,10 @@ export function apply(ctx) {
       // The shared rule refuses the compaction unless the checkpoint is verified, and allows it at 300k with the
       // closure owed; its own words say which, so they reach the user instead of a fixed "verified" claim.
       const { output, reason } = invoke(root, { session_id: session, hook_event_name: 'PreCompact',
-        compaction_unavailable: !compaction(agent) });
+        compaction_unavailable: !canCompact(agent) });
       if (reason) return next();
-      // A profile that exposes no compaction service to this agent cannot be asked to start one, so it keeps the
-      // handover current and lets the harness compact on its own. It never asks for /compact.
-      const service = compaction(agent);
-      if (!service) {
-        say(agent, ASK);
-        return next();
-      }
       // dsh's overflow path compacts now whatever its own threshold; it is the step-time compaction dsh exposes.
-      await service.compactIfNeeded(agent, 'context-overflow', signal);
+      await seam.compaction.compactIfNeeded(agent, 'context-overflow', signal);
       started.delete(session);
       compacted.add(session);
       say(agent, RESUME);
@@ -191,5 +189,40 @@ export function apply(ctx) {
       ctx.logger?.warn?.(`aeion-factory: compaction failed: ${error.message}`);
     }
     return next();
+  });
+
+  // The web profile isolates its compaction service inside the agent preset, so the plugin crosses that
+  // boundary with the /compact command. It needs an idle agent, so it runs once the turn has ended, and the
+  // resume message wakes the session to continue from its handover.
+  ctx.on('agent/status', async ({ agent, status }) => {
+    if (status !== 'idle' || !due.has(agent)) return;
+    const registry = commands();
+    if (!registry?.find?.(agent, 'compact')) {
+      // No compaction is reachable for this agent: keep the handover current and let the harness compact itself.
+      due.delete(agent);
+      say(agent, ASK);
+      return;
+    }
+    due.delete(agent);
+    const session = agent.session.id;
+    try {
+      const root = rootOf(agent);
+      if (!root) return;
+      // The shared rule refuses the compaction unless the checkpoint is verified, and allows it at 300k with the
+      // closure owed; its own words say which, so they reach the user instead of a fixed "verified" claim.
+      const { reason } = invoke(root, { session_id: session, hook_event_name: 'PreCompact',
+        compaction_unavailable: !canCompact(agent) });
+      if (reason) {
+        say(agent, reason);
+        return;
+      }
+      const settled = await registry.execute(agent, '/compact', [], new AbortController().signal);
+      if (settled?.result?.kind !== 'success') return;
+      started.delete(session);
+      compacted.add(session);
+      say(agent, RESUME);
+    } catch (error) {
+      ctx.logger?.warn?.(`aeion-factory: compaction failed: ${error.message}`);
+    }
   });
 }

@@ -6,6 +6,13 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+## [1.8.7] - 2026-11-01
+
+- dsh web compacts across the isolated compaction group: 1.8.6 reached for `agent.ctx.get('compaction')`,
+  but the web profile mounts that service in a group with `isolate: compaction`, so it never resolved and
+  the gate stayed advisory. The plugin now runs the `/compact` command once the agent is idle — the one
+  entry point across the isolation — and resumes from the handover.
+
 ## [1.8.6] - 2026-11-01
 
 - dsh web no longer stalls the 250k/300k gate as advisory: the plugin reaches the per-agent compaction

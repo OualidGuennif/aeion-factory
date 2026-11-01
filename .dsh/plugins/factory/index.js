@@ -61,6 +61,11 @@ export function apply(ctx) {
 
   const tokens = (agent) => ctx.tokenMeter.measure(agent.session).totalTokens;
 
+  // The compaction service this agent can reach: the root one (headless) or the one each agent preset
+  // mounts in the web profile. The factory's root injection cannot see the per-agent service, so the
+  // guards must look it up on the agent's own context instead of assuming it is absent.
+  const compaction = (agent) => seam.compaction || agent.ctx?.get?.('compaction');
+
   function observe(agent) {
     const session = agent.session.id;
     const now = tokens(agent);
@@ -93,8 +98,9 @@ export function apply(ctx) {
       tool_name: tool, tool_input: exec.arguments,
       // dsh's own replay-based measure feeds the shared 250k/300k rule.
       observed_tokens: tokens(exec.agent),
-      // The web profile keeps compaction inside each agent preset; the shared rule must not gate work it cannot finish.
-      compaction_unavailable: !seam.compaction,
+      // Only a profile that exposes no compaction service to this agent (neither the root's nor its
+      // preset's) is told so; the shared rule then gates work the plugin cannot finish.
+      compaction_unavailable: !compaction(exec.agent),
     };
     // Any result a local file tool did not produce is forwarded; the adapter decides what reads outside.
     if (result !== undefined && !LOCAL.has(tool)) {
@@ -150,7 +156,7 @@ export function apply(ctx) {
       const root = rootOf(agent);
       if (!root) return;
       const { output, reason } = invoke(root, { session_id: agent.session.id, hook_event_name: 'Stop',
-        compaction_unavailable: !seam.compaction });
+        compaction_unavailable: !compaction(agent) });
       if (reason && output.continue !== false) say(agent, reason);
     } catch (error) {
       ctx.logger?.warn?.(`aeion-factory: ${error.message || UNAVAILABLE}`);
@@ -167,16 +173,17 @@ export function apply(ctx) {
       // The shared rule refuses the compaction unless the checkpoint is verified, and allows it at 300k with the
       // closure owed; its own words say which, so they reach the user instead of a fixed "verified" claim.
       const { output, reason } = invoke(root, { session_id: session, hook_event_name: 'PreCompact',
-        compaction_unavailable: !seam.compaction });
+        compaction_unavailable: !compaction(agent) });
       if (reason) return next();
-      // The web profile keeps compaction inside each agent preset, out of a plugin's reach: the harness compacts
-      // itself and the plugin only keeps the handover current. It never asks the user to type /compact.
-      if (!seam.compaction) {
+      // A profile that exposes no compaction service to this agent cannot be asked to start one, so it keeps the
+      // handover current and lets the harness compact on its own. It never asks for /compact.
+      const service = compaction(agent);
+      if (!service) {
         say(agent, ASK);
         return next();
       }
       // dsh's overflow path compacts now whatever its own threshold; it is the step-time compaction dsh exposes.
-      await seam.compaction.compactIfNeeded(agent, 'context-overflow', signal);
+      await service.compactIfNeeded(agent, 'context-overflow', signal);
       started.delete(session);
       compacted.add(session);
       say(agent, RESUME);

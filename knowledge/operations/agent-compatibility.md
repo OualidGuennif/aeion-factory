@@ -128,12 +128,14 @@ directory does not establish loaded hooks or identical runtime guarantees.
   answer of `continue: false` is the hook's terminal stop: the turn ends with its reason and is never
   steered, because a steered terminal stop starts a turn that closes the same way.
   Once a verified handover asks for compaction, the next `agent/pre-step` sends PreCompact and, when
-  allowed, compacts through `ctx.compaction.compactIfNeeded(agent, 'context-overflow')`, then steers a
-  message that resumes from the handover. Without the root service (web) the plugin cannot start a
-  compaction, so it tells the shared rule that compaction is unavailable: the 250k/300k gate becomes
-  advisory, the handover stays required for recovery, and dsh's own compaction continues ungated
-  instead of waiting for a human to type `/compact`; a token measure that falls to under half between
-  two calls marks that compaction, so the next call sends SessionStart with `source: compact`.
+  allowed, compacts through `compactIfNeeded(agent, 'context-overflow')`, then steers a
+  message that resumes from the handover. The service is the root one in headless, or, in the web profile
+  where the preset keeps `compaction` per agent, the one reached through `agent.ctx.get('compaction')`.
+  Only a profile that exposes no compaction service to the agent (neither the root's nor its preset's)
+  tells the shared rule that compaction is unavailable: the 250k/300k gate then becomes advisory and
+  dsh's own compaction continues ungated instead of waiting for a human to type `/compact`; a token
+  measure that falls to under half between two calls marks that compaction, so the next call sends
+  SessionStart with `source: compact`.
   `bash` is Bash, `read`/`write`/`edit` name `file_path`,
   `str_replace_editor` is Edit (Read for `view`), `glob`/`grep` are Glob/Grep. dsh's own pressure
   compaction (about 55% of a 1M window) is not refused; past 300k only closure runs, so it is reached

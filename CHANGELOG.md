@@ -6,6 +6,8 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+## [1.8.4] - 2026-11-01
+
 - The 250k/300k rule no longer stalls a harness that cannot compact: the dsh web plugin tells the
   shared rule that its profile offers no compaction service, so the gate is advisory there and the
   harness compacts on its own instead of waiting for a human to type `/compact`; the handover stays

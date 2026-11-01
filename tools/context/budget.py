@@ -327,6 +327,16 @@ def apply_usage(root, session, state, name, event, usage):
         elif usage >= WARNING and state["state"] not in {"HANDOVER_REQUIRED", "COMPACT_REQUIRED"}:
             state["state"] = "HANDOVER_REQUIRED"
             state["warning_pending"] = True
+        elif (0 < usage < WARNING and state["state"] in {"HANDOVER_REQUIRED", "COMPACT_REQUIRED"}
+                and not state.get("closure_owed")):
+            # The context fell back under the threshold, so a compaction ran without the adapter seeing its
+            # SessionStart: dsh compacts on its own. Keeping the latch would gate a 127k session forever, so it
+            # ends here and the closure it owed becomes a debt Stop enforces instead. A zero is the stand-in a
+            # harness that measures nothing (Droid) uses, never a real measurement.
+            state["state"] = "RUNNING"
+            state.pop("warning_pending", None)
+            if not ready(root, session, state):
+                state["closure_owed"] = "due"
         if name == "PreCompact":
             if not ready(root, session, state):
                 ensure_handover(root, session)

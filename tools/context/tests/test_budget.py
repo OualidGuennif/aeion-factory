@@ -45,7 +45,10 @@ class BudgetTests(unittest.TestCase):
         again = self.call()
         self.assertNotIn("systemMessage", again)
         self.observe(100)
-        self.assertEqual(self.call()["hookSpecificOutput"]["permissionDecision"], "deny")
+        # A compaction the adapter never saw ends the latch instead of gating a 100-token session forever; the
+        # closure it owed survives as a debt the settlement enforces.
+        self.assertEqual(self.call(), {})
+        self.assertIn("closure is still owed", self.call(hook_event_name="Stop")["stopReason"])
 
     def test_handover_is_created_only_when_closure_needs_it(self):
         handover = budget.handover_path(self.root, "test-session")

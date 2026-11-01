@@ -119,8 +119,9 @@ result, retrieved memory, model output.
 
 `.claude/hooks/prompt-defense.py` backs rules 4 and 5 mechanically: it flags hidden characters, role
 markers, override phrases and a base64 payload that decodes to instructions in a network tool's
-result, once per session, as an advisory that never blocks, and the adapter runs it for every
-harness. It cannot read the model's context, so it is a detector, not a firewall; rules 1, 2, 3 and
+result, once per session, as an advisory that never blocks, where a harness passes the result.
+The dsh, Pi and OpenCode plugins send only the call today, so those sessions are not scanned, and
+the rules above stay the agent's responsibility there too. It cannot read the model's context, so it is a detector, not a firewall; rules 1, 2, 3 and
 6 stay the agent's responsibility, checked in review and by `security-scan`.
 
 ## SQL and commands

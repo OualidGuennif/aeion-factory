@@ -9,7 +9,7 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 - `tools/agents/adapter-check` names a connector copy that drifted from the factory copy, and a native
   config that points at a missing script; `tools/factory-tests` runs it, so a stale copy fails CI.
 - `.claude/hooks/prompt-defense.py` flags injected instructions, hidden characters and encoded payloads
-  in a fetched tool result, once per session, through every harness; it never blocks.
+  in a fetched tool result, once per session, where the harness passes the result; it never blocks.
 - `knowledge/policies/security.md` states the prompt-defense baseline; `knowledge/policies/engineering.md`
   the three passes: make it work, make it right, follow practice.
 

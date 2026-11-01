@@ -6,6 +6,18 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+## [1.8.3] - 2026-11-01
+
+- `tools/agents/adapter-check` names a connector copy that drifted from the factory and a native config
+  that points at a missing script, and refuses a project's own copy of itself; `tools/factory-tests`
+  runs it with `--self`.
+- `.claude/hooks/prompt-defense.py` flags injected instructions, hidden characters and encoded payloads
+  in a fetched, MCP or `curl`'d tool result, once per session; it never blocks.
+- dsh, Pi, OpenCode and Codex deliver that warning (dsh also needed a message id: its second steered
+  message in a turn was dropped as a pending duplicate).
+- `knowledge/policies/security.md` states the prompt-defense baseline; `knowledge/policies/engineering.md`
+  the three passes: make it work, make it right, follow practice.
+
 ## [1.8.2] - 2026-10-31
 
 - dsh and Pi: a terminal stop (`continue: false`) ends the turn with its reason instead of being steered

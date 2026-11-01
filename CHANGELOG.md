@@ -6,6 +6,12 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+- `tools/agents/dsh-install` installs the desktop dsh plugin from a release tag and links the profile
+  at that copy instead of the working tree, so a broken `develop` cannot reach the app; `--check`
+  names a hand-edited copy, a missing file and a link that names no tag.
+- `tools/agents/adapter-check` reports `UNIDENTIFIED` for a `steer` call that carries no id: dsh
+  persists such a message and then refuses to reopen the session that holds it.
+
 ## [1.8.3] - 2026-11-01
 
 - `tools/agents/adapter-check` names a connector copy that drifted from the factory and a native config

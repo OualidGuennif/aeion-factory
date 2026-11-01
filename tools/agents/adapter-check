@@ -98,6 +98,46 @@ def references(text, relative):
     return sorted(set(pattern.findall(text)))
 
 
+# A steered message with no identity is persisted as history the harness cannot reopen, so the whole
+# session stops loading. Every steer call must carry an id in its own literal, not one nested below.
+STEER = re.compile(r"\.steer\s*\(\s*\{")
+
+
+def identified(body):
+    """Whether an object literal names a top-level `id`, scanning braces a literal way."""
+    depth = 0
+    index = 0
+    while index < len(body):
+        character = body[index]
+        if character in "{[(":
+            depth += 1
+        elif character in "}])":
+            depth -= 1
+        elif depth == 0 and re.match(r"\bid\s*:", body[index:]):
+            return True
+        index += 1
+    return False
+
+
+def unidentified(text):
+    """The 1-based lines of every steer call whose object literal has no top-level id."""
+    lines = []
+    for match in STEER.finditer(text):
+        opening = text.find("{", match.start() + len(".steer"))
+        depth, index = 0, opening
+        while index < len(text):
+            if text[index] == "{":
+                depth += 1
+            elif text[index] == "}":
+                depth -= 1
+                if depth == 0:
+                    break
+            index += 1
+        if not identified(text[opening + 1:index]):
+            lines.append(text.count("\n", 0, match.start()) + 1)
+    return lines
+
+
 def wiring(root):
     """(unwired, broken) for every native config that is present."""
     unwired, broken = [], []
@@ -146,6 +186,12 @@ def main():
 
     drifted, missing, clean = compare(root)
     unwired, broken = wiring(root)
+    unmanaged = []
+    for relative in VENDORED:
+        if not relative.endswith(".js") or not (root / relative).is_file():
+            continue
+        for line in unidentified((root / relative).read_text(encoding="utf-8", errors="replace")):
+            unmanaged.append((relative, line))
 
     print(f"adapter-check: factory {factory_version()} at {FACTORY}")
     print(f"               against {root}")
@@ -160,8 +206,10 @@ def main():
         print(f"UNWIRED   {relative} → {reference} — no such file")
     for relative, error in broken:
         print(f"invalid   {relative} — {error}")
+    for relative, line in unmanaged:
+        print(f"UNIDENTIFIED {relative} — steer() without an id at line {line}")
 
-    failed = bool(drifted or unwired or broken)
+    failed = bool(drifted or unwired or broken or unmanaged)
     if arguments.strict and missing:
         failed = True
     if drifted:
@@ -173,7 +221,8 @@ def main():
 
     print(
         f"\n{len(VENDORED)} connectors: {len(clean)} matching, {len(drifted)} drifted, "
-        f"{len(missing)} absent, {len(unwired)} unwired, {len(broken)} invalid"
+        f"{len(missing)} absent, {len(unwired)} unwired, {len(broken)} invalid, "
+        f"{len(unmanaged)} unidentified"
     )
     print("adapter-check: PASS" if not failed else "adapter-check: FAIL")
     return 1 if failed else 0

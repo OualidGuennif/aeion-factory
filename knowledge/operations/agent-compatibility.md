@@ -11,6 +11,8 @@ sources:
     title: "Managed agent launch"
   - resource: ../../tools/agents/adapter-check
     title: "Connector copy drift check"
+  - resource: ../../tools/agents/dsh-install
+    title: "Tag-pinned desktop plugin install"
   - resource: ../../.codex/config.toml
     title: "Codex native compaction config"
   - resource: ../../.codex/hooks.json
@@ -263,10 +265,12 @@ tools/agents/adapter-check --root ../app --strict --verbose
 ```
 
 It prints one line per connector: `ok`, `DRIFT` with both sizes and the exact `cp` that repairs it,
-`UNWIRED` for a native config that names a file which is not there, and `invalid` for a config that
-is not valid JSON. A connector the project does not carry is `absent`: listed under `--verbose`, and
+`UNWIRED` for a native config that names a file which is not there, `invalid` for a config that
+is not valid JSON, and `UNIDENTIFIED` with its line for a `steer` call that carries no id. A
+connector the project does not carry is `absent`: listed under `--verbose`, and
 a failure only under `--strict`, because a Claude-only project legitimately has no Pi extension.
-Exit code 0 is clean, 1 is drift or broken wiring, 2 is a bad root or the script's own copy.
+Exit code 0 is clean, 1 is drift, broken wiring or an unidentified steer, 2 is a bad root or the
+script's own copy.
 
 Configs a project merges with its own settings are not compared byte for byte —
 `.claude/settings.json`, `.codex/config.toml`, `.devin/config.json` — but their commands are: every
@@ -275,6 +279,95 @@ project's own CI — from a pinned factory checkout with `--root`, never from th
 project, which would compare the project with itself and pass; the factory's own run passes
 `--self`. The factory runs it on itself in `tools/factory-tests`, which catches a
 registration that points at a renamed or deleted module.
+
+The same check refuses a connector that steers a message without an identity. dsh persists a
+steered message and its loader then rejects the whole session for holding one it cannot name, so a
+connector that omits the `id` turns every session it touched into history that will not reopen.
+Every `steer({...})` the factory ships carries an `id`; a call without one is reported as
+`UNIDENTIFIED <file> — steer() without an id at line N` and fails the check.
+
+## Installing the desktop plugin at a tag
+
+The desktop profile composes the factory plugin as `./aeion-factory/index.js` and
+`./aeion-factory/compaction.js`, resolved inside the profile folder. A symlink from there into a
+working tree makes the running app follow that tree: an uncommitted or broken edit reaches the app,
+and no review can say which version ran. This installs from a release tag instead.
+
+### Intent
+
+Run the desktop app on a released tag rather than the working tree, so a dirty or broken `develop`
+cannot reach it, and make the loaded tag checkable.
+
+### Data sources
+
+| Source | What is read | Owner | Freshness |
+| --- | --- | --- | --- |
+| git object store | every file of `.dsh/plugins/factory` at one tag | the release that made the tag | read at each install and check |
+| `<profile>/aeion-factory` | the link that decides the loaded plugin | this tool | at install |
+| `<profile>/cordis.patch.yml` | the module names the app loads | the dsh profile | never written here |
+
+### Inputs
+
+```bash
+tools/agents/dsh-install --tag vX.Y.Z [--profile desktop] [--profile-dir PATH] [--repo PATH]
+tools/agents/dsh-install --check   [--profile desktop] [--profile-dir PATH] [--repo PATH]
+```
+
+- `--tag`: an existing tag in the repository, the whole name (`v1.8.4`); annotated or lightweight.
+- `--profile`: a folder under the profile directory, default `desktop`.
+- `--profile-dir`: default `~/.dsh/profiles`; a test passes its own temporary one.
+- `--repo`: the repository the tag is read from, default this checkout.
+- `--force`: replace an `aeion-factory` entry that is not a symlink, after moving it aside.
+
+### Outputs
+
+- Install writes `<profile>/vendor/aeion-factory-<tag>/` with the tag's files, then makes
+  `<profile>/aeion-factory` a relative symlink to that folder. Prints `installed <tag> → <path>`.
+- `--check` prints `ok <tag>` when every file matches the tag, otherwise one `DRIFT <file>` or
+  `MISSING <file>` line per difference.
+- Exit codes: 0 clean, 1 drift or an incomplete copy, 2 a refusal. Refusals name the condition:
+  `no such tag: <tag>`, `tag <tag> has no .dsh/plugins/factory`, `no profile directory: <path>`,
+  `not a git repository: <path>`, `aeion-factory is not a link; move it aside or pass --force`
+  (with `--force`, a `aeion-factory.replaced` that already exists is itself refused), and from
+  `--check`, `no aeion-factory link in <path>` and `link does not name a vendored tag: <target>`.
+
+### Invariants
+
+1. Every installed byte equals the tag's byte — `test_installs_the_tag_bytes`.
+2. A second install of another tag repoints the link and keeps the earlier copy —
+   `test_a_second_tag_repoints_the_link`.
+3. A copy that fails leaves the previous link in place — `test_a_failed_copy_keeps_the_old_link`.
+4. An unknown tag writes nothing — `test_unknown_tag_refuses`.
+5. A non-link entry is refused, and `--force` overwrites nothing —
+   `test_unmanaged_entry_refuses` and `test_force_refuses_a_second_displacement`.
+6. `--check` fails on one hand-edited byte — `test_check_names_a_hand_edited_copy`.
+7. `--check` fails on a link that does not name a vendored tag —
+   `test_check_refuses_a_foreign_link`.
+8. `adapter-check` reports a `steer` call without an id —
+   `test_steer_without_id_is_unidentified`, fails a copy that steers unidentified —
+   `test_a_steering_copy_fails_the_check`, and passes the shipped adapters —
+   `test_the_shipped_adapters_are_identified`.
+
+### Determinism
+
+deterministic: bytes come from git objects, the file list is sorted, and nothing is stamped with a
+clock. `--force` renames to the fixed name `aeion-factory.replaced` rather than to a timestamp.
+
+### Acceptance checks
+
+```bash
+python3 tools/agents/tests/test_dsh_install.py
+python3 tools/agents/tests/test_adapter_check.py
+tools/agents/adapter-check --self
+tools/factory-tests
+```
+
+### Out of scope
+
+- creating, signing or publishing the tag: `tools/release/release` owns that.
+- installing any other harness or profile.
+- repairing sessions whose stored messages already lack an id.
+- proving a tag was reviewed, or that it is the newest release.
 
 ## Qualification and limits
 

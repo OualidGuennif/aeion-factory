@@ -99,6 +99,27 @@ class AdapterCheckTests(unittest.TestCase):
         self.assertEqual(code, 1, output)
         self.assertIn('UNWIRED   .codex/config.toml → tools/agents/removed-hook.py', output)
 
+    def test_steer_without_id_is_unidentified(self):
+        self.assertEqual(check.unidentified("  agent.steer({ content: [], source: { kind: 'x' } });\n"), [1])
+        self.assertEqual(check.unidentified("  agent.steer({ id: randomUUID(), content: [] });\n"), [])
+
+    def test_a_steering_copy_fails_the_check(self):
+        # A steered message with no id is persisted as history dsh cannot reopen.
+        target = self.project / '.dsh/plugins/factory/index.js'
+        target.write_text(target.read_text().replace(
+            'agent.steer({ id: globalThis.crypto.randomUUID(), content:',
+            'agent.steer({ content:'))
+        code, output = self.run_check()
+        self.assertEqual(code, 1, output)
+        self.assertIn('UNIDENTIFIED .dsh/plugins/factory/index.js — steer() without an id at line', output)
+        self.assertIn('adapter-check: FAIL', output)
+
+    def test_the_shipped_adapters_are_identified(self):
+        for relative in check.VENDORED:
+            if relative.endswith('.js'):
+                text = (ROOT / relative).read_text(encoding='utf-8')
+                self.assertEqual(check.unidentified(text), [], relative)
+
 
 if __name__ == '__main__':
     unittest.main()

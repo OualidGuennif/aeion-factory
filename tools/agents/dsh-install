@@ -102,9 +102,16 @@ def install(repo, profiles, profile, tag, force):
     try:
         materialize(repo, tag, staging)
         destination = vendor / f"{PREFIX}{tag}"
-        discard(destination)
+        # A copy being replaced stays readable until its successor is in place, so the link never dangles.
+        replaced = None
+        if destination.exists():
+            replaced = vendor / f".previous-{tag}"
+            discard(replaced)
+            os.replace(destination, replaced)
         os.replace(staging, destination)
         staging = None
+        if replaced is not None:
+            discard(replaced)
     finally:
         # A copy that fails leaves no partial tree behind; the link below is still the old one.
         if staging is not None and staging.exists():

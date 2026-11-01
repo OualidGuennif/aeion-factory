@@ -129,6 +129,14 @@ class DshInstallTests(unittest.TestCase):
         self.assertEqual(code, 2, output)
         self.assertIn('aeion-factory.replaced', output)
 
+    def test_reinstalling_a_tag_replaces_its_copy(self):
+        self.assertEqual(self.run_tool('--tag', 'v1.0.0')[0], 0)
+        copy = self.profile / 'vendor/aeion-factory-v1.0.0/index.js'
+        copy.write_text('a hand edit that must not survive\n')
+        self.assertEqual(self.run_tool('--tag', 'v1.0.0')[0], 0)
+        self.assertNotIn('hand edit', copy.read_text())
+        self.assertEqual(self.target_of(), 'vendor/aeion-factory-v1.0.0')
+
     def test_check_names_a_hand_edited_copy(self):
         self.assertEqual(self.run_tool('--tag', 'v1.0.0')[0], 0)
         edited = self.profile / 'vendor/aeion-factory-v1.0.0/index.js'

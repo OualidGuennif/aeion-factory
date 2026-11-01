@@ -111,7 +111,12 @@ can recover. A PostToolUse warning from the prompt-defense scan travels in the s
 context and changes no budget decision. Invalid complete records remain terminal: that is an
 integrity failure, not a size. A `compact_boundary` or compact SessionStart clears the
 old observation and ends a 250k or 300k closure. Smaller model windows retain
-their native earlier limit. The guard does not expand a model's capacity.
+their native earlier limit. The guard does not expand a model's capacity. On the native path (dsh and
+OpenCode), `PreCompact` makes the same stale-receipt exception as the Claude hook: a complete handover
+that verified before an edit may compact and keeps `closure_owed = due`; a missing receipt or an
+incomplete handover is still refused. Pi reaches that hook only for its own window compaction
+(`native`), which a refusal would cancel, so it compacts regardless and owes the handover and
+checkpoint in the new epoch, as Codex and Droid do.
 
 **Guarantee:** this is checkpoint-based enforcement, not a proof of an absolute 300k ceiling.
 Claude Code exposes no qualified before-every-request admission callback here. A large tool
@@ -164,6 +169,11 @@ refused compaction and retries it before every turn, so it would stall: when Cod
 handover is verified (owner decision 2026-10-28), the compaction runs and the session resumes in closure,
 allowed only the handover, `work/current.md`, docs and the checkpoint until the checkpoint passes. The OpenCode stream and compaction
 calls are read from the 2.2.0 build and unit-tested; a live long run has not exercised them yet.
+dsh compaction is not dependable in every profile, so its start context and every 250k/300k gate
+message also give the recovery step: once the handover, `work/current.md` and the checkpoint
+verify, stop the session and start a new one from the handover instead of working past 250k. The
+web plugin repeats that instruction when its `/compact` command did not run. That is an instruction
+to the user, not a forced stop; a verified handover is what makes the stop safe.
 
 Verification: `python3 tools/context/tests/test_budget.py`, `tools/agents/tests/test_hooks.py`,
 `test_pi.mjs` and `test_opencode.mjs`. Synthetic fixtures prove state and

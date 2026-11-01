@@ -113,8 +113,8 @@ from another source; analysis refuses mismatched package provenance or a dirty A
 | --- | --- | --- |
 | Instructions and seven-phase guide | Owner precedence, scope and adoption | Markdown links; `CLAUDE.md` points to `AGENTS.md` |
 | Skills | Plan/spec/build/test/review/sign-off/ship, template update and focused procedures | `.claude/skills/*/SKILL.md`; no second task ledger |
-| Connector checks | Byte equality against a checkout or a git reference, config wiring, steer identity and role | `tools/agents/adapter-check`; `connectors.py` (one file list), `refs.py` (one reference reader) |
-| Project update | Move an adopted project to a release, writing only the files a harness loads | `tools/agents/template-update`; names `AGENTS.md`, merged settings and `knowledge/` for a human |
+| Connector checks | Byte equality against a checkout or a git reference, config wiring, regular-file and executable-mode checks, steer identity and role | `tools/agents/adapter-check`; `connectors.py` (one file list), `refs.py` (one reference reader and git mode) |
+| Project update | Move an adopted project between factory references, writing only the files a harness loads and never the application's `VERSION` | `tools/agents/template-update`; explicit `--from-ref` and `--ref`; names `AGENTS.md`, merged settings and `knowledge/` for a human; refuses linked destinations and restores reference executable modes |
 | Desktop install | Pin the dsh profile's plugin at a release instead of a working tree | `tools/agents/dsh-install`; `<profile>/aeion-factory` symlink |
 | Hook adapter | Read event JSON and call a bounded local check | stdin/stdout JSON; failure blocks where supported |
 | dsh connector | Guard every tool call and drive the 250k/300k handover-compact-resume cycle | `.dsh/plugins/factory/*.js`; the root compaction service (headless) or the `/compact` command on idle (web, whose service is isolated in an agent-preset group) |
@@ -150,13 +150,19 @@ the checkpoint command stays admitted whatever session token it carries (`ready`
 spelling). PreCompact refuses an absent checkpoint, and a stale one whose handover is incomplete; when a
 complete handover was verified and the tree moved since, it compacts and leaves the closure owed
 (`closure_owed`) instead, because the gate admits only the checkpoint command that could refresh the
-receipt. At 300k the compaction runs too and leaves the closure owed, because code is already frozen
+receipt. The native `PreCompact` in `tools/agents/hook.py` applies the same exception to dsh and
+OpenCode, with OpenCode starting its own epoch because it sends no compact SessionStart. Pi reaches that
+hook only for its own window compaction (`native`), which a refusal would cancel, so it compacts
+regardless and owes the handover and checkpoint in the new epoch, as Codex and Droid do. At 300k the
+compaction runs too and leaves the closure owed, because code is already frozen
 there. A compact SessionStart begins RECOVERING
 and supplies the handover pointer; new positive native usage permits RUNNING. Resume alone does not clear STOPPED. The 250k and 300k alerts
 name the checkpoint command; a settlement that still owes closure names the missing receipt; closure
 admits a project's own Markdown docs, never code. The suggested base is an existing ref
 (`origin/develop`, `origin/main`, else `HEAD`), and a refused checkpoint reports the failing check's
-bounded output.
+bounded output. Because dsh compaction is not dependable in every profile, its start context and
+gate messages also name the recovery: after the handover, `work/current.md` and the checkpoint
+verify, stop the session and resume from the handover instead of working past 250k.
 
 Observed usage at 300k or invalid complete usage latches STOPPED. Unavailable usage after bootstrap
 blocks the current action and can recover after a valid observation. A PreCompact refusal uses

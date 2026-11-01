@@ -163,9 +163,11 @@ on its command line, and its profiles differ in what a plugin may reach.
 - **Startup warning.** In `web`, dsh prints `aeion-factory-compaction ... pending (waiting for service:
   compaction)`. That is expected: web keeps compaction inside each agent preset, out of a plugin's reach,
   while the guards (entry `aeion-factory`) run. `headless` loads both entries.
-- **Compaction.** Past 250k with a verified handover, `headless` compacts by itself; in `web` the agent asks
-  you to type `/compact`, and the plugin sees the token count fall and resumes the session from its
-  handover.
+- **Compaction.** Past 250k with a verified handover, `headless` compacts by itself; `web` isolates the
+  compaction service inside an agent preset, so the plugin runs `/compact` once the agent is idle and
+  resumes from the handover. If compaction does not run, the start context and gate messages say what to
+  do: after the handover, `work/current.md` and the checkpoint verify, stop the session and start a new
+  one from the handover rather than continuing past 250k.
 - **Check it is loaded.** Ask the agent to run `cat .env`: it must be refused by
   `.claude/hooks/guard-bash.py`. If it runs, the patch is not loaded or the session is outside the project.
 - **Provider and versions.** Connect your provider in dsh's own settings. `npx @deepseek-ai/dsh` may run

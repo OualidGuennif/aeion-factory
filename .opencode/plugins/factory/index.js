@@ -37,7 +37,7 @@ function toolEvent(event, name, usage, result) {
     // The last step's tokens feed the shared 250k/300k rule; null until OpenCode reports a step.
     observed_tokens: usage.get(event.sessionID) ?? null,
   };
-  // The prompt-defense scan reads a fetched result; any other result stays off the hook payload.
+  // Any result a local file tool did not produce is forwarded; the adapter decides what reads outside.
   if (result !== undefined && !LOCAL.has(tool)) {
     try {
       if (JSON.stringify(result).length <= MAX_RESULT) payload.tool_response = result;

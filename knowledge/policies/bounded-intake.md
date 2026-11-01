@@ -51,8 +51,9 @@ Tests remain runnable; quiet/fail-fast flags and error summaries are guidance in
 
 Prompt defense (`.claude/hooks/prompt-defense.py`) never refuses either: it reads at most 64 KiB in
 total of a tool result the harness forwards, flags hidden characters, role markers, override phrases
-and an encoded payload once per session, and stays silent when no result arrives. The adapters forward
-a result under 256 KiB, so a larger one is not scanned.
+and an encoded payload once per session, and stays silent when no result arrives. The dsh, Pi and OpenCode
+plugins forward a result under 256 KiB; Claude Code and Codex pass it through, and the scan still
+stops at 64 KiB.
 
 Token feedback (`.claude/hooks/token-feedback.py`) never refuses. Keep reasoning private and use
 tools directly; do not emit optional progress narration or intermediate JSON notes. After a tool

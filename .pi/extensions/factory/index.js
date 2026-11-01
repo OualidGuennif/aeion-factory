@@ -44,7 +44,7 @@ function toolEvent(event, ctx, name, result) {
     // Pi's own context measure feeds the shared 250k/300k rule; null right after a compaction.
     observed_tokens: ctx.getContextUsage?.()?.tokens ?? null,
   };
-  // The prompt-defense scan reads a fetched result; any other result stays off the hook payload.
+  // Any result a local file tool did not produce is forwarded; the adapter decides what reads outside.
   if (result !== undefined && !LOCAL.has(tool)) {
     try {
       if (JSON.stringify(result).length <= MAX_RESULT) payload.tool_response = result;

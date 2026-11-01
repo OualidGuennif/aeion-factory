@@ -228,8 +228,12 @@ test('dsh forwards a tool result but never a local file read', async () => {
     { content: 'x' }, async () => ({}));
   await handlers['tools/post-execute'](call(agent, 'bash', { command: 'true' }),
     { output: 'x' }, async () => ({}));
+  // A tool name in neither the old network set nor the shell set still forwards its result.
+  await handlers['tools/post-execute'](call(agent, 'task', { prompt: 'check' }),
+    { summary: 'x' }, async () => ({}));
   const posts = events().filter((event) => event.hook_event_name === 'PostToolUse');
   rmSync(folder, { recursive: true, force: true });
   assert.equal(posts[0].tool_response, undefined);
   assert.equal(posts[1].tool_response.output, 'x');
+  assert.equal(posts[2].tool_response.summary, 'x');
 });

@@ -94,7 +94,7 @@ export function apply(ctx) {
       // dsh's own replay-based measure feeds the shared 250k/300k rule.
       observed_tokens: tokens(exec.agent),
     };
-    // The prompt-defense scan reads a fetched result; any other result stays off the hook payload.
+    // Any result a local file tool did not produce is forwarded; the adapter decides what reads outside.
     if (result !== undefined && !LOCAL.has(tool)) {
       try {
         if (JSON.stringify(result).length <= MAX_RESULT) event.tool_response = result;

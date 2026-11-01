@@ -121,8 +121,8 @@ result, retrieved memory, model output.
 that reads outside text — a fetch or search tool, an MCP tool, and a shell command that names
 `curl`, `wget`, `http`, `ssh` or a similar reader — for hidden characters, role markers, override
 phrases and a base64 payload that decodes to instructions, once per session, and adds one advisory
-line that never blocks. It reads 64 KiB in total; the adapters forward a result under 256 KiB, so a
-larger result is not scanned. The dsh, Pi and OpenCode plugins forward that result and show the warning;
+line that never blocks. It reads 64 KiB in total. The dsh, Pi and OpenCode plugins forward a result under 256 KiB; Claude
+Code and Codex pass the result through, so a larger one is still read up to that bound. The dsh, Pi and OpenCode plugins forward that result and show the warning;
 Claude Code's PostToolUse registration covers WebFetch, WebSearch, Bash and `mcp__*`, and Codex
 passes the result through the adapter. A harness that passes no result is not scanned, and the hook
 cannot read the model's context: it is a detector, not a firewall, so rules 1, 2, 3 and 6 stay the

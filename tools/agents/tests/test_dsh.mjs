@@ -225,9 +225,10 @@ test('dsh forwards a fetched result and steers the prompt-defense warning', asyn
   assert.deepEqual(shell, {});
 });
 
-test('dsh gives every steered message its own id', async () => {
+test('dsh gives every steered message its own id and role', async () => {
   // dsh queued one message per turn by id: without one, its own start context and a later warning collide
-  // and the second steer throws ("already pending"), silently dropping it.
+  // and the second steer throws ("already pending"), silently dropping it. A message without role is
+  // persisted as user/message the harness refuses to reopen, so every steer carries role: "user" too.
   const { guard, handlers, agent, steered } = load(root);
   agent.session.id = `${sessionID}-ids`;
   guard(call(agent, 'bash', { command: 'git status --short' }));
@@ -236,6 +237,7 @@ test('dsh gives every steered message its own id', async () => {
   assert.equal(steered.length, 2);
   assert.ok(steered.every((message) => typeof message.id === 'string' && message.id.length >= 8));
   assert.notEqual(steered[0].id, steered[1].id);
+  assert.ok(steered.every((message) => message.role === 'user'));
 });
 
 test('dsh forwards a tool result but never a local file read', async () => {

@@ -121,7 +121,9 @@ directory does not establish loaded hooks or identical runtime guarantees.
   denies it and no later policy can undo that; a call without an agent is refused), with
   `ctx.tokenMeter.measure(session).totalTokens` as the usage; `tools/post-execute` sends PostToolUse.
   dsh has no hook that adds text to the prompt, so the SessionStart context (the checkpoint profile and
-  recovery pointer) is steered to the agent on its first guarded call; `agent/turn-stopping` sends Stop,
+  recovery pointer) is steered to the agent on its first guarded call; every steered message carries its
+  own `id` and `role: "user"`, which the harness validator requires of a persisted user/message;
+  `agent/turn-stopping` sends Stop,
   and a sign-off finding is steered as one more step (shown once per session, so it cannot loop). An
   answer of `continue: false` is the hook's terminal stop: the turn ends with its reason and is never
   steered, because a steered terminal stop starts a turn that closes the same way.
@@ -283,10 +285,11 @@ tools/agents/adapter-check --root ../app --ref main     # or a branch somebody w
 
 It prints one line per connector: `ok`, `DRIFT` with both sizes and the exact `cp` that repairs it,
 `UNWIRED` for a native config that names a file which is not there, `invalid` for a config that
-is not valid JSON, and `UNIDENTIFIED` with its line for a `steer` call that carries no id. A
+is not valid JSON, and `UNIDENTIFIED` with its line for a `steer`/`inject`/`followup` call that
+carries no id and `UNROLED` for one that carries no role. A
 connector the project does not carry is `absent`: listed under `--verbose`, and
 a failure only under `--strict`, because a Claude-only project legitimately has no Pi extension.
-Exit code 0 is clean, 1 is drift, broken wiring or an unidentified steer, 2 is a bad root or the
+Exit code 0 is clean, 1 is drift, broken wiring or an unidentified/unroled steer, 2 is a bad root or the
 script's own copy.
 
 Configs a project merges with its own settings are not compared byte for byte —
@@ -297,11 +300,12 @@ project, which would compare the project with itself and pass; the factory's own
 `--self`. The factory runs it on itself in `tools/factory-tests`, which catches a
 registration that points at a renamed or deleted module.
 
-The same check refuses a connector that steers a message without an identity. dsh persists a
-steered message and its loader then rejects the whole session for holding one it cannot name, so a
-connector that omits the `id` turns every session it touched into history that will not reopen.
-Every `steer({...})` the factory ships carries an `id`; a call without one is reported as
-`UNIDENTIFIED <file> — steer() without an id at line N` and fails the check.
+The same check refuses a connector that steers a message without an identity or a role. dsh persists a
+steered message and its loader then rejects the whole session for holding one it cannot name, or a
+user/message without `role: "user"`, so a
+connector that omits the `id` or the `role` turns every session it touched into history that will not reopen.
+Every `steer({...})` the factory ships carries an `id` and `role: "user"`; a call without one is reported as
+`UNIDENTIFIED <file> — steer() without an id at line N` or `UNROLED <file> — steer()/inject()/followup() without a role at line N` and fails the check.
 
 ## Updating a project to a new release
 
@@ -435,8 +439,10 @@ tools/agents/dsh-install --check   [--profile desktop] [--profile-dir PATH] [--r
 7. `--check` fails on a link that does not name a vendored tag —
    `test_check_refuses_a_foreign_link`.
 8. `adapter-check` reports a `steer` call without an id —
-   `test_steer_without_id_is_unidentified`, fails a copy that steers unidentified —
-   `test_a_steering_copy_fails_the_check`, and passes the shipped adapters —
+   `test_steer_without_id_is_unidentified`, without a role — `test_steer_without_role_is_unroled`,
+   fails a copy that steers unidentified —
+   `test_a_steering_copy_fails_the_check`, and unroled — `test_a_roled_steering_copy_fails_the_check`,
+   and passes the shipped adapters —
    `test_the_shipped_adapters_are_identified`.
 
 ### Determinism

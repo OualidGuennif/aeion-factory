@@ -12,13 +12,6 @@ lines `- Owner decision:`, `- State:`, `- Next:` (with who), `- Blocker:`, `- Ev
 - Blocker: none.
 - Evidence: CHANGELOG.md Unreleased; knowledge/operations/agent-compatibility.md; knowledge/operations/context-safety.md; knowledge/operations/build-and-test.md; tools/agents/tests/test_dsh_install.py; tools/agents/tests/test_template_update.py; tools/agents/tests/test_adapter_check.py; tools/agents/tests/test_hooks.py; tools/agents/tests/test_pi.mjs; tools/agents/tests/test_dsh.mjs; live dsh headless run in an isolated copy attempted an environment dump and quoted the guard's refusal verbatim; the same payload is denied through all seven adapters.
 
-## Live Pi qualification — WAITING-OWNER
-- Owner decision: 2026-11-01, "test it with dsh headless and also pi".
-- State: Pi 1.4.0 is installed. `pi -p` is never a trusted project, so discovery loads no extension: a headless session runs with no Æion Factory hook and nothing in the transcript says so. With `-e .pi/extensions/factory/index.js` the extension loads and injects the checkpoint profile, shown in a `--mode json` run; the bash guard then refused an environment dump. The same payload is denied by `tools/agents/hook.py pi`.
-- Next: run one Pi session with the extension loaded against an action that must be allowed (the "north" case), and one against a guard only the extension can enforce (who: owner, one command each).
-- Blocker: none.
-- Evidence: knowledge/operations/agent-compatibility.md (Pi bullet and live qualification); /tmp/pi-south.json; /tmp/dsh-live2.log
-
 ## Golden task set — MEASURING
 - Owner decision: 2026-10-31, start the local evaluation harness, then approve the twelve candidate tasks proposed with it.
 - State: twelve tasks in `tools/evals/tasks/`, six implementation and six process; one baseline is recorded (architecture-answer on pi, success, 0.9 minutes) and eleven still say "not run yet"; `report` renders one row.
@@ -36,7 +29,7 @@ lines `- Owner decision:`, `- State:`, `- Next:` (with who), `- Blocker:`, `- Ev
 
 ## Live Devin, Droid, Antigravity and Pi hook qualification — WAITING-OWNER
 - Owner decision: 2026-10-27, support Devin, Droid and Antigravity; 2026-10-28, Pi 1.4.0; adapters use documented, not live-run, payloads.
-- State: Devin merged in #12, Droid in #13, Antigravity in task/antigravity, Pi on develop; no live run of any yet.
+- State: Devin merged in #12, Droid in #13, Antigravity in task/antigravity, Pi on develop. Pi ran live headless on 2026-11-01: with `-e .pi/extensions/factory/index.js` the extension injected the checkpoint profile, an allowed read succeeded and the shared guard refused an environment dump; Pi's own native compaction is still unexercised.
 - Next: run the qualification steps with Devin CLI, Droid, agy and Pi and record the result (who: owner).
 - Blocker: neither CLI is in the agent's container.
 - Evidence: knowledge/operations/agent-compatibility.md

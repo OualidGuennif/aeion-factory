@@ -72,7 +72,7 @@ export function apply(ctx) {
   }
 
   // The factory's start context reaches the model as steering: dsh has no hook that adds it to the prompt.
-  const say = (agent, text) => agent.steer({ id: globalThis.crypto.randomUUID(), content: [{ type: 'text', text }], source: { kind: 'aeion-factory' } });
+  const say = (agent, text) => agent.steer({ id: globalThis.crypto.randomUUID(), role: 'user', content: [{ type: 'text', text }], source: { kind: 'aeion-factory' } });
 
   function start(root, agent) {
     const session = agent.session.id;

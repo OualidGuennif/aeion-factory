@@ -6,6 +6,15 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+## [1.8.5] - 2026-11-01
+
+- dsh no longer corrupts its own sessions: the plugin's `say` helper steers every message with
+  `role: "user"` as the harness validator requires, so a steered start context or warning no longer
+  produces a user/message the session refuses to reopen on the next launch.
+- `tools/agents/adapter-check` reports `UNROLED` for a `steer`, `inject` or `followup` call whose
+  message carries no role, beside `UNIDENTIFIED` for a missing id, so a connector that would persist
+  an ill-formed message fails the check instead of a session.
+
 ## [1.8.4] - 2026-11-01
 
 - The 250k/300k rule no longer stalls a harness that cannot compact: the dsh web plugin tells the

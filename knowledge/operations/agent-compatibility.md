@@ -271,7 +271,9 @@ Exit code 0 is clean, 1 is drift or broken wiring, 2 is a root that does not exi
 Configs a project merges with its own settings are not compared byte for byte —
 `.claude/settings.json`, `.codex/config.toml`, `.devin/config.json` — but their commands are: every
 script they name must exist. Run the check after adopting, after every factory upgrade, and in the
-project's own CI. The factory runs it on itself in `tools/factory-tests`, which catches a
+project's own CI — from a pinned factory checkout with `--root`, never from the copy inside the
+project, which would compare the project with itself and pass; the factory's own run passes
+`--self`. The factory runs it on itself in `tools/factory-tests`, which catches a
 registration that points at a renamed or deleted module.
 
 ## Qualification and limits

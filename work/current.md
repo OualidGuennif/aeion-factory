@@ -7,10 +7,10 @@ lines `- Owner decision:`, `- State:`, `- Next:` (with who), `- Blocker:`, `- Ev
 
 ## Connector drift check across all harnesses — ACTIVE
 - Owner decision: 2026-11-01, "avoid such problems for all connectors": a stale or hand-edited copy must fail a check, not a session. Same day: the prompt-defense baseline and the three passes ship in 1.8.3 too.
-- State: `tools/agents/adapter-check` compares every vendored connector — shared adapter, context rule, Claude hooks, dsh, Pi and OpenCode plugins, and the five native registrations — with the factory copy by exact bytes, and checks each config's script references; `tools/factory-tests` runs it. `.claude/hooks/prompt-defense.py` flags an injected instruction, hidden characters or an encoded payload in a fetched result, once per session, where the harness passes the result (the dsh, Pi and OpenCode plugins still send only the call). `knowledge/policies/security.md` holds the baseline; `knowledge/policies/engineering.md` the three passes. The desktop dsh profile's `aeion-factory` points at this repository, not a project copy.
+- State: `tools/agents/adapter-check` compares every vendored connector with the factory copy by exact bytes, checks each config's script references, and refuses a project's own copy of itself; `tools/factory-tests` runs it with `--self`. `.claude/hooks/prompt-defense.py` flags an injected instruction, hidden characters or an encoded payload in a fetched, MCP or `curl`'d result, once per session; dsh, Pi and OpenCode forward the result, dsh also needed a message id to deliver it. `knowledge/policies/security.md` holds the baseline; `knowledge/policies/engineering.md` the three passes.
 - Next: restart the desktop app so it loads the released plugin; run `tools/agents/adapter-check --root <project>` in every adopted project and in its CI; a tag-pinned install path for the desktop profile is the next proposal (who: owner).
 - Blocker: none.
-- Evidence: CHANGELOG.md Unreleased; knowledge/policies/security.md; knowledge/policies/engineering.md; knowledge/operations/agent-compatibility.md
+- Evidence: CHANGELOG.md Unreleased; knowledge/policies/security.md; knowledge/policies/engineering.md; knowledge/operations/agent-compatibility.md; live 1.8.3 runs on dsh (deepseek-v4.1-flash), Pi (deepseek-v4.1-flash) and Codex (gpt-6.1-sol, medium) each received and quoted the warning on a poisoned localhost page
 
 ## Golden task set — MEASURING
 - Owner decision: 2026-10-31, start the local evaluation harness, then approve the twelve candidate tasks proposed with it.

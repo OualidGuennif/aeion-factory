@@ -67,13 +67,27 @@ def advisory(root, event):
         return {}
 
 
-# A tool whose name says it reads outside text; its result may carry an injected instruction.
+# A tool whose name says it reads outside text, and a shell command that does: both results are data.
 NETWORK_TOOL = re.compile(r'fetch|search|browse|scrape|mcp', re.I)
+NETWORK_COMMAND = re.compile(r'\b(curl|wget|httpie|http|https|fetch|nc|ncat|ssh|scp|dig|nslookup|ftp)\b', re.I)
+SHELL_TOOL = re.compile(r'^(bash|execute|shell|exec)$', re.I)
+
+
+def reads_outside(event):
+    """True when a tool result may carry text from outside the project."""
+    tool = str(event.get('tool_name', ''))
+    if NETWORK_TOOL.search(tool):
+        return True
+    if not SHELL_TOOL.match(tool):
+        return False
+    data = event.get('tool_input')
+    command = data.get('command') if isinstance(data, dict) else None
+    return isinstance(command, str) and bool(NETWORK_COMMAND.search(command))
 
 
 def defense(root, event):
     """Flag a fetched result that carries an injected instruction; an advisory may fail, never stop work."""
-    if not NETWORK_TOOL.search(str(event.get('tool_name', ''))):
+    if not reads_outside(event):
         return ''
     try:
         result = script(root, 'prompt-defense.py', event)

@@ -83,6 +83,22 @@ class AdapterCheckTests(unittest.TestCase):
                 code = check.main()
         self.assertEqual(code, 2)
 
+    def test_a_copy_that_compares_with_itself_is_refused(self):
+        # A project that copied this script would compare its connectors with themselves and always pass.
+        with patch.object(check, 'FACTORY', self.project):
+            code, output = self.run_check()
+        self.assertEqual(code, 2, output)
+        with patch.object(check, 'FACTORY', self.project):
+            code, output = self.run_check('--self')
+        self.assertEqual(code, 0, output)
+
+    def test_a_command_in_a_merged_config_is_checked(self):
+        config = self.project / '.codex/config.toml'
+        config.write_text((ROOT / '.codex/config.toml').read_text() + '\nnotify = ["python3", "tools/agents/removed-hook.py"]\n')
+        code, output = self.run_check()
+        self.assertEqual(code, 1, output)
+        self.assertIn('UNWIRED   .codex/config.toml → tools/agents/removed-hook.py', output)
+
 
 if __name__ == '__main__':
     unittest.main()

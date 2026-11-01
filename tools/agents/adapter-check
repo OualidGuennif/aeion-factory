@@ -52,7 +52,9 @@ VENDORED = (
 WIRING = (
     ".claude/settings.json",
     ".codex/hooks.json",
+    ".codex/config.toml",
     ".devin/hooks.v1.json",
+    ".devin/config.json",
     ".factory/settings.json",
     ".agents/hooks.json",
     ".dsh/factory.patch.yml",
@@ -126,12 +128,20 @@ def main():
     )
     parser.add_argument("--root", default=str(FACTORY), help="the repository to check (default: this one)")
     parser.add_argument("--strict", action="store_true", help="also fail when a connector is not vendored")
+    parser.add_argument("--self", action="store_true", help="allow the factory to compare with itself")
     parser.add_argument("--verbose", action="store_true", help="list the connectors that are absent")
     arguments = parser.parse_args()
 
     root = Path(arguments.root).resolve()
     if not root.is_dir():
         print(f"adapter-check: {root} is not a directory", file=sys.stderr)
+        return 2
+    # A project that copied this script compares its copies with themselves and always passes: refuse it,
+    # so the project's CI runs this script from a pinned factory checkout with --root instead.
+    if root == FACTORY and not arguments.self:
+        print(f"adapter-check: {root} is the copy this script lives in, so every connector would match "
+              f"itself; run the factory's copy with --root {root}, or pass --self to check the factory",
+              file=sys.stderr)
         return 2
 
     drifted, missing, clean = compare(root)

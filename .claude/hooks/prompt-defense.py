@@ -39,6 +39,9 @@ OVERRIDE = (
                r"anweisungen\b", re.I | re.S),
 )
 BLOB = re.compile(r"[A-Za-z0-9+/]{64,}={0,2}")
+# A shell command that reads the network is a fetch too: the model often curls a page instead of using a tool.
+SHELL = re.compile(r"^(bash|execute|shell|exec)$", re.I)
+NETWORK_COMMAND = re.compile(r"\b(curl|wget|httpie|http|https|fetch|nc|ncat|ssh|scp|dig|nslookup|ftp)\b", re.I)
 
 
 def text_of(value, sink, limit):
@@ -94,6 +97,18 @@ def seen_before(session, key):
     return False
 
 
+def reads_outside(event):
+    """True when a tool result may carry text from outside the project."""
+    tool = str(event.get("tool_name", ""))
+    if NETWORK.search(tool):
+        return True
+    if not SHELL.match(tool):
+        return False
+    data = event.get("tool_input")
+    command = data.get("command") if isinstance(data, dict) else None
+    return isinstance(command, str) and bool(NETWORK_COMMAND.search(command))
+
+
 def main():
     try:
         event = json.loads(sys.stdin.read(2 * 1024 * 1024 + 1))
@@ -102,7 +117,7 @@ def main():
     if not isinstance(event, dict):
         return 0
     tool = str(event.get("tool_name", ""))
-    if not NETWORK.search(tool):
+    if not reads_outside(event):
         return 0
     sink = []
     text_of(event.get("tool_response"), sink, MAX_TEXT)

@@ -66,7 +66,7 @@ is advisory; it does not enforce the model's private reasoning format or a token
 
 | Source | Content / owner | Freshness |
 | --- | --- | --- |
-| `AGENTS.md` and owner instruction | Self-check and stop-and-ask triggers, precedence, boundaries, task workflow / owner | Read at task start; dated pointers to `CHANGELOG.md` and `work/current.md` |
+| `AGENTS.md` and owner instruction | Self-check and stop-and-ask triggers, precedence, boundaries (secrets, untrusted input), task workflow / owner | Read at task start; dated pointers to `CHANGELOG.md` and `work/current.md` |
 | `knowledge/` | Policies, components, ADRs, operations and references / reviewed repository | Owning fact updated with its code |
 | `work/current.md` | Open task state / current worker | Every meaningful sign-off/checkpoint |
 | Git objects and diff | Immutable source and changed/deleted paths / Git | Explicit target/base SHA |

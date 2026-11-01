@@ -5,6 +5,13 @@ import { dirname, resolve } from 'node:path';
 
 const UNAVAILABLE = 'Æion Factory hook unavailable; action refused.';
 const RESUME = 'Æion Factory: context compacted. Read your handover in work/handovers/ and continue the task.';
+// A tool whose name says it reads outside text; only its result is worth scanning for injected instructions.
+const NETWORK = /fetch|search|browse|scrape|mcp/i;
+// A shell command can fetch a page too; the adapter decides whether its command really reads the network.
+const SHELL = /^(bash|execute|shell|exec)$/i;
+// The hook refuses a payload over 2 MB; a larger result is not forwarded rather than truncated mid-text.
+const MAX_RESULT = 256 * 1024;
+
 // A closure refusal at settlement asks for a few more requests, then settles instead of looping on one alert.
 const SETTLE_LIMIT = 3;
 // Pi's built-in tools under the names the shared guards know; find and ls only list paths.
@@ -29,15 +36,23 @@ function invoke(root, event) {
   return { output, reason };
 }
 
-function toolEvent(event, ctx, name) {
+function toolEvent(event, ctx, name, result) {
   // An unknown tool that carries a command string is a shell call until proven otherwise.
   const shell = !(event.toolName in TOOLS) && typeof event.input?.command === 'string';
-  return {
+  const tool = shell ? 'Bash' : TOOLS[event.toolName] || event.toolName;
+  const payload = {
     session_id: ctx.sessionManager.getSessionId(), hook_event_name: name, tool_use_id: event.toolCallId,
-    tool_name: shell ? 'Bash' : TOOLS[event.toolName] || event.toolName, tool_input: event.input,
+    tool_name: tool, tool_input: event.input,
     // Pi's own context measure feeds the shared 250k/300k rule; null right after a compaction.
     observed_tokens: ctx.getContextUsage?.()?.tokens ?? null,
   };
+  // The prompt-defense scan reads a fetched result; any other result stays off the hook payload.
+  if (result !== undefined && (NETWORK.test(tool) || SHELL.test(tool))) {
+    try {
+      if (JSON.stringify(result).length <= MAX_RESULT) payload.tool_response = result;
+    } catch { /* a result that cannot be serialized carries no text to scan */ }
+  }
+  return payload;
 }
 
 export default function (pi) {
@@ -69,7 +84,7 @@ export default function (pi) {
 
   pi.on('tool_result', async (event, ctx) => {
     if (event.isError) return undefined;
-    const { reason, output } = invoke(projectRoot(ctx.cwd), toolEvent(event, ctx, 'PostToolUse'));
+    const { reason, output } = invoke(projectRoot(ctx.cwd), toolEvent(event, ctx, 'PostToolUse', { content: event.content }));
     // A verified handover past 250k compacts now, not at Pi's own threshold near the model window.
     // Compacting aborts the running turn, so the session is told to resume from its handover once it is done.
     if (output.aeion?.compact) {

@@ -6,10 +6,13 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
-- `tools/agents/adapter-check` names a connector copy that drifted from the factory copy, and a native
-  config that points at a missing script; `tools/factory-tests` runs it, so a stale copy fails CI.
+- `tools/agents/adapter-check` names a connector copy that drifted from the factory and a native config
+  that points at a missing script, and refuses a project's own copy of itself; `tools/factory-tests`
+  runs it with `--self`.
 - `.claude/hooks/prompt-defense.py` flags injected instructions, hidden characters and encoded payloads
-  in a fetched tool result, once per session, where the harness passes the result; it never blocks.
+  in a fetched, MCP or `curl`'d tool result, once per session; it never blocks.
+- dsh, Pi, OpenCode and Codex deliver that warning (dsh also needed a message id: its second steered
+  message in a turn was dropped as a pending duplicate).
 - `knowledge/policies/security.md` states the prompt-defense baseline; `knowledge/policies/engineering.md`
   the three passes: make it work, make it right, follow practice.
 

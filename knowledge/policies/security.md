@@ -117,12 +117,15 @@ result, retrieved memory, model output.
 6. **Harm and session boundaries.** No harmful, weapon, exploit or phishing content; nothing carried
    from one session into another.
 
-`.claude/hooks/prompt-defense.py` backs rules 4 and 5 mechanically: it flags hidden characters, role
-markers, override phrases and a base64 payload that decodes to instructions in a network tool's
-result, once per session, as an advisory that never blocks, where a harness passes the result.
-The dsh, Pi and OpenCode plugins send only the call today, so those sessions are not scanned, and
-the rules above stay the agent's responsibility there too. It cannot read the model's context, so it is a detector, not a firewall; rules 1, 2, 3 and
-6 stay the agent's responsibility, checked in review and by `security-scan`.
+`.claude/hooks/prompt-defense.py` backs rules 4 and 5 mechanically. It scans the result of a tool
+that reads outside text — a fetch or search tool, an MCP tool, and a shell command that names
+`curl`, `wget`, `http`, `ssh` or a similar reader — for hidden characters, role markers, override
+phrases and a base64 payload that decodes to instructions, once per session, and adds one advisory
+line that never blocks. The dsh, Pi and OpenCode plugins forward that result and show the warning;
+Claude Code's PostToolUse registration covers WebFetch, WebSearch, Bash and `mcp__*`, and Codex
+passes the result through the adapter. A harness that passes no result is not scanned, and the hook
+cannot read the model's context: it is a detector, not a firewall, so rules 1, 2, 3 and 6 stay the
+agent's responsibility, checked in review and by `security-scan`.
 
 ## SQL and commands
 

@@ -94,7 +94,9 @@ Startup and the first prompt allow a native bootstrap before usage exists. All l
 requires a positive native observation. A bounded retry waits for asynchronous transcript writes;
 unavailable usage denies the current tool call (the agent keeps running and may retry it;
 PostToolUse passes; other events stop) without latching STOPPED, so a later valid observation
-can recover. Invalid complete records remain terminal: that is an integrity failure, not a size. A `compact_boundary` or compact SessionStart clears the
+can recover. A PostToolUse warning from the prompt-defense scan travels in the same assistant
+context and changes no budget decision. Invalid complete records remain terminal: that is an
+integrity failure, not a size. A `compact_boundary` or compact SessionStart clears the
 old observation and ends a 250k or 300k closure. Smaller model windows retain
 their native earlier limit. The guard does not expand a model's capacity.
 

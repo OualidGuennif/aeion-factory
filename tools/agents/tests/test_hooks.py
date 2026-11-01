@@ -356,6 +356,18 @@ class HookTests(unittest.TestCase):
         codex=self.measure('codex',250_000,**edit)
         self.assertNotIn('stop this dsh session',json.dumps(codex))
 
+    def test_dsh_a_refused_compaction_also_says_to_stop_after_the_handover(self):
+        # The refusal is the dead end: nothing retries the compaction and the gate admits only the checkpoint, so a
+        # user told just to fill the handover keeps working past the threshold. The refusal must carry the stop step.
+        refused=self.call('dsh',session_id='refused-dsh',hook_event_name='PreCompact')
+        self.assertFalse(refused['continue'])
+        self.assertIn('Fill work/handovers/dsh-',refused['stopReason'])
+        self.assertIn('stop this dsh session',refused['stopReason'])
+        self.assertIn('stop this dsh session',refused['systemMessage'])
+        # One harness's recovery path stays out of another harness's refusal.
+        codex=self.call('codex',session_id='refused-codex',hook_event_name='PreCompact')
+        self.assertNotIn('stop this dsh session',json.dumps(codex))
+
     def test_300k_stopgap_compacts_and_keeps_the_closure_owed(self):
         # The incident: a check that failed before the session froze code at 300k, and the checkpoint that would
         # release it failed on that same check. The compaction runs, the epoch stays editable, the debt stays owed.

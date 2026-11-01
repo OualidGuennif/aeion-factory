@@ -150,8 +150,10 @@ the checkpoint command stays admitted whatever session token it carries (`ready`
 spelling). PreCompact refuses an absent checkpoint, and a stale one whose handover is incomplete; when a
 complete handover was verified and the tree moved since, it compacts and leaves the closure owed
 (`closure_owed`) instead, because the gate admits only the checkpoint command that could refresh the
-receipt. The native `PreCompact` in `tools/agents/hook.py` applies the same exception to dsh, Pi and
-OpenCode, with OpenCode starting its own epoch because it sends no compact SessionStart. At 300k the
+receipt. The native `PreCompact` in `tools/agents/hook.py` applies the same exception to dsh and
+OpenCode, with OpenCode starting its own epoch because it sends no compact SessionStart. Pi reaches that
+hook only for its own window compaction (`native`), which a refusal would cancel, so it compacts
+regardless and owes the handover and checkpoint in the new epoch, as Codex and Droid do. At 300k the
 compaction runs too and leaves the closure owed, because code is already frozen
 there. A compact SessionStart begins RECOVERING
 and supplies the handover pointer; new positive native usage permits RUNNING. Resume alone does not clear STOPPED. The 250k and 300k alerts

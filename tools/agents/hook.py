@@ -379,8 +379,11 @@ def handle(root, provider, event):
                     return {'systemMessage': f'Æion Factory 250k: {handover.relative_to(root)} was verified and the '
                                              f'tree moved since; compacting now, and the closure stays owed until a '
                                              f'fresh checkpoint: ' + budget.checkpoint_command(root, session)}
-                return fail(provider, name, f'Fill {handover.relative_to(root)} and verify the docs before compaction: '
-                            + budget.checkpoint_command(root, session))
+                refusal = fail(provider, name, f'Fill {handover.relative_to(root)} and verify the docs before '
+                                               f'compaction: ' + budget.checkpoint_command(root, session))
+                # A refused compaction is where a dsh user is left with nothing to retry, so the refusal carries the
+                # same instruction to stop once the handover and the tree are in order.
+                return dsh_advice(refusal) if provider == 'dsh' else refusal
             # A verified compaction owes no closure after it.
             if state.pop('closure_owed', None):
                 budget.atomic(file, json.dumps(state, sort_keys=True) + '\n')

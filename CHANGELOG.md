@@ -6,6 +6,8 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+## [1.9.1] - 2026-11-02
+
 - `PreCompact` now makes the same stale-receipt decision through the native adapter as through the shared
   budget: a complete handover verified before an edit compacts and keeps `closure_owed` for dsh, Pi and
   OpenCode, instead of refusing and leaving scheduled compaction blocked. A missing receipt and an

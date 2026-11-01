@@ -203,21 +203,36 @@ export function apply(ctx) {
       say(agent, ASK);
       return;
     }
-    due.delete(agent);
     const session = agent.session.id;
     try {
       const root = rootOf(agent);
       if (!root) return;
       // The shared rule refuses the compaction unless the checkpoint is verified, and allows it at 300k with the
-      // closure owed; its own words say which, so they reach the user instead of a fixed "verified" claim.
+      // closure owed; its own words say which, so they reach the user instead of a fixed "verified" claim. A
+      // refusal keeps the request pending: dropping it here is what left a latched session with no way to compact
+      // after one edit made the receipt stale.
       const { reason } = invoke(root, { session_id: session, hook_event_name: 'PreCompact',
         compaction_unavailable: !canCompact(agent) });
       if (reason) {
         say(agent, reason);
         return;
       }
-      const settled = await registry.execute(agent, '/compact', [], new AbortController().signal);
-      if (settled?.result?.kind !== 'success') return;
+      // The command registry is the only entry point that crosses the preset boundary, and its spelling is not
+      // observable from here: try both shapes, and name the failure instead of returning silently (a silent
+      // failure is indistinguishable from a compaction that never ran).
+      let settled;
+      for (const name of ['/compact', 'compact']) {
+        try {
+          settled = await registry.execute(agent, name, [], new AbortController().signal);
+        } catch { settled = undefined; }
+        if (settled?.result?.kind === 'success') break;
+      }
+      if (settled?.result?.kind !== 'success') {
+        due.delete(agent);
+        say(agent, 'Æion Factory: the /compact command did not run, so the 250k gate stays closed; run /compact yourself once.');
+        return;
+      }
+      due.delete(agent);
       started.delete(session);
       compacted.add(session);
       say(agent, RESUME);

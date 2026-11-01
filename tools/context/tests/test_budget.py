@@ -316,6 +316,24 @@ class BudgetTests(unittest.TestCase):
         (self.root / "new.py").write_text("print('change')\n")
         self.assertEqual(self.call(hook_event_name="PreCompact")["decision"], "block")
 
+    def test_precompact_compacts_a_verified_handover_that_went_stale(self):
+        # A receipt that verified this handover and then went stale must not make the compaction impossible: the
+        # only work the gate admits is the checkpoint, so a session that edited once could never compact again.
+        handover = budget.ensure_handover(self.root, "test-session")
+        handover.write_text("".join(f"## {h}\nEvidence\n" for h in budget.HEADINGS))
+        self.observe(260000)
+        self.call()
+        state_file = self.root / ".aeion/context/test-session.json"
+        state = json.loads(state_file.read_text())
+        state["checkpoint"] = {"tree": budget.fingerprint(self.root),
+                               "handover": budget.hashlib.sha256(handover.read_bytes()).hexdigest()}
+        budget.atomic(state_file, json.dumps(state))
+        (self.root / "new.py").write_text("print('change')\n")
+        result = self.call(hook_event_name="PreCompact")
+        self.assertNotIn("decision", result)
+        self.assertIn("compacting now", result["systemMessage"])
+        self.assertEqual(json.loads(state_file.read_text())["closure_owed"], "due")
+
     def test_300k_stopgap_compacts_and_keeps_the_closure_owed(self):
         # The 300k profile freezes code, so a check that failed before this session would leave no verified
         # checkpoint and no way to repair it. The compaction runs; the closure stays owed.

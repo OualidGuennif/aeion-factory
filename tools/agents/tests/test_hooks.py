@@ -395,6 +395,30 @@ class HookTests(unittest.TestCase):
         # Every other harness still refuses a compaction without a verified handover.
         self.assertFalse(self.measure('opencode', 231_000, hook_event_name='PreCompact')['continue'])
 
+    def test_a_verified_handover_above_250k_keeps_its_receipt_for_the_compaction(self):
+        session = hook.key('dsh', {'session_id': 'context-dsh'})
+        handover = hook.budget.handover_path(self.root, session)
+        state_file = self.root / '.aeion/context' / f'{session}.json'
+        edit = {'tool_name': 'Edit', 'tool_input': {'file_path': str(self.root / 'src.py')}}
+        denied = lambda result: result.get('hookSpecificOutput', {}).get('permissionDecision') == 'deny'
+        # Latch, compact unseen (dsh does), climb again: the debt is owed and the alert is back.
+        self.measure('dsh', 260_000, **edit)
+        self.measure('dsh', 100, **edit)
+        self.assertTrue(denied(self.measure('dsh', 260_000, **edit)))
+        handover.write_text('## Scope\nx\n## Completed\nx\n## Remaining\nx\n## Constraints\nx\n## Evidence\nx\n')
+        state = json.loads(state_file.read_text())
+        state['checkpoint'] = {'tree': hook.budget.fingerprint(self.root),
+                               'handover': hook.budget.hashlib.sha256(handover.read_bytes()).hexdigest()}
+        hook.budget.atomic(state_file, json.dumps(state))
+        # Settling the debt above the threshold must leave the receipt: dropping it would close the gate on
+        # the same event that re-latches the alert, with the compaction still owed.
+        self.assertFalse(denied(self.measure('dsh', 260_000, **edit)))
+        state = json.loads(state_file.read_text())
+        self.assertNotIn('closure_owed', state)
+        self.assertIn('checkpoint', state)
+        self.assertTrue(hook.budget.ready(self.root, session, state))
+        self.assertEqual(state['state'], 'HANDOVER_REQUIRED')
+
     def test_codex_usage_restarts_at_compaction_and_refuses_a_foreign_rollout(self):
         rollout = self.root / 'rollout-2026-10-28T00-00-00-native-fixture.jsonl'
         count = lambda tokens: {'type': 'event_msg', 'payload': {'type': 'token_count', 'info': {

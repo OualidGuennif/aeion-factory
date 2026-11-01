@@ -200,6 +200,14 @@ def ensure_handover(root, session):
     return path
 
 
+def handover_faults(path):
+    """Named faults that keep a handover from being a checkpoint: a missing exact heading, a section still TODO."""
+    text = path.read_text()
+    missing = [f"## {key}" for key in HEADINGS if f"## {key}\n" not in text]
+    return ([f"missing heading{'s' if len(missing) > 1 else ''}: {', '.join(missing)} (exact line)"] if missing else []) \
+        + (["a section still reads TODO"] if "TODO" in text else [])
+
+
 def ready(root, session, state):
     handover = handover_path(root, session)
     receipt = state.get("checkpoint", {})
@@ -343,7 +351,7 @@ def apply_usage(root, session, state, name, event, usage):
                 state["closure_owed"] = "due"
         if name == "PreCompact":
             if not ready(root, session, state):
-                ensure_handover(root, session)
+                handover = ensure_handover(root, session)
                 if state["state"] == "COMPACT_REQUIRED":
                     # 300k stopgap: code is already frozen here, so a check that failed before this session would
                     # leave no way to verify and no way to repair. The compaction runs, the closure stays owed.
@@ -351,6 +359,15 @@ def apply_usage(root, session, state, name, event, usage):
                     result = {"systemMessage": f"Æion Factory 300k: compacting before a verified checkpoint; the "
                                                f"closure stays owed until the failing check is fixed and "
                                                f"{handover.relative_to(root)} is verified: {checkpoint_command(root, session)}."}
+                elif state.get("checkpoint") and not handover_faults(handover):
+                    # The handover was verified, then an edit moved the tree: refusing here is what left a latched
+                    # session unable to compact at all, because the receipt can only be refreshed by the same work
+                    # the closure gate is blocking. Compact, keep the debt, and let Stop refuse until a fresh
+                    # receipt settles it; an unverified handover still refuses below, so the rule keeps its teeth.
+                    state["closure_owed"] = "due"
+                    result = {"systemMessage": f"Æion Factory 250k: {handover.relative_to(root)} was verified and the "
+                                               f"tree moved since; compacting now, and the closure stays owed until a "
+                                               f"fresh checkpoint: {checkpoint_command(root, session)}."}
                 else:
                     moved = changed_paths(state.get("checkpoint", {}).get("files", {}), tree_files(root)) if state.get("checkpoint") else ""
                     stale = f" The receipt is stale: {moved} changed since it (git-ignore a live log)." if moved else ""
@@ -470,12 +487,9 @@ def checkpoint(root, session, base):
         if state["state"] == "STOPPED":
             raise ValueError("a stopped run cannot request another closure pass")
         handover = ensure_handover(root, session)
-        text = handover.read_text()
         # Name each fault: a heading spelled `## Completed (commits)` reads as complete to a person.
-        missing = [f"## {key}" for key in HEADINGS if f"## {key}\n" not in text]
-        if missing or "TODO" in text:
-            faults = ([f"missing heading{'s' if len(missing) > 1 else ''}: {', '.join(missing)} (exact line)"] if missing else []) \
-                + (["a section still reads TODO"] if "TODO" in text else [])
+        faults = handover_faults(handover)
+        if faults:
             raise ValueError(f"complete all handover sections first: {'; '.join(faults)}")
         files = tree_files(root)
         before = fingerprint(root, files)

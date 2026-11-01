@@ -14,6 +14,15 @@ dates them at release time. Spec: knowledge/policies/engineering.md
   again; Stop keeps enforcing the debt, so nothing is forgotten. The one exception is a latch a harness set
   because its own compaction resumed it in closure (Codex, Droid): it keeps `resumed_in_closure` and only a
   verified handover releases it.
+- A verified handover above 250k keeps its receipt: the settlement used to drop the checkpoint and set
+  `RUNNING` on the same event that re-latched the alert, so the gate closed with no receipt left and the
+  compaction could never be requested. Above the threshold it now settles the debt alone and keeps the
+  verified receipt, which is what opens the gate and allows `PreCompact`.
+- `PreCompact` compacts a complete handover that was verified before the tree moved, instead of refusing it:
+  the gate admits only the checkpoint command that could refresh that receipt, so refusing left the session
+  latched with no way to compact. It keeps `closure_owed` until a fresh receipt, so Stop still refuses an
+  unverified end. The dsh plugin also keeps its pending request when `PreCompact` refuses (it used to drop it
+  after one refusal), tries both spellings of the compact command, and says so when the command did not run.
 
 ## [1.8.9] - 2026-11-01
 

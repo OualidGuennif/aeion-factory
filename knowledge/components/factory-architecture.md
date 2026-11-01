@@ -147,9 +147,11 @@ compaction resumed it in closure (Codex, Droid) is marked `resumed_in_closure` a
 the handover verifies. A verified receipt releases the gate: it owes
 exactly one handover, and a compaction the plugin cannot guarantee must never hold a session hostage, so
 the checkpoint command stays admitted whatever session token it carries (`ready` opens the gate, never the
-spelling). PreCompact refuses an absent/stale
-checkpoint, except at 300k, where the compaction runs and leaves the closure owed (`closure_owed`)
-until a verified receipt, because code is already frozen there. A compact SessionStart begins RECOVERING
+spelling). PreCompact refuses an absent checkpoint, and a stale one whose handover is incomplete; when a
+complete handover was verified and the tree moved since, it compacts and leaves the closure owed
+(`closure_owed`) instead, because the gate admits only the checkpoint command that could refresh the
+receipt. At 300k the compaction runs too and leaves the closure owed, because code is already frozen
+there. A compact SessionStart begins RECOVERING
 and supplies the handover pointer; new positive native usage permits RUNNING. Resume alone does not clear STOPPED. The 250k and 300k alerts
 name the checkpoint command; a settlement that still owes closure names the missing receipt; closure
 admits a project's own Markdown docs, never code. The suggested base is an existing ref

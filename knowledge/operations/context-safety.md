@@ -48,7 +48,11 @@ Every event latches the first observed 250k crossing, including PreCompact. The 
 agent and user at the next supported event; PreCompact retains a pending alert because that event
 discards system messages. A harness that compacts without the adapter seeing its compact SessionStart
 (dsh does) would otherwise keep the latch forever: an observed size back under the threshold ends it,
-and the closure it owed survives as `closure_owed`, which the settlement still enforces. Only closure work
+and the closure it owed survives as `closure_owed`, which the settlement still enforces. The debt
+never re-latches a later fall: a session that climbs over 250k again and compacts again is released
+again, because Stop enforces the debt while the threshold no longer justifies the gate. A latch a
+harness set because its own compaction resumed it in closure (Codex, Droid) is the exception:
+`resumed_in_closure` keeps it latched until the handover verifies. Only closure work
 (docs/task/handover edits and fixed verification commands) remains available. At an observed
 300k closure narrows to the handover and its checkpoint (reads stay open), Stop is refused, and the
 message asks for the handover and compaction now. 300k never stops the run: once the checkpoint is

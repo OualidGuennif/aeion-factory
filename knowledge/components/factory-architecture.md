@@ -140,7 +140,11 @@ doc links, repository health and current task updates, then hashes source and ha
 Any later source or handover change invalidates readiness. An observed size back under 250k ends the
 latch, because a harness that compacts without the adapter seeing its compact SessionStart (dsh does)
 would otherwise stay gated at a fraction of the threshold; the closure it owed survives as
-`closure_owed`, which the settlement enforces. A verified receipt releases the gate: it owes
+`closure_owed`, which the settlement enforces. That debt never re-latches a later fall: a session that
+climbs over 250k again and compacts again is still under the threshold, so it is released again (Stop
+keeps the debt), never gated until the gate becomes permanent. A latch a harness set because its own
+compaction resumed it in closure (Codex, Droid) is marked `resumed_in_closure` and stays latched until
+the handover verifies. A verified receipt releases the gate: it owes
 exactly one handover, and a compaction the plugin cannot guarantee must never hold a session hostage, so
 the checkpoint command stays admitted whatever session token it carries (`ready` opens the gate, never the
 spelling). PreCompact refuses an absent/stale

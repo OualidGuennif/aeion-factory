@@ -50,6 +50,22 @@ class BudgetTests(unittest.TestCase):
         self.assertEqual(self.call(), {})
         self.assertIn("closure is still owed", self.call(hook_event_name="Stop")["stopReason"])
 
+    def test_a_second_fall_clears_the_latch_while_the_debt_survives(self):
+        # The first fall sets closure_owed; climbing back over 250k re-latches. A harness that compacts again
+        # without a SessionStart must still be released, or the debt turns the latch into a permanent gate:
+        # the debt is enforced by Stop, never by keeping the session latched.
+        self.observe(260000)
+        self.assertIn("250k", self.call()["systemMessage"])
+        self.observe(100)
+        self.assertEqual(self.call(), {})
+        self.observe(260000)
+        self.assertIn("250k", self.call()["systemMessage"])
+        self.observe(100)
+        self.assertEqual(self.call(), {})
+        state = json.loads((self.root / ".aeion/context/test-session.json").read_text())
+        self.assertEqual(state["state"], "RUNNING")
+        self.assertEqual(state["closure_owed"], "due")
+
     def test_handover_is_created_only_when_closure_needs_it(self):
         handover = budget.handover_path(self.root, "test-session")
         start = self.call(hook_event_name="SessionStart", source="startup")

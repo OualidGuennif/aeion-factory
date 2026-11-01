@@ -311,6 +311,11 @@ def handle(root, provider, event):
                 state['closure_owed'] = 'due'
                 if provider in {'codex', 'droid'}:
                     state['state'] = 'HANDOVER_REQUIRED'
+                    # This latch is not a threshold crossing that a later compaction may release: it is the
+                    # closure owed right after a compaction the harness ran itself. Mark it, so the shared
+                    # fall-back rule (which frees a dsh session that compacted unseen) does not reopen code
+                    # before the handover is verified.
+                    state['resumed_in_closure'] = True
                 state['warning_pending'] = True
         budget.atomic(file, json.dumps(state, sort_keys=True) + '\n')
         if name == 'PreCompact':
@@ -364,7 +369,7 @@ def handle(root, provider, event):
                 usage = state.get('observed_tokens') or 0
             # The closure owed since an early compaction ends with its verified handover, without compacting again.
             if state.get('closure_owed') == 'due' and budget.ready(root, session, state):
-                for field in ('closure_owed', 'checkpoint', 'warning_pending'):
+                for field in ('closure_owed', 'checkpoint', 'warning_pending', 'resumed_in_closure'):
                     state.pop(field, None)
                 state['state'] = 'RUNNING'
             # Closure judges a file edit by `file_path`; native tools name it `path`, `filePath` or a patch header.

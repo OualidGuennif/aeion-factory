@@ -6,6 +6,15 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+## [1.8.10] - 2026-11-01
+
+- The 250k latch stays escapable once closure is owed: 1.8.9 cleared `HANDOVER_REQUIRED` under the threshold
+  only while `closure_owed` was unset, so a session that climbed back over 250k and compacted a second time
+  was gated forever at a fraction of the threshold. Every observed size back under 250k releases the latch
+  again; Stop keeps enforcing the debt, so nothing is forgotten. The one exception is a latch a harness set
+  because its own compaction resumed it in closure (Codex, Droid): it keeps `resumed_in_closure` and only a
+  verified handover releases it.
+
 ## [1.8.9] - 2026-11-01
 
 - The 250k latch ends when the context falls back under the threshold: a harness that compacts without the

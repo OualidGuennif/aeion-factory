@@ -64,7 +64,8 @@ directory does not establish loaded hooks or identical runtime guarantees.
 - Codex local trusted projects enable `.codex/config.toml` and `.codex/hooks.json`. Its native
   auto-compaction threshold is 250000. Codex has no compaction tool and ends its turn on a refused
   compaction, so a compaction that comes before the verified handover runs, and closure is owed right
-  after it. Its rollout is not a stable token API.
+  after it. That latch carries `resumed_in_closure` and survives a fall back under 250k; only a
+  verified handover releases it. Its rollout is not a stable token API.
 - OpenCode 2.1.4+ loads root `opencode.json` and `.opencode/plugins/factory/index.js`. The plugin reads each
   step's tokens (`session.step.ended`) and compacts itself at 250k once the handover is verified.
 - Pi 1.4.0+ reads `AGENTS.md`/`CLAUDE.md` from its folder and every parent, and project

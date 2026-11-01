@@ -117,6 +117,7 @@ from another source; analysis refuses mismatched package provenance or a dirty A
 | Project update | Move an adopted project to a release, writing only the files a harness loads | `tools/agents/template-update`; names `AGENTS.md`, merged settings and `knowledge/` for a human |
 | Desktop install | Pin the dsh profile's plugin at a release instead of a working tree | `tools/agents/dsh-install`; `<profile>/aeion-factory` symlink |
 | Hook adapter | Read event JSON and call a bounded local check | stdin/stdout JSON; failure blocks where supported |
+| dsh connector | Guard every tool call and drive the 250k/300k handover-compact-resume cycle | `.dsh/plugins/factory/*.js`; the compaction service at the root (headless) or per agent preset via `agent.ctx.get('compaction')` (web) |
 | Context budget | Usage, closure-only state, checkpoint receipt (with per-file digests, so a stale one names what changed), 300k forced compaction | `.aeion/context/<session>.json`; per-session file lock |
 | Handover | Recovery facts for the current session | Ignored `work/handovers/<session>.md`, created atomically only when closure needs it |
 | Knowledge/link/health checkers | Frontmatter, caps, traceability and diff coverage | Exit code + bounded diagnostics; no provider |

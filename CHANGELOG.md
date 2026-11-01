@@ -6,6 +6,13 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+## [1.8.9] - 2026-11-01
+
+- The 250k latch ends when the context falls back under the threshold: a harness that compacts without the
+  adapter seeing its `SessionStart` (dsh does) left `HANDOVER_REQUIRED` behind, so a session back at 127k
+  stayed hard-gated forever. The latch now clears and the closure it owed survives as `closure_owed`, which
+  the settlement enforces. A harness that measures nothing keeps its stand-in zero and is untouched.
+
 ## [1.8.8] - 2026-11-01
 
 - A verified handover releases the hard gate: 1.8.7 made the 250k/300k gate hard for dsh web and then kept

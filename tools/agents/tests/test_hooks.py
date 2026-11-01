@@ -304,6 +304,18 @@ class HookTests(unittest.TestCase):
             state.pop('checkpoint', None)
             hook.budget.atomic(state_file, json.dumps(state))
 
+    def test_a_compaction_the_adapter_never_saw_releases_the_latch(self):
+        # dsh compacts on its own, so no compact SessionStart reaches the adapter and the 250k latch survived:
+        # a session back at 127k stayed gated forever. Falling under the threshold ends the closure.
+        session = hook.key('dsh', {'session_id': 'context-dsh'})
+        state_file = self.root / '.aeion/context' / f'{session}.json'
+        edit = {'tool_name': 'Edit', 'tool_input': {'file_path': str(self.root / 'src.py')}}
+        denied = lambda result: result.get('hookSpecificOutput', {}).get('permissionDecision') == 'deny'
+        self.assertTrue(denied(self.measure('dsh', 250_000, **edit)))
+        self.assertEqual(json.loads(state_file.read_text())['state'], 'HANDOVER_REQUIRED')
+        self.assertFalse(denied(self.measure('dsh', 127_416, **edit)))
+        self.assertEqual(json.loads(state_file.read_text())['state'], 'RUNNING')
+
     def test_300k_stopgap_compacts_and_keeps_the_closure_owed(self):
         # The incident: a check that failed before the session froze code at 300k, and the checkpoint that would
         # release it failed on that same check. The compaction runs, the epoch stays editable, the debt stays owed.

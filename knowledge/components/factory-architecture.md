@@ -137,7 +137,10 @@ In the Claude profile, native auto-compaction is enabled at 250k. The state mach
 latches HANDOVER_REQUIRED and emits one alert to user and agent. Code/subtask tools are refused;
 closure docs and fixed check commands remain. A checkpoint validates handover sections, Knowledge,
 doc links, repository health and current task updates, then hashes source and handover bytes.
-Any later source or handover change invalidates readiness. PreCompact refuses an absent/stale
+Any later source or handover change invalidates readiness. A verified receipt releases the gate: it owes
+exactly one handover, and a compaction the plugin cannot guarantee must never hold a session hostage, so
+the checkpoint command stays admitted whatever session token it carries (`ready` opens the gate, never the
+spelling). PreCompact refuses an absent/stale
 checkpoint, except at 300k, where the compaction runs and leaves the closure owed (`closure_owed`)
 until a verified receipt, because code is already frozen there. A compact SessionStart begins RECOVERING
 and supplies the handover pointer; new positive native usage permits RUNNING. Resume alone does not clear STOPPED. The 250k and 300k alerts

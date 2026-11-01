@@ -6,6 +6,13 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+- `tools/agents/adapter-check` compares a repository's vendored connectors with the factory copy it
+  ships in — the shared adapter, the context rule, each harness plugin and each native registration —
+  and names every copy that differs, every config that points at a missing file and every config that
+  is not valid JSON, with the `cp` that repairs a drift. A connector the project does not carry is
+  absent, not a failure, unless `--strict`. `tools/factory-tests` runs it on the factory itself, so a
+  registration pointing at a renamed module fails CI instead of silently disabling a harness.
+
 ## [1.8.2] - 2026-10-31
 
 - dsh and Pi: a terminal stop (`continue: false`) ends the turn with its reason instead of being steered

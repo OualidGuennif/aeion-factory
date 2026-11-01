@@ -5,12 +5,12 @@ Finished tasks are deleted: the commit message and knowledge/ keep what matters.
 Status: ACTIVE, WAITING-OWNER, MEASURING, BLOCKED, BACKLOG. An entry is `## <title> — <STATUS>`, then the
 lines `- Owner decision:`, `- State:`, `- Next:` (with who), `- Blocker:`, `- Evidence:`.
 
-## dsh/Pi terminal stop and the 300k checkpoint deadlock — WAITING-OWNER
-- Owner decision: 2026-10-31, ship Fix 1 and the 300k stopgap in 1.8.2, then merge, tag and publish after a green CI.
-- State: released as v1.8.2 (tag on e5981b3, GitHub release published, main and develop in sync). dsh and Pi end a terminal stop with its reason instead of steering it; at 300k a failing check no longer blocks compaction, code stays editable afterwards and the closure stays owed until a verified checkpoint. Live headless dsh on a stub that always stops: the fixed adapter sent 1 Stop and exited, the pre-fix adapter 51 Stops in 90s and never exited.
-- Next: update the live plugin copy the desktop profile loads (`~/.dsh/profiles/desktop/aeion-factory` symlinks `/Users/wallseven/Desktop/Showcase/my-app/.dsh/plugins/factory`) and restart the app; its `index.js` still holds the broken `invoke(...)` line, so the app has no hooks (who: owner).
-- Blocker: that copy is outside this repository, so the release cannot repair it.
-- Evidence: CHANGELOG.md 1.8.2; knowledge/operations/context-safety.md; knowledge/operations/agent-compatibility.md
+## Connector drift check across all harnesses — ACTIVE
+- Owner decision: 2026-11-01, "avoid such problems for all connectors": a stale or hand-edited copy must fail a check, not a session.
+- State: `tools/agents/adapter-check` compares every vendored connector — shared adapter, context rule, Claude hooks, dsh, Pi and OpenCode plugins, and the five native registrations — with the factory copy by exact bytes, and checks each config's script references; six tests; `tools/factory-tests` runs it on the factory. The desktop dsh profile's `aeion-factory` now points at this repository, not a project copy, so the app loads the released adapter.
+- Next: restart the desktop app so it loads v1.8.2 and start a fresh session; run `tools/agents/adapter-check --root <project>` in every adopted project and in its CI (who: owner).
+- Blocker: none.
+- Evidence: CHANGELOG.md Unreleased; knowledge/operations/agent-compatibility.md
 
 ## Golden task set — MEASURING
 - Owner decision: 2026-10-31, start the local evaluation harness, then approve the twelve candidate tasks proposed with it.

@@ -327,7 +327,7 @@ tools/agents/dsh-install --check   [--profile desktop] [--profile-dir PATH] [--r
   `MISSING <file>` line per difference.
 - Exit codes: 0 clean, 1 drift or an incomplete copy, 2 a refusal. Refusals name the condition:
   `no such tag: <tag>`, `tag <tag> has no .dsh/plugins/factory`, `no profile directory: <path>`,
-  `not a git repository: <path>`, `aeion-factory is not a link; move it aside or pass --force`
+  `not a git repository: <path>`, `<entry> is not a link; move it aside or pass --force`
   (with `--force`, a `aeion-factory.replaced` that already exists is itself refused), and from
   `--check`, `no aeion-factory link in <path>` and `link does not name a vendored tag: <target>`.
 

@@ -6,6 +6,8 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+## [1.9.3] - 2026-11-02
+
 - Added `tools/agents/pi-rpc`, the headless Pi RPC runner behind `tools/agents/run pi rpc`: one
   `pi --mode rpc` process with the factory extension sends the prompt as JSONL, streams the answer,
   waits through the settlement compaction (including one Pi starts only after the settlement) and the

@@ -36,9 +36,9 @@ lines `- Owner decision:`, `- State:`, `- Next:` (with who), `- Blocker:`, `- Ev
 
 ## Live Devin, Droid, Antigravity and Pi hook qualification — WAITING-OWNER
 - Owner decision: 2026-10-27, support Devin, Droid and Antigravity; 2026-10-28, Pi 1.4.0; adapters use documented, not live-run, payloads.
-- State: Devin merged in #12, Droid in #13, Antigravity in task/antigravity, Pi on develop. Pi guards ran live headless on 2026-11-01. The 2026-11-02 live run found Pi's headless 250k compaction broken (separate entry); dsh headless and OpenCode 2.2.0 compacted live at 250k/272k with verified receipts.
-- Next: run the remaining qualification steps with Devin CLI, Droid and agy (who: owner); Pi waits on the extension fix.
-- Blocker: Devin/Droid/Antigravity CLIs are not in the agent's container; Pi headless compaction is broken.
+- State: Devin merged in #12, Droid in #13, Antigravity in task/antigravity, Pi on develop. Pi guards ran live headless on 2026-11-01. 1.9.2 fixed Pi's headless 250k crash (clean stop; headless auto-compaction remains unavailable); dsh headless and OpenCode 2.2.0 compacted live at 250k/272k with verified receipts.
+- Next: run the remaining qualification steps with Devin CLI, Droid and agy (who: owner); Pi's remaining item is a live TUI/RPC settlement-compaction test.
+- Blocker: Devin/Droid/Antigravity CLIs are not in the agent's container; Pi headless auto-compaction is unavailable in print mode (the clean stop ships).
 - Evidence: knowledge/operations/agent-compatibility.md; .pi/README.md; .opencode/README.md
 
 ## Native strict context admission — BLOCKED

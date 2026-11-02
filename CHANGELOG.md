@@ -6,6 +6,23 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+## [1.9.3] - 2026-11-02
+
+- Added `tools/agents/pi-rpc`, the headless Pi RPC runner behind `tools/agents/run pi rpc`: one
+  `pi --mode rpc` process with the factory extension sends the prompt as JSONL, streams the answer,
+  waits through the settlement compaction (including one Pi starts only after the settlement) and the
+  resumed run, and exits after the final settle. It fixes the gap print mode cannot fill: a one-shot
+  `pi -p` run still stops cleanly at the 250k gate, while the RPC run compacts and continues in the
+  same process. Fake-RPC tests in `tools/agents/tests/test_pi_rpc.py` (in `tools/factory-tests`) cover
+  a normal run, a compaction that starts after settlement plus its resume, a failed compaction,
+  `--prompt-file`, a refused prompt, a missing prompt, a stream past the deadline and a repeated
+  `--mode`. A live 288,668-token run reached
+  the gate, verified its handover and compacted at settlement, with the resume run continuing in the
+  same process (recorded in `knowledge/operations/agent-compatibility.md`).
+- `tools/agents/pi-rpc` is part of the connector set, so a project updated to a release with the
+  `run pi rpc` dispatch receives the runner too; without it, the update ships a launcher naming a
+  file the project does not have.
+
 ## [1.9.2] - 2026-11-02
 
 - Pi headless 250k no longer crashes. The extension never starts compaction from a tool result or a

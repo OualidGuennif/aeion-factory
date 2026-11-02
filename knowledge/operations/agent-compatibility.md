@@ -9,6 +9,10 @@ sources:
     title: "Native payload adapter"
   - resource: ../../tools/agents/run
     title: "Managed agent launch"
+  - resource: ../../tools/agents/pi-rpc
+    title: "Headless Pi RPC runner"
+  - resource: ../../tools/agents/tests/test_pi_rpc.py
+    title: "Fake-RPC tests for the headless Pi RPC runner"
   - resource: ../../tools/agents/adapter-check
     title: "Connector copy drift check"
   - resource: ../../tools/agents/dsh-install
@@ -90,7 +94,10 @@ directory does not establish loaded hooks or identical runtime guarantees.
   Bash, `read`/`edit`/`write`/`grep` name their file in `path`, `find` and `ls` are Glob and LS, and an
   unknown tool carrying a `command` string is a shell call. `tools/agents/run pi` requires 1.4.0+.
   Its compaction aborts the running turn, so once it is done the extension sends a message that resumes
-  the task from the handover.
+  the task from the handover. `tools/agents/run pi rpc` starts the factory's headless RPC runner instead
+  (`tools/agents/pi-rpc`): one `pi --mode rpc` process with the extension, one prompt over JSONL, and
+  the run waits through the settlement compaction and the resumed run, so headless Pi can compact and
+  continue without a TUI. Print/JSON mode still does not compact (see the Pi note).
   The extension sends `ctx.getContextUsage()` to the shared rule and calls `ctx.compact()` at 250k once
   the handover is verified; the 250k alert names the checkpoint command, and closure admits a project's
   Markdown docs. `agent_before_settle` sends Stop: a sign-off finding becomes a displayed
@@ -287,7 +294,8 @@ Edit semantics, so checking a patch never becomes an accidental full-file Read r
 ## Keeping a copy in step
 
 A project that adopts the factory carries its own copy of every connector: the shared adapter
-(`tools/agents/hook.py`), the context rule (`tools/context/budget.py`), the Claude hooks, the dsh
+(`tools/agents/hook.py`), the context rule (`tools/context/budget.py`), the launcher and the headless
+Pi RPC runner it dispatches to (`tools/agents/run` and `tools/agents/pi-rpc`), the Claude hooks, the dsh
 plugin, the Pi extension, the OpenCode plugin and the native registrations. A copy that drifts from
 the factory does not fail loudly. The harness keeps loading whatever is there, or silently drops a
 module that no longer parses, and nothing in the session says so: that is how a desktop dsh profile
@@ -598,9 +606,11 @@ turn. Versions: dsh 0.2.1-rc.5 headless, Pi 1.4.0, OpenCode 2.2.0, Python 3.15.2
 | --- | --- |
 | dsh headless (patched) | 1 MB user turn; the plugin's meter crossed 250k; compacted, epoch 1, resumed from the handover. PASS. |
 | OpenCode 2.2.0 | 272k-token step; a two-tool turn compacted (epoch 1, RECOVERING). A one-tool turn missed it: `session.step.ended` arrived after `tool.execute.after`, so the next tool or turn triggers. |
-| Pi 1.4.0 headless | 264,275 measured (1.9.2 re-run). The gate latched `HANDOVER_REQUIRED`; Stop now carries `observed_tokens`; the run exits 0 with a stderr notice and no compaction entry, and the verified handover is the next session's start. The 1.9.1 crash (mid-turn `ctx.compact()`, stale ctx, exit 1) is fixed. Headless auto-compaction remains unavailable in print mode; interactive/TUI and RPC compaction at settlement are implemented but not live-tested. |
+| Pi 1.4.0 headless | 264,275 measured (1.9.2 re-run). The gate latched `HANDOVER_REQUIRED`; Stop now carries `observed_tokens`; the run exits 0 with a stderr notice and no compaction entry, and the verified handover is the next session's start. The 1.9.1 crash (mid-turn `ctx.compact()`, stale ctx, exit 1) is fixed. Headless auto-compaction remains unavailable in print mode; TUI compaction at settlement is implemented but not live-tested. |
+| Pi via `tools/agents/pi-rpc` | `tools/agents/run pi rpc --provider opencode-go --model deepseek-v4.1-flash --prompt-file <1.35 MB prompt>`. A 1,350,333-character prompt reached the gate; the model filled the handover and its checkpoint verified; at settlement the extension compacted (`tokensBefore` 288,668; usage input 262,002, output 1,753; cost $0.0403521), the `onComplete` resume message started a new run in the same process, and that run read the handover and continued. The runner was stopped during the resumed work, so this run does not prove exit 0; the fake-RPC compaction test and a real short RPC call cover the exit path. The compaction entry's `fromHook: false` means Pi generated the summary (the extension supplied none), not that Pi started the compaction. PASS for headless RPC compaction and resume. |
 
 Limits: headless CLIs only (the TUI path was not re-tested), fresh receipts (the stale-receipt
-branch is covered by the deterministic suites, not this run), one model/provider, and no Devin,
-Droid or Antigravity run. The Pi 1.9.2 fix is a clean stop, not headless auto-compaction; the
+branch is covered by the deterministic suites, not this run), one model/provider, no clean exit
+observed on the compaction run, and no Devin, Droid or Antigravity run. The Pi 1.9.2 fix remains the
+print-mode clean stop; headless auto-compaction is provided by the RPC runner above, and the
 limitation and workaround are in [the Pi note](../../.pi/README.md).

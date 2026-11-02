@@ -5,12 +5,12 @@ Finished tasks are deleted: the commit message and knowledge/ keep what matters.
 Status: ACTIVE, WAITING-OWNER, MEASURING, BLOCKED, BACKLOG. An entry is `## <title> — <STATUS>`, then the
 lines `- Owner decision:`, `- State:`, `- Next:` (with who), `- Blocker:`, `- Evidence:`.
 
-## 1.9.3 release — ACTIVE
-- Owner decision: 2026-11-02, cut a 1.9.3 patch that ships the Pi RPC runner and its connector wiring.
-- State: the connector fix is committed with the docs; the version bump, release PR, merge, tag and notes are in progress.
-- Next: run tools/release/release patch, review and push, open the develop→main PR, merge on green CI, tag v1.9.3, then catch develop up (who: agent; the owner authorized this release).
+## Pi RPC prompt write on early exit — BACKLOG
+- Owner decision: not made yet; the 1.9.3 release review found this (low, non-blocking) and it waits for a yes/no.
+- State: `tools/agents/pi-rpc` writes the prompt to Pi's stdin unguarded; a `pi` that exits before reading a large prompt raises BrokenPipeError and prints a Python traceback instead of a bounded `pi-rpc:` diagnostic (the exit code is still 1, so it fails closed).
+- Next: on the owner's yes, catch OSError around `send()`, report that Pi exited before accepting the prompt, and add a fake-RPC test with a child that exits before reading (who: agent).
 - Blocker: none.
-- Evidence: CHANGELOG.md Unreleased; knowledge/operations/agent-compatibility.md; tools/release/release
+- Evidence: PR #39 review comment; tools/agents/pi-rpc:145; tools/agents/tests/test_pi_rpc.py
 
 ## Connector drift check across all harnesses — ACTIVE
 - Owner decision: 2026-11-01, "avoid such problems for all connectors": a stale or hand-edited copy must fail a check, not a session. Same day: the prompt-defense baseline and the three passes ship in 1.8.3 too. Later the same day: verification must accept `main`/`develop` for people who downloaded a branch, and an adopted project needs an update path that keeps its own content.

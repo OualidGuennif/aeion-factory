@@ -549,8 +549,9 @@ tool inputs follow the 1.4.0 docs and its published type declarations (`types.d.
 Unverified: that a thrown `before_agent_start` handler stops the run (the tool guards refuse anyway),
 and that symlinked `.agents/skills` folders are followed. Qualify it like Devin with `tools/agents/run
 pi`: `cat .env` and a read of that file refused with the guard's reason, an edit naming its covering
-doc, and `/compact` cancelled until the checkpoint passes. The 2026-11-02 250k run hit the gate but
-the extension's own `ctx.compact()` path failed headless; see the live table below.
+doc, and `/compact` cancelled until the checkpoint passes. A 1.9.2 re-run at 264k stopped cleanly at the gate with the verified handover (exit 0, no crash);
+the one-shot print run cannot finish the summary, so headless Pi stops and the next session continues
+from the handover. Interactive Pi compacts at settlement.
 
 Droid is not yet qualified live either. docs.factory.ai was unreachable from the container that
 added it, so the payload shape, tool names and `$FACTORY_PROJECT_DIR` follow search excerpts of
@@ -597,9 +598,9 @@ turn. Versions: dsh 0.2.1-rc.5 headless, Pi 1.4.0, OpenCode 2.2.0, Python 3.15.2
 | --- | --- |
 | dsh headless (patched) | 1 MB user turn; the plugin's meter crossed 250k; compacted, epoch 1, resumed from the handover. PASS. |
 | OpenCode 2.2.0 | 272k-token step; a two-tool turn compacted (epoch 1, RECOVERING). A one-tool turn missed it: `session.step.ended` arrived after `tool.execute.after`, so the next tool or turn triggers. |
-| Pi 1.4.0 headless | 264,360 measured; the gate latched `HANDOVER_REQUIRED`, then `ctx.compact()` from `tool_result` aborted the run and its stale-ctx error handler exited 1; no compaction entry, epoch 0. A text-only 264k turn also stayed `RUNNING` because `agent_before_settle` sends Stop without `observed_tokens`. FAIL. |
+| Pi 1.4.0 headless | 264,275 measured (1.9.2 re-run). The gate latched `HANDOVER_REQUIRED`; Stop now carries `observed_tokens`; the run exits 0 with a stderr notice and no compaction entry, and the verified handover is the next session's start. The 1.9.1 crash (mid-turn `ctx.compact()`, stale ctx, exit 1) is fixed. Headless auto-compaction remains unavailable in print mode; interactive/TUI and RPC compaction at settlement are implemented but not live-tested. |
 
 Limits: headless CLIs only (the TUI path was not re-tested), fresh receipts (the stale-receipt
 branch is covered by the deterministic suites, not this run), one model/provider, and no Devin,
-Droid or Antigravity run. The Pi failure is execution, not the shared receipt rule; the limitation
-and workaround are in [the Pi note](../../.pi/README.md).
+Droid or Antigravity run. The Pi 1.9.2 fix is a clean stop, not headless auto-compaction; the
+limitation and workaround are in [the Pi note](../../.pi/README.md).

@@ -6,11 +6,11 @@ Status: ACTIVE, WAITING-OWNER, MEASURING, BLOCKED, BACKLOG. An entry is `## <tit
 lines `- Owner decision:`, `- State:`, `- Next:` (with who), `- Blocker:`, `- Evidence:`.
 
 ## Pi headless 250k compaction — ACTIVE
-- Owner decision: 2026-11-02, document the live finding; the fix is separate.
-- State: `ctx.compact()` from `tool_result` aborts `pi -p` and exits 1 on a stale ctx; no compaction entry. `agent_before_settle` sends Stop without `observed_tokens`, so a text-only 250k turn never triggers. The limitation and workaround are documented and pushed on develop (7aec745); the limitation itself remains.
-- Next: plan the smallest extension change (safe compaction boundary, observed tokens in Stop) and re-run the live fixture (who: agent, with the owner's yes).
-- Blocker: not fixed; only documented.
-- Evidence: knowledge/operations/agent-compatibility.md; .pi/README.md
+- Owner decision: 2026-11-02, fix the crash and release it as 1.9.2 (supersedes the document-only scope).
+- State: 1.9.2 removes the mid-turn `ctx.compact()` call, sends `observed_tokens` in the Stop payload, and ends a one-shot print/JSON run cleanly at the 250k gate with the verified handover. Live 264,275-token run on Pi 1.4.0 exits 0 with a stderr notice, no compaction entry and `HANDOVER_REQUIRED`; the 1.9.1 stale-ctx crash is gone. Interactive/TUI and RPC runs compact at settlement and resume; both are implemented but not live-tested.
+- Next: live-test the TUI/RPC settlement compaction; decide whether a headless RPC runner is worth the added surface (who: owner for scope, agent for the run).
+- Blocker: Pi print mode disposes before the async summary, so headless auto-compaction is unavailable; the clean stop is the shipped behavior.
+- Evidence: .pi/extensions/factory/index.js; tools/agents/tests/test_pi.mjs; knowledge/operations/agent-compatibility.md; .pi/README.md; /tmp/aeion-live-pi5.json (ephemeral)
 
 ## Connector drift check across all harnesses — ACTIVE
 - Owner decision: 2026-11-01, "avoid such problems for all connectors": a stale or hand-edited copy must fail a check, not a session. Same day: the prompt-defense baseline and the three passes ship in 1.8.3 too. Later the same day: verification must accept `main`/`develop` for people who downloaded a branch, and an adopted project needs an update path that keeps its own content.

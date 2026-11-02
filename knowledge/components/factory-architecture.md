@@ -266,7 +266,7 @@ runtime admission control, and automatically enabling additional agents or Super
 
 Native adapters validate line endings and required path/command fields before guard dispatch.
 OpenCode uses the V2 directory id/setup entrypoint and native prompt/tool/compaction callbacks;
-its pre-compaction receipt is consumed per attempt, live-confirmed at 272k on 2026-11-02. Pi's extension maps `tool_call`,
+its pre-compaction receipt is consumed per attempt; a fresh receipt was live-confirmed at 272k on 2026-11-02. Pi's extension maps `tool_call`,
 `tool_result`, `before_agent_start` and `session_before_compact` to the same guards and cancels a
 compaction without a verified handover; its own 250k `ctx.compact()` path failed live headless on
 2026-11-02 (see agent-compatibility). Loop cancellation terminates the ordinary

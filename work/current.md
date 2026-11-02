@@ -7,7 +7,7 @@ lines `- Owner decision:`, `- State:`, `- Next:` (with who), `- Blocker:`, `- Ev
 
 ## Pi headless 250k compaction — ACTIVE
 - Owner decision: 2026-11-02, document the live finding; the fix is separate.
-- State: `ctx.compact()` from `tool_result` aborts `pi -p` and exits 1 on a stale ctx; no compaction entry. `agent_before_settle` sends Stop without `observed_tokens`, so a text-only 250k turn never triggers. The limitation and workaround are documented.
+- State: `ctx.compact()` from `tool_result` aborts `pi -p` and exits 1 on a stale ctx; no compaction entry. `agent_before_settle` sends Stop without `observed_tokens`, so a text-only 250k turn never triggers. The limitation and workaround are documented and pushed on develop (7aec745); the limitation itself remains.
 - Next: plan the smallest extension change (safe compaction boundary, observed tokens in Stop) and re-run the live fixture (who: agent, with the owner's yes).
 - Blocker: not fixed; only documented.
 - Evidence: knowledge/operations/agent-compatibility.md; .pi/README.md

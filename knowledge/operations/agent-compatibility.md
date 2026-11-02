@@ -294,7 +294,8 @@ Edit semantics, so checking a patch never becomes an accidental full-file Read r
 ## Keeping a copy in step
 
 A project that adopts the factory carries its own copy of every connector: the shared adapter
-(`tools/agents/hook.py`), the context rule (`tools/context/budget.py`), the Claude hooks, the dsh
+(`tools/agents/hook.py`), the context rule (`tools/context/budget.py`), the launcher and the headless
+Pi RPC runner it dispatches to (`tools/agents/run` and `tools/agents/pi-rpc`), the Claude hooks, the dsh
 plugin, the Pi extension, the OpenCode plugin and the native registrations. A copy that drifts from
 the factory does not fail loudly. The harness keeps loading whatever is there, or silently drops a
 module that no longer parses, and nothing in the session says so: that is how a desktop dsh profile

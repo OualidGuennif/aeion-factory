@@ -17,6 +17,9 @@ dates them at release time. Spec: knowledge/policies/engineering.md
   `--mode`. A live 288,668-token run reached
   the gate, verified its handover and compacted at settlement, with the resume run continuing in the
   same process (recorded in `knowledge/operations/agent-compatibility.md`).
+- `tools/agents/pi-rpc` is part of the connector set, so a project updated to a release with the
+  `run pi rpc` dispatch receives the runner too; without it, the update ships a launcher naming a
+  file the project does not have.
 
 ## [1.9.2] - 2026-11-02
 

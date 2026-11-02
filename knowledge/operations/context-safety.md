@@ -144,7 +144,7 @@ edit its own scripts/settings. Raw CLI launches outside the managed entry point 
 | Claude Code | the session transcript's last request | native, `autoCompactWindow: 250000` |
 | Codex | the rollout's newest `token_count` after the newest `compacted` record | native at 250000 (`model_auto_compact_token_limit`); a compaction before the handover owes it after |
 | OpenCode | the newest `session.step.ended` tokens (input, output, cache) | the plugin calls `session.compact` |
-| Pi | `ctx.getContextUsage().tokens` | the extension compacts at settlement in TUI/RPC; a one-shot headless run stops cleanly at the gate with the verified handover (1.9.2) |
+| Pi | `ctx.getContextUsage().tokens` | the extension compacts at settlement in TUI/RPC; the RPC headless runner keeps the process alive for that compaction; a one-shot print/JSON run stops cleanly at the gate with the verified handover (1.9.2) |
 | dsh | `ctx.tokenMeter.measure(session).totalTokens` | the plugin compacts before the next step through the root service (headless), or runs `/compact` on idle where the web profile isolates that service inside an agent-preset group |
 | Droid | nothing (no 250k alert) | native; a compaction before the handover owes it after, as for Codex |
 
@@ -153,8 +153,8 @@ until a new one arrives (0 after a compaction). A malformed count or a rollout f
 fails closed. Codex without a `transcript_path` keeps only its native compaction and refusal. Pi and
 OpenCode compact themselves on the hook's `aeion.compact` signal, sent once a closure's checkpoint
 is verified, so the context never waits for the model window. OpenCode did so live on 2026-11-02. Pi
-compacts at settlement when the run is interactive; a one-shot print run stops cleanly at the gate
-instead (1.9.2). Pi never cancels its own compaction at
+compacts at settlement when the run is interactive or driven through `tools/agents/run pi rpc`; a
+one-shot print run stops cleanly at the gate instead (1.9.2). Pi never cancels its own compaction at
 the model window: it runs and the closure is owed after it. OpenCode sends no compact SessionStart, so
 its allowed compaction itself ends the closure (state RECOVERING, usage cleared). The dsh web profile
 keeps `compaction` inside each agent preset, out of the plugin's root injection, so the plugin looks it
@@ -172,9 +172,9 @@ handover is verified (owner decision 2026-10-28), the compaction runs and the se
 allowed only the handover, `work/current.md`, docs and the checkpoint until the checkpoint passes. A live
 2026-11-02 OpenCode 2.2.0 run compacted at 272k on a two-tool turn; a one-tool turn can miss the
 step-usage event, which arrives after the tool hook. Pi's headless 250k run no longer crashes:
-1.9.2 stops it cleanly at the gate with the verified handover and leaves automatic compaction to
-interactive/TUI and RPC runs (implemented, not live-tested; see
-[agent compatibility](agent-compatibility.md)).
+1.9.2 stops `pi -p` cleanly at the gate with the verified handover, and
+`tools/agents/run pi rpc` compacts at settlement and resumes in one process (live 2026-11-02 at
+288,668 tokens; the TUI path was not re-tested; see [agent compatibility](agent-compatibility.md)).
 dsh compaction is not dependable in every profile, so its start context and every 250k/300k gate
 message also give the recovery step: once the handover, `work/current.md` and the checkpoint
 verify, stop the session and start a new one from the handover instead of working past 250k. The

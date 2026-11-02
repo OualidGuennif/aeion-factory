@@ -6,11 +6,11 @@ Status: ACTIVE, WAITING-OWNER, MEASURING, BLOCKED, BACKLOG. An entry is `## <tit
 lines `- Owner decision:`, `- State:`, `- Next:` (with who), `- Blocker:`, `- Evidence:`.
 
 ## Pi headless 250k compaction — ACTIVE
-- Owner decision: 2026-11-02, fix the crash and release it as 1.9.2 (supersedes the document-only scope).
-- State: 1.9.2 removes the mid-turn `ctx.compact()` call, sends `observed_tokens` in the Stop payload, and ends a one-shot print/JSON run cleanly at the 250k gate with the verified handover. Live 264,275-token run on Pi 1.4.0 exits 0 with a stderr notice, no compaction entry and `HANDOVER_REQUIRED`; the 1.9.1 stale-ctx crash is gone. Interactive/TUI and RPC runs compact at settlement and resume; both are implemented but not live-tested. The 1.9.2 release carries this fix and the documented limitation.
-- Next: live-test the TUI/RPC settlement compaction; decide whether a headless RPC runner is worth the added surface (who: owner for scope, agent for the run).
-- Blocker: Pi print mode disposes before the async summary, so headless auto-compaction is unavailable; the clean stop is the shipped behavior.
-- Evidence: .pi/extensions/factory/index.js; tools/agents/tests/test_pi.mjs; knowledge/operations/agent-compatibility.md; .pi/README.md; /tmp/aeion-live-pi5.json (ephemeral)
+- Owner decision: 2026-11-02, build the persistent RPC headless runner (supersedes the clean-stop-only scope); no release without a new instruction.
+- State: `tools/agents/pi-rpc` and `tools/agents/run pi rpc` are implemented; it starts `pi --mode rpc` with the factory extension, sends the prompt as JSONL, streams text, waits through `compaction_start`/`compaction_end` and the resumed run, and exits after a settled quiet period. A fake-RPC suite (`tools/agents/tests/test_pi_rpc.py`, 8 tests) is in `tools/factory-tests`; a real short RPC call returned `RPC-SMOKE-OK`, exit 0. **2026-11-02 live run (session `rpc-live-1`): the extension's settlement compaction ran.** A 1,350,333-character prompt reached the gate; the model filled the handover and the checkpoint verified; at settlement Pi wrote a compaction entry (`tokensBefore` 288,668; usage input 262,002, output 1,753; $0.0403521) and the `onComplete` resume message started a new run in the same process, which read the handover and continued. The runner was stopped during that resumed work, so this run does not prove exit 0; the fake-RPC compaction test and the short RPC call cover the exit. The 1.9.2 clean stop remains the print-mode behavior.
+- Next: review `origin/develop..HEAD` and push develop (who: agent; owner for any release).
+- Blocker: none.
+- Evidence: tools/agents/pi-rpc; tools/agents/tests/test_pi_rpc.py; .pi/README.md; knowledge/operations/agent-compatibility.md (live table); knowledge/operations/context-safety.md; knowledge/operations/build-and-test.md; work/handovers/pi-8550249f2c8ae1430b5c1a1e3a0b86a902f18e4b.md; .pi/extensions/factory/index.js
 
 ## Connector drift check across all harnesses — ACTIVE
 - Owner decision: 2026-11-01, "avoid such problems for all connectors": a stale or hand-edited copy must fail a check, not a session. Same day: the prompt-defense baseline and the three passes ship in 1.8.3 too. Later the same day: verification must accept `main`/`develop` for people who downloaded a branch, and an adopted project needs an update path that keeps its own content.
@@ -36,10 +36,10 @@ lines `- Owner decision:`, `- State:`, `- Next:` (with who), `- Blocker:`, `- Ev
 
 ## Live Devin, Droid, Antigravity and Pi hook qualification — WAITING-OWNER
 - Owner decision: 2026-10-27, support Devin, Droid and Antigravity; 2026-10-28, Pi 1.4.0; adapters use documented, not live-run, payloads.
-- State: Devin merged in #12, Droid in #13, Antigravity in task/antigravity, Pi on develop. Pi guards ran live headless on 2026-11-01. 1.9.2 fixed Pi's headless 250k crash (clean stop; headless auto-compaction remains unavailable); dsh headless and OpenCode 2.2.0 compacted live at 250k/272k with verified receipts.
-- Next: run the remaining qualification steps with Devin CLI, Droid and agy (who: owner); Pi's remaining item is a live TUI/RPC settlement-compaction test.
-- Blocker: Devin/Droid/Antigravity CLIs are not in the agent's container; Pi headless auto-compaction is unavailable in print mode (the clean stop ships).
-- Evidence: knowledge/operations/agent-compatibility.md; .pi/README.md; .opencode/README.md
+- State: Devin merged in #12, Droid in #13, Antigravity in task/antigravity, Pi on develop. Pi guards ran live headless on 2026-11-01. 1.9.2 fixed Pi's headless 250k crash (clean stop); `tools/agents/run pi rpc` then compacted and resumed live at 288,668 tokens (2026-11-02), so headless auto-compaction is available through the RPC runner while print mode keeps the clean stop; dsh headless and OpenCode 2.2.0 compacted live at 250k/272k with verified receipts.
+- Next: run the remaining qualification steps with Devin CLI, Droid and agy (who: owner); Pi's remaining item is a live TUI settlement-compaction test (the RPC path is qualified).
+- Blocker: Devin/Droid/Antigravity CLIs are not in the agent's container; Pi print mode cannot compact (the clean stop ships, the RPC runner is the headless path).
+- Evidence: knowledge/operations/agent-compatibility.md; .pi/README.md; .opencode/README.md; tools/agents/pi-rpc
 
 ## Native strict context admission — BLOCKED
 - Owner decision: 2026-10-26, attempt native 300k qualification using paid OpenCode Go DeepSeek V4.1 Flash.

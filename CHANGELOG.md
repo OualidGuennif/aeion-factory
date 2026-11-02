@@ -6,11 +6,14 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+## [1.9.2] - 2026-11-02
+
 - Pi headless 250k no longer crashes. The extension never starts compaction from a tool result or a
   one-shot settlement, and the Stop payload now carries `observed_tokens`, so a text-only turn at the
   gate is measured. A `pi -p` run exits 0 at 250k with the verified handover and a stderr notice; the
-  next session continues from it. Interactive/TUI and RPC runs compact at settlement and resume; both are implemented but not live-tested. Headless
-  auto-compaction remains unavailable in Pi print mode. Live 264,275-token run on 1.4.0, regression
+  next session continues from it. Interactive/TUI and RPC runs compact at settlement and resume; both
+  are implemented but not live-tested. Headless auto-compaction remains unavailable in Pi print mode.
+  Live 264,275-token run on 1.4.0, regression
   tests in `tools/agents/tests/test_pi.mjs`.
 - Documented the 2026-11-02 live 250k qualification and the 1.9.2 Pi behavior in the compatibility
   runbook, context-safety, the architecture spec, the Pi and OpenCode notes, and `work/current.md`.

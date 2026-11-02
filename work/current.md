@@ -7,7 +7,7 @@ lines `- Owner decision:`, `- State:`, `- Next:` (with who), `- Blocker:`, `- Ev
 
 ## Pi headless 250k compaction — ACTIVE
 - Owner decision: 2026-11-02, fix the crash and release it as 1.9.2 (supersedes the document-only scope).
-- State: 1.9.2 removes the mid-turn `ctx.compact()` call, sends `observed_tokens` in the Stop payload, and ends a one-shot print/JSON run cleanly at the 250k gate with the verified handover. Live 264,275-token run on Pi 1.4.0 exits 0 with a stderr notice, no compaction entry and `HANDOVER_REQUIRED`; the 1.9.1 stale-ctx crash is gone. Interactive/TUI and RPC runs compact at settlement and resume; both are implemented but not live-tested.
+- State: 1.9.2 removes the mid-turn `ctx.compact()` call, sends `observed_tokens` in the Stop payload, and ends a one-shot print/JSON run cleanly at the 250k gate with the verified handover. Live 264,275-token run on Pi 1.4.0 exits 0 with a stderr notice, no compaction entry and `HANDOVER_REQUIRED`; the 1.9.1 stale-ctx crash is gone. Interactive/TUI and RPC runs compact at settlement and resume; both are implemented but not live-tested. The 1.9.2 release carries this fix and the documented limitation.
 - Next: live-test the TUI/RPC settlement compaction; decide whether a headless RPC runner is worth the added surface (who: owner for scope, agent for the run).
 - Blocker: Pi print mode disposes before the async summary, so headless auto-compaction is unavailable; the clean stop is the shipped behavior.
 - Evidence: .pi/extensions/factory/index.js; tools/agents/tests/test_pi.mjs; knowledge/operations/agent-compatibility.md; .pi/README.md; /tmp/aeion-live-pi5.json (ephemeral)

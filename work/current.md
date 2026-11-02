@@ -5,6 +5,13 @@ Finished tasks are deleted: the commit message and knowledge/ keep what matters.
 Status: ACTIVE, WAITING-OWNER, MEASURING, BLOCKED, BACKLOG. An entry is `## <title> — <STATUS>`, then the
 lines `- Owner decision:`, `- State:`, `- Next:` (with who), `- Blocker:`, `- Evidence:`.
 
+## Pi headless 250k compaction — ACTIVE
+- Owner decision: 2026-11-02, document the live finding; the fix is separate.
+- State: `ctx.compact()` from `tool_result` aborts `pi -p` and exits 1 on a stale ctx; no compaction entry. `agent_before_settle` sends Stop without `observed_tokens`, so a text-only 250k turn never triggers. The limitation and workaround are documented.
+- Next: plan the smallest extension change (safe compaction boundary, observed tokens in Stop) and re-run the live fixture (who: agent, with the owner's yes).
+- Blocker: not fixed; only documented.
+- Evidence: knowledge/operations/agent-compatibility.md; .pi/README.md
+
 ## Connector drift check across all harnesses — ACTIVE
 - Owner decision: 2026-11-01, "avoid such problems for all connectors": a stale or hand-edited copy must fail a check, not a session. Same day: the prompt-defense baseline and the three passes ship in 1.8.3 too. Later the same day: verification must accept `main`/`develop` for people who downloaded a branch, and an adopted project needs an update path that keeps its own content.
 - State: `tools/agents/adapter-check` compares the 27 connector files with the factory copy or with any git reference (`--ref v1.8.5`, `--ref main`, `--ref develop`), checks each config's script references, refuses a project's own copy of itself, and reports `UNIDENTIFIED` for a `steer` call with no id and `UNROLED` for a `steer`/`inject`/`followup` with no role. The dsh plugin's `say` helper steers every message with `role: "user"`, so a steered start context or warning no longer corrupts a session the harness refuses to reopen. `tools/agents/template-update` moves an adopted project between explicit factory references (`--from-ref`, `--ref`): it writes the connector files and restores launcher modes, never the application's `VERSION`, and only names `AGENTS.md`, merged settings, `knowledge/`, `work/` and `CHANGELOG.md` for a human to merge; skill `template-update` states the three file classes. `tools/agents/dsh-install` pins the desktop profile at a release tag; `--check` fails a hand-edited copy and today's working-tree link. `connectors.py` and `refs.py` hold the one file list and the one reference reader. The 250k/300k gate no longer waits for a human: the dsh web plugin reports the compaction service it cannot reach, so the rule is advisory there, and Pi lets its own window compaction run and owes the receipt after it. A live dsh session then exposed three latch faults (81a1a0f, 2f7b41d): the fall-back escape was one-shot once `closure_owed` was set, the settlement dropped the receipt on the event that re-latched the alert, and `PreCompact` refused a verified handover whose tree had moved while the gate admitted only the checkpoint. Each fall now releases the latch, a verified receipt is kept above the threshold, a complete stale-checked handover compacts and owes its closure, and the plugin keeps a refused compaction instead of dropping it.
@@ -29,10 +36,10 @@ lines `- Owner decision:`, `- State:`, `- Next:` (with who), `- Blocker:`, `- Ev
 
 ## Live Devin, Droid, Antigravity and Pi hook qualification — WAITING-OWNER
 - Owner decision: 2026-10-27, support Devin, Droid and Antigravity; 2026-10-28, Pi 1.4.0; adapters use documented, not live-run, payloads.
-- State: Devin merged in #12, Droid in #13, Antigravity in task/antigravity, Pi on develop. Pi ran live headless on 2026-11-01: with `-e .pi/extensions/factory/index.js` the extension injected the checkpoint profile, an allowed read succeeded and the shared guard refused an environment dump; Pi's own native compaction is still unexercised.
-- Next: run the qualification steps with Devin CLI, Droid, agy and Pi and record the result (who: owner).
-- Blocker: neither CLI is in the agent's container.
-- Evidence: knowledge/operations/agent-compatibility.md
+- State: Devin merged in #12, Droid in #13, Antigravity in task/antigravity, Pi on develop. Pi guards ran live headless on 2026-11-01. The 2026-11-02 live run found Pi's headless 250k compaction broken (separate entry); dsh headless and OpenCode 2.2.0 compacted live at 250k/272k with verified receipts.
+- Next: run the remaining qualification steps with Devin CLI, Droid and agy (who: owner); Pi waits on the extension fix.
+- Blocker: Devin/Droid/Antigravity CLIs are not in the agent's container; Pi headless compaction is broken.
+- Evidence: knowledge/operations/agent-compatibility.md; .pi/README.md; .opencode/README.md
 
 ## Native strict context admission — BLOCKED
 - Owner decision: 2026-10-26, attempt native 300k qualification using paid OpenCode Go DeepSeek V4.1 Flash.

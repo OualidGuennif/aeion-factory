@@ -6,6 +6,13 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+- Documented the 2026-11-02 live 250k qualification. dsh headless (through the patch) and OpenCode
+  2.2.0 compact with a verified receipt; OpenCode needs a later tool call because the step-usage event
+  arrives after the tool hook. Pi 1.4.0 headless fails at 250k: the extension's `ctx.compact()` aborts
+  the run and its error handler exits on a stale ctx, and `agent_before_settle` omits `observed_tokens`.
+  The Pi and OpenCode integration notes and the compatibility runbook now state the limitation and the
+  workaround. No code change.
+
 ## [1.9.1] - 2026-11-02
 
 - `PreCompact` now makes the same stale-receipt decision through the native adapter as through the shared

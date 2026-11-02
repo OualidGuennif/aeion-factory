@@ -6,7 +6,7 @@ status: stable
 review_after: 2027-01-29
 generated:
   by: aeion-factory/1.1
-  at: 2026-10-25
+  at: 2026-11-02
 sources:
   - id: budget
     resource: ../../tools/context/budget.py
@@ -152,7 +152,8 @@ A harness reports usage after the response that asked for a tool, so the adapter
 until a new one arrives (0 after a compaction). A malformed count or a rollout from another session
 fails closed. Codex without a `transcript_path` keeps only its native compaction and refusal. Pi and
 OpenCode compact themselves on the hook's `aeion.compact` signal, sent once a closure's checkpoint
-is verified, so the context never waits for the model window. Pi never cancels its own compaction at
+is verified, so the context never waits for the model window. OpenCode did so live on 2026-11-02; Pi's
+headless path fails at that call (below). Pi never cancels its own compaction at
 the model window: it runs and the closure is owed after it. OpenCode sends no compact SessionStart, so
 its allowed compaction itself ends the closure (state RECOVERING, usage cleared). The dsh web profile
 keeps `compaction` inside each agent preset, out of the plugin's root injection, so the plugin looks it
@@ -167,8 +168,11 @@ profile that exposes no compaction service to an agent (neither the root's
 nor its preset's) gets the advisory gate and lets dsh compact itself. Codex ends its turn on a
 refused compaction and retries it before every turn, so it would stall: when Codex compacts before its
 handover is verified (owner decision 2026-10-28), the compaction runs and the session resumes in closure,
-allowed only the handover, `work/current.md`, docs and the checkpoint until the checkpoint passes. The OpenCode stream and compaction
-calls are read from the 2.2.0 build and unit-tested; a live long run has not exercised them yet.
+allowed only the handover, `work/current.md`, docs and the checkpoint until the checkpoint passes. A live
+2026-11-02 OpenCode 2.2.0 run compacted at 272k on a two-tool turn; a one-tool turn can miss the
+step-usage event, which arrives after the tool hook. Pi's headless 250k compaction is currently
+broken: the extension's `ctx.compact()` aborts the run and its error handler exits 1 (see
+[agent compatibility](agent-compatibility.md)).
 dsh compaction is not dependable in every profile, so its start context and every 250k/300k gate
 message also give the recovery step: once the handover, `work/current.md` and the checkpoint
 verify, stop the session and start a new one from the handover instead of working past 250k. The

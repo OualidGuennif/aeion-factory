@@ -45,9 +45,13 @@ sources:
     title: "compaction.js, which names this doc as its spec"
   - resource: ../../.dsh/plugins/factory/seam.js
     title: "seam.js, which names this doc as its spec"
+  - resource: ../../.pi/README.md
+    title: "Pi integration and its headless limitation"
+  - resource: ../../.opencode/README.md
+    title: "OpenCode integration and its live note"
 generated:
   by: aeion-factory/1.6
-  at: 2026-10-29
+  at: 2026-11-02
 ---
 
 # Agent compatibility
@@ -67,7 +71,10 @@ directory does not establish loaded hooks or identical runtime guarantees.
   after it. That latch carries `resumed_in_closure` and survives a fall back under 250k; only a
   verified handover releases it. Its rollout is not a stable token API.
 - OpenCode 2.1.4+ loads root `opencode.json` and `.opencode/plugins/factory/index.js`. The plugin reads each
-  step's tokens (`session.step.ended`) and compacts itself at 250k once the handover is verified.
+  step's tokens (`session.step.ended`) and compacts itself at 250k once the handover is verified. A live
+  2.2.0 run on 2026-11-02 compacted a 272k step on a turn with two tool calls; a one-tool turn can miss the
+  trigger because that event arrives after the tool hook, so the next tool or turn sees it. See
+  [the OpenCode integration note](../../.opencode/README.md).
 - Pi 1.4.0+ reads `AGENTS.md`/`CLAUDE.md` from its folder and every parent, and project
   `.agents/skills` from its folder or a parent, so the shared rules and skills need no copy. It loads
   `.pi/extensions/factory/index.js` from **its start folder only**, once the project is trusted; started
@@ -91,8 +98,11 @@ directory does not establish loaded hooks or identical runtime guarantees.
   the next settlement passes. A terminal stop (`continue: false`: a stopped run, invalid or unavailable
   usage) settles at once and shows its reason in the UI, never as another request. A closure refusal
   repeats at most three times and then settles with the
-  reason in the UI, so one alert cannot spin forever. Not yet qualified live: the events follow the
-  1.4.0 docs and published type declarations.
+  reason in the UI, so one alert cannot spin forever. The guards are qualified live headless (2026-11-01);
+  the 250k compaction is not (2026-11-02): the extension's `ctx.compact()` aborts the headless run and its
+  error handler exits on a stale ctx, so no compaction entry is written, and `agent_before_settle` sends
+  Stop without `observed_tokens`. See [the Pi note](../../.pi/README.md) and
+  [Qualification and limits](#qualification-and-limits).
 - Token feedback (narration between tools, full-file rewrites; advisory, never blocking) covers
   Claude Code natively and Codex through its rollout transcript. Devin, Droid and Antigravity pass
   no transcript the hook can read and the OpenCode and Pi extensions pass no assistant text, so they get the
@@ -146,7 +156,9 @@ directory does not establish loaded hooks or identical runtime guarantees.
   `bash` is Bash, `read`/`write`/`edit` name `file_path`,
   `str_replace_editor` is Edit (Read for `view`), `glob`/`grep` are Glob/Grep. dsh's own pressure
   compaction (about 55% of a 1M window) is not refused; past 300k only closure runs, so it is reached
-  only if closure never completes. A dsh launched without the patch has no Æion Factory hooks.
+  only if closure never completes. A dsh launched without the patch has no Æion Factory hooks. A live
+  2026-11-02 headless run launched through `tools/agents/run dsh headless` compacted at the factory's
+  250k gate with a verified receipt and resumed from the handover.
   Its sandbox ("workspace-write") writes only below the launch folder and headless has no approval
   channel: launched in a subfolder (`demo/`), it cannot write the root's `.git`, `work/current.md` or
   `work/handovers/`, so whoever drives the run commits and writes the closure files there; launched at
@@ -537,7 +549,9 @@ tool inputs follow the 1.4.0 docs and its published type declarations (`types.d.
 Unverified: that a thrown `before_agent_start` handler stops the run (the tool guards refuse anyway),
 and that symlinked `.agents/skills` folders are followed. Qualify it like Devin with `tools/agents/run
 pi`: `cat .env` and a read of that file refused with the guard's reason, an edit naming its covering
-doc, and `/compact` cancelled until the checkpoint passes.
+doc, and `/compact` cancelled until the checkpoint passes. A 1.9.2 re-run at 264k stopped cleanly at the gate with the verified handover (exit 0, no crash);
+the one-shot print run cannot finish the summary, so headless Pi stops and the next session continues
+from the handover. Interactive Pi compacts at settlement.
 
 Droid is not yet qualified live either. docs.factory.ai was unreachable from the container that
 added it, so the payload shape, tool names and `$FACTORY_PROJECT_DIR` follow search excerpts of
@@ -554,9 +568,10 @@ workspace hooks (a forum report says its PostToolUse did not fire). A hook that 
 times out blocks the call. Qualify it with `agy`: `cat .env` and a view of that file refused
 with the guard's reason, and an edit naming its covering doc; then repeat in the IDE.
 
-OpenCode 2.1.4 is the qualified V2 target. Legacy 1.19.4 can discover skills but does not dispatch
-these V2 callbacks; do not claim its guards are working from discovery alone. The plugin is a
-directory with a default id/setup entrypoint and uses no SDK dependency.
+OpenCode 2.1.4 is the qualified V2 target; 2.2.0 also passed the 2026-11-02 live 272k compaction on a
+two-tool turn. Legacy 1.19.4 can discover skills but does not dispatch these V2 callbacks; do not
+claim its guards are working from discovery alone. The plugin is a directory with a default id/setup
+entrypoint and uses no SDK dependency.
 
 OpenCode consumes a verified receipt before each compaction attempt. A retry must verify a new
 checkpoint; it never silently reuses a receipt from an earlier compaction. The plugin imports only
@@ -571,3 +586,21 @@ were witnessed, and independent documentation/diff checks passed. OpenCode's den
 no completed-tool event. This qualifies bounded tool dispatch, not long-context admission.
 Run disposable repositories outside a configured ancestor project: OpenCode inherits parent
 configuration and can select that ancestor's plugin instead of the instrumented local copy.
+
+### Live 250k qualification, 2026-11-02
+
+Method: clean v1.9.1 worktrees, real calls with `deepseek-v4.1-flash` (1M window), a 1.0–1.35 MB
+context fill, a completed handover and a receipt created with
+`python3 tools/context/budget.py checkpoint --session <key> --base HEAD --verify`, then one measured
+turn. Versions: dsh 0.2.1-rc.5 headless, Pi 1.4.0, OpenCode 2.2.0, Python 3.15.2.
+
+| Harness | Live result |
+| --- | --- |
+| dsh headless (patched) | 1 MB user turn; the plugin's meter crossed 250k; compacted, epoch 1, resumed from the handover. PASS. |
+| OpenCode 2.2.0 | 272k-token step; a two-tool turn compacted (epoch 1, RECOVERING). A one-tool turn missed it: `session.step.ended` arrived after `tool.execute.after`, so the next tool or turn triggers. |
+| Pi 1.4.0 headless | 264,275 measured (1.9.2 re-run). The gate latched `HANDOVER_REQUIRED`; Stop now carries `observed_tokens`; the run exits 0 with a stderr notice and no compaction entry, and the verified handover is the next session's start. The 1.9.1 crash (mid-turn `ctx.compact()`, stale ctx, exit 1) is fixed. Headless auto-compaction remains unavailable in print mode; interactive/TUI and RPC compaction at settlement are implemented but not live-tested. |
+
+Limits: headless CLIs only (the TUI path was not re-tested), fresh receipts (the stale-receipt
+branch is covered by the deterministic suites, not this run), one model/provider, and no Devin,
+Droid or Antigravity run. The Pi 1.9.2 fix is a clean stop, not headless auto-compaction; the
+limitation and workaround are in [the Pi note](../../.pi/README.md).

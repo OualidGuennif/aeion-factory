@@ -266,9 +266,11 @@ runtime admission control, and automatically enabling additional agents or Super
 
 Native adapters validate line endings and required path/command fields before guard dispatch.
 OpenCode uses the V2 directory id/setup entrypoint and native prompt/tool/compaction callbacks;
-its pre-compaction receipt is consumed per attempt. Pi's extension maps `tool_call`,
+its pre-compaction receipt is consumed per attempt; a fresh receipt was live-confirmed at 272k on 2026-11-02. Pi's extension maps `tool_call`,
 `tool_result`, `before_agent_start` and `session_before_compact` to the same guards and cancels a
-compaction without a verified handover. Loop cancellation terminates the ordinary
+compaction without a verified handover; its 250k compaction runs at settlement in interactive and
+RPC runs, and a one-shot headless run now stops cleanly with the verified handover (1.9.2; see
+agent-compatibility). Loop cancellation terminates the ordinary
 child process group as well as enforcing deadlines. No SDK dependency is bundled for the plugin.
 
 ## Versioned skill library

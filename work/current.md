@@ -5,17 +5,17 @@ Finished tasks are deleted: the commit message and knowledge/ keep what matters.
 Status: ACTIVE, WAITING-OWNER, MEASURING, BLOCKED, BACKLOG. An entry is `## <title> — <STATUS>`, then the
 lines `- Owner decision:`, `- State:`, `- Next:` (with who), `- Blocker:`, `- Evidence:`.
 
-## Template review 1.9.1 — ACTIVE
-- Owner decision: 2026-11-01, implement review plan v1 A/B/C and deploy 1.9.1; 2026-11-02, add a dsh instruction to stop after the handover and verification when compaction does not run.
-- State: F1 native `PreCompact` stale-receipt parity for dsh/Pi/OpenCode; F2/F5 explicit `--from-ref` with application `VERSION` untouched and repeatable merge advice; F3/F4 linked-destination refusal, reference executable modes and adapter-check detection; dsh stop guidance in the hook, plugin and runbooks. Tests and docs updated.
-- Next: run the full factory checks, cut 1.9.1, review and release (who: agent, with the owner's authorization).
-- Blocker: none.
-- Evidence: CHANGELOG.md Unreleased; tools/agents/tests/test_hooks.py; tools/agents/tests/test_template_update.py; tools/agents/tests/test_adapter_check.py; tools/agents/tests/test_dsh.mjs; knowledge/operations/agent-compatibility.md; knowledge/operations/context-safety.md.
+## Pi headless 250k compaction — ACTIVE
+- Owner decision: 2026-11-02, fix the crash and release it as 1.9.2 (supersedes the document-only scope).
+- State: 1.9.2 removes the mid-turn `ctx.compact()` call, sends `observed_tokens` in the Stop payload, and ends a one-shot print/JSON run cleanly at the 250k gate with the verified handover. Live 264,275-token run on Pi 1.4.0 exits 0 with a stderr notice, no compaction entry and `HANDOVER_REQUIRED`; the 1.9.1 stale-ctx crash is gone. Interactive/TUI and RPC runs compact at settlement and resume; both are implemented but not live-tested. The 1.9.2 release carries this fix and the documented limitation.
+- Next: live-test the TUI/RPC settlement compaction; decide whether a headless RPC runner is worth the added surface (who: owner for scope, agent for the run).
+- Blocker: Pi print mode disposes before the async summary, so headless auto-compaction is unavailable; the clean stop is the shipped behavior.
+- Evidence: .pi/extensions/factory/index.js; tools/agents/tests/test_pi.mjs; knowledge/operations/agent-compatibility.md; .pi/README.md; /tmp/aeion-live-pi5.json (ephemeral)
 
 ## Connector drift check across all harnesses — ACTIVE
 - Owner decision: 2026-11-01, "avoid such problems for all connectors": a stale or hand-edited copy must fail a check, not a session. Same day: the prompt-defense baseline and the three passes ship in 1.8.3 too. Later the same day: verification must accept `main`/`develop` for people who downloaded a branch, and an adopted project needs an update path that keeps its own content.
 - State: `tools/agents/adapter-check` compares the 27 connector files with the factory copy or with any git reference (`--ref v1.8.5`, `--ref main`, `--ref develop`), checks each config's script references, refuses a project's own copy of itself, and reports `UNIDENTIFIED` for a `steer` call with no id and `UNROLED` for a `steer`/`inject`/`followup` with no role. The dsh plugin's `say` helper steers every message with `role: "user"`, so a steered start context or warning no longer corrupts a session the harness refuses to reopen. `tools/agents/template-update` moves an adopted project between explicit factory references (`--from-ref`, `--ref`): it writes the connector files and restores launcher modes, never the application's `VERSION`, and only names `AGENTS.md`, merged settings, `knowledge/`, `work/` and `CHANGELOG.md` for a human to merge; skill `template-update` states the three file classes. `tools/agents/dsh-install` pins the desktop profile at a release tag; `--check` fails a hand-edited copy and today's working-tree link. `connectors.py` and `refs.py` hold the one file list and the one reference reader. The 250k/300k gate no longer waits for a human: the dsh web plugin reports the compaction service it cannot reach, so the rule is advisory there, and Pi lets its own window compaction run and owes the receipt after it. A live dsh session then exposed three latch faults (81a1a0f, 2f7b41d): the fall-back escape was one-shot once `closure_owed` was set, the settlement dropped the receipt on the event that re-latched the alert, and `PreCompact` refused a verified handover whose tree had moved while the gate admitted only the checkpoint. Each fall now releases the latch, a verified receipt is kept above the threshold, a complete stale-checked handover compacts and owes its closure, and the plugin keeps a refused compaction instead of dropping it.
-- Next: v1.8.5 released (PR #31, tag `v1.8.5`) and the desktop plugin installed at that tag; restart the desktop app so the running server loads it, then run `tools/agents/adapter-check --root <project> --ref v1.8.5` in every adopted project and in its CI (who: owner restarts, agent checks adopted projects). The latch fixes reach an adopted project through the same install path.
+- Next: v1.9.1 released (PR #37, tag `v1.9.1`, desktop profile installed at that tag, `aeion-observability` at 1.9.1 connectors in 10ded60); restart the desktop app so the running server loads 1.9.1, then run `tools/agents/adapter-check --root <project> --ref v1.9.1` in every other adopted project and in its CI (who: owner restarts, agent checks adopted projects).
 - Blocker: none.
 - Evidence: CHANGELOG.md Unreleased; knowledge/operations/agent-compatibility.md; knowledge/operations/context-safety.md; knowledge/components/factory-architecture.md; knowledge/operations/build-and-test.md; tools/context/tests/test_budget.py; tools/agents/tests/test_hooks.py; tools/agents/tests/test_dsh_install.py; tools/agents/tests/test_template_update.py; tools/agents/tests/test_adapter_check.py; tools/agents/tests/test_pi.mjs; tools/agents/tests/test_dsh.mjs; a live dsh web session compacted itself through the plugin once the receipt was valid; live dsh headless run in an isolated copy attempted an environment dump and quoted the guard's refusal verbatim.
 
@@ -36,10 +36,10 @@ lines `- Owner decision:`, `- State:`, `- Next:` (with who), `- Blocker:`, `- Ev
 
 ## Live Devin, Droid, Antigravity and Pi hook qualification — WAITING-OWNER
 - Owner decision: 2026-10-27, support Devin, Droid and Antigravity; 2026-10-28, Pi 1.4.0; adapters use documented, not live-run, payloads.
-- State: Devin merged in #12, Droid in #13, Antigravity in task/antigravity, Pi on develop. Pi ran live headless on 2026-11-01: with `-e .pi/extensions/factory/index.js` the extension injected the checkpoint profile, an allowed read succeeded and the shared guard refused an environment dump; Pi's own native compaction is still unexercised.
-- Next: run the qualification steps with Devin CLI, Droid, agy and Pi and record the result (who: owner).
-- Blocker: neither CLI is in the agent's container.
-- Evidence: knowledge/operations/agent-compatibility.md
+- State: Devin merged in #12, Droid in #13, Antigravity in task/antigravity, Pi on develop. Pi guards ran live headless on 2026-11-01. The 2026-11-02 live run found Pi's headless 250k compaction broken (separate entry); dsh headless and OpenCode 2.2.0 compacted live at 250k/272k with verified receipts.
+- Next: run the remaining qualification steps with Devin CLI, Droid and agy (who: owner); Pi waits on the extension fix.
+- Blocker: Devin/Droid/Antigravity CLIs are not in the agent's container; Pi headless compaction is broken.
+- Evidence: knowledge/operations/agent-compatibility.md; .pi/README.md; .opencode/README.md
 
 ## Native strict context admission — BLOCKED
 - Owner decision: 2026-10-26, attempt native 300k qualification using paid OpenCode Go DeepSeek V4.1 Flash.

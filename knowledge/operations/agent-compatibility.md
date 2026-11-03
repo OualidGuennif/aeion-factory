@@ -98,7 +98,8 @@ with one line naming a missing agent binary and the setup link, exit 1.
   the task from the handover. `tools/agents/run pi rpc` starts the factory's headless RPC runner instead
   (`tools/agents/pi-rpc`): one `pi --mode rpc` process with the extension, one prompt over JSONL, and
   the run waits through the settlement compaction and the resumed run, so headless Pi can compact and
-  continue without a TUI. Print/JSON mode still does not compact (see the Pi note).
+  continue without a TUI; a Pi that exits before reading the prompt is one `pi-rpc:` line, exit 1.
+  Print/JSON mode still does not compact (see the Pi note).
   The extension sends `ctx.getContextUsage()` to the shared rule and calls `ctx.compact()` at 250k once
   the handover is verified; the 250k alert names the checkpoint command, and closure admits a project's
   Markdown docs. `agent_before_settle` sends Stop: a sign-off finding becomes a displayed

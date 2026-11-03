@@ -70,9 +70,9 @@ structural scorecard; each project's build, linter and tests provide language-sp
 
 ## Branch, review, release
 
-This is the team flow, under git only. In a plain folder there is no branch, review, CI or tag: the
-tests for what changed and the `CHANGELOG.md` line are the whole ritual. In local mode
-(`git config aeion.mode local`, see [build and test](../operations/build-and-test.md)) commits stay
+This is the team flow (`git config aeion.mode team`), under git only. In a plain folder there is no
+branch, review, CI or tag: the tests for what changed and the `CHANGELOG.md` line are the whole
+ritual. In local mode, the default (see [build and test](../operations/build-and-test.md)), commits stay
 local, without review, CI or a `work/current.md` entry, and pre-push lets the user's own push through;
 tests for what changed still run.
 

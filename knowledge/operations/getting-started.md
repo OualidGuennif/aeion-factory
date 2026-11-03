@@ -15,7 +15,7 @@ generated:
 
 The launcher installs nothing. Install and connect your chosen agent separately, then trust the
 project and approve its hooks as required below. The optional Git hooks and architecture tools
-are described in [the overview](../../README.md#optional-tools).
+are described in [the overview](../../README.md#enable-optional-tools).
 
 ## Prepare your agent
 
@@ -72,7 +72,7 @@ in step 3. A present configuration file alone does not prove the hooks are activ
    > instructions, Knowledge and skills. Report anything that still needs configuration. Wait for
    > approval before implementing application features.
 
-5. Say yes to the Git hooks, Graphify and Archify unless your policy forbids them (see [optional tools](../../README.md#optional-tools)).
+5. Say yes to Graphify and Archify unless your policy forbids them, and turn on the team git flow when the project has a remote and reviews (see [optional tools](../../README.md#enable-optional-tools)).
 6. From then on, start work with the managed launcher (`tools/agents/run <harness>`, below). Configure
    [GitHub main protection](github-protection.md) in the new repository;
    GitHub settings are not copied by templates.

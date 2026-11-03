@@ -101,16 +101,17 @@ before capture pipes are drained, so ordinary descendants do not keep working af
 
 The same hook suite tests [bounded intake](../policies/bounded-intake.md), including file/range
 thresholds, misleading limiters and preserved native edit/range fields. SessionStart adds two
-short intake instructions and the flow mode within its existing 25-line cap. It names git hooks
-that are off (`core.hooksPath` not `tools/git-hooks`), and past six changed paths or open tasks it
-lists five and says how many more.
+short intake instructions and the flow mode within its existing 25-line cap. In the team flow it
+names git hooks that are off (`core.hooksPath` not `tools/git-hooks`) and team work on `main`; past
+six changed paths or open tasks it lists five and says how many more.
 
 The flow mode is a per-clone Git setting, read from the repository's local config only
-(`git config --local`; includes and the global config do not count). The default team flow works
-on `develop`, records a review before each push of it and reaches `main` only through a reviewed
-release pull request with green CI. `git config aeion.mode local` sets local play
-in the repository's local config: commits stay local, the Stop sign-off reminder is silent, and the safety guards (secrets, Git hook
-and force-push bypasses, large dumps) stay on. `git config --unset aeion.mode` restores the team flow.
+(`git config --local`; includes and the global config do not count). Local mode is the default
+(unset, or any value but `team`): commits stay local, the Stop sign-off reminder is silent, pre-push
+lets the user's push through, and the safety guards (secrets, Git hook and force-push bypasses, large
+dumps) stay on. `git config aeion.mode team` turns on the team flow: it works on `develop`, records a
+review before each push of it and reaches `main` only through a reviewed release pull request with
+green CI. `git config --unset aeion.mode` returns to local mode.
 
 ## Language servers
 

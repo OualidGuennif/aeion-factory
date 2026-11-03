@@ -89,8 +89,8 @@ its output, so the agent can fix the failure instead of retrying a bare exit sta
 refused without a current receipt, and the refusal names the paths changed since it: a live session
 log inside the tree changes on every event, so it is git-ignored (`/demo/*/journal/*.jsonl`) or
 written outside the project.
-Local mode (`git config aeion.mode local`, read with `--local` so includes and the global config
-do not count) keeps no `work/current.md` entry, so its checkpoint
+Local mode (the default: `aeion.mode` unset or not `team`, read with `--local` so includes and the
+global config do not count) keeps no `work/current.md` entry, so its checkpoint
 does not require one. During closure a command the shell cannot parse is denied, never a stop.
 Closure admits edits to any Markdown file in the project, so a project's own docs can be updated,
 and never a code file. The checkpoint is admitted from any working directory when its path resolves

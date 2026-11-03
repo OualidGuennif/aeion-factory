@@ -525,7 +525,7 @@ def git_bypass(command):
                 unset = "unset" in positional[:keys[0]] or any(a.startswith("--unset") for a in args)
                 if unset or values and values[0] != HOOKS_PATH:
                     return hooks_reason
-            # Local mode relaxes the sign-off and the closure checkpoint, so only the user switches it.
+            # The mode turns the sign-off, the closure checkpoint and the push gate on or off, so only the user switches it.
             modes = [i for i, a in enumerate(positional) if a.lower() == "aeion.mode"]
             reads = {"get", "--get", "--get-all", "--get-regexp"} & set(args)
             if modes and not reads and (positional[modes[0] + 1:] or "unset" in positional[:modes[0]]

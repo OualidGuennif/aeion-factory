@@ -9,6 +9,8 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 - Security: the bash guard refuses a recursive search that would read a secret (`grep -r` over a
   folder holding `.env`, or `rg -u`/`--no-ignore`), and allows a secret's name as a search pattern
   (`grep -rn env.local docs`), which no longer points to a Grep tool some agents lack.
+- Security: the path guard judges a symlink by its target, so a link with an ordinary name to a
+  secret or to `.git/config` is refused like the file itself.
 
 ## [1.9.3] - 2026-11-02
 

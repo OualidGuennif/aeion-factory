@@ -91,7 +91,8 @@ Requirements for a change, not claims about what production already satisfies.
   unquoted glob that, like the shell's, crosses no `/` and meets `.git` only with a literal dot),
   normalized and case folded (`.GIT//Config` is the same file on APFS); a quoted pattern (`-path
   './.git/*'`), prose with spaces (a commit message) and a heredoc fed to a program are not paths.
-  Reading it stays allowed. A text guard sees one call at a time, so
+  Reading it stays allowed. The path guard also judges a symlink by its target, so a link with an
+  ordinary name to `.env` or `.git/config` is refused like the file itself. A text guard sees one call at a time, so
   a path held in a variable or a symlink, and a script written in one call and run in a later
   one, are not judged by what they do. CI repeats the checks, so it stays the gate a
   deliberate local bypass cannot pass.

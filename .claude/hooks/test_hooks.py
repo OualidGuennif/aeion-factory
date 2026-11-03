@@ -311,6 +311,29 @@ with tempfile.TemporaryDirectory() as large:
 shutil.rmtree(glob_dir)
 for path in ["/repo/.env.example", "/repo/env.example.local", str(ROOT / "AGENTS.md")]:
     expect(f"path allow: {path}", run_hook("guard-path.py", {"file_path": path}), 0)
+# A symlink is judged by its target as well as its own name.
+with tempfile.TemporaryDirectory() as linked:
+    linked = Path(linked)
+    (linked / ".env").write_text("KEY=x\n")
+    (linked / "plain.md").write_text("x\n")
+    (linked / ".git").mkdir()
+    (linked / ".git/config").write_text("[core]\n")
+    (linked / "notes.txt").symlink_to(linked / ".env")
+    (linked / "settings.ini").symlink_to(linked / ".git/config")
+    (linked / "readme.md").symlink_to(linked / "plain.md")
+    for tool in ["Read", "Write", "Edit"]:
+        expect(f"path deny: {tool} through a symlink to a secret",
+               run_hook("guard-path.py", {"file_path": str(linked / "notes.txt")}, tool_name=tool), 2, stderr_has=".env")
+    relative = json.dumps({"tool_name": "Read", "tool_input": {"file_path": "notes.txt"}, "cwd": str(linked)})
+    expect("path deny: a relative symlink to a secret, from the event cwd",
+           subprocess.run([sys.executable, str(HOOKS / "guard-path.py")], input=relative, capture_output=True, text=True,
+                          cwd=ROOT), 2)
+    expect("path deny: Write through a symlink to the git config",
+           run_hook("guard-path.py", {"file_path": str(linked / "settings.ini")}, tool_name="Write"), 2)
+    expect("path allow: Read through a symlink to the git config",
+           run_hook("guard-path.py", {"file_path": str(linked / "settings.ini")}, tool_name="Read"), 0)
+    expect("path allow: a symlink to an ordinary file",
+           run_hook("guard-path.py", {"file_path": str(linked / "readme.md")}, tool_name="Read"), 0)
 
 # Unreadable policy input is an explicit denial, never a traceback or an implicit allow.
 for raw in ["{", "null", "[]", "{}", '{"tool_input": []}', '{"tool_input": {"path": 123}}',

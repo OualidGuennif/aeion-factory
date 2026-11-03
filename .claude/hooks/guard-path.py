@@ -76,16 +76,23 @@ elif not isinstance(path, str) or (not path and event.get("tool_name") != "Grep"
     deny("the tool path must be a nonempty string")
 if "\0" in path:
     deny("the tool path contains a null byte")
-name = PurePosixPath(path).name
-if is_secret(name):
-    print(f"Blocked by .claude/hooks/guard-path.py: {name} holds secrets and is never opened "
-          f"(knowledge/policies/security.md).", file=sys.stderr)
-    sys.exit(2)
-# Writing the git config file sets aeion.mode or core.hooksPath without guard-bash's git config checks.
-# The path is normalized and case folded: .git//config and .GIT/Config are the same file on APFS.
-if event.get("tool_name") not in {"Read", "Grep", "Glob"} and re.search(
-        r"(^|/)\.git/(config|config\.worktree|worktrees/[^/]+/config\.worktree)$", posixpath.normpath(path).lower()):
-    deny("the git config file is changed with git config, never edited directly")
+# A symlink with an ordinary name may point at a secret or the git config file, so its target counts too.
+try:
+    cwd = event.get("cwd") if isinstance(event.get("cwd"), str) else "."
+    paths = [path, str((Path(cwd) / path).resolve())] if path else [path]
+except (OSError, RuntimeError):
+    deny("the path could not be resolved; name the file itself")
+for candidate in paths:
+    name = PurePosixPath(candidate).name
+    if is_secret(name):
+        print(f"Blocked by .claude/hooks/guard-path.py: {name} holds secrets and is never opened "
+              f"(knowledge/policies/security.md).", file=sys.stderr)
+        sys.exit(2)
+    # Writing the git config file sets aeion.mode or core.hooksPath without guard-bash's git config checks.
+    # The path is normalized and case folded: .git//config and .GIT/Config are the same file on APFS.
+    if event.get("tool_name") not in {"Read", "Grep", "Glob"} and re.search(
+            r"(^|/)\.git/(config|config\.worktree|worktrees/[^/]+/config\.worktree)$", posixpath.normpath(candidate).lower()):
+        deny("the git config file is changed with git config, never edited directly")
 # Grep's glob filter picks the files it reads, so a glob that names a secret is a read of it.
 if event.get("tool_name") == "Grep" and tool_input.get("glob") is not None:
     if not isinstance(tool_input["glob"], str):

@@ -6,6 +6,8 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+## [1.9.4] - 2026-11-03
+
 - Security: a recursive search that would read a secret file is refused (`grep -r`, `rg -u`, `ack`,
   `ag`, and `rg` outside a git repository); a secret's name is allowed as a search pattern
   (`grep -rn env.local docs`).

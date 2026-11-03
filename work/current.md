@@ -5,13 +5,6 @@ Finished tasks are deleted: the commit message and knowledge/ keep what matters.
 Status: ACTIVE, WAITING-OWNER, MEASURING, BLOCKED, BACKLOG. An entry is `## <title> — <STATUS>`, then the
 lines `- Owner decision:`, `- State:`, `- Next:` (with who), `- Blocker:`, `- Evidence:`.
 
-## Overview fixes and release 1.9.4 — ACTIVE
-- Owner decision: 2026-11-03, approved the overview plan (guards, launcher, Pi RPC, session-start, CI, --new-project drops demo/), then added: concise CHANGELOG and GitHub release notes, trimmed dsh docs, release 1.9.4.
-- State: every fix committed on develop with tests; CHANGELOG rewritten; dsh docs trimmed.
-- Next: sign-off and full gates, pr-review, push develop, release PR, merge, tag v1.9.4, refresh the GitHub release notes (who: agent).
-- Blocker: none.
-- Evidence: CHANGELOG.md Unreleased; tools/factory-tests
-
 ## Connector drift check across all harnesses — ACTIVE
 - Owner decision: 2026-11-01, a stale or hand-edited connector must fail a check, not a session; a branch (`main`/`develop`) verifies too, and an adopted project gets an update path that keeps its own content.
 - State: shipped through 1.9.1: `tools/agents/adapter-check` (any `--ref`), `tools/agents/template-update`, `tools/agents/dsh-install` and the dsh compaction fixes; a live dsh session compacts through the plugin.

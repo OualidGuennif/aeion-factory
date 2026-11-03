@@ -330,7 +330,8 @@ the project made, and leave the project's own text alone.
 ### Intent
 
 Move a project from the factory release it adopted to another reference, deciding each file the
-factory changed between the two on its own, so a connector matches its release byte for byte, an
+factory changed between the two, and each factory file the project still holds as an older
+release's untouched copy, on its own, so a connector matches its release byte for byte, an
 untouched factory file follows the release, a project edit survives, and a conflict or a project-owned
 file goes to a human. The application's `VERSION` is not factory provenance: it is neither read as
 the baseline nor written.
@@ -340,7 +341,7 @@ the baseline nor written.
 | Source | What is read | Owner | Freshness |
 | --- | --- | --- | --- |
 | `--from-ref`, else the project's `.aeion-factory` marker | the factory release or commit the project adopted | the caller; the last update or `release --new-project` | at each update |
-| the factory's `vX.Y.Z` tags (inference only) | every tagged tree's object ids, against the project's files | the releases | when neither flag nor marker names the baseline |
+| the factory's `vX.Y.Z` tags | every tagged tree's object ids, against the project's files | the releases | at each update: the inferred baseline, and the release an untouched older copy came from |
 | the project's tree and git state | file bytes, executable modes, links, tracked changes, `develop`, `aeion.mode` | the project | at each update |
 | the baseline and target trees | every changed file's bytes and git mode, the target's `CHANGELOG.md` | the factory | at each update |
 
@@ -359,7 +360,8 @@ tools/agents/template-update --from-ref v1.8.5 --ref main --root ../app
   `--check` only. It is never read from the project's `VERSION`.
 - `--ref`: the target tag, `main`, `develop` or a commit id.
 - `--root`: the project that adopted the factory; `--repo`: the factory repository holding both
-  references (default: this checkout).
+  references (default: the checkout the tool runs from). A project's own copy of the tool cannot
+  see a newer release, so `--root` and `--repo` must differ: run it from the factory clone.
 - `--check` writes nothing; `--force` permits moving to an older factory release.
 
 ### Outputs
@@ -374,11 +376,15 @@ most). Then one line per file, in these classes:
 | contract | `connectors.CONTRACT` | `written`, `mode`, `skipped — not in <ref>`; `DRIFT`/`MODE` under `--check` |
 | project-owned | `VERSION`, `CHANGELOG.md`, `.aeion-factory`, `work/`, `knowledge/`, `demo/` | never written; a changed `knowledge/` doc is `review <file>` |
 | merge | `connectors.MERGE` (`AGENTS.md`, merged settings) | never written; `merge <file> — proposal: <path>` |
-| three-way | every other changed file | `updated` (the project kept the baseline), `added` (new, its folder exists), `removed` (deleted upstream, untouched here), `merged` (`git merge-file` was clean), `conflict` (left as it is, with a proposal), `review` (removed upstream but edited here, or a link the project changed), `link`, `mode` |
+| three-way | every other changed file, and every factory file still an older release's copy | `updated` (the project kept the baseline, or an older release's copy: `— untouched since <tag>`), `added` (new, its folder exists), `removed` (deleted upstream, untouched here), `merged` (`git merge-file` was clean), `conflict` (left as it is, with a proposal), `review` (removed upstream but edited here, or a link the project changed), `link`, `mode` |
 
-Files the project deleted, and new files in a folder the project never adopted, stay out and are
-counted on one `untouched` line. A proposal (the three-way result, conflict markers included) is
-written under the git-ignored `.aeion/template-update/<ref>/` on a write. A `migrate` line names what
+An update before 2.0.1 moved only the connectors, so a project can hold a factory file byte for byte
+as an older release had it; such a file diffs from that release, not from the baseline, and takes
+the target even when the factory left it alone since the baseline. Files the project deleted, and
+new files in a folder the project never adopted, stay out and are counted on one `untouched` line.
+A proposal (the three-way result, conflict markers included) is written under
+`.aeion/template-update/<ref>/` on a write; that folder carries its own `.gitignore`, so a project
+that does not ignore `.aeion/` never sees the proposals as files to commit. A `migrate` line names what
 the owner must run for a release crossed, such as `git config aeion.mode team` for 2.0.0 when the
 project has a `develop` branch and no team mode; the tool never runs it. A write ends by recording
 `<ref> <commit>` in `.aeion-factory` and naming the verification and the commit.
@@ -390,7 +396,7 @@ under `--check`, when anything would change or the inferred baseline is partial)
 `<root> has uncommitted changes`, `not an adopted project: no factory connector in <path>`,
 `refusing linked [connector] destination <path> below <root>`,
 `refusing non-regular [connector] destination <relative>`, `refusing to downgrade <a> to <b>`, and
-`<path> is the factory itself, not a project that adopted it`.
+`refusing to update <root> from its own repository; run template-update from the Æion Factory clone`.
 
 ### Invariants
 
@@ -408,22 +414,26 @@ under `--check`, when anything would change or the inferred baseline is partial)
    `test_an_exact_inference_writes`, `test_a_partial_inference_only_checks`.
 6. Repeating the same from/to pair keeps naming an unpaid merge even when every connector matches —
    `test_a_merge_only_check_keeps_naming_the_merge`.
-7. A linked destination file or parent is refused before the first write —
-   `test_a_linked_connector_is_refused_before_any_write`, `test_a_linked_parent_is_refused`.
+7. A linked destination file or parent, or a linked proposal folder, is refused before the first
+   write — `test_a_linked_connector_is_refused_before_any_write`, `test_a_linked_parent_is_refused`,
+   `test_a_linked_proposal_folder_is_refused`.
 8. A created or repaired launcher carries the reference's executable mode —
    `test_a_missing_launcher_is_written_executable`,
    `test_a_launcher_that_lost_its_mode_is_repaired`.
-9. A directory with no connector is not an adopted project, and the factory refuses to update
-   itself — `test_it_refuses_a_project_with_no_connector`,
-   `test_it_refuses_the_factory_itself`.
+9. A directory with no connector is not an adopted project, and a repository never updates itself
+   (the factory, or a project running its own copy) — `test_it_refuses_a_project_with_no_connector`,
+   `test_it_refuses_to_update_a_repository_from_itself`.
 10. An untouched factory file takes the target, an edit merges, a conflict keeps the project's file
-    with a proposal, and a file the project deleted stays deleted —
+    with a proposal in a folder that ignores itself, and a file the project deleted stays deleted —
     `test_an_untouched_factory_file_takes_the_target`, `test_a_project_edit_merges_with_the_target`,
     `test_a_conflicting_edit_is_kept_with_a_proposal`, `test_a_file_the_project_deleted_stays_deleted`.
 11. A write refuses tracked uncommitted changes, so the update is one revertible commit —
     `test_a_dirty_project_refuses_a_write`.
 12. The notes, the major banner and a migration hint are printed, and the mode switch is left to
     the owner — `test_notes_major_and_the_mode_migration`.
+13. A factory file the project holds as an older release's untouched copy takes the target, even
+    when the factory left it alone since the baseline; an edited one is never caught up —
+    `test_an_older_untouched_copy_takes_the_target`, `test_an_edited_older_copy_is_never_caught_up`.
 
 ### Determinism
 

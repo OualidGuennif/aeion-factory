@@ -16,12 +16,13 @@ skill is keeping those three apart, and saying what the release changes for this
 | Contract | `CONTRACT` in `tools/agents/connectors.py`: adapters, hooks, plugins, native registrations | **The factory wins, byte for byte.** Never hand-merge one: a difference is the bug. |
 | Merge | `AGENTS.md`, `.claude/settings.json`, `.codex/config.toml`, `.devin/config.json` | **The project wins.** The factory's change arrives as a proposal you apply by hand. |
 | Project-owned | `VERSION`, `CHANGELOG.md`, `.aeion-factory`, `work/`, `knowledge/`, `demo/` | **Never written.** A changed factory `knowledge/` doc is listed for review. |
-| Three-way | every other factory file: git hooks, skills, tools, CI, guides, README | Untouched since the baseline: takes the release. Edited: merged with `git merge-file`. Conflict: kept as it is, with a proposal. Deleted by the project: stays deleted. |
+| Three-way | every other factory file: git hooks, skills, tools, CI, guides, README | Untouched since the baseline, or still an older release's exact copy (`untouched since <tag>`): takes the release. Edited: merged with `git merge-file`. Conflict: kept as it is, with a proposal. Deleted by the project: stays deleted. |
 
 ## Steps
 
-1. **Prepare.** From a factory checkout with the target fetched (`git fetch --tags`), make sure the
-   project's tree is committed: a write refuses tracked changes, so the update is one revertible commit.
+1. **Prepare.** Run the tool from the factory checkout with the target fetched (`git fetch --tags`),
+   never the project's own copy, which cannot see the new release. Make sure the project's tree is
+   committed: a write refuses tracked changes, so the update is one revertible commit.
 2. **Preview.** Run `tools/agents/template-update --ref <tag> --root <project> --check`. Read:
    - the header's baseline and how it was found. `.aeion-factory` and `--from-ref` are facts; an
      `inferred` baseline is a guess. If it is partial (fewer connectors than all match), ask the owner
@@ -34,7 +35,7 @@ skill is keeping those three apart, and saying what the release changes for this
    the notes and the major banner), which files need a human (conflicts, merges, reviews), what you
    propose for each, and every `migrate` line. Wait for a yes.
 4. **Write.** Run the same command without `--check`. Proposals land in
-   `.aeion/template-update/<ref>/` (git-ignored); `.aeion-factory` now records the target, so
+   `.aeion/template-update/<ref>/` (ignored by its own `.gitignore`); `.aeion-factory` now records the target, so
    resolve every conflict before the commit: the next update starts from that target.
 5. **Resolve, one file at a time.**
    - `conflict`: compare the project's file with its proposal (`diff <file>

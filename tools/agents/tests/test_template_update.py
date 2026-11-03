@@ -195,6 +195,19 @@ class TemplateUpdateTests(unittest.TestCase):
         proposal = (self.project / '.aeion/template-update/v2.0.0/README.md').read_text()
         self.assertIn('<<<<<<< project', proposal)
         self.assertIn('footer of 2.0.0', proposal)
+        # A project that does not ignore .aeion/ must not see proposals as files to commit.
+        self.assertEqual((self.project / '.aeion/template-update/.gitignore').read_text(), '*\n')
+
+    def test_a_linked_proposal_folder_is_refused(self):
+        self.project_file('README.md', README_V1.replace('footer', 'our footer'))
+        outside = self.base / 'shared-aeion'
+        outside.mkdir()
+        (self.project / '.aeion').symlink_to(outside, target_is_directory=True)
+        code, output = self.run_tool('--from-ref', 'v1.0.0', '--ref', 'v2.0.0')
+        self.assertEqual(code, 2, output)
+        self.assertIn('refusing linked destination .aeion', output)
+        self.assertEqual(list(outside.iterdir()), [])
+        self.assertEqual((self.project / HOOK).read_text(), HOOK_V1)
 
     def test_a_file_the_project_deleted_stays_deleted(self):
         (self.project / HOOK).unlink()
@@ -298,11 +311,42 @@ class TemplateUpdateTests(unittest.TestCase):
         self.assertEqual(code, 2, output)
         self.assertIn('not an adopted project', output)
 
-    def test_it_refuses_the_factory_itself(self):
-        with patch.object(update_tool, 'FACTORY', self.project):
-            code, output = self.run_tool('--from-ref', 'v1.0.0', '--ref', 'v2.0.0')
+    def test_it_refuses_to_update_a_repository_from_itself(self):
+        # A project's own copy of the tool reads releases from the project, which lacks the new one.
+        self.commit_project()
+        code, output = self.run_tool('--ref', 'v2.0.0', '--repo', str(self.project))
         self.assertEqual(code, 2, output)
-        self.assertIn('is the factory itself', output)
+        self.assertIn('from its own repository; run template-update from the Æion Factory clone', output)
+        self.assertEqual((self.project / HOOK).read_text(), HOOK_V1)
+
+    def release_2_1(self):
+        """2.1.0 changes the README's intro and leaves the hook as 2.0.0 had it."""
+        self.write('VERSION', '2.1.0\n')
+        self.write('README.md', README_V1.replace('intro', 'intro of 2.1.0').replace('footer', 'footer of 2.0.0'))
+        self.commit('v2.1')
+        self.git('tag', 'v2.1.0')
+
+    def test_an_older_untouched_copy_takes_the_target(self):
+        # The project still holds 1.0.0's README and hook, as one updated before 2.0.1 does.
+        self.release_2_1()
+        code, output = self.run_tool('--from-ref', 'v2.0.0', '--ref', 'v2.1.0')
+        self.assertEqual(code, 0, output)
+        readme = (self.project / 'README.md').read_text()
+        # A three-way merge from 2.0.0 would have dropped 2.0.0's footer without a conflict.
+        self.assertIn('intro of 2.1.0', readme)
+        self.assertIn('footer of 2.0.0', readme)
+        self.assertIn('updated   README.md — untouched since v1.0.0', output)
+        # The factory left the hook alone since 2.0.0; the project's 1.0.0 copy still catches up.
+        self.assertIn('mode != "team"', (self.project / HOOK).read_text())
+        self.assertIn(f'updated   {HOOK} — untouched since v1.0.0', output)
+
+    def test_an_edited_older_copy_is_never_caught_up(self):
+        self.release_2_1()
+        self.project_file(HOOK, HOOK_V1 + '# our own step\n')
+        code, output = self.run_tool('--from-ref', 'v2.0.0', '--ref', 'v2.1.0')
+        self.assertEqual(code, 0, output)
+        self.assertEqual((self.project / HOOK).read_text(), HOOK_V1 + '# our own step\n')
+        self.assertNotIn(HOOK, output)
 
     def test_a_missing_launcher_is_written_executable(self):
         (self.project / LAUNCHER).unlink()

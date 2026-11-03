@@ -47,12 +47,12 @@ stay in place, and you approve each change before it is applied.
 
 ### Update to a new release
 
-From an up-to-date clone of Æion Factory (`git fetch --tags`), preview, then apply the latest
-release tag:
+From an up-to-date clone of Æion Factory (`git fetch --tags`), not the project's own copy of the
+tool, preview, then apply the latest release tag:
 
 ```bash
-tools/agents/template-update --ref v2.0.1 --root ../your-project --check
-tools/agents/template-update --ref v2.0.1 --root ../your-project
+tools/agents/template-update --ref v2.0.2 --root ../your-project --check
+tools/agents/template-update --ref v2.0.2 --root ../your-project
 ```
 
 It finds the release your project came from (`.aeion-factory`, else the closest tag), shows the

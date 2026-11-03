@@ -6,6 +6,12 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+- Fixed: `template-update` also brings forward the factory files a project still holds as an older
+  release left them (updates before 2.0.1 moved only the connectors), instead of reporting false
+  conflicts or never updating them.
+- `template-update` says to run it from the factory clone when started from a project's own copy, and
+  its proposal folder ignores itself, so proposals never show up as files to commit.
+
 ## [2.0.1] - 2026-11-03
 
 - `template-update` updates every factory file a release changed, not only the connectors: files you

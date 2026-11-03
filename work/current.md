@@ -5,8 +5,15 @@ Finished tasks are deleted: the commit message and knowledge/ keep what matters.
 Status: ACTIVE, WAITING-OWNER, MEASURING, BLOCKED, BACKLOG. An entry is `## <title> — <STATUS>`, then the
 lines `- Owner decision:`, `- State:`, `- Next:` (with who), `- Blocker:`, `- Evidence:`.
 
+## Overview fixes and release 1.9.4 — ACTIVE
+- Owner decision: 2026-11-03, approved the overview plan (guards, launcher, Pi RPC, session-start, CI, --new-project drops demo/), then added: concise CHANGELOG and GitHub release notes, trimmed dsh docs, release 1.9.4.
+- State: guard slices committed (d1ffe88, ef2da89); launcher missing-binary fix tested, not committed.
+- Next: Pi RPC and session-start fixes, CI, new-project, docs cleanup, sign-off, review, release (who: agent; owner approves the push).
+- Blocker: none.
+- Evidence: work/handovers/3becc232-7f18-4e3f-acb7-1360590e42dc.md; .claude/hooks/test_hooks.py
+
 ## Pi RPC prompt write on early exit — BACKLOG
-- Owner decision: not made yet; the 1.9.3 release review found this (low, non-blocking) and it waits for a yes/no.
+- Owner decision: 2026-11-03, yes (part of the overview fixes above).
 - State: `tools/agents/pi-rpc` writes the prompt to Pi's stdin unguarded; a `pi` that exits before reading a large prompt raises BrokenPipeError and prints a Python traceback instead of a bounded `pi-rpc:` diagnostic (the exit code is still 1, so it fails closed).
 - Next: on the owner's yes, catch OSError around `send()`, report that Pi exited before accepting the prompt, and add a fake-RPC test with a child that exits before reading (who: agent).
 - Blocker: none.

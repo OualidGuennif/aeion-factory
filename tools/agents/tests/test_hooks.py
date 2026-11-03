@@ -555,6 +555,19 @@ class HookTests(unittest.TestCase):
                               env={'PATH':str(native.parent)+os.pathsep+os.defpath,'PWD':str(caller)},capture_output=True,text=True)
         self.assertIn('requires Pi 1.4.0+',result.stderr)
 
+    def test_missing_agent_binary_is_one_line_not_a_traceback(self):
+        launcher=self.root/'tools/agents/run';launcher.parent.mkdir(parents=True)
+        shutil.copy2(ROOT/'tools/agents/run',launcher)
+        gate=self.root/'tools/architecture/refresh';gate.parent.mkdir(parents=True)
+        gate.write_text('#!/bin/sh\nexit 0\n');gate.chmod(0o755)
+        empty=self.root/'empty-bin';empty.mkdir()
+        for agent in ['droid','devin','antigravity','codex','dsh']:
+            result=subprocess.run([hook.sys.executable,str(launcher),agent],cwd=self.root,
+                                  env={'PATH':str(empty)},capture_output=True,text=True)
+            self.assertEqual(result.returncode,1,agent)
+            self.assertIn('is not installed or not on PATH',result.stderr)
+            self.assertNotIn('Traceback',result.stderr)
+
     def test_devin_native_tool_names_reach_the_shared_guards(self):
         with self.assertRaises(ValueError):
             self.call('devin',tool_name='exec',tool_input={'command':'cat .env'})

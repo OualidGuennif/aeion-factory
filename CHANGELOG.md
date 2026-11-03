@@ -11,6 +11,8 @@ dates them at release time. Spec: knowledge/policies/engineering.md
   (`grep -rn env.local docs`), which no longer points to a Grep tool some agents lack.
 - Security: the path guard judges a symlink by its target, so a link with an ordinary name to a
   secret or to `.git/config` is refused like the file itself.
+- `tools/agents/run` (and `tools/context/run`) prints one line naming a missing agent binary
+  instead of a Python traceback.
 
 ## [1.9.3] - 2026-11-02
 

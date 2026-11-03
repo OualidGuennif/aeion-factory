@@ -63,7 +63,8 @@ generated:
 AGENTS.md, Knowledge, task state, checker commands and the reviewed PR workflow are shared.
 Claude Code remains the original integration. Codex, OpenCode, Pi, dsh, Devin, Droid and Antigravity use their
 documented native configuration and small adapters to the existing guards/checkpoints; copying a
-directory does not establish loaded hooks or identical runtime guarantees.
+directory does not establish loaded hooks or identical runtime guarantees. `tools/agents/run` stops
+with one line naming a missing agent binary and the setup link, exit 1.
 
 ## Contract
 

@@ -6,6 +6,8 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-11-03
+
 - Changed: the git lifecycle is off by default. A clone starts in local mode (safety hooks on, no
   develop, review or release gate); `git config aeion.mode team` turns the team flow on.
   **Projects that use the team flow: run `git config aeion.mode team` once in each clone.**

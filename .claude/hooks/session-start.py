@@ -42,7 +42,7 @@ else:
         lines.append(f"Æion Factory mode: team on {' '.join(out('git', 'branch', '--show-current')) or 'a detached HEAD'} "
                      "(develop: review before each push; main: release PR). Local play: git config aeion.mode local")
     # The pre-commit checks and the pre-push review gate run only when git uses the repository's hooks.
-    hooks = out("git", "config", "--get", "core.hooksPath")
+    hooks = out("git", "config", "--path", "--get", "core.hooksPath")
     if not hooks or (ROOT / hooks[0]).resolve() != (ROOT / "tools/git-hooks").resolve():
         lines.append("git hooks: off; enable with git config core.hooksPath tools/git-hooks")
     # Uncommitted changes: one you cannot explain is not yours.

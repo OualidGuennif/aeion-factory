@@ -303,6 +303,23 @@ for command in ["grep -r x .", "grep -rn API_KEY .", "grep -R KEY sub", "grep -d
            run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 2, stderr_has="git grep")
 expect("bash deny: a search pattern for an environment word points to grep -f",
        run_hook("guard-bash.py", {"command": "grep -rn environ plain", "workdir": str(glob_dir)}), 2, stderr_has="grep -f")
+# A link with an ordinary name is judged by its target; grep -R also walks linked folders.
+with tempfile.TemporaryDirectory() as tree:
+    tree = Path(tree)
+    for folder in ("secret", "quiet", "linked"):
+        (tree / folder).mkdir()
+    (tree / "secret/.env").write_text("KEY=x\n")
+    (tree / "quiet/a.md").write_text("a\n")
+    (tree / "quiet/notes.txt").symlink_to(tree / "secret/.env")
+    (tree / "linked/docs").symlink_to(tree / "secret")
+    for command in ["grep -rn KEY quiet", "grep -R KEY linked"]:
+        expect(f"bash deny recursive read through a link: {command}",
+               run_hook("guard-bash.py", {"command": command, "workdir": str(tree)}), 2, stderr_has=".env")
+    expect("bash allow: grep -r does not walk a linked folder",
+           run_hook("guard-bash.py", {"command": "grep -rn KEY linked", "workdir": str(tree)}), 0)
+    expect("bash deny: an --exclude-from value is a file, not the pattern",
+           run_hook("guard-bash.py", {"command": "grep --exclude-from secret/.env -n x quiet/a.md", "workdir": str(tree)}),
+           2, stderr_has="secret")
 with tempfile.TemporaryDirectory() as large:
     for index in range(10001):
         (Path(large) / f"f{index}").touch()

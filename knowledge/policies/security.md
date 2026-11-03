@@ -64,8 +64,9 @@ Requirements for a change, not claims about what production already satisfies.
   `$`, backtick, brace, tilde or backslash, unless quotes surely stay quotes). A file operand, a `-f`
   pattern file or any other mention is still judged. A recursive search reads every file under its
   folders, hidden and gitignored ones too: `grep -r`/`-R`/`-d recurse`, and `rg` with `-u`,
-  `--no-ignore*` or a ripgrep config, are refused when a folder they search holds a secret file or
-  more than 10,000 entries to check. Plain `rg` and `git grep` skip ignored files and stay allowed;
+  `--no-ignore*` or a ripgrep config, are refused when a folder they search holds a secret file (a
+  link judged by its target; linked folders walked for `grep -R` and `rg -L`) or more than 10,000
+  entries to check. Plain `rg` and `git grep` skip ignored files and stay allowed;
   so `rg` does read a secret file that is not gitignored, and `git grep --no-index` and
   `find -exec grep` are not judged.
   One exception, for code: in a heredoc read by an interpreter or git, or written to a file by `cat`

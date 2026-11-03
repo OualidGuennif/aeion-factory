@@ -701,7 +701,7 @@ def quotes_inert(command):
 
 # The options of grep, rg and git grep that take a value, so a value is never taken for the pattern.
 GREP_VALUES = {"-A", "-B", "-C", "-D", "-d", "-m", "--after-context", "--before-context", "--context", "--devices",
-               "--directories", "--exclude", "--exclude-dir", "--include", "--label", "--max-count",
+               "--directories", "--exclude", "--exclude-dir", "--exclude-from", "--include", "--label", "--max-count",
                "--binary-files", "--group-separator"}
 SEARCH_VALUES = {"grep": GREP_VALUES, "egrep": GREP_VALUES, "fgrep": GREP_VALUES,
                  "rg": {"-A", "-B", "-C", "-E", "-M", "-T", "-d", "-g", "-j", "-m", "-r", "-t", "--after-context",
@@ -783,17 +783,20 @@ def without_patterns(tokens, patterns, split, aligned=None):
     return tokens, aligned
 
 
-def secret_under(directory):
-    """The first secret file name under directory, "" when there is none, None when it is too large to check."""
+def secret_under(directory, follow=False):
+    """The first secret file name under directory, a link judged by its target too, "" when there is none,
+    None when it is too large to check. follow walks linked folders, as grep -R does."""
     seen = 0
-    for _, folders, files in os.walk(directory):
+    for top, folders, files in os.walk(directory, followlinks=follow):
         folders[:] = [f for f in folders if f != ".git"]
         seen += len(folders) + len(files)
         if seen > WALK_LIMIT:
             return None
-        found = next((f for f in files if is_secret(f)), "")
-        if found:
-            return found
+        for name in files:
+            path = os.path.join(top, name)
+            target = os.path.basename(os.path.realpath(path)) if os.path.islink(path) else name
+            if is_secret(name) or is_secret(target):
+                return target
     return ""
 
 
@@ -811,6 +814,7 @@ def recursive_secret_read(command, bases):
         if not parts or parts[0] == "git":
             continue
         tool, _, operands, options = parts
+        follow = any(n in (("-L", "--follow") if tool == "rg" else ("-R", "--dereference-recursive")) for n, _ in options)
         if tool == "rg":
             walks = ("RIPGREP_CONFIG_PATH" in command or os.environ.get("RIPGREP_CONFIG_PATH")
                      or any(n in ("-u", "--unrestricted") or n.startswith("--no-ignore") for n, _ in options))
@@ -827,7 +831,7 @@ def recursive_secret_read(command, bases):
                 for folder in glob.glob(path) if any(c in operand for c in "*?[") else [path]:
                     if not os.path.isdir(folder):
                         continue
-                    found = secret_under(folder)
+                    found = secret_under(folder, follow)
                     if found is None:
                         return f"{tool} would search {operand}, too many files to check for secret files"
                     if found:

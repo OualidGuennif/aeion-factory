@@ -157,17 +157,10 @@ is verified, so the context never waits for the model window. OpenCode did so li
 compacts at settlement when the run is interactive or driven through `tools/agents/run pi rpc`; a
 one-shot print run stops cleanly at the gate instead (1.9.2). Pi never cancels its own compaction at
 the model window: it runs and the closure is owed after it. OpenCode sends no compact SessionStart, so
-its allowed compaction itself ends the closure (state RECOVERING, usage cleared). The dsh web profile
-keeps `compaction` inside each agent preset, out of the plugin's root injection, so the plugin looks it
-up with the `/compact` command (the service itself is isolated inside that group) and tells the shared rule that compaction
-is available; the 250k/300k gate then holds as it does for the other harnesses — handover and verified
-checkpoint before compaction, then a compact and a resume — instead of staying advisory and waiting for
-dsh's own compaction. A hard gate owes exactly one verified handover: once the receipt matches, the
-gate stops denying and the session works while the compaction is on its way, because a compaction the
-plugin cannot guarantee must never be able to hold a session hostage. The exit command is likewise
-admitted whatever session token it carries — `ready` opens the gate, never the spelling. Only a
-profile that exposes no compaction service to an agent (neither the root's
-nor its preset's) gets the advisory gate and lets dsh compact itself. Codex ends its turn on a
+its allowed compaction itself ends the closure (state RECOVERING, usage cleared). dsh web runs
+`/compact` once the agent is idle, so its gate holds like the others; a hard gate owes one verified
+handover and stops denying once the receipt matches, so a compaction that never lands cannot hold
+the session. A profile with no compaction service gets the advisory gate. Codex ends its turn on a
 refused compaction and retries it before every turn, so it would stall: when Codex compacts before its
 handover is verified (owner decision 2026-10-28), the compaction runs and the session resumes in closure,
 allowed only the handover, `work/current.md`, docs and the checkpoint until the checkpoint passes. A live
@@ -176,11 +169,8 @@ step-usage event, which arrives after the tool hook. Pi's headless 250k run no l
 1.9.2 stops `pi -p` cleanly at the gate with the verified handover, and
 `tools/agents/run pi rpc` compacts at settlement and resumes in one process (live 2026-11-02 at
 288,668 tokens; the TUI path was not re-tested; see [agent compatibility](agent-compatibility.md)).
-dsh compaction is not dependable in every profile, so its start context and every 250k/300k gate
-message also give the recovery step: once the handover, `work/current.md` and the checkpoint
-verify, stop the session and start a new one from the handover instead of working past 250k. The
-web plugin repeats that instruction when its `/compact` command did not run. That is an instruction
-to the user, not a forced stop; a verified handover is what makes the stop safe.
+When dsh compaction does not run, its messages give the recovery step: once the handover,
+`work/current.md` and the checkpoint verify, stop and start a new session from the handover.
 
 Verification: `python3 tools/context/tests/test_budget.py`, `tools/agents/tests/test_hooks.py`,
 `test_pi.mjs` and `test_opencode.mjs`. Synthetic fixtures prove state and

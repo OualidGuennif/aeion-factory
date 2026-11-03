@@ -6,6 +6,17 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+## [2.0.1] - 2026-11-03
+
+- `template-update` updates every factory file a release changed, not only the connectors: files you
+  left untouched take the release, files you edited are merged, and a conflict keeps your file with a
+  proposal under `.aeion/template-update/`. Your instructions, settings, knowledge and changelog stay yours.
+- Fixed: a project updated to 2.0.0 kept the old team-default `pre-push` hook.
+- `template-update` finds the release your project came from (`.aeion-factory`, else the closest tag),
+  so `--from-ref` is optional; it shows the release notes, flags a major version and names migration
+  steps such as `git config aeion.mode team`; it refuses to write over uncommitted changes.
+- `tools/release/release --new-project` records the factory release in `.aeion-factory`.
+
 ## [2.0.0] - 2026-11-03
 
 - Changed: the git lifecycle is off by default. A clone starts in local mode (safety hooks on, no

@@ -7,8 +7,8 @@ lines `- Owner decision:`, `- State:`, `- Next:` (with who), `- Blocker:`, `- Ev
 
 ## Connector drift check across all harnesses — ACTIVE
 - Owner decision: 2026-11-01, a stale or hand-edited connector must fail a check, not a session; a branch (`main`/`develop`) verifies too, and an adopted project gets an update path that keeps its own content.
-- State: shipped through 1.9.1: `tools/agents/adapter-check` (any `--ref`), `tools/agents/template-update`, `tools/agents/dsh-install` and the dsh compaction fixes; a live dsh session compacts through the plugin.
-- Next: after 1.9.4, `tools/agents/dsh-install --tag v1.9.4` and restart the desktop app (who: owner); run `tools/agents/adapter-check --root <project> --ref v1.9.4` in every other adopted project and its CI (who: agent).
+- State: shipped through 1.9.1: `tools/agents/adapter-check` (any `--ref`), `tools/agents/dsh-install` and the dsh compaction fixes. 2026-11-03 (owner: smarter updates): `tools/agents/template-update` finds the baseline (`.aeion-factory` or tag inference), updates every changed factory file three-way, prints notes, MAJOR and migrations; live v1.9.4 → v2.0.0 update passed adapter-check and the project's tests.
+- Next: release 2.0.1 (who: agent); then `tools/agents/template-update --ref v2.0.1 --root <project>` in every adopted project (who: agent, owner approves merges) and `tools/agents/dsh-install --tag v2.0.1` with a desktop restart (who: owner).
 - Blocker: none.
 - Evidence: knowledge/operations/agent-compatibility.md; tools/agents/tests/test_adapter_check.py; tools/agents/tests/test_template_update.py; tools/agents/tests/test_dsh_install.py
 

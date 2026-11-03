@@ -6,8 +6,9 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
-- Security: a recursive `grep -r` or `rg -u` that would read a secret file is refused; a secret's
-  name is allowed as a search pattern (`grep -rn env.local docs`).
+- Security: a recursive search that would read a secret file is refused (`grep -r`, `rg -u`, `ack`,
+  `ag`, and `rg` outside a git repository); a secret's name is allowed as a search pattern
+  (`grep -rn env.local docs`).
 - Security: the path guard judges a symlink by its target, so a link to `.env` or `.git/config` is refused.
 - `tools/agents/run` and `tools/context/run` name a missing agent binary in one line, not a traceback.
 - `tools/agents/pi-rpc` reports a Pi that exits before reading the prompt in one line.

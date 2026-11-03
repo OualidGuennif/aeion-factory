@@ -5,10 +5,18 @@ Finished tasks are deleted: the commit message and knowledge/ keep what matters.
 Status: ACTIVE, WAITING-OWNER, MEASURING, BLOCKED, BACKLOG. An entry is `## <title> — <STATUS>`, then the
 lines `- Owner decision:`, `- State:`, `- Next:` (with who), `- Blocker:`, `- Evidence:`.
 
+## Security scan findings 2026-11-03 — WAITING-OWNER
+- Owner decision: 2026-11-03, a full security check of the repository (Claude Security, whole repository, medium); then a rescan of the unreviewed areas only, never the whole repository again.
+- State: scan 1 at f727090, report verified, 8 findings each confirmed 3/3. F14 HIGH `.dsh/plugins/factory/index.js:31` runs the first `tools/agents/hook.py` found above the session folder (same upward walk in `.opencode/plugins/factory/index.js:23` and `.pi/extensions/factory/index.js:19`). F15-F18 MEDIUM `loops/orchestrator.sh` inner :36, middle :38, watch :43 (web plus `git *`, e.g. `git config core.fsmonitor`), retro :45 (writes `.claude/**`, `gh api`): attacker-writable issue, PR or web text reaches agents with broad git/gh/Write grants. F19 MEDIUM `.claude/hooks/secret_names.py:16` `is_secret()` is case-sensitive (`ENV.LOCAL` opens `.env.local` on APFS). F20 MEDIUM `.github/workflows/outer-loop.yml:31` outsider text plus an issue publish channel. F21 LOW `outer-loop.yml:20` and `pr-review.yml` check out without `persist-credentials: false`.
+- Coverage: 10 of 34 researchers returned (no result, no reason). Read: loops, `.github`, `tools/{git-hooks,release,repo-health,loops}`, the native plugins; `tools/agents` for injection only. Unreviewed: `.claude/`, the other `tools/`, `demo/`, `skills/`, the docs, root files and the secrets pass.
+- Next: rescan the unreviewed areas (who: agent, owner asked 2026-11-03); then the owner picks which findings to fix and whether before 2.0.2 (who: owner decides; agent fixes).
+- Blocker: none.
+- Evidence: CLAUDE-SECURITY-20261103-075825/CLAUDE-SECURITY-RESULTS.md (git-ignored)
+
 ## Connector drift check across all harnesses — ACTIVE
 - Owner decision: 2026-11-01, a stale or hand-edited connector must fail a check, not a session; a branch (`main`/`develop`) verifies too, and an adopted project gets an update path that keeps its own content.
 - State: shipped through 1.9.1: `tools/agents/adapter-check` (any `--ref`), `tools/agents/dsh-install` and the dsh compaction fixes. 2026-11-03 (owner: smarter updates): `tools/agents/template-update` finds the baseline (`.aeion-factory` or tag inference), updates every changed factory file three-way, prints notes, MAJOR and migrations; live v1.9.4 → v2.0.0 update passed adapter-check and the project's tests.
-- Next: 2.0.2 released; from the factory clone, `tools/agents/template-update --ref v2.0.2 --root <project>` in every adopted project after committing its work (who: agent, owner approves merges; aeion-observability previewed on a clone: 16 updated, 2 real conflicts, AGENTS.md merge) and `tools/agents/dsh-install --tag v2.0.2` with a desktop restart (who: owner).
+- Next: release 2.0.2 (fix committed as f727090 on develop, not pushed: review receipt, push, release PR, tag; who: agent, owner approved 2026-11-03). Then, from the factory clone, `tools/agents/template-update --ref v2.0.2 --root <project>` in every adopted project after committing its work (who: agent, owner approves merges; aeion-observability previewed on a clone: 16 updated, 2 real conflicts, AGENTS.md merge) and `tools/agents/dsh-install --tag v2.0.2` with a desktop restart (who: owner).
 - Blocker: none.
 - Evidence: knowledge/operations/agent-compatibility.md; tools/agents/tests/test_adapter_check.py; tools/agents/tests/test_template_update.py; tools/agents/tests/test_dsh_install.py
 

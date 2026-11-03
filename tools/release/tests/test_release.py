@@ -77,9 +77,12 @@ class ReleaseTests(unittest.TestCase):
         self.assertEqual((self.root / "work/current.md").read_text(), expected)
         self.assertEqual((self.root / "CHANGELOG.md").read_text(), "# Changelog\n\nIntro.\n\n## [Unreleased]\n")
         self.assertEqual((self.root / "VERSION").read_text(), "0.1.0\n")
+        # template-update reads the factory release from the marker, never from the application's VERSION.
+        self.assertEqual((self.root / ".aeion-factory").read_text(), "v1.4.0\n")
         # A second run changes nothing.
         self.assertEqual(self.release("--new-project").returncode, 0)
         self.assertEqual((self.root / "work/current.md").read_text(), expected)
+        self.assertEqual((self.root / ".aeion-factory").read_text(), "v1.4.0\n")
 
     def test_new_project_refuses_in_the_factory_clone(self):
         self.write("1.4.0\n", HEAD)
@@ -94,6 +97,7 @@ class ReleaseTests(unittest.TestCase):
         self.assertIn("own clone", result.stderr)
         self.assertTrue((self.root / "demo").is_dir())
         self.assertEqual((self.root / "VERSION").read_text(), "1.4.0\n")
+        self.assertFalse((self.root / ".aeion-factory").exists())
 
 class ArchiveTests(unittest.TestCase):
     def test_release_archive_leaves_out_demo(self):

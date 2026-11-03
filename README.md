@@ -22,7 +22,8 @@ tools/agents/run claude
 ```
 
 `--new-project` sets version 0.1.0, empties the changelog, leaves one task (adapt the factory to
-your project) and removes the factory's `demo/`. Then give your agent the
+your project), removes the factory's `demo/` and records the factory release in `.aeion-factory`
+for later updates. Then give your agent the
 [ready-to-copy setup prompt](knowledge/operations/getting-started.md#new-project).
 
 Replace `claude` with `codex`, `opencode`, `pi`, `dsh`, `devin`, `droid` or `antigravity`. The
@@ -43,6 +44,21 @@ Open your project with your agent and use the **adopt** skill from a reference c
 It inspects what you have and proposes one phase at a time; your instructions, tools and history
 stay in place, and you approve each change before it is applied.
 [Existing-project walkthrough and ready-to-copy prompt →](knowledge/operations/getting-started.md#existing-project)
+
+### Update to a new release
+
+From an up-to-date clone of Æion Factory (`git fetch --tags`), preview, then apply the latest
+release tag:
+
+```bash
+tools/agents/template-update --ref v2.0.1 --root ../your-project --check
+tools/agents/template-update --ref v2.0.1 --root ../your-project
+```
+
+It finds the release your project came from (`.aeion-factory`, else the closest tag), shows the
+release notes, updates every factory file you left untouched, merges the ones you edited, and leaves
+your instructions, settings, knowledge and changelog to you with a proposal for each. The
+[template-update skill](.agents/skills/template-update/SKILL.md) walks your agent through it.
 
 ## Enable optional tools
 

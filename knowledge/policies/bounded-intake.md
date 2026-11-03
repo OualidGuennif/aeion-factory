@@ -36,7 +36,10 @@ Read windows use a positive `limit` and an `offset` of 0 or more (0 and 1 both m
 line), at most 400 lines and 64 KiB, with at most 1 MiB of local scanning. Use a bounded shell selection when a distant window exceeds that scan budget.
 Large-file Grep uses an explicit positive `head_limit`/native `limit` of at most 400, or an
 explicit count/file-name output mode. Directory searches are not recursively pre-counted, but an
-explicit unlimited (`head_limit: 0`) content search is refused on any path.
+explicit unlimited (`head_limit: 0`) content search is refused on any path. A recursive Bash `grep`
+(or `rg -u`) is checked for secret files by walking at most 10,000 entries; a larger tree is refused,
+and `git grep` or plain `rg` stays available ([security](security.md)). The path guard sizes and
+judges a symlink's target, not only its name.
 
 ## Outputs and refusals
 

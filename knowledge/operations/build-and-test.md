@@ -68,7 +68,8 @@ A valid knowledge directory with no dated documents still passes `stale`.
 The pre-commit (`git config core.hooksPath tools/git-hooks`) runs `knowledge-check`, `doc-links`
 and `repo-health`. The pre-push refuses a push of `develop` without a recorded `Review: OK`
 and any direct push to `main`. CI runs those three checks, `factory-tests`, the efficiency-bundle
-check and security scans on pushes to `main` and pull requests targeting `main` or `develop`.
+check and security scans on pushes to `main` or `develop` and pull requests targeting either; the
+Semgrep container is pinned by digest like the actions.
 `stale` and `orphans` remain manual checks; CI exercises their fixtures through `factory-tests`.
 
 Many people run Æion Factory in a plain folder, without git. The link and health checks, the context

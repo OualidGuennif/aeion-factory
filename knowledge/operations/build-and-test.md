@@ -100,7 +100,9 @@ before capture pipes are drained, so ordinary descendants do not keep working af
 
 The same hook suite tests [bounded intake](../policies/bounded-intake.md), including file/range
 thresholds, misleading limiters and preserved native edit/range fields. SessionStart adds two
-short intake instructions and the flow mode within its existing 25-line cap.
+short intake instructions and the flow mode within its existing 25-line cap. It names git hooks
+that are off (`core.hooksPath` not `tools/git-hooks`), and past six changed paths or open tasks it
+lists five and says how many more.
 
 The flow mode is a per-clone Git setting, read from the repository's local config only
 (`git config --local`; includes and the global config do not count). The default team flow works

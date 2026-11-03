@@ -560,19 +560,22 @@ shutil.rmtree(parent)
 
 # session-start: at most 25 lines, and it names the flow mode.
 # The mode is read from the repository's local config, so each run gets a throwaway repository.
-def session_start(mode, global_mode=None, git=True):
+def session_start(mode, global_mode=None, git=True, tasks=1, hooks_path=None):
     repo = Path(tempfile.mkdtemp())
     for rel in (".claude/hooks/session-start.py", ".claude/hooks/project_files.py", "tools/repo-health/repo-health"):
         (repo / rel).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy(ROOT / rel, repo / rel)
     (repo / "work").mkdir()
-    (repo / "work/current.md").write_text("# Current work\n\n## Probe task — ACTIVE\n- State: x\n")
+    (repo / "work/current.md").write_text("# Current work\n" + "".join(
+        f"\n## Probe task{'' if n == 0 else f' {n + 1}'} — ACTIVE\n- State: x\n" for n in range(tasks)))
     git_env = {**os.environ, "GIT_CONFIG_GLOBAL": str(repo / "global.cfg"), "GIT_CONFIG_NOSYSTEM": "1"}
     (repo / "global.cfg").write_text(f"[aeion]\n\tmode = {global_mode}\n" if global_mode else "")
     for args in (["init", "-q"], ["add", "work"], ["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "Probe commit"]) if git else ():
         subprocess.run(["git"] + args, cwd=repo, capture_output=True, check=True, env=git_env)
     if mode:
         subprocess.run(["git", "config", "aeion.mode", mode], cwd=repo, capture_output=True, check=True, env=git_env)
+    if hooks_path:
+        subprocess.run(["git", "config", "core.hooksPath", hooks_path], cwd=repo, capture_output=True, check=True, env=git_env)
     result = subprocess.run([sys.executable, str(repo / ".claude/hooks/session-start.py")], capture_output=True, text=True,
                             cwd=repo, env=git_env)
     shutil.rmtree(repo)
@@ -590,6 +593,15 @@ expect("session-start lists the open task", result, 0, "Probe task — ACTIVE")
 if len(result.stdout.strip().split("\n")) > 25:
     failures.append("session-start printed more than 25 lines")
 expect("session-start names local mode", session_start("local"), 0, "Æion Factory mode: local")
+# More than six tasks: five titles, then how many more, so the count and the list agree.
+result = session_start("team", tasks=8)
+expect("session-start names the tasks it leaves out", result, 0, "  … and 3 more")
+if "Probe task 6" in result.stdout or len(result.stdout.strip().split("\n")) > 25:
+    failures.append("session-start listed more than five of eight tasks or printed more than 25 lines")
+expect("session-start names git hooks that are off", session_start("team"), 0,
+       "git hooks: off; enable with git config core.hooksPath tools/git-hooks")
+if "git hooks: off" in session_start("team", hooks_path="tools/git-hooks").stdout:
+    failures.append("session-start called the repository's own git hooks off")
 # The global config cannot switch the mode: only the repository's own config does.
 expect("session-start ignores a global aeion.mode", session_start(None, "local"), 0, "Æion Factory mode: team")
 

@@ -15,6 +15,12 @@ def out(*command):
     return [l for l in subprocess.run(command, cwd=ROOT, capture_output=True, text=True).stdout.split("\n") if l.strip()]
 
 
+def capped(items):
+    """At most six lines: every item, or the first five and how many were left out."""
+    shown = items if len(items) <= 6 else items[:5] + [f"… and {len(items) - 5} more"]
+    return ["  " + item[:110] for item in shown]
+
+
 lines = []
 lines += ["Bounded intake: full reads/dumps above 64 KiB or 400 lines are refused.",
           "Use targeted Read ranges, limited searches and summaries; see knowledge/policies/bounded-intake.md."]
@@ -35,10 +41,14 @@ else:
     else:
         lines.append(f"Æion Factory mode: team on {' '.join(out('git', 'branch', '--show-current')) or 'a detached HEAD'} "
                      "(develop: review before each push; main: release PR). Local play: git config aeion.mode local")
+    # The pre-commit checks and the pre-push review gate run only when git uses the repository's hooks.
+    hooks = out("git", "config", "--get", "core.hooksPath")
+    if not hooks or (ROOT / hooks[0]).resolve() != (ROOT / "tools/git-hooks").resolve():
+        lines.append("git hooks: off; enable with git config core.hooksPath tools/git-hooks")
     # Uncommitted changes: one you cannot explain is not yours.
     status = out("git", "status", "--short")
     lines.append(f"git status: {len(status)} changed path(s)" if status else "git status: clean")
-    lines += ["  " + s for s in status[:6]]
+    lines += capped(status)
     # The last commits.
     lines.append("last commits:")
     lines += ["  " + s for s in out("git", "log", "-5", "--oneline")]
@@ -46,7 +56,7 @@ else:
 work = ROOT / "work/current.md"
 titles = [l[3:] for l in work.read_text(encoding="utf-8").split("\n") if l.startswith("## ")] if work.exists() else []
 lines.append(f"work/current.md: {len(titles)} open task(s)")
-lines += ["  " + t[:110] for t in titles[:6]]
+lines += capped(titles)
 # The scorecard.
 lines += out("tools/repo-health/repo-health")
 print("\n".join(lines[:25]))

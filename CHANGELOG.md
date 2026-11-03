@@ -14,6 +14,7 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 - `tools/agents/run` (and `tools/context/run`) prints one line naming a missing agent binary
   instead of a Python traceback.
 - `tools/agents/pi-rpc` reports a Pi that exits before reading the prompt in one line, exit 1.
+- Session start says when git hooks are off, and how many tasks or changes it left unlisted.
 
 ## [1.9.3] - 2026-11-02
 

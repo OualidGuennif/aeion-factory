@@ -57,6 +57,6 @@ work = ROOT / "work/current.md"
 titles = [l[3:] for l in work.read_text(encoding="utf-8").split("\n") if l.startswith("## ")] if work.exists() else []
 lines.append(f"work/current.md: {len(titles)} open task(s)")
 lines += capped(titles)
-# The scorecard.
-lines += out("tools/repo-health/repo-health")
-print("\n".join(lines[:25]))
+# The scorecard always shows; the lists above give way to it within the 25 lines.
+score = out("tools/repo-health/repo-health")[:25]
+print("\n".join(lines[:25 - len(score)] + score))

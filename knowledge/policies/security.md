@@ -63,12 +63,13 @@ Requirements for a change, not claims about what production already satisfies.
   first operand, or each `-e` value) may name a secret when the shell passes it as typed (no glob,
   `$`, backtick, brace, tilde or backslash, unless quotes surely stay quotes). A file operand, a `-f`
   pattern file or any other mention is still judged. A recursive search reads every file under its
-  folders, hidden and gitignored ones too: `grep -r`/`-R`/`-d recurse`, and `rg` with `-u`,
-  `--no-ignore*` or a ripgrep config, are refused when a folder they search holds a secret file (a
-  link judged by its target; linked folders walked for `grep -R` and `rg -L`) or more than 10,000
-  entries to check. Plain `rg` and `git grep` skip ignored files and stay allowed;
-  so `rg` does read a secret file that is not gitignored, and `git grep --no-index` and
-  `find -exec grep` are not judged.
+  folders, hidden and gitignored ones too: `grep -r`/`-R`/`-d recurse` (or a unique prefix such as
+  `--recur`), `rg` with `-u`, `--no-ignore*` or a ripgrep config, and `ack`/`ag` are refused when a
+  folder they search holds a secret file (a link judged by its target; linked folders walked for
+  `grep -R` and `rg -L`) or more than 10,000 entries to check. Inside a git work tree plain `rg` and
+  `git grep` skip ignored files and stay allowed, so `rg` there does read a secret file that is not
+  gitignored; outside one, `rg` honours no `.gitignore` and is judged like a recursive search (dot
+  files only with `--hidden`). `git grep --no-index` and `find -exec grep` are not judged.
   One exception, for code: in a heredoc read by an interpreter or git, or written to a file by `cat`
   or `tee`, an identifier's property directly followed by `)`, `]`, `}`, `;` or `,` (a Deno KV
   `entry.key)`) is not a file name. The delimiter must be quoted (`<<'EOF'`), because an unquoted body

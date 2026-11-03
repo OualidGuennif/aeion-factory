@@ -289,7 +289,7 @@ expect("bash allow: a cd with a plain glob", run_hook("guard-bash.py", {"command
 # A search pattern is text: a secret's name there opens nothing. Files, pattern files and globs still count.
 for command in ["grep -rn id_rsa plain", "grep -rn 'env.local' plain", "rg -n env.local", "git grep -n .env",
                 "grep -e .env -e id_rsa notes.md", "rg -g '*.md' env.local plain", "grep -n entry.key app/x.ts",
-                "git -C plain grep -n id_rsa", "rg --hidden KEY .", "grep -rn -A 2 env.local plain"]:
+                "git -C plain grep -n id_rsa", "rg --hidden KEY plain", "grep -rn -A 2 env.local plain"]:
     expect(f"bash allow search pattern: {command}", run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 0)
 for command in ["grep x .env", "grep -f .env notes.md", "grep env.* notes.md", "cat env.local; grep env.local notes.md",
                 "rg -n KEY sub/.env", "sh -c 'grep env.local notes.md'"]:
@@ -317,6 +317,19 @@ with tempfile.TemporaryDirectory() as tree:
                run_hook("guard-bash.py", {"command": command, "workdir": str(tree)}), 2, stderr_has=".env")
     expect("bash allow: grep -r does not walk a linked folder",
            run_hook("guard-bash.py", {"command": "grep -rn KEY linked", "workdir": str(tree)}), 0)
+    # GNU grep takes a unique prefix of a long option; ack and ag search folders by default; outside a
+    # git work tree rg reads every unhidden file, since .gitignore applies only inside one.
+    (tree / "plain").mkdir()
+    (tree / "plain/env.local").write_text("KEY=x\n")
+    (tree / "dotted").mkdir()
+    (tree / "dotted/.env").write_text("KEY=x\n")
+    for command in ["grep --recur KEY secret", "grep --dir=recurse KEY secret", "grep --dir recurse KEY secret",
+                    "grep --deref KEY linked", "ack KEY secret", "ag KEY", "rg KEY plain", "rg --hidden KEY dotted",
+                    "rg -uu KEY dotted"]:
+        expect(f"bash deny recursive secret read: {command}",
+               run_hook("guard-bash.py", {"command": command, "workdir": str(tree)}), 2, stderr_has="secret")
+    expect("bash allow: plain rg skips hidden files outside git",
+           run_hook("guard-bash.py", {"command": "rg KEY dotted", "workdir": str(tree)}), 0)
     expect("bash deny: an --exclude-from value is a file, not the pattern",
            run_hook("guard-bash.py", {"command": "grep --exclude-from secret/.env -n x quiet/a.md", "workdir": str(tree)}),
            2, stderr_has="secret")

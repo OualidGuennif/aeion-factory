@@ -17,8 +17,8 @@ def launch(command):
     """Runs the agent and exits with its code; a missing binary is one line, not a traceback."""
     try:
         sys.exit(subprocess.run(command, cwd=root, shell=False).returncode)
-    except FileNotFoundError:
-        sys.exit(f'{command[0]} is not installed or not on PATH; '
+    except (FileNotFoundError, PermissionError):
+        sys.exit(f'{command[0]} is not installed, not on PATH or not executable; '
                  'see knowledge/operations/getting-started.md#prepare-your-agent')
 
 

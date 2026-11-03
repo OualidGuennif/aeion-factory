@@ -714,6 +714,8 @@ SEARCH_VALUES = {"grep": GREP_VALUES, "egrep": GREP_VALUES, "fgrep": GREP_VALUES
                  "git": {"-A", "-B", "-C", "-m", "--after-context", "--before-context", "--context", "--max-count",
                          "--max-depth", "--threads"}}
 PATTERN_FLAGS, PATTERN_FILE_FLAGS = {"-e", "--regexp"}, {"-f", "--file"}
+GREP_LONG = sorted(o for o in GREP_VALUES | {"--recursive", "--dereference-recursive", "--regexp", "--file"}
+                   if o.startswith("--"))
 WALK_LIMIT = 10000
 
 
@@ -743,6 +745,10 @@ def search_parts(words):
             operands.append(word)
         elif word.startswith("--"):
             name, eq, value = word.partition("=")
+            # GNU grep takes any unique prefix of a long option (--recur is --recursive).
+            if tool not in ("rg", "git") and name not in GREP_LONG:
+                matches = [o for o in GREP_LONG if o.startswith(name)]
+                name = matches[0] if len(matches) == 1 else name
             options.append((name, value if eq else rest.pop(0) if name in takes and rest else None))
         else:
             for i, letter in enumerate(word[1:], 2):
@@ -783,12 +789,14 @@ def without_patterns(tokens, patterns, split, aligned=None):
     return tokens, aligned
 
 
-def secret_under(directory, follow=False):
+def secret_under(directory, follow=False, hidden=True):
     """The first secret file name under directory, a link judged by its target too, "" when there is none,
-    None when it is too large to check. follow walks linked folders, as grep -R does."""
+    None when it is too large to check. follow walks linked folders, as grep -R does; hidden=False skips
+    dot files and folders, as plain rg does."""
     seen = 0
     for top, folders, files in os.walk(directory, followlinks=follow):
-        folders[:] = [f for f in folders if f != ".git"]
+        folders[:] = [f for f in folders if f != ".git" and (hidden or not f.startswith("."))]
+        files = [f for f in files if hidden or not f.startswith(".")]
         seen += len(folders) + len(files)
         if seen > WALK_LIMIT:
             return None
@@ -800,9 +808,15 @@ def secret_under(directory, follow=False):
     return ""
 
 
+def inside_git(folder):
+    """Whether folder lies in a git work tree, the only place rg honours .gitignore."""
+    path = Path(folder).resolve()
+    return any((p / ".git").exists() for p in (path, *path.parents))
+
+
 def recursive_secret_read(command, bases):
-    """Why a recursive grep, or an rg that skips no ignore file, would read a secret file, or "": it reads
-    every file under the folders it searches, hidden and gitignored ones too."""
+    """Why a recursive grep, an rg that skips no ignore file, or ack/ag would read a secret file, or "":
+    they read every file under the folders they search, gitignored ones too."""
     for words in simple_commands(command):
         words = program(words)
         if words and words[0] == "<script>":
@@ -810,17 +824,27 @@ def recursive_secret_read(command, bases):
             if reason:
                 return reason
             continue
-        parts = search_parts(words)
-        if not parts or parts[0] == "git":
-            continue
-        tool, _, operands, options = parts
-        follow = any(n in (("-L", "--follow") if tool == "rg" else ("-R", "--dereference-recursive")) for n, _ in options)
-        if tool == "rg":
-            walks = ("RIPGREP_CONFIG_PATH" in command or os.environ.get("RIPGREP_CONFIG_PATH")
-                     or any(n in ("-u", "--unrestricted") or n.startswith("--no-ignore") for n, _ in options))
+        hidden = True
+        if words and PurePosixPath(words[0]).name in ("ack", "ack-grep", "ag"):
+            # ack and ag search the current folder by default; their options differ, so every folder named counts.
+            tool, operands, follow, walks = words[0], [w for w in words[1:] if not w.startswith("-")][1:], False, True
         else:
-            walks = any(n in ("-r", "-R", "--recursive", "--dereference-recursive")
-                        or n in ("-d", "--directories") and v == "recurse" for n, v in options)
+            parts = search_parts(words)
+            if not parts or parts[0] == "git":
+                continue
+            tool, _, operands, options = parts
+            follow = any(n in (("-L", "--follow") if tool == "rg" else ("-R", "--dereference-recursive"))
+                         for n, _ in options)
+            if tool == "rg":
+                walks = ("RIPGREP_CONFIG_PATH" in command or os.environ.get("RIPGREP_CONFIG_PATH")
+                         or any(n in ("-u", "--unrestricted") or n.startswith("--no-ignore") for n, _ in options))
+                # Outside a git work tree rg ignores .gitignore and reads every file it does not count as hidden.
+                if not walks and not all(inside_git(base) for base in bases):
+                    walks = True
+                    hidden = any(n in ("--hidden", "-.") for n, _ in options) or [n for n, _ in options].count("-u") > 1
+            else:
+                walks = any(n in ("-r", "-R", "--recursive", "--dereference-recursive")
+                            or n in ("-d", "--directories") and v == "recurse" for n, v in options)
         if not walks:
             continue
         for operand in operands or ["."]:
@@ -831,7 +855,7 @@ def recursive_secret_read(command, bases):
                 for folder in glob.glob(path) if any(c in operand for c in "*?[") else [path]:
                     if not os.path.isdir(folder):
                         continue
-                    found = secret_under(folder, follow)
+                    found = secret_under(folder, follow, hidden)
                     if found is None:
                         return f"{tool} would search {operand}, too many files to check for secret files"
                     if found:
@@ -966,7 +990,8 @@ except OSError:
     recursive = True
 if recursive:
     deny((recursive if isinstance(recursive, str) else "the recursive search could not be verified")
-         + "; search with git grep, or rg without -u/--no-ignore: both skip ignored files such as .env.")
+         + "; in a git repository, search with git grep, or rg without -u/--no-ignore: both skip ignored "
+           "files such as .env.")
 
 # Environment dumps hold keys.
 if "printenv" in tokens or refuses(env_dump, command):

@@ -565,7 +565,7 @@ class HookTests(unittest.TestCase):
             result=subprocess.run([hook.sys.executable,str(launcher),agent],cwd=self.root,
                                   env={'PATH':str(empty)},capture_output=True,text=True)
             self.assertEqual(result.returncode,1,agent)
-            self.assertIn('is not installed or not on PATH',result.stderr)
+            self.assertIn('is not installed',result.stderr)
             self.assertNotIn('Traceback',result.stderr)
 
     def test_devin_native_tool_names_reach_the_shared_guards(self):

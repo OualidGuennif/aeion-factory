@@ -91,8 +91,8 @@ tests for what changed still run.
   unedited: the same simple bullet list as the first releases.
 - A new project or a demo copy starts with `tools/release/release --new-project`: `VERSION` 0.1.0, an
   empty `Unreleased`, and `work/current.md` holding only the "Adapt Æion Factory to this project" entry,
-  dated today. It refuses in Æion Factory's own clone (origin `OualidGuennif/aeion-factory`), and running
-  it twice changes nothing.
+  dated today; the factory's `demo/` is removed. It refuses in Æion Factory's own clone (origin
+  `OualidGuennif/aeion-factory`), and running it twice changes nothing.
 - Independent review requires an authorized independent pass. Reading a pool agent profile does
   not authorize creating an agent; local self-assessment cannot issue the independent push-gate receipt.
 - A deploy or a human decision waits for that human. The owner's comments become preferences

@@ -68,7 +68,8 @@ A valid knowledge directory with no dated documents still passes `stale`.
 The pre-commit (`git config core.hooksPath tools/git-hooks`) runs `knowledge-check`, `doc-links`
 and `repo-health`. The pre-push refuses a push of `develop` without a recorded `Review: OK`
 and any direct push to `main`. CI runs those three checks, `factory-tests`, the efficiency-bundle
-check and security scans on pushes to `main` and pull requests targeting `main` or `develop`.
+check and security scans on pushes to `main` or `develop` and pull requests targeting either; the
+Semgrep container is pinned by digest like the actions.
 `stale` and `orphans` remain manual checks; CI exercises their fixtures through `factory-tests`.
 
 Many people run Æion Factory in a plain folder, without git. The link and health checks, the context
@@ -100,7 +101,9 @@ before capture pipes are drained, so ordinary descendants do not keep working af
 
 The same hook suite tests [bounded intake](../policies/bounded-intake.md), including file/range
 thresholds, misleading limiters and preserved native edit/range fields. SessionStart adds two
-short intake instructions and the flow mode within its existing 25-line cap.
+short intake instructions and the flow mode within its existing 25-line cap. It names git hooks
+that are off (`core.hooksPath` not `tools/git-hooks`), and past six changed paths or open tasks it
+lists five and says how many more.
 
 The flow mode is a per-clone Git setting, read from the repository's local config only
 (`git config --local`; includes and the global config do not count). The default team flow works

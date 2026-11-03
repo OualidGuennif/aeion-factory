@@ -59,7 +59,17 @@ Requirements for a change, not claims about what production already satisfies.
   a `cd` or `pushd` moves to. The Grep tool's `glob` filter is refused when it names a secret the
   same way. The ordinary-name list is a heuristic: an odd glob such as `*2` matches only a
   certificate name and is refused.
-  A read of a secret name is refused even as a search pattern; search names with the Grep tool.
+  A search pattern is text: the pattern of a bare `grep`, `egrep`, `fgrep`, `rg` or `git grep` (its
+  first operand, or each `-e` value) may name a secret when the shell passes it as typed (no glob,
+  `$`, backtick, brace, tilde or backslash, unless quotes surely stay quotes). A file operand, a `-f`
+  pattern file or any other mention is still judged. A recursive search reads every file under its
+  folders, hidden and gitignored ones too: `grep -r`/`-R`/`-d recurse` (or a unique prefix such as
+  `--recur`), `rg` with `-u`, `--no-ignore*` or a ripgrep config, and `ack`/`ag` are refused when a
+  folder they search holds a secret file (a link judged by its target; linked folders walked for
+  `grep -R` and `rg -L`) or more than 10,000 entries to check. Inside a git work tree plain `rg` and
+  `git grep` skip ignored files and stay allowed, so `rg` there does read a secret file that is not
+  gitignored; outside one, `rg` honours no `.gitignore` and is judged like a recursive search (dot
+  files only with `--hidden`). `git grep --no-index` and `find -exec grep` are not judged.
   One exception, for code: in a heredoc read by an interpreter or git, or written to a file by `cat`
   or `tee`, an identifier's property directly followed by `)`, `]`, `}`, `;` or `,` (a Deno KV
   `entry.key)`) is not a file name. The delimiter must be quoted (`<<'EOF'`), because an unquoted body
@@ -83,7 +93,8 @@ Requirements for a change, not claims about what production already satisfies.
   unquoted glob that, like the shell's, crosses no `/` and meets `.git` only with a literal dot),
   normalized and case folded (`.GIT//Config` is the same file on APFS); a quoted pattern (`-path
   './.git/*'`), prose with spaces (a commit message) and a heredoc fed to a program are not paths.
-  Reading it stays allowed. A text guard sees one call at a time, so
+  Reading it stays allowed. The path guard also judges a symlink by its target, so a link with an
+  ordinary name to `.env` or `.git/config` is refused like the file itself. A text guard sees one call at a time, so
   a path held in a variable or a symlink, and a script written in one call and run in a later
   one, are not judged by what they do. CI repeats the checks, so it stays the gate a
   deliberate local bypass cannot pass.

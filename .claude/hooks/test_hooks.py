@@ -169,7 +169,7 @@ glob_dir = Path(tempfile.mkdtemp())
 for command in ["head .env*", "grep -r . .e*", "base64 .en?", "tail .[e]nv", f"head {glob_dir}/.e*"]:
     expect(f"bash deny glob: {command}", run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 2)
 expect("bash ask: a glob that names a secret", run_hook("guard-bash.py", {"command": "ls .e*", "workdir": str(glob_dir)}), 0, '"ask"')
-for command in ["ls *", "head *.md", "grep -r x .", "wc -l .x*", "rg 'x.*y$' .", "ls src/{a,b}.py"]:
+for command in ["ls *", "head *.md", "wc -l .x*", "rg 'x.*y$' .", "ls src/{a,b}.py"]:
     expect(f"bash allow glob: {command}", run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 0)
 # The glob follows a cd, braces expand, and an unknown directory refuses.
 (glob_dir / "sub").mkdir()
@@ -179,7 +179,7 @@ for command in ["cd sub && head .e*", "bash -c 'cd sub; tail .e*'", "head sub/.{
                 'cd sub && head .e""*', "head $(pwd)/sub/.e*", "head `pwd`/sub/.e*", "head ~+/sub/.e*",
                 "sh -c 'head $1/.e*' _ sub", "env -C sub sh -c 'head .[e]nv'"]:
     expect(f"bash deny glob: {command}", run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 2)
-for command in ["grep -rn '$HOME/.*' .", "sed -i \"s/$OLD.*/$NEW/\" a.py", "jq --arg k x '.items[$k]' f.json",
+for command in ["grep -n '$HOME/.*' notes.md", "sed -i \"s/$OLD.*/$NEW/\" a.py", "jq --arg k x '.items[$k]' f.json",
                 'cd "$REPO" && ls *.py', "ls ${DIR}/*.py", 'git commit -m "fix $PWD/*.py glob"',
                 "cd - && head *.md", "sed -n 's/.*=//p' a.cfg"]:
     expect(f"bash allow: {command}", run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 0)
@@ -215,7 +215,6 @@ for command in ["python3 - <<'PY'\nopen('server.key').read()\nPY",
                 "while read f; do cat \"$f\"; done <<'EOF'\nserver.key;\nEOF",
                 "cat > out.txt <<EOF\n$(cat server.key)\nEOF",
                 "git commit -F - <<EOF\n$(cat server.key)\nEOF",
-                "grep -n entry.key app/x.ts",
                 "cat server.key"]:
     expect(f"bash deny secret beside accessors: {command[:30]}", run_hook("guard-bash.py", {"command": command}), 2, stderr_has="secret")
 # A glob that names a secret and no ordinary file is refused wherever it expands.
@@ -287,11 +286,84 @@ expect("bash allow: find prunes .git", run_hook("guard-bash.py", {"command": "fi
                                                                  "workdir": str(glob_dir)}), 0)
 expect("path allow: Read of .git/config", run_hook("guard-path.py", {"file_path": "/repo/.git/config"}, tool_name="Read"), 0)
 expect("bash allow: a cd with a plain glob", run_hook("guard-bash.py", {"command": "cd sub && ls *.md", "workdir": str(glob_dir)}), 0)
-expect("bash deny names the Grep tool for searches", run_hook("guard-bash.py", {"command": "grep -rn id_rsa tools"}), 2,
-       stderr_has="Grep tool")
+# A search pattern is text: a secret's name there opens nothing. Files, pattern files and globs still count.
+for command in ["grep -rn id_rsa plain", "grep -rn 'env.local' plain", "rg -n env.local", "git grep -n .env",
+                "grep -e .env -e id_rsa notes.md", "rg -g '*.md' env.local plain", "grep -n entry.key app/x.ts",
+                "git -C plain grep -n id_rsa", "rg --hidden KEY plain", "grep -rn -A 2 env.local plain"]:
+    expect(f"bash allow search pattern: {command}", run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 0)
+for command in ["grep x .env", "grep -f .env notes.md", "grep env.* notes.md", "cat env.local; grep env.local notes.md",
+                "rg -n KEY sub/.env", "sh -c 'grep env.local notes.md'"]:
+    expect(f"bash deny secret beside a pattern: {command}",
+           run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 2, stderr_has="secret")
+# A recursive search reads hidden and gitignored files, so a folder holding a secret refuses it.
+for command in ["grep -r x .", "grep -rn API_KEY .", "grep -R KEY sub", "grep -d recurse KEY .", "rg -uu KEY",
+                "rg --no-ignore KEY .", "grep -rn KEY $DIR", "cd sub && grep -rn KEY .", "bash -c 'grep -r KEY .'",
+                "RIPGREP_CONFIG_PATH=c rg KEY ."]:
+    expect(f"bash deny recursive secret read: {command}",
+           run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 2, stderr_has="git grep")
+expect("bash deny: a search pattern for an environment word points to grep -f",
+       run_hook("guard-bash.py", {"command": "grep -rn environ plain", "workdir": str(glob_dir)}), 2, stderr_has="grep -f")
+# A link with an ordinary name is judged by its target; grep -R also walks linked folders.
+with tempfile.TemporaryDirectory() as tree:
+    tree = Path(tree)
+    for folder in ("secret", "quiet", "linked"):
+        (tree / folder).mkdir()
+    (tree / "secret/.env").write_text("KEY=x\n")
+    (tree / "quiet/a.md").write_text("a\n")
+    (tree / "quiet/notes.txt").symlink_to(tree / "secret/.env")
+    (tree / "linked/docs").symlink_to(tree / "secret")
+    for command in ["grep -rn KEY quiet", "grep -R KEY linked"]:
+        expect(f"bash deny recursive read through a link: {command}",
+               run_hook("guard-bash.py", {"command": command, "workdir": str(tree)}), 2, stderr_has=".env")
+    expect("bash allow: grep -r does not walk a linked folder",
+           run_hook("guard-bash.py", {"command": "grep -rn KEY linked", "workdir": str(tree)}), 0)
+    # GNU grep takes a unique prefix of a long option; ack and ag search folders by default; outside a
+    # git work tree rg reads every unhidden file, since .gitignore applies only inside one.
+    (tree / "plain").mkdir()
+    (tree / "plain/env.local").write_text("KEY=x\n")
+    (tree / "dotted").mkdir()
+    (tree / "dotted/.env").write_text("KEY=x\n")
+    for command in ["grep --recur KEY secret", "grep --dir=recurse KEY secret", "grep --dir recurse KEY secret",
+                    "grep --deref KEY linked", "ack KEY secret", "ag KEY", "rg KEY plain", "rg --hidden KEY dotted",
+                    "rg -uu KEY dotted"]:
+        expect(f"bash deny recursive secret read: {command}",
+               run_hook("guard-bash.py", {"command": command, "workdir": str(tree)}), 2, stderr_has="secret")
+    expect("bash allow: plain rg skips hidden files outside git",
+           run_hook("guard-bash.py", {"command": "rg KEY dotted", "workdir": str(tree)}), 0)
+    expect("bash deny: an --exclude-from value is a file, not the pattern",
+           run_hook("guard-bash.py", {"command": "grep --exclude-from secret/.env -n x quiet/a.md", "workdir": str(tree)}),
+           2, stderr_has="secret")
+with tempfile.TemporaryDirectory() as large:
+    for index in range(10001):
+        (Path(large) / f"f{index}").touch()
+    expect("bash deny: a recursive search too large to check", run_hook("guard-bash.py", {"command": "grep -rn x .", "workdir": large}),
+           2, stderr_has="too many files")
 shutil.rmtree(glob_dir)
 for path in ["/repo/.env.example", "/repo/env.example.local", str(ROOT / "AGENTS.md")]:
     expect(f"path allow: {path}", run_hook("guard-path.py", {"file_path": path}), 0)
+# A symlink is judged by its target as well as its own name.
+with tempfile.TemporaryDirectory() as linked:
+    linked = Path(linked)
+    (linked / ".env").write_text("KEY=x\n")
+    (linked / "plain.md").write_text("x\n")
+    (linked / ".git").mkdir()
+    (linked / ".git/config").write_text("[core]\n")
+    (linked / "notes.txt").symlink_to(linked / ".env")
+    (linked / "settings.ini").symlink_to(linked / ".git/config")
+    (linked / "readme.md").symlink_to(linked / "plain.md")
+    for tool in ["Read", "Write", "Edit"]:
+        expect(f"path deny: {tool} through a symlink to a secret",
+               run_hook("guard-path.py", {"file_path": str(linked / "notes.txt")}, tool_name=tool), 2, stderr_has=".env")
+    relative = json.dumps({"tool_name": "Read", "tool_input": {"file_path": "notes.txt"}, "cwd": str(linked)})
+    expect("path deny: a relative symlink to a secret, from the event cwd",
+           subprocess.run([sys.executable, str(HOOKS / "guard-path.py")], input=relative, capture_output=True, text=True,
+                          cwd=ROOT), 2)
+    expect("path deny: Write through a symlink to the git config",
+           run_hook("guard-path.py", {"file_path": str(linked / "settings.ini")}, tool_name="Write"), 2)
+    expect("path allow: Read through a symlink to the git config",
+           run_hook("guard-path.py", {"file_path": str(linked / "settings.ini")}, tool_name="Read"), 0)
+    expect("path allow: a symlink to an ordinary file",
+           run_hook("guard-path.py", {"file_path": str(linked / "readme.md")}, tool_name="Read"), 0)
 
 # Unreadable policy input is an explicit denial, never a traceback or an implicit allow.
 for raw in ["{", "null", "[]", "{}", '{"tool_input": []}', '{"tool_input": {"path": 123}}',
@@ -518,19 +590,22 @@ shutil.rmtree(parent)
 
 # session-start: at most 25 lines, and it names the flow mode.
 # The mode is read from the repository's local config, so each run gets a throwaway repository.
-def session_start(mode, global_mode=None, git=True):
+def session_start(mode, global_mode=None, git=True, tasks=1, hooks_path=None):
     repo = Path(tempfile.mkdtemp())
     for rel in (".claude/hooks/session-start.py", ".claude/hooks/project_files.py", "tools/repo-health/repo-health"):
         (repo / rel).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy(ROOT / rel, repo / rel)
     (repo / "work").mkdir()
-    (repo / "work/current.md").write_text("# Current work\n\n## Probe task — ACTIVE\n- State: x\n")
+    (repo / "work/current.md").write_text("# Current work\n" + "".join(
+        f"\n## Probe task{'' if n == 0 else f' {n + 1}'} — ACTIVE\n- State: x\n" for n in range(tasks)))
     git_env = {**os.environ, "GIT_CONFIG_GLOBAL": str(repo / "global.cfg"), "GIT_CONFIG_NOSYSTEM": "1"}
     (repo / "global.cfg").write_text(f"[aeion]\n\tmode = {global_mode}\n" if global_mode else "")
     for args in (["init", "-q"], ["add", "work"], ["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "Probe commit"]) if git else ():
         subprocess.run(["git"] + args, cwd=repo, capture_output=True, check=True, env=git_env)
     if mode:
         subprocess.run(["git", "config", "aeion.mode", mode], cwd=repo, capture_output=True, check=True, env=git_env)
+    if hooks_path:
+        subprocess.run(["git", "config", "core.hooksPath", hooks_path], cwd=repo, capture_output=True, check=True, env=git_env)
     result = subprocess.run([sys.executable, str(repo / ".claude/hooks/session-start.py")], capture_output=True, text=True,
                             cwd=repo, env=git_env)
     shutil.rmtree(repo)
@@ -548,6 +623,15 @@ expect("session-start lists the open task", result, 0, "Probe task — ACTIVE")
 if len(result.stdout.strip().split("\n")) > 25:
     failures.append("session-start printed more than 25 lines")
 expect("session-start names local mode", session_start("local"), 0, "Æion Factory mode: local")
+# More than six tasks: five titles, then how many more, so the count and the list agree.
+result = session_start("team", tasks=8)
+expect("session-start names the tasks it leaves out", result, 0, "  … and 3 more")
+if "Probe task 6" in result.stdout or len(result.stdout.strip().split("\n")) > 25:
+    failures.append("session-start listed more than five of eight tasks or printed more than 25 lines")
+expect("session-start names git hooks that are off", session_start("team"), 0,
+       "git hooks: off; enable with git config core.hooksPath tools/git-hooks")
+if "git hooks: off" in session_start("team", hooks_path="tools/git-hooks").stdout:
+    failures.append("session-start called the repository's own git hooks off")
 # The global config cannot switch the mode: only the repository's own config does.
 expect("session-start ignores a global aeion.mode", session_start(None, "local"), 0, "Æion Factory mode: team")
 

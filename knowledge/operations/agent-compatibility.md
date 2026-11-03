@@ -63,7 +63,8 @@ generated:
 AGENTS.md, Knowledge, task state, checker commands and the reviewed PR workflow are shared.
 Claude Code remains the original integration. Codex, OpenCode, Pi, dsh, Devin, Droid and Antigravity use their
 documented native configuration and small adapters to the existing guards/checkpoints; copying a
-directory does not establish loaded hooks or identical runtime guarantees.
+directory does not establish loaded hooks or identical runtime guarantees. `tools/agents/run` stops
+with one line naming a missing agent binary and the setup link, exit 1.
 
 ## Contract
 
@@ -97,7 +98,8 @@ directory does not establish loaded hooks or identical runtime guarantees.
   the task from the handover. `tools/agents/run pi rpc` starts the factory's headless RPC runner instead
   (`tools/agents/pi-rpc`): one `pi --mode rpc` process with the extension, one prompt over JSONL, and
   the run waits through the settlement compaction and the resumed run, so headless Pi can compact and
-  continue without a TUI. Print/JSON mode still does not compact (see the Pi note).
+  continue without a TUI; a Pi that exits before reading the prompt is one `pi-rpc:` line, exit 1.
+  Print/JSON mode still does not compact (see the Pi note).
   The extension sends `ctx.getContextUsage()` to the shared rule and calls `ctx.compact()` at 250k once
   the handover is verified; the 250k alert names the checkpoint command, and closure admits a project's
   Markdown docs. `agent_before_settle` sends Stop: a sign-off finding becomes a displayed
@@ -125,52 +127,28 @@ directory does not establish loaded hooks or identical runtime guarantees.
   and a Pi compaction the checkpoint did not verify still runs and owes that closure after it
   instead of trapping the session at its window; the first refused compaction creates the skeleton to fill.
   Native token stops and strict pre-request 300k admission are unqualified.
-- dsh (DeepSeek Harness, CLI `dsh`, 0.2.1-rc.3) reads `AGENTS.md`/`CLAUDE.md` from the project root down
-  to its folder and skills from `.dsh/skills` and `.agents/skills`, so the shared rules and skills need no
-  copy. It loads project plugins only from a patch overlay: `tools/agents/run dsh [web|headless]` (web, a
-  browser UI, by default; dsh ships no `tui` profile) passes `--patch .dsh/factory.patch.yml`, which
-  inserts `.dsh/plugins/factory/index.js` (the guards) and `compaction.js` (the compaction service, shared
-  through `seam.js`). The web profile keeps `compaction` inside each agent preset, not at its root, so there
-  the second entry stays pending ("waiting for service: compaction") while the guards run. One web server
-  serves many projects, so the plugin finds `tools/agents/hook.py` above each session's own directory
-  (`ctx.workingDirectory.get(session)`, which follows the working-directory tool), not the launch folder;
-  a session outside an Æion Factory project is left alone. The plugin's
-  `ctx.tools.guard` sends every tool call as PreToolUse to `tools/agents/hook.py dsh` (a returned reason
-  denies it and no later policy can undo that; a call without an agent is refused), with
-  `ctx.tokenMeter.measure(session).totalTokens` as the usage; `tools/post-execute` sends PostToolUse.
-  dsh has no hook that adds text to the prompt, so the SessionStart context (the checkpoint profile and
-  recovery pointer) is steered to the agent on its first guarded call; every steered message carries its
-  own `id` and `role: "user"`, which the harness validator requires of a persisted user/message;
-  `agent/turn-stopping` sends Stop,
-  and a sign-off finding is steered as one more step (shown once per session, so it cannot loop). An
-  answer of `continue: false` is the hook's terminal stop: the turn ends with its reason and is never
-  steered, because a steered terminal stop starts a turn that closes the same way.
-  Once a verified handover asks for compaction, the next `agent/pre-step` sends PreCompact and, when
-  allowed, compacts through `compactIfNeeded(agent, 'context-overflow')`, then steers a
-  message that resumes from the handover. The service is the root one in headless, or, in the web profile
-  where the preset isolates `compaction` inside an agent-preset group, the plugin runs the `/compact`
-  command once the agent is idle, since that command is the one entry point across the isolation.
-  Only a profile that exposes no compaction service to the agent (neither the root's nor its preset's)
-  tells the shared rule that compaction is unavailable: the 250k/300k gate then becomes advisory and
-  dsh's own compaction continues ungated instead of waiting for a human to type `/compact`; a token
-  measure that falls to under half between two calls marks that compaction, so the next call sends
-  SessionStart with `source: compact`.
-  dsh compaction is not dependable in every profile, so the steered start context and every 250k/300k
-  gate message also name the recovery: once the handover, `work/current.md` and the checkpoint verify,
-  stop the session and start a new one from the handover rather than working past 250k. The web
-  command path repeats that instruction when its `/compact` did not run. It is guidance to the user,
-  not a forced stop.
-  `bash` is Bash, `read`/`write`/`edit` name `file_path`,
-  `str_replace_editor` is Edit (Read for `view`), `glob`/`grep` are Glob/Grep. dsh's own pressure
-  compaction (about 55% of a 1M window) is not refused; past 300k only closure runs, so it is reached
-  only if closure never completes. A dsh launched without the patch has no Æion Factory hooks. A live
-  2026-11-02 headless run launched through `tools/agents/run dsh headless` compacted at the factory's
-  250k gate with a verified receipt and resumed from the handover.
-  Its sandbox ("workspace-write") writes only below the launch folder and headless has no approval
-  channel: launched in a subfolder (`demo/`), it cannot write the root's `.git`, `work/current.md` or
-  `work/handovers/`, so whoever drives the run commits and writes the closure files there; launched at
-  the root, closure works. Programs that keep state in the home folder need it moved inside the
-  workspace, e.g. `DOCKER_CONFIG=$PWD/.docker` (with the CLI plugins linked) for `docker compose`.
+- dsh (DeepSeek Harness, `dsh` 0.2.1+) reads `AGENTS.md`/`CLAUDE.md` and `.agents/skills` natively. It
+  loads project plugins only from a patch: `tools/agents/run dsh [web|headless]` passes
+  `--patch .dsh/factory.patch.yml`, which loads `.dsh/plugins/factory/index.js` (the guards) and
+  `compaction.js` (compaction, shared through `seam.js`); a dsh started without it is unguarded.
+  - **Guards.** Each tool call goes to `tools/agents/hook.py dsh` as PreToolUse (a call without an agent
+    is refused), with `ctx.tokenMeter.measure(session).totalTokens` as usage; `tools/post-execute` sends
+    PostToolUse and `agent/turn-stopping` sends Stop. The plugin finds the hook above each session's own
+    directory, so one web server guards every factory project and leaves other folders alone. `bash` is
+    Bash, `read`/`write`/`edit` name `file_path`, `str_replace_editor` is Edit (Read for `view`), and
+    `glob`/`grep` are Glob/Grep.
+  - **Messages.** dsh cannot add prompt text, so the start context is steered on the first guarded call.
+    Every steered message carries an `id` and `role: "user"`, without which dsh refuses to reopen the
+    session. A sign-off finding is steered once; `continue: false` ends the turn and is never steered.
+  - **Compaction.** After a verified handover, the next `agent/pre-step` sends PreCompact and compacts
+    (headless: the root service; web: the `/compact` command once the agent is idle), then resumes from
+    the handover. A profile with no compaction service gets the advisory gate, and a token measure that
+    falls by over half marks dsh's own compaction as SessionStart `source: compact`. dsh's pressure
+    compaction (about 55% of a 1M window) is not refused. If compaction does not run, the messages say to
+    stop and resume from the verified handover. Live 2026-11-02: headless compacted at 250k and resumed.
+  - **Sandbox.** It writes only below the launch folder: started in `demo/`, it cannot write the root's
+    `.git` or `work/`, so start it at the root. Move home-folder state into the workspace, e.g.
+    `DOCKER_CONFIG=$PWD/.docker` for `docker compose`.
 - Devin CLI reads `AGENTS.md` and `.agents/skills` natively. By default it also imports
   `.claude/settings.json` hooks, but its tools are named `exec`, `read`, `edit`, `write` and
   `apply_patch`, so Claude matchers never fire and the matcher-less Claude budget hook reads a

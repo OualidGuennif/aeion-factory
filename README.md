@@ -75,7 +75,7 @@ clone it, then run this **inside your new repository**:
 tools/release/release --new-project
 ```
 
-This resets the copied release metadata and task list. Ask your agent to adapt the instructions,
+This resets the copied release metadata and task list and removes the factory's `demo/`. Ask your agent to adapt the instructions,
 documentation and checks to your project before building features.
 
 [New-project walkthrough and ready-to-copy prompt →](knowledge/operations/getting-started.md#new-project)

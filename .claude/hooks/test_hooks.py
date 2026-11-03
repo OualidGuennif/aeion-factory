@@ -169,7 +169,7 @@ glob_dir = Path(tempfile.mkdtemp())
 for command in ["head .env*", "grep -r . .e*", "base64 .en?", "tail .[e]nv", f"head {glob_dir}/.e*"]:
     expect(f"bash deny glob: {command}", run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 2)
 expect("bash ask: a glob that names a secret", run_hook("guard-bash.py", {"command": "ls .e*", "workdir": str(glob_dir)}), 0, '"ask"')
-for command in ["ls *", "head *.md", "grep -r x .", "wc -l .x*", "rg 'x.*y$' .", "ls src/{a,b}.py"]:
+for command in ["ls *", "head *.md", "wc -l .x*", "rg 'x.*y$' .", "ls src/{a,b}.py"]:
     expect(f"bash allow glob: {command}", run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 0)
 # The glob follows a cd, braces expand, and an unknown directory refuses.
 (glob_dir / "sub").mkdir()
@@ -179,7 +179,7 @@ for command in ["cd sub && head .e*", "bash -c 'cd sub; tail .e*'", "head sub/.{
                 'cd sub && head .e""*', "head $(pwd)/sub/.e*", "head `pwd`/sub/.e*", "head ~+/sub/.e*",
                 "sh -c 'head $1/.e*' _ sub", "env -C sub sh -c 'head .[e]nv'"]:
     expect(f"bash deny glob: {command}", run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 2)
-for command in ["grep -rn '$HOME/.*' .", "sed -i \"s/$OLD.*/$NEW/\" a.py", "jq --arg k x '.items[$k]' f.json",
+for command in ["grep -n '$HOME/.*' notes.md", "sed -i \"s/$OLD.*/$NEW/\" a.py", "jq --arg k x '.items[$k]' f.json",
                 'cd "$REPO" && ls *.py', "ls ${DIR}/*.py", 'git commit -m "fix $PWD/*.py glob"',
                 "cd - && head *.md", "sed -n 's/.*=//p' a.cfg"]:
     expect(f"bash allow: {command}", run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 0)
@@ -215,7 +215,6 @@ for command in ["python3 - <<'PY'\nopen('server.key').read()\nPY",
                 "while read f; do cat \"$f\"; done <<'EOF'\nserver.key;\nEOF",
                 "cat > out.txt <<EOF\n$(cat server.key)\nEOF",
                 "git commit -F - <<EOF\n$(cat server.key)\nEOF",
-                "grep -n entry.key app/x.ts",
                 "cat server.key"]:
     expect(f"bash deny secret beside accessors: {command[:30]}", run_hook("guard-bash.py", {"command": command}), 2, stderr_has="secret")
 # A glob that names a secret and no ordinary file is refused wherever it expands.
@@ -287,8 +286,28 @@ expect("bash allow: find prunes .git", run_hook("guard-bash.py", {"command": "fi
                                                                  "workdir": str(glob_dir)}), 0)
 expect("path allow: Read of .git/config", run_hook("guard-path.py", {"file_path": "/repo/.git/config"}, tool_name="Read"), 0)
 expect("bash allow: a cd with a plain glob", run_hook("guard-bash.py", {"command": "cd sub && ls *.md", "workdir": str(glob_dir)}), 0)
-expect("bash deny names the Grep tool for searches", run_hook("guard-bash.py", {"command": "grep -rn id_rsa tools"}), 2,
-       stderr_has="Grep tool")
+# A search pattern is text: a secret's name there opens nothing. Files, pattern files and globs still count.
+for command in ["grep -rn id_rsa plain", "grep -rn 'env.local' plain", "rg -n env.local", "git grep -n .env",
+                "grep -e .env -e id_rsa notes.md", "rg -g '*.md' env.local plain", "grep -n entry.key app/x.ts",
+                "git -C plain grep -n id_rsa", "rg --hidden KEY .", "grep -rn -A 2 env.local plain"]:
+    expect(f"bash allow search pattern: {command}", run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 0)
+for command in ["grep x .env", "grep -f .env notes.md", "grep env.* notes.md", "cat env.local; grep env.local notes.md",
+                "rg -n KEY sub/.env", "sh -c 'grep env.local notes.md'"]:
+    expect(f"bash deny secret beside a pattern: {command}",
+           run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 2, stderr_has="secret")
+# A recursive search reads hidden and gitignored files, so a folder holding a secret refuses it.
+for command in ["grep -r x .", "grep -rn API_KEY .", "grep -R KEY sub", "grep -d recurse KEY .", "rg -uu KEY",
+                "rg --no-ignore KEY .", "grep -rn KEY $DIR", "cd sub && grep -rn KEY .", "bash -c 'grep -r KEY .'",
+                "RIPGREP_CONFIG_PATH=c rg KEY ."]:
+    expect(f"bash deny recursive secret read: {command}",
+           run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 2, stderr_has="git grep")
+expect("bash deny: a search pattern for an environment word points to grep -f",
+       run_hook("guard-bash.py", {"command": "grep -rn environ plain", "workdir": str(glob_dir)}), 2, stderr_has="grep -f")
+with tempfile.TemporaryDirectory() as large:
+    for index in range(10001):
+        (Path(large) / f"f{index}").touch()
+    expect("bash deny: a recursive search too large to check", run_hook("guard-bash.py", {"command": "grep -rn x .", "workdir": large}),
+           2, stderr_has="too many files")
 shutil.rmtree(glob_dir)
 for path in ["/repo/.env.example", "/repo/env.example.local", str(ROOT / "AGENTS.md")]:
     expect(f"path allow: {path}", run_hook("guard-path.py", {"file_path": path}), 0)

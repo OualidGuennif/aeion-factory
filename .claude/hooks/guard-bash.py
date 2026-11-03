@@ -87,6 +87,9 @@ def with_defaults(text):
     return text
 
 
+SHELL_SPLIT = r"[\s=;&|<>()`]+"
+
+
 def shell_words(text):
     """The words the shell globs: quotes and escapes dropped (they join a word: .e\\nv), defaults as
     their word (innermost first), and each word with a group (zsh (i|x)d_rsa, extglob @(i)d_rsa)
@@ -94,7 +97,7 @@ def shell_words(text):
     text = with_defaults(re.sub(r"\\(.)", r"\1", re.sub(r"['\"]", "", text)))
     # Split on whitespace first: one pattern scan per long word would be quadratic.
     grouped = [w for w in re.split(r"[\s;&<>`]+", text) if "(" in w]
-    return [t for t in re.split(r"[\s=;&|<>()`]+", text) if t] + grouped
+    return [t for t in re.split(SHELL_SPLIT, text) if t] + grouped
 
 
 def mentioned_secrets(tokens, shell_tokens, bases, unquoted_globs):
@@ -125,8 +128,8 @@ def mentioned_secrets(tokens, shell_tokens, bases, unquoted_globs):
 # recursively); then refused: printenv; env with no program to run;
 # declare, typeset, export and set that print variables; ps with BSD e or -E (process environments). And
 # anywhere in the command: the words environ, environb and ENVIRON; an interpreter together with
-# process.env, Deno.env or ENV; jq with env or $ENV. A seatbelt: search for these names with the
-# Grep tool, and put prose that names them in a file.
+# process.env, Deno.env or ENV; jq with env or $ENV. A seatbelt: search for these words from a
+# pattern file (grep -f), and put prose that names them in a file.
 ENV_WORD = re.compile(r"\b(environ|environb|ENVIRON)\b")
 INTERPRETER = re.compile(r"\b(python3?|node|deno|bun|tsx|ts-node|npx|ruby|perl)\b")
 ENV_IN_CODE = re.compile(r"process\.env\b|Deno\.env\b|%ENV\b|\bENV\b")
@@ -696,6 +699,142 @@ def quotes_inert(command):
     return True
 
 
+# The options of grep, rg and git grep that take a value, so a value is never taken for the pattern.
+GREP_VALUES = {"-A", "-B", "-C", "-D", "-d", "-m", "--after-context", "--before-context", "--context", "--devices",
+               "--directories", "--exclude", "--exclude-dir", "--include", "--label", "--max-count",
+               "--binary-files", "--group-separator"}
+SEARCH_VALUES = {"grep": GREP_VALUES, "egrep": GREP_VALUES, "fgrep": GREP_VALUES,
+                 "rg": {"-A", "-B", "-C", "-E", "-M", "-T", "-d", "-g", "-j", "-m", "-r", "-t", "--after-context",
+                        "--before-context", "--context", "--color", "--colors", "--context-separator",
+                        "--dfa-size-limit", "--encoding", "--engine", "--field-context-separator",
+                        "--field-match-separator", "--glob", "--hostname-bin", "--hyperlink-format", "--iglob",
+                        "--ignore-file", "--max-columns", "--max-count", "--max-depth", "--max-filesize",
+                        "--path-separator", "--pre", "--pre-glob", "--regex-size-limit", "--replace", "--sort",
+                        "--sortr", "--threads", "--type", "--type-add", "--type-clear", "--type-not"},
+                 "git": {"-A", "-B", "-C", "-m", "--after-context", "--before-context", "--context", "--max-count",
+                         "--max-depth", "--threads"}}
+PATTERN_FLAGS, PATTERN_FILE_FLAGS = {"-e", "--regexp"}, {"-f", "--file"}
+WALK_LIMIT = 10000
+
+
+def search_parts(words):
+    """(tool, patterns, operands, options) of a grep, egrep, fgrep, rg or git grep command, or None.
+    The patterns are each -e value, else the first operand; a -f file supplies them instead, so every
+    operand is then a path. options are (name, value) pairs, a short cluster split into its letters."""
+    tool = PurePosixPath(words[0]).name if words else ""
+    if tool not in SEARCH_VALUES:
+        return None
+    rest = list(words[1:])
+    if tool == "git":
+        while rest and rest[0].startswith("-"):
+            if rest.pop(0) in GIT_VALUE_FLAGS and rest:
+                rest.pop(0)
+        if rest[:1] != ["grep"]:
+            return None
+        rest.pop(0)
+    takes = SEARCH_VALUES[tool] | PATTERN_FLAGS | PATTERN_FILE_FLAGS
+    operands, options = [], []
+    while rest:
+        word = rest.pop(0)
+        if word == "--":
+            operands += rest
+            break
+        if not word.startswith("-") or word == "-":
+            operands.append(word)
+        elif word.startswith("--"):
+            name, eq, value = word.partition("=")
+            options.append((name, value if eq else rest.pop(0) if name in takes and rest else None))
+        else:
+            for i, letter in enumerate(word[1:], 2):
+                if "-" + letter in takes:
+                    options.append(("-" + letter, word[i:] or (rest.pop(0) if rest else "")))
+                    break
+                options.append(("-" + letter, None))
+    explicit = [value for name, value in options if name in PATTERN_FLAGS]
+    if explicit or any(name in PATTERN_FILE_FLAGS for name, _ in options):
+        return tool, explicit, operands, options
+    return tool, operands[:1], operands[1:], options
+
+
+def search_patterns(command):
+    """The patterns that a bare grep, rg or git grep reads as text and never opens: only words the shell
+    passes as typed, with no glob, expansion or escape unless quotes surely stay quotes."""
+    if re.search(r"`|<<", command):
+        return []
+    inert = quotes_inert(command)
+    found = []
+    for words in simple_commands(command):
+        words = program(words)
+        parts = search_parts(words)
+        # A path-qualified program (./grep) may be any script.
+        if parts and words[0] == parts[0]:
+            found += [p for p in parts[1] if not re.search(r"[*?\[{~$`\\]", p)
+                      or inert and (f"'{p}'" in command or f'"{p}"' in command)]
+    return found
+
+
+def without_patterns(tokens, patterns, split, aligned=None):
+    """The tokens, and a list aligned with them, less one occurrence of each piece of each pattern."""
+    tokens, aligned = list(tokens), list(tokens if aligned is None else aligned)
+    for piece in (p for pattern in patterns for p in re.split(split, pattern) if p):
+        if piece in tokens:
+            index = tokens.index(piece)
+            del tokens[index], aligned[index]
+    return tokens, aligned
+
+
+def secret_under(directory):
+    """The first secret file name under directory, "" when there is none, None when it is too large to check."""
+    seen = 0
+    for _, folders, files in os.walk(directory):
+        folders[:] = [f for f in folders if f != ".git"]
+        seen += len(folders) + len(files)
+        if seen > WALK_LIMIT:
+            return None
+        found = next((f for f in files if is_secret(f)), "")
+        if found:
+            return found
+    return ""
+
+
+def recursive_secret_read(command, bases):
+    """Why a recursive grep, or an rg that skips no ignore file, would read a secret file, or "": it reads
+    every file under the folders it searches, hidden and gitignored ones too."""
+    for words in simple_commands(command):
+        words = program(words)
+        if words and words[0] == "<script>":
+            reason = recursive_secret_read(words[1], bases)
+            if reason:
+                return reason
+            continue
+        parts = search_parts(words)
+        if not parts or parts[0] == "git":
+            continue
+        tool, _, operands, options = parts
+        if tool == "rg":
+            walks = ("RIPGREP_CONFIG_PATH" in command or os.environ.get("RIPGREP_CONFIG_PATH")
+                     or any(n in ("-u", "--unrestricted") or n.startswith("--no-ignore") for n, _ in options))
+        else:
+            walks = any(n in ("-r", "-R", "--recursive", "--dereference-recursive")
+                        or n in ("-d", "--directories") and v == "recurse" for n, v in options)
+        if not walks:
+            continue
+        for operand in operands or ["."]:
+            if re.search(r"[$`]", operand):
+                return f"{tool} searches {operand}, a folder that cannot be checked for secret files"
+            for base in bases:
+                path = os.path.join(base, os.path.expanduser(operand))
+                for folder in glob.glob(path) if any(c in operand for c in "*?[") else [path]:
+                    if not os.path.isdir(folder):
+                        continue
+                    found = secret_under(folder)
+                    if found is None:
+                        return f"{tool} would search {operand}, too many files to check for secret files"
+                    if found:
+                        return f"{tool} would read the secret file {found} under {operand}"
+    return ""
+
+
 def intake_dump(command, base, changed_directory=False):
     """Why the command dumps a file it cannot size, or "" when it does not; the reason names the cause,
     so a refusal for a variable path or a cd does not read like a missing limiter."""
@@ -769,8 +908,12 @@ try:
         inert = re.sub(r"'[^']*'|\"[^\"]*\"", lambda m: m.group(0).translate(QUOTED_GLOB), inert)
     marked = shell_words(inert)
     unquoted_globs = [any(char in t for char in "*?[") for t in marked]
-    secrets = mentioned_secrets(secret_tokens, shell_tokens, directories(command, workdir if isinstance(workdir, str) else "."),
-                                unquoted_globs)
+    # A search pattern is text the program matches, never a file it opens.
+    patterns = search_patterns(command)
+    secret_tokens = without_patterns(secret_tokens, patterns, TOKEN_SPLIT)[0]
+    shell_tokens, unquoted_globs = without_patterns(shell_tokens, patterns, SHELL_SPLIT, unquoted_globs)
+    bases = directories(command, workdir if isinstance(workdir, str) else ".")
+    secrets = mentioned_secrets(secret_tokens, shell_tokens, bases, unquoted_globs)
 except (OSError, ValueError, RecursionError):
     deny("the files a glob names could not be verified; name the files explicitly.")
 
@@ -809,12 +952,22 @@ if os.environ.get("AEION_LOOP_READ_ONLY") == "1":
 if secrets:
     if READERS & set(tokens):
         deny(f"it reads a secret file ({', '.join(secrets)}). Secrets are never read or printed "
-             "(to search for the name itself, use the Grep tool).")
+             "(to find where a name is mentioned, make it the search pattern: grep -rn <name> <folder>).")
     ask(f"The command mentions a secret file ({', '.join(secrets)}).")
+
+# A recursive search reads every file under its folders, hidden and gitignored ones too.
+try:
+    recursive = refuses(lambda text: recursive_secret_read(text, bases), command)
+except OSError:
+    recursive = True
+if recursive:
+    deny((recursive if isinstance(recursive, str) else "the recursive search could not be verified")
+         + "; search with git grep, or rg without -u/--no-ignore: both skip ignored files such as .env.")
 
 # Environment dumps hold keys.
 if "printenv" in tokens or refuses(env_dump, command):
-    deny("it prints an environment, which holds keys (to search for a name, use the Grep tool; for prose, write it to a file).")
+    deny("it prints an environment, which holds keys (to search for such a word, put it in a pattern file "
+         "for grep -f; for prose, write it to a file).")
 if refuses(docker_inspect_dump, command):
     deny("docker inspect without a narrow --format shows the container's environment.")
 if refuses(compose_config, command):

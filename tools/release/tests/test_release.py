@@ -66,7 +66,12 @@ class ReleaseTests(unittest.TestCase):
         tasks = ("# Current work\n\nHeader.\n\n## Factory task — ACTIVE\n- State: factory.\n\n"
                  "## Adapt Æion Factory to this project — ACTIVE\n- Owner decision: <date>, started.\n- Next: adapt.\n")
         (self.root / "work/current.md").write_text(tasks)
-        self.assertEqual(self.release("--new-project").returncode, 0)
+        (self.root / "demo/idea-board").mkdir(parents=True)
+        (self.root / "demo/idea-board/JOURNAL.md").write_text("Run 1.\n")
+        first = self.release("--new-project")
+        self.assertEqual(first.returncode, 0)
+        self.assertIn("demo/ removed", first.stdout)
+        self.assertFalse((self.root / "demo").exists())
         expected = ("# Current work\n\nHeader.\n\n## Adapt Æion Factory to this project — ACTIVE\n"
                     "- Owner decision: 2026-10-28, started.\n- Next: adapt.\n")
         self.assertEqual((self.root / "work/current.md").read_text(), expected)
@@ -83,9 +88,11 @@ class ReleaseTests(unittest.TestCase):
         subprocess.run(["git", "init", "-q", str(self.root)], check=True)
         subprocess.run(["git", "-C", str(self.root), "remote", "add", "origin",
                         "https://github.com/OualidGuennif/aeion-factory.git"], check=True)
+        (self.root / "demo").mkdir()
         result = self.release("--new-project")
         self.assertEqual(result.returncode, 1)
         self.assertIn("own clone", result.stderr)
+        self.assertTrue((self.root / "demo").is_dir())
         self.assertEqual((self.root / "VERSION").read_text(), "1.4.0\n")
 
 class ArchiveTests(unittest.TestCase):

@@ -16,6 +16,7 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 - `tools/agents/pi-rpc` reports a Pi that exits before reading the prompt in one line, exit 1.
 - Session start says when git hooks are off, and how many tasks or changes it left unlisted.
 - CI also runs on pushes to `develop`; the Semgrep container is pinned by digest (1.182.1).
+- `tools/release/release --new-project` removes the factory's `demo/` from a new project.
 
 ## [1.9.3] - 2026-11-02
 

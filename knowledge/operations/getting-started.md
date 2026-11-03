@@ -47,7 +47,7 @@ in step 3. A present configuration file alone does not prove the hooks are activ
 1. [Create a repository from this template](https://github.com/OualidGuennif/aeion-factory/generate),
    then clone your new repository and open its folder.
    Reset the copied release metadata and tasks: `tools/release/release --new-project` (version 0.1.0, an
-   empty changelog, one task: adapt the factory to this project).
+   empty changelog, one task: adapt the factory to this project; the factory's `demo/` is removed).
 2. Prepare your harness (once), then start it in that folder:
 
    | Harness | Start | What to do first |

@@ -6,6 +6,12 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+- Changed: the git lifecycle is off by default. A clone starts in local mode (safety hooks on, no
+  develop, review or release gate); `git config aeion.mode team` turns the team flow on.
+  **Projects that use the team flow: run `git config aeion.mode team` once in each clone.**
+- README reorganized: new project, existing project, optional tools, skills, then every hook.
+- In the team flow, session start says when you are on `main` instead of `develop`.
+
 ## [1.9.4] - 2026-11-03
 
 - Security: a recursive search that would read a secret file is refused (`grep -r`, `rg -u`, `ack`,

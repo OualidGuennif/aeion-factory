@@ -81,8 +81,8 @@ Requirements for a change, not claims about what production already satisfies.
   commit cluster, any unambiguous prefix of `--no-verify`, a `core.hooksPath` override (`-c`,
   `--config-env`, `GIT_CONFIG_*`, or `git config` set to anything but `tools/git-hooks`; reading it
   stays allowed), `-f`/`--force*`/`--mirror`/`+refspec` on push. It also refuses setting or
-  unsetting `aeion.mode`, and renaming or removing the `aeion` section, also behind `env`: local mode relaxes the
-  sign-off and checkpoint, so the user switches it. The readers use `git config --local`, so an
+  unsetting `aeion.mode`, and renaming or removing the `aeion` section, also behind `env`: the mode turns
+  the sign-off, the closure checkpoint and the push gate on or off, so the user switches it. The readers use `git config --local`, so an
   `include.path` or the global config cannot switch the mode. Writing the git config file
   (`.git/config`, `config.worktree`) directly is refused: a shell redirection to it (`>`, `>>`,
   `>|`, `>!`, `>&`), any program but a reader (`cat`, `grep`, `git`, `diff`, `echo`, ...) naming

@@ -517,7 +517,9 @@ for rel in (".claude/hooks/sign-off.py", ".claude/hooks/secret_names.py", ".clau
 (tmp / "work/current.md").write_text("# Current work\n")
 (tmp / "CHANGELOG.md").write_text("# Changelog\n\n## [Unreleased]\n")
 git = ["git", "-c", "user.name=t", "-c", "user.email=t@example.invalid"]
-for args in (["init", "-q", "-b", "main"], ["add", "."], ["commit", "-qm", "base"], ["switch", "-qc", "task/x"]):
+# The sign-off runs in the team flow only, so this repository opts in.
+for args in (["init", "-q", "-b", "main"], ["config", "aeion.mode", "team"], ["add", "."], ["commit", "-qm", "base"],
+             ["switch", "-qc", "task/x"]):
     subprocess.run(git + args, cwd=tmp, capture_output=True)
 (tmp / "src/a.ts").write_text("export const a = 2;\n")
 
@@ -552,16 +554,21 @@ expect("sign-off: a spaced accented path is checked", special_result, 0, '"decis
 if special not in json.loads(special_result.stdout or "{}").get("reason", ""):
     failures.append("sign-off lost a spaced accented path")
 
-# Local mode (git config aeion.mode local) skips the sign-off reminder for the same change.
-for session in ("team", "include", "local"):
+# Local mode, the default, skips the sign-off reminder for the same change; only the team flow blocks.
+for session in ("team", "include", "unset", "local"):
     with (Path(tempfile.gettempdir()) / f"claude-edited-{session}-{RUN}").open("a") as f:
         f.write("src/a.ts\n")
 expect("sign-off: a fresh team session blocks", stop("team"), 0, '"decision": "block"')
 # An included file cannot switch the mode: the readers ask for the repository's own config only.
+subprocess.run(git + ["config", "--unset", "aeion.mode"], cwd=tmp, capture_output=True, check=True)
 included = Path(tempfile.mkdtemp()) / "mode.cfg"
-included.write_text("[aeion]\n\tmode = local\n")
+included.write_text("[aeion]\n\tmode = team\n")
 subprocess.run(git + ["config", "include.path", str(included)], cwd=tmp, capture_output=True, check=True)
-expect("sign-off: an included aeion.mode stays team", stop("include"), 0, '"decision": "block"')
+for session, name in (("include", "an included team mode stays local"), ("unset", "an unset mode is local")):
+    result = stop(session)
+    expect(f"sign-off: {name}", result, 0)
+    if '"block"' in result.stdout:
+        failures.append(f"sign-off blocked: {name}")
 subprocess.run(git + ["config", "--unset", "include.path"], cwd=tmp, capture_output=True, check=True)
 shutil.rmtree(included.parent)
 subprocess.run(git + ["config", "aeion.mode", "local"], cwd=tmp, capture_output=True, check=True)
@@ -600,7 +607,7 @@ def session_start(mode, global_mode=None, git=True, tasks=1, hooks_path=None):
         f"\n## Probe task{'' if n == 0 else f' {n + 1}'} — ACTIVE\n- State: x\n" for n in range(tasks)))
     git_env = {**os.environ, "GIT_CONFIG_GLOBAL": str(repo / "global.cfg"), "GIT_CONFIG_NOSYSTEM": "1"}
     (repo / "global.cfg").write_text(f"[aeion]\n\tmode = {global_mode}\n" if global_mode else "")
-    for args in (["init", "-q"], ["add", "work"], ["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "Probe commit"]) if git else ():
+    for args in (["init", "-q", "-b", "main"], ["add", "work"], ["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "Probe commit"]) if git else ():
         subprocess.run(["git"] + args, cwd=repo, capture_output=True, check=True, env=git_env)
     if mode:
         subprocess.run(["git", "config", "aeion.mode", mode], cwd=repo, capture_output=True, check=True, env=git_env)
@@ -623,6 +630,12 @@ expect("session-start lists the open task", result, 0, "Probe task — ACTIVE")
 if len(result.stdout.strip().split("\n")) > 25:
     failures.append("session-start printed more than 25 lines")
 expect("session-start names local mode", session_start("local"), 0, "Æion Factory mode: local")
+result = session_start(None)
+expect("session-start defaults to local mode", result, 0, "Æion Factory mode: local (git lifecycle off")
+if "git hooks: off" in result.stdout or "branch: main" in result.stdout:
+    failures.append("session-start gave team-flow advice in local mode")
+expect("session-start points team work on main to develop", session_start("team"), 0,
+       "branch: main; team work happens on develop")
 # More than six tasks: five titles, then how many more, so the count and the list agree.
 result = session_start("team", tasks=8)
 expect("session-start names the tasks it leaves out", result, 0, "  … and 3 more")
@@ -633,7 +646,7 @@ expect("session-start names git hooks that are off", session_start("team"), 0,
 if "git hooks: off" in session_start("team", hooks_path="tools/git-hooks").stdout:
     failures.append("session-start called the repository's own git hooks off")
 # The global config cannot switch the mode: only the repository's own config does.
-expect("session-start ignores a global aeion.mode", session_start(None, "local"), 0, "Æion Factory mode: team")
+expect("session-start ignores a global aeion.mode", session_start(None, "team"), 0, "Æion Factory mode: local")
 
 print(f"hook tests: {passes} passed, {len(failures)} failed")
 for f in failures:

@@ -46,8 +46,9 @@ the existing secret guards, edit checks and handover checkpoints (Devin and Anti
 compaction checkpoint; Droid, which reports no tokens, owes its closure after a compaction). During closure, plain read commands (`cat`, `head`, `sed -n`, `rg` and
 the like, without operators, globs or secret files) are closure tools, because Codex reads only
 through its shell. Droid owns `.factory/`, so
-Æion Factory's local state lives in the ignored `.aeion/`. A per-clone flow mode selects the team flow (PR, review, CI)
-or local play (commits on main, no sign-off reminder); the safety guards run in both.
+Æion Factory's local state lives in the ignored `.aeion/`. A per-clone flow mode selects local mode, the default
+(local commits, no sign-off reminder), or the team flow (`aeion.mode team`: develop, review, release PR);
+the safety guards run in both.
 Their native token/compaction interfaces differ; compatibility is not a claim of identical
 enforcement. See [agent compatibility](../operations/agent-compatibility.md).
 

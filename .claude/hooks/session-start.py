@@ -34,17 +34,21 @@ elif not repository:
     # A plain folder: no branch, pull request, review, CI or tag; done means the tests pass.
     lines.append("git: inactive (plain folder); the branch, review, CI and release flow is skipped.")
 else:
-    # The flow mode decides whether work ends in a reviewed push or a local commit.
-    if out("git", "config", "--local", "--get", "aeion.mode") == ["local"]:
-        lines.append("Æion Factory mode: local (commits on main, no PR/CI/task-state ritual; safety guards stay on). "
-                     "Team flow: git config --unset aeion.mode")
+    # The flow mode decides whether work ends in a reviewed push or a local commit; local unless set to team.
+    if out("git", "config", "--local", "--get", "aeion.mode") != ["team"]:
+        lines.append("Æion Factory mode: local (git lifecycle off: no develop, review, PR or release gate; "
+                     "safety guards stay on). Team flow: README.md#team-git-flow")
     else:
-        lines.append(f"Æion Factory mode: team on {' '.join(out('git', 'branch', '--show-current')) or 'a detached HEAD'} "
-                     "(develop: review before each push; main: release PR). Local play: git config aeion.mode local")
-    # The pre-commit checks and the pre-push review gate run only when git uses the repository's hooks.
-    hooks = out("git", "config", "--path", "--get", "core.hooksPath")
-    if not hooks or (ROOT / hooks[0]).resolve() != (ROOT / "tools/git-hooks").resolve():
-        lines.append("git hooks: off; enable with git config core.hooksPath tools/git-hooks")
+        branch = " ".join(out("git", "branch", "--show-current")) or "a detached HEAD"
+        lines.append(f"Æion Factory mode: team on {branch} "
+                     "(develop: review before each push; main: release PR). Local: git config --unset aeion.mode")
+        # Team work happens on develop; main moves only through the release pull request.
+        if branch == "main":
+            lines.append("branch: main; team work happens on develop (git switch develop)")
+        # The pre-commit checks and the pre-push review gate run only when git uses the repository's hooks.
+        hooks = out("git", "config", "--path", "--get", "core.hooksPath")
+        if not hooks or (ROOT / hooks[0]).resolve() != (ROOT / "tools/git-hooks").resolve():
+            lines.append("git hooks: off; enable with git config core.hooksPath tools/git-hooks")
     # Uncommitted changes: one you cannot explain is not yours.
     status = out("git", "status", "--short")
     lines.append(f"git status: {len(status)} changed path(s)" if status else "git status: clean")

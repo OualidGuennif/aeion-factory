@@ -6,6 +6,8 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+## [2.0.3] - 2026-11-04
+
 - Security: the pooled skill-creator eval viewer page escapes quotes and every benchmark value it
   writes, so grader evidence quoting an eval output can no longer add an event handler to the page
   (Claude Security sweep of 2026-11-04, F1).

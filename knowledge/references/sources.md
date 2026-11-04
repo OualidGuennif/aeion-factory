@@ -62,3 +62,7 @@ Three ECC resource lines have reviewed, rule-specific scanner annotation comment
 exact original file hashes, locations and reasoning are in tools/skills/annotations.json;
 the catalog retains original and materialized hashes. Other findings and changed source
 files are not suppressed, and the complete pool remains in SAST scope.
+
+Two resources change behavior through reviewed security patches in tools/skills/patches.json,
+each bound to the exact original file hash and marked "Æion Factory security patch" in the code:
+the skill-creator eval viewer (Apache-2.0) and the continuous-learning-v2 instinct import (MIT).

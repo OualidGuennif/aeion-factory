@@ -139,13 +139,103 @@ with tempfile.TemporaryDirectory() as loop_dir:
                     "gh issue create --title x --body 'a\nb'", "git diff origin/main...HEAD",
                     "tools/knowledge/doc-links --for ../outside", "tools/knowledge/doc-links --diff origin/main",
                     "gh issue comment 1 -F/etc/hostname", "gh issue comment 1 -F=/etc/hostname",
-                    "gh pr comment 7 -wF/etc/hostname"]:
+                    "gh pr comment 7 -wF/etc/hostname",
+                    # --jq runs gojq (env prints the environment), --template a Go template, --repo another repository.
+                    "gh issue list --jq .[].title", "gh issue list --jq=.[].title", "gh issue view 3 -q .body",
+                    "gh pr view 7 --template '{{.body}}'", "gh pr list -t x", "gh pr checks 7 -tx",
+                    "gh issue create --title x --body-file .aeion/loop-bodies/finding.md --repo evil/x",
+                    "gh issue comment 3 -R evil/x -F .aeion/loop-bodies/finding.md",
+                    "gh issue comment 3 -Revil/x -F .aeion/loop-bodies/finding.md", "gh issue list --repo=evil/x"]:
         expect(f"read-only deny: {command}", run_read_only(command, loop), 2)
+    for command in ["gh issue create -t x -F .aeion/loop-bodies/finding.md", "gh issue list --label loop:outer --json number,title"]:
+        expect(f"read-only allow: {command}", run_read_only(command, loop), 0)
+
+# gh's --jq and -q run gojq, whose env and $ENV print the environment however the word is quoted.
+for command in ["gh api user --jq 'en\"v\"'", "gh issue list -q '$ENV'", "gh pr view 1 --jq 'e''nv'",
+                "gh issue list --json title -q '.[] | e\\nv'"]:
+    expect(f"bash deny: {command}", run_hook("guard-bash.py", {"command": command}), 2, stderr_has="environment")
+# A config key that names a program runs it on later git commands, out of this guard's sight.
+for command in ["git config core.fsmonitor 'sh -c x'", "git config --global alias.x '!sh -c y'",
+                "git config set core.sshCommand 'ssh -i k'", "git -c core.fsmonitor=./x status", "git -c alias.st='!cat x' st",
+                "git --config-env=core.pager=X log", "git --config-env core.editor=X commit",
+                "GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=core.fsmonitor GIT_CONFIG_VALUE_0=x git status",
+                "export GIT_CONFIG_PARAMETERS=\"'alias.x'='!y'\"", "git config filter.lfs.smudge 'x %f'",
+                "git config include.path ../x", "git config includeIf.gitdir:/x/.path y", "git config diff.foo.textconv x",
+                "git config credential.helper store", "git config gpg.program x", "git config core.editor vim",
+                "git config merge.ours.driver x", "git config pager.log 'x'", "git -C repo config core.askPass x",
+                "git config CORE.FSMONITOR x", "git config sequence.editor x", "git config remote.origin.uploadpack x"]:
+    expect(f"bash deny git program: {command}", run_hook("guard-bash.py", {"command": command}), 2,
+           stderr_has="names a program")
+for command in ["git -c core.pager=cat log -1", "git -c core.editor=true rebase --continue", "git config --get alias.st",
+                "git config --unset core.fsmonitor", "git config alias.st", "git config --get-regexp alias",
+                "git -c user.name=t -c user.email=t@example.invalid commit -m x", "git config user.name x"]:
+    expect(f"bash allow git config: {command}", run_hook("guard-bash.py", {"command": command}), 0)
 
 # guard-path: secrets refused, templates allowed.
 for path in ["/repo/.env", "/repo/env.local", "/x/server.pem", "/h/auth.json", "/h/.netrc", "/h/.ssh/id_ecdsa",
-             "/x/client.p12", "/repo/.envrc", "/h/.npmrc"]:
+             "/x/client.p12", "/repo/.envrc", "/h/.npmrc",
+             # A case-insensitive file system (APFS, NTFS) opens .env.local for ENV.LOCAL.
+             "/repo/ENV.LOCAL", "/repo/.ENV", "/x/SERVER.PEM", "/h/.ssh/ID_RSA",
+             "/h/.git-credentials", "/h/.claude/.credentials.json", "/repo/prod.env", "/repo/.env-prod",
+             "/repo/.dev.vars", "/x/putty.ppk", "/x/release.jks", "/x/app.keystore", "/h/.ssh/id_ed25519_sk",
+             "/infra/terraform.tfstate", "/infra/terraform.tfstate.backup", "/infra/prod.tfvars", "/web/.htpasswd"]:
     expect(f"path deny: {path}", run_hook("guard-path.py", {"file_path": path}), 2)
+for path in ["/h/.ssh/id_rsa.pub", "/h/.ssh/id_ed25519_sk.pub", "/repo/.ENV.EXAMPLE", "/repo/environment.md"]:
+    expect(f"path allow: {path}", run_hook("guard-path.py", {"file_path": path}), 0)
+for pattern in ["*.ENV", ".E*", "ID_*", "*.jks", "*.tfvars", ".git-cred*"]:
+    expect(f"path deny: Grep glob {pattern}",
+           run_hook("guard-path.py", {"pattern": "x", "glob": pattern, "path": "/repo"}, tool_name="Grep"), 2)
+for pattern in ["R*", "*.MD", "*.pub"]:
+    expect(f"path allow: Grep glob {pattern}",
+           run_hook("guard-path.py", {"pattern": "x", "glob": pattern, "path": "/repo"}, tool_name="Grep"), 0)
+# Outside a git work tree Grep reads every file of the folder it searches, a secret file too.
+with tempfile.TemporaryDirectory() as plain:
+    (Path(plain) / "sub").mkdir()
+    (Path(plain) / "sub/.env").write_text("KEY=x\n")
+    (Path(plain) / "notes.md").write_text("x\n")
+    expect("path deny: Grep over a folder holding a secret",
+           run_hook("guard-path.py", {"pattern": "KEY", "path": plain}, tool_name="Grep"), 2, stderr_has=".env")
+    expect("path deny: Grep with its implicit root over a secret",
+           subprocess.run([sys.executable, str(HOOKS / "guard-path.py")], capture_output=True, text=True, cwd=ROOT,
+                          input=json.dumps({"tool_name": "Grep", "tool_input": {"pattern": "KEY"}, "cwd": plain})), 2)
+    expect("path allow: Grep whose glob skips the secret",
+           run_hook("guard-path.py", {"pattern": "x", "path": plain, "glob": "*.md"}, tool_name="Grep"), 0)
+    expect("path deny: Grep over a folder named through ..",
+           run_hook("guard-path.py", {"pattern": "x", "path": str(Path(plain) / "sub" / "..")}, tool_name="Grep"), 2)
+    (Path(plain) / "sub/.env").unlink()
+    expect("path allow: Grep of a folder without a secret",
+           run_hook("guard-path.py", {"pattern": "x", "path": plain}, tool_name="Grep"), 0)
+    for index in range(10001):
+        (Path(plain) / "sub" / f"f{index}").touch()
+    expect("path deny: Grep over a folder too large to check",
+           run_hook("guard-path.py", {"pattern": "x", "path": plain}, tool_name="Grep"), 2, stderr_has="too many files")
+
+
+# A loop reads and writes its own project only; the retro also reads this project's session transcripts.
+def run_loop_path(tool, tool_input, loop="outer", cwd=ROOT):
+    event = json.dumps({"tool_name": tool, "tool_input": tool_input, "cwd": str(cwd)})
+    return subprocess.run([sys.executable, str(HOOKS / "guard-path.py")], input=event, capture_output=True,
+                          text=True, cwd=ROOT, env={**os.environ, "AEION_LOOP": loop})
+
+
+transcripts = Path.home() / ".claude/projects" / "".join(c if c.isalnum() or c == "-" else "-" for c in str(ROOT))
+for tool, tool_input, loop in [("Read", {"file_path": "/etc/hosts"}, "outer"),
+                               ("Read", {"file_path": str(Path.home() / ".config/gh/hosts.yml")}, "watch"),
+                               ("Read", {"file_path": str(ROOT / ".." / "outside.md")}, "inner"),
+                               ("Grep", {"pattern": "x"}, "outer"),
+                               ("Grep", {"pattern": "x", "path": "/etc"}, "security"),
+                               ("Write", {"file_path": "/tmp/loop-out.md"}, "retro"),
+                               ("Read", {"file_path": str(transcripts / "s.jsonl")}, "outer"),
+                               ("Write", {"file_path": str(transcripts / "s.jsonl")}, "retro")]:
+    cwd = "/tmp" if tool == "Grep" and "path" not in tool_input else ROOT
+    expect(f"path deny: loop {loop} {tool} {tool_input}", run_loop_path(tool, tool_input, loop, cwd), 2,
+           stderr_has="works inside")
+for tool, tool_input, loop in [("Read", {"file_path": str(ROOT / "AGENTS.md")}, "outer"),
+                               ("Grep", {"pattern": "x", "path": "knowledge"}, "outer"),
+                               ("Read", {"file_path": str(transcripts / "s.jsonl")}, "retro")]:
+    expect(f"path allow: loop {loop} {tool} {tool_input}", run_loop_path(tool, tool_input, loop), 0)
+expect("path allow: outside the project when no loop runs",
+       run_hook("guard-path.py", {"file_path": "/etc/hosts"}, tool_name="Read"), 0)
 for pattern in [".env", ".e*", "**/.env*", ".{e,x}nv", "*.pem"]:
     expect(f"path deny: Grep glob {pattern}",
            run_hook("guard-path.py", {"pattern": "x", "glob": pattern, "path": "/repo"}, tool_name="Grep"), 2)

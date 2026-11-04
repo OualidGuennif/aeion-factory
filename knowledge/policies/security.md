@@ -37,9 +37,14 @@ Requirements for a change, not claims about what production already satisfies.
   input. Policy PreToolUse hooks block on command failure or timeout (Claude Code 2.1.295+).
   Basename guards are an accidental-read safeguard, not resolved-path or runtime isolation.
 - One list names secret files for the guards, doc-links, the context fingerprint and the
-  architecture scope: `.claude/hooks/secret_names.py` (dotenv files, `env.local`, credential and
-  `auth.json` files, SSH keys, `.netrc`, `.npmrc`, `.pypirc`, `.pgpass`, `.envrc`, `*.pem`, `*.key`,
-  `*.p12`, `*.pfx`; templates such as `.env.example` stay allowed). In a Bash command, quotes and
+  architecture scope: `.claude/hooks/secret_names.py` (dotenv files `.env`, `.env.*`, `.env-*` and
+  `*.env`, `env.local`, `.dev.vars`, credential and `auth.json` files, `.git-credentials`,
+  `.credentials.json`, private SSH keys `id_rsa`/`id_dsa`/`id_ecdsa`/`id_ed25519` and their `_sk`
+  forms but never `.pub`, `.netrc`, `.npmrc`, `.pypirc`, `.pgpass`, `.envrc`, `.htpasswd`,
+  `terraform.tfstate` and its backup, `*.pem`, `*.key`, `*.p12`, `*.pfx`, `*.ppk`, `*.jks`,
+  `*.keystore`, `*.tfvars`; templates such as `.env.example` stay allowed). Names are case folded,
+  because APFS and NTFS open `.env.local` for `ENV.LOCAL`; code that reads the environment
+  (`process.env`, `import.meta.env`) names no file. In a Bash command, quotes and
   backslash escapes are joined and brace alternatives expanded first, and so are groups, nested
   or several in a word: zsh alternation (`(i|x)d_rsa`) and bash extglob (`@(i)d_rsa`) give each
   alternative, `?(…)`, `*(…)` and `!(…)` a wildcard, as does every group past 256 alternatives
@@ -57,7 +62,10 @@ Requirements for a change, not claims about what production already satisfies.
   `rg --pre`; anything else (`awk`, `sort`, `env`, `watch`, `sh -c`) fails closed. Every glob is
   also judged by the files it expands to from the command's directory and each literal directory
   a `cd` or `pushd` moves to. The Grep tool's `glob` filter is refused when it names a secret the
-  same way. The ordinary-name list is a heuristic: an odd glob such as `*2` matches only a
+  same way (a negated `!.env` names nothing). Outside a git work tree the Grep tool honours no
+  `.gitignore`, so a Grep over a folder (its `path`, or the working folder when it names none) is
+  refused when a file it would read is a secret, or when the folder holds more than 10,000 entries
+  to check. The ordinary-name list is a heuristic: an odd glob such as `*2` matches only a
   certificate name and is refused.
   A search pattern is text: the pattern of a bare `grep`, `egrep`, `fgrep`, `rg` or `git grep` (its
   first operand, or each `-e` value) may name a secret when the shell passes it as typed (no glob,
@@ -82,7 +90,15 @@ Requirements for a change, not claims about what production already satisfies.
   `--config-env`, `GIT_CONFIG_*`, or `git config` set to anything but `tools/git-hooks`; reading it
   stays allowed), `-f`/`--force*`/`--mirror`/`+refspec` on push. It also refuses setting or
   unsetting `aeion.mode`, and renaming or removing the `aeion` section, also behind `env`: the mode turns
-  the sign-off, the closure checkpoint and the push gate on or off, so the user switches it. The readers use `git config --local`, so an
+  the sign-off, the closure checkpoint and the push gate on or off, so the user switches it. It
+  refuses setting a key whose value git runs as a program, through `git config`, `-c`,
+  `--config-env` or `GIT_CONFIG_*`, because later git commands run it out of the guard's sight:
+  `core.fsmonitor`, `core.sshCommand`, `core.pager`, `core.editor`, `core.askPass`, `alias.*`,
+  `credential.helper`, `diff.external`, `*.textconv`, `filter.*.clean/smudge/process`,
+  `merge.*.driver`, `gpg.program`, `sequence.editor`, `pager.*`, `include.path`,
+  `includeIf.*.path`, `remote.*.uploadpack/receivepack` and `protocol.*.allow`. Reading or unsetting
+  one stays allowed, and so do the values `cat`, `true`, `false`, `:` and `less`
+  (`git -c core.pager=cat log`). The readers use `git config --local`, so an
   `include.path` or the global config cannot switch the mode. Writing the git config file
   (`.git/config`, `config.worktree`) directly is refused: a shell redirection to it (`>`, `>>`,
   `>|`, `>!`, `>&`), any program but a reader (`cat`, `grep`, `git`, `diff`, `echo`, ...) naming
@@ -173,8 +189,17 @@ Read-only loop jobs set `AEION_LOOP_READ_ONLY=1`. The shared guard restricts Bas
 checker/Git reads and named issue/review operations; it refuses writer-capable tool wildcards,
 arbitrary Git arguments and shell composition. A published body file must be a regular file under
 `.aeion/loop-bodies/` (the jobs' only Write scope), given as its own word, and `--recover` is refused: issue text cannot
-make a loop post a local file such as a CLI credential store. A production read must match the configured
+make a loop post a local file such as a CLI credential store. `gh` there takes no `--jq`/`-q` (gojq's
+`env` prints the environment), no `--template` (`-t` on list, view and checks) and no
+`--repo`/`-R`, in either spelling. A production read must match the configured
 single trusted command. These are accidental-command controls, not OS-level isolation.
+
+Every loop job also sets `AEION_LOOP=<job>`, and the path guard then refuses any file tool outside
+the project (a resolved path, so `..` and links count); the retro may also read this project's
+session transcripts under `~/.claude/projects/`. `.claude/settings.json` denies Read of the usual
+credential stores (`~/.ssh`, `~/.aws`, `~/.config/gh`, `~/.git-credentials`,
+`~/.claude/.credentials.json`) in every session. Anywhere, `gh --jq`/`-q` with `env` or `$ENV` is
+refused as an environment dump, however its quotes split the word (`en"v"`).
 
 Codex/OpenCode/Pi adapters normalize their supported native Bash/file/patch payloads to these same
 guards. A known refusal is returned as an explicit native denial; it is never silently converted

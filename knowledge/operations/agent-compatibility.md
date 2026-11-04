@@ -121,8 +121,14 @@ with one line naming a missing agent binary and the setup link, exit 1.
   from a subfolder, or nested in another repository, does not find `tools/agents/hook.py`; Codex and
   Antigravity then refuse every tool call (fail closed). Start the agent at the project root.
   Inside a git repository a subfolder such as `demo/` works: the hook commands resolve the git root,
-  and the OpenCode and Pi extensions use the nearest folder above their start folder that has
-  `tools/agents/hook.py`.
+  and the OpenCode and Pi extensions run the hooks three folders above their own file, never a
+  `tools/agents/hook.py` found above a session's folder (one could be planted); with none there, every call is refused.
+- Patches and file filters, every harness: a patch header (`*** Add File:`, `Update File`,
+  `Delete File`, `Move to`) is read as harness parsers read it, trimmed, in any case. An empty path or
+  one with a colon, any other `*** Word:` header, or two patch texts is refused. On every non-shell tool,
+  each string at any depth under `include`, `glob`, `globPattern`, `filePattern` or `includePattern`
+  (any case, `_`/`-` ignored, plurals too; never `pattern`, the search regex) meets the Grep `glob`
+  check ([security](../policies/security.md)); OpenCode's grep filter is `include`.
 - Both adapters enforce supported Bash/path refusals, edit feedback and a verified handover,
   and a Pi compaction the checkpoint did not verify still runs and owes that closure after it
   instead of trapping the session at its window; the first refused compaction creates the skeleton to fill.
@@ -134,7 +140,11 @@ with one line naming a missing agent binary and the setup link, exit 1.
   - **Guards.** Each tool call goes to `tools/agents/hook.py dsh` as PreToolUse (a call without an agent
     is refused), with `ctx.tokenMeter.measure(session).totalTokens` as usage; `tools/post-execute` sends
     PostToolUse and `agent/turn-stopping` sends Stop. The plugin finds the hook above each session's own
-    directory, so one web server guards every factory project and leaves other folders alone. `bash` is
+    directory, so one web server guards every factory project and leaves other folders alone. It runs
+    that project's hooks only if it is the project the plugin ships in (the `tools/agents/run dsh`
+    overlay) or one the profile trusts: `tools/agents/dsh-install --trust PROJECT` lists it in
+    `aeion-factory.trusted` beside the profile's link, read on each call. Any other project's calls are
+    refused with that command, so a planted `tools/agents/hook.py` never runs. `bash` is
     Bash, `read`/`write`/`edit` name `file_path`, `str_replace_editor` is Edit (Read for `view`), and
     `glob`/`grep` are Glob/Grep.
   - **Messages.** dsh cannot add prompt text, so the start context is steered on the first guarded call.
@@ -181,8 +191,9 @@ with one line naming a missing agent binary and the setup link, exit 1.
   sends PreToolUse and PostToolUse (matcher `.*`) and Stop to `tools/agents/hook.py antigravity
   <event>`: the payload names no hook event or session, so the event is an argument and the
   session key is per clone, as for Devin. The adapter reads `toolCall {name, args}`, maps
-  `run_command` (`CommandLine`) to Bash, `view_file` to Read, `write_to_file` to Write and
-  `replace_file_content`/`multi_replace_file_content` to Edit and `grep_search` to Grep. For any
+  `run_command` (`CommandLine`) to Bash, `view_file` and `read_file` to Read, `write_to_file` and
+  `write_file` to Write, `replace_file_content`/`multi_replace_file_content`/`edit_file` to Edit and
+  `grep_search` to Grep. For any
   tool, including MCP tools, every nonempty string at any depth under an argument whose name,
   ignoring case and `_`/`-`, ends in path, file, dir, directory or uri, or their plurals
   (`AbsolutePath`, `TargetDirectories`, `file_path`, `Uri`; a `file:` URI is decoded to its path),
@@ -197,7 +208,8 @@ with one line naming a missing agent binary and the setup link, exit 1.
   shell guard, as does a `command` or `commandLine` argument in any case; a call with two is
   refused. `Cwd` or `workdir` in any case (a `file:` URI decoded) is the shell's directory; two
   or a non-string one are refused. On a shell call any other argument must be a flag or a
-  number, since the guard cannot tell which one a tool runs in; a text, list or object is refused.
+  number, since the guard cannot tell which one a tool runs in; a text, list or object is refused,
+  except AGY 2.0's required `toolSummary` string, the line shown to the user, which is never run.
   The guards see only fields the adapter derives, never a raw `limit` or output mode from the
   model. A pre-tool payload without `toolCall` is refused. A pre-tool answer is always an
   explicit `{"decision": "allow"}` or `{"decision": "deny", "reason": ...}`, since Antigravity
@@ -291,7 +303,8 @@ tools/agents/adapter-check --root ../app --ref main     # or a branch somebody w
 ```
 
 It prints one line per connector: `ok`, `DRIFT` with both sizes and the exact `cp` that repairs it,
-`UNWIRED` for a native config that names a file which is not there, `invalid` for a config that
+`UNWIRED` for a native config that names a `.py`, `.js` or `.sh` script which is not there (a `.json`
+path, such as a credentials file in a deny rule, is not a script), `invalid` for a config that
 is not valid JSON, `LINKED` for a connector or one of its parent folders that is a symlink, `MODE`
 for a launcher that lost its executable bit, and `UNIDENTIFIED` with its line for a
 `steer`/`inject`/`followup` call that carries no id and `UNROLED` for one that carries no role. A
@@ -480,11 +493,13 @@ cannot reach it, and make the loaded tag checkable.
 ### Inputs
 
 ```bash
-tools/agents/dsh-install --tag vX.Y.Z [--profile desktop] [--profile-dir PATH] [--repo PATH]
+tools/agents/dsh-install [--tag vX.Y.Z] [--trust PROJECT ...] [--profile desktop] [--profile-dir PATH] [--repo PATH]
 tools/agents/dsh-install --check   [--profile desktop] [--profile-dir PATH] [--repo PATH]
 ```
 
 - `--tag`: an existing tag in the repository, the whole name (`v1.8.4`); annotated or lightweight.
+- `--trust`: a project whose hooks the plugin may run (repeatable); its root must hold
+  `tools/agents/hook.py`. It is recorded once, resolved, in `<profile>/aeion-factory.trusted`.
 - `--profile`: a folder under the profile directory, default `desktop`.
 - `--profile-dir`: default `~/.dsh/profiles`; a test passes its own temporary one.
 - `--repo`: the repository the tag is read from, default this checkout.
@@ -494,6 +509,7 @@ tools/agents/dsh-install --check   [--profile desktop] [--profile-dir PATH] [--r
 
 - Install writes `<profile>/vendor/aeion-factory-<tag>/` with the tag's files, then makes
   `<profile>/aeion-factory` a relative symlink to that folder. Prints `installed <tag> → <path>`.
+- `--trust` prints `trusted <project>`, or refuses `<project> has no tools/agents/hook.py; …`.
 - `--check` prints `ok <tag>` when every file matches the tag, otherwise one `DRIFT <file>` or
   `MISSING <file>` line per difference.
 - Exit codes: 0 clean, 1 drift or an incomplete copy, 2 a refusal. Refusals name the condition:
@@ -514,6 +530,8 @@ tools/agents/dsh-install --check   [--profile desktop] [--profile-dir PATH] [--r
 6. `--check` fails on one hand-edited byte — `test_check_names_a_hand_edited_copy`.
 7. `--check` fails on a link that does not name a vendored tag —
    `test_check_refuses_a_foreign_link`.
+9. `--trust` records a project once, refuses one without hooks, and the plugin runs only trusted ones —
+   `test_trust_records_a_project_once_beside_the_link`, `test_trust_refuses_a_folder_without_the_factory_hooks`, `test_dsh.mjs`.
 8. `adapter-check` reports a `steer` call without an id —
    `test_steer_without_id_is_unidentified`, without a role — `test_steer_without_role_is_unroled`,
    fails a copy that steers unidentified —

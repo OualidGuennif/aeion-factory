@@ -157,6 +157,40 @@ class HookTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 self.call(tool_name='apply_patch',tool_input={'command':patch_text})
 
+    def test_padded_patch_headers_are_guarded_as_the_harness_reads_them(self):
+        # Harness parsers trim the header line and its path, so the guard does too.
+        for header in ('*** Update File: .env ','  *** Delete File: .env','***Add File:.npmrc','*** update file: .env',
+                       '*** Add File:\tid_rsa\t','*** Update File: a.py\n*** Move to:  .env '):
+            with self.assertRaisesRegex(hook.GuardRefusal,'secret',msg=header):
+                self.call(tool_name='apply_patch',tool_input={'command':f'*** Begin Patch\n{header}\n+x\n*** End Patch\n'})
+        self.assertEqual(hook.edit_paths({'tool_name':'apply_patch','tool_input':{'patch':'*** Update File: a.py \n*** Move to:b.py'}}),
+                         ['a.py','b.py'])
+        # A header the guard cannot place, an empty or colon-split path, or two patch texts are refused.
+        for data in ({'command':'*** Rename File: .env\n'},{'command':'*** Add File: \n+x'},
+                     {'command':'*** Update File: .env:notes.md\n'},
+                     {'command':'*** Add File: a.md\n+x','input':'*** Add File: .env\n+x'}):
+            with self.assertRaises(ValueError,msg=str(data)):
+                self.call(tool_name='apply_patch',tool_input=data)
+        # Hunk lines and the end markers are not headers, whatever they hold.
+        patch_text=('*** Begin Patch\n*** Update File: notes.md\n@@\n ***\n-***Note: a\n+***Note: b\n'
+                    '*** End of File\n*** End Patch\n')
+        self.assertEqual(self.call(tool_name='apply_patch',tool_input={'command':patch_text}),{})
+
+    def test_every_harness_checks_a_grep_file_filter(self):
+        # Each harness names its grep filter its own way; every one picks the files the search reads.
+        for provider,tool,data in (('opencode','Grep',{'pattern':'.','path':'.','include':'.env'}),
+                                   ('pi','Grep',{'pattern':'x','path':'.','glob':'*.pem'}),
+                                   ('devin','grep',{'pattern':'x','path':'.','include':'.env'}),
+                                   ('droid','Grep',{'pattern':'x','include':'id_rsa'}),
+                                   ('dsh','grep',{'pattern':'x','includePattern':'auth.json'}),
+                                   ('codex','mcp_search',{'query':'x','options':{'file_pattern':['*.md','.env']}})):
+            with self.assertRaisesRegex(hook.GuardRefusal,'secret',msg=provider):
+                self.call(provider,session_id=f'filter-{provider}',tool_name=tool,tool_input=data)
+        # The search pattern is a regex, never a file filter; an ordinary filter passes.
+        self.assertEqual(self.call('opencode',tool_name='Grep',tool_input={'pattern':'.env','path':'.','include':'*.md'}),{})
+        with self.assertRaises(ValueError):
+            self.call('opencode',tool_name='Grep',tool_input={'pattern':'x','path':'.','include':1})
+
     def test_before_compaction_refuses_missing_and_changed_checkpoint(self):
         # Codex instead compacts and owes the closure after it (owner decision, tested below).
         for provider in ('opencode','pi'):
@@ -804,6 +838,28 @@ class HookTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.call('antigravity',session_id=None,toolCall={'name':'run_command','args':'cat'})
 
+    def test_antigravity_2_shell_summary_and_file_tools(self):
+        # AGY 2.0's run_command requires toolSummary, the line shown to the user; it is never run.
+        call={'CommandLine':'git status --short','toolSummary':'Check the tree','WaitMsBeforeAsync':0}
+        self.assertEqual(self.agy('run_command',call),{})
+        with self.assertRaisesRegex(hook.GuardRefusal,'secret'):
+            self.agy('run_command',{**call,'CommandLine':'cat .env'})
+        for summary in ({'text':'x'},['x'],None):
+            with self.assertRaises(ValueError,msg=str(summary)):
+                self.agy('run_command',{**call,'toolSummary':summary})
+        # Its file tools are read_file, write_file and edit_file.
+        path=str(self.root/'.env')
+        for name in ('read_file','write_file','edit_file'):
+            with self.assertRaisesRegex(hook.GuardRefusal,'secret',msg=name):
+                self.agy(name,{'AbsolutePath':path})
+            with self.assertRaises(ValueError,msg=name):
+                self.agy(name,{'Location':path})
+        long=self.root/'long.md'
+        long.write_text('x\n'*500)
+        with self.assertRaisesRegex(hook.GuardRefusal,'intake|Bounded'):
+            self.agy('read_file',{'AbsolutePath':str(long)})
+        self.assertEqual(self.agy('write_file',{'TargetFile':str(self.root/'notes.md'),'CodeContent':'x'}),{})
+
     def test_antigravity_decisions_are_explicit(self):
         def run(payload,event='PreToolUse'):
             result=subprocess.run(['python3',str(ROOT/'tools/agents/hook.py'),'antigravity',event],
@@ -814,6 +870,8 @@ class HookTests(unittest.TestCase):
         self.assertEqual(denied['decision'],'deny')
         self.assertIn('secret',denied['reason'])
         self.assertEqual(run({'toolCall':{'name':'run_command','args':{'CommandLine':'git status --short'}}}),{'decision':'allow'})
+        summarized={'CommandLine':'git status --short','toolSummary':'Check the tree','WaitMsBeforeAsync':500}
+        self.assertEqual(run({'toolCall':{'name':'run_command','args':summarized}}),{'decision':'allow'})
         self.assertEqual(run({'toolCall':{'name':'view_file','args':{}}})['decision'],'deny')
         # A pre-tool payload in any other shape is refused, never allowed unguarded.
         self.assertEqual(run({'tool_call':{'name':'view_file','args':{'AbsolutePath':'/x/.env'}}})['decision'],'deny')
@@ -826,8 +884,12 @@ class HookTests(unittest.TestCase):
         log.unlink(missing_ok=True)
         self.addCleanup(log.unlink,missing_ok=True)
         (self.root/'notes.md').write_text('x\n')
+        (self.root/'plan.md').write_text('x\n')
+        (self.root/'todo.md').write_text('x\n')
         self.agy('replace_file_content',{'TargetFile':str(self.root/'notes.md')},event='PostToolUse')
-        self.assertEqual(set(log.read_text().splitlines()),{'notes.md'})
+        self.agy('write_file',{'TargetFile':str(self.root/'plan.md')},event='PostToolUse')
+        self.agy('edit_file',{'TargetFile':str(self.root/'todo.md')},event='PostToolUse')
+        self.assertEqual(set(log.read_text().splitlines()),{'notes.md','plan.md','todo.md'})
 
     def test_antigravity_hooks_route_every_event_to_the_adapter(self):
         groups=json.loads((ROOT/'.agents/hooks.json').read_text())

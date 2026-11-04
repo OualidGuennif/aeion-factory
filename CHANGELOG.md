@@ -6,6 +6,8 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+## [2.0.2] - 2026-11-04
+
 - Fixed: `template-update` also brings forward the factory files a project still holds as an older
   release left them (updates before 2.0.1 moved only the connectors), instead of reporting false
   conflicts or never updating them.

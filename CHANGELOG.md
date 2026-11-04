@@ -6,6 +6,9 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+- `template-update` run from a project's own copy says to run it from the factory clone even when
+  `--root` names no folder, instead of `no such project`.
+
 ## [2.0.3] - 2026-11-04
 
 - Security: the pooled skill-creator eval viewer page escapes quotes and every benchmark value it

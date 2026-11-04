@@ -123,7 +123,7 @@ from another source; analysis refuses mismatched package provenance or a dirty A
 | Context budget | Usage, closure-only state, checkpoint receipt (with per-file digests, so a stale one names what changed), 300k forced compaction | `.aeion/context/<session>.json`; per-session file lock |
 | Handover | Recovery facts for the current session | Ignored `work/handovers/<session>.md`, created atomically only when closure needs it |
 | Knowledge/link/health checkers | Frontmatter, caps, traceability and diff coverage | Exit code + bounded diagnostics; no provider |
-| Optional loops | Select prompt/model/tools and run a managed headless task | Off unless enabled; outer loop reads production only through its configured read path |
+| Optional loops | Select prompt/model/tools and run a managed headless task | Off unless enabled; outer loop reads production only through its configured read path; `AEION_LOOP` keeps file tools in the project, writing jobs get named git subcommands only, inner needs a maintainer-written issue |
 | Analysis wrapper | Freeze Git, Graphify, evidence validation and Archify finalization | Ignored `.aeion/analysis/<sha>/` and immutable receipts |
 | GitHub workflows | PR checks and post-main analysis; artifact retention | Read-only checkout/job permissions; no generated-source push |
 | Native language servers | Editor diagnostics for their registered language | Local processes; explicit plugin enablement |
@@ -289,7 +289,8 @@ native selector, shared through `.agents/skills`. Native rules take precedence o
 methods. Profile files never launch agents or choose models by themselves. See
 [skill selection](../operations/skill-selection.md) for authority and licensing boundaries.
 
-The materializer applies three reviewed comment-only SAST annotations from
-`tools/skills/annotations.json`, each bound to an exact original file hash. Source
+The materializer applies the security patches in `tools/skills/patches.json` (the
+skill-creator eval viewer and the instinct import), then three reviewed comment-only SAST
+annotations from `tools/skills/annotations.json`, each bound to an exact original file hash. Source
 changes require renewed review. Original/materialized hashes are both retained;
 search and checking remain offline and no source execution or broad scan exemption is added.

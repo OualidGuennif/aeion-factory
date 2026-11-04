@@ -35,7 +35,8 @@ execution. Intake bounds are not output virtualization: no tool result is rewrit
 heuristics cannot establish an absolute context ceiling. Keep targeted reads and summary commands.
 
 The default Claude profile enables native auto-compaction at 250,000 tokens and a budget hook
-on session start, prompts, tools, compaction and stop; `tools/context/run` names a missing `claude`
+on session start, prompts, tools, compaction and stop (the same `.claude/settings.json` also denies
+Read of the credential stores, see [security](../policies/security.md)); `tools/context/run` names a missing `claude`
 in one line instead of a traceback. SubagentStop also checks a child's final
 observation, including pure-text child responses. The hook reads only the current session's
 bounded transcript tail and retains native token counts, never transcript text. Cached input

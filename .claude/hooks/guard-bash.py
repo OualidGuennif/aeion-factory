@@ -15,7 +15,7 @@ import re
 import shlex
 import sys
 from pathlib import Path, PurePosixPath
-from secret_names import brace_variants, is_secret, named_secrets, shell_pattern
+from secret_names import brace_variants, inside_git, is_secret, named_secrets, secret_under, shell_pattern
 
 READERS = {"cat", "less", "more", "head", "tail", "grep", "rg", "awk", "sed", "strings", "base64",
            "xxd", "od", "source", ".", "cp", "scp", "rsync", "jq", "python3", "python", "node", "vim", "nano"}
@@ -133,7 +133,8 @@ def mentioned_secrets(tokens, shell_tokens, bases, unquoted_globs):
 ENV_WORD = re.compile(r"\b(environ|environb|ENVIRON)\b")
 INTERPRETER = re.compile(r"\b(python3?|node|deno|bun|tsx|ts-node|npx|ruby|perl)\b")
 ENV_IN_CODE = re.compile(r"process\.env\b|Deno\.env\b|%ENV\b|\bENV\b")
-JQ_ENV = re.compile(r"\bjq\b.*(\benv\b|\$ENV\b)", re.S)
+# jq, and gh's --jq or -q (gojq), with env or $ENV.
+JQ_ENV = re.compile(r"(\bjq\b|\bgh\b.*\s-[a-zA-Z]*q).*(\benv\b|\$ENV\b)", re.S)
 # The env= keyword argument of a call (subprocess) with os.environ copied, optionally with overrides: env=dict(os.environ,
 # K=V), env={**os.environ, K: V}, env=os.environ.copy() or env=os.environ. Overrides hold no parentheses.
 ENV_COPY = re.compile(r"([(,]\s*)env\s*=\s*(dict\(\s*os\.environ\b[^()]*\)|\{\s*\*\*os\.environ\b[^{}()]*\}"
@@ -424,7 +425,8 @@ def prints_environment(words):
 def env_dump(command):
     # A copy handed to a child process (env=dict(os.environ, K=V)) is not printed; printing it still is.
     command = ENV_COPY.sub(r"\1env=child_env", command)
-    if ENV_WORD.search(command) or JQ_ENV.search(command):
+    # The shell joins quoted pieces (en"v", e''nv) into the word jq reads.
+    if ENV_WORD.search(command) or JQ_ENV.search(command) or JQ_ENV.search(" ".join(shell_words(command))):
         return True
     if INTERPRETER.search(command) and ENV_IN_CODE.search(command):
         return True
@@ -487,6 +489,16 @@ def graphify_command(command):
 
 GIT_VALUE_FLAGS = {"-C", "-c", "--config-env", "--git-dir", "--work-tree", "--namespace"}
 HOOKS_PATH = "tools/git-hooks"
+# Config keys whose value git runs as a program or command line; once set, later git commands run it out of
+# this guard's sight. Keys are matched case folded, as git reads them.
+PROGRAM_KEY = re.compile(r"core\.(fsmonitor|sshcommand|pager|editor|askpass|gitproxy|alternaterefscommand)|alias\..+"
+                         r"|credential\.(.+\.)?helper|diff\.external|(diff|difftool|mergetool)\..+\.(textconv|command|cmd)"
+                         r"|filter\..+\.(clean|smudge|process)|merge\..+\.driver|gpg\.(.+\.)?program|sequence\.editor"
+                         r"|pager\..+|include\.path|includeif\..+\.path|remote\..+\.(uploadpack|receivepack)"
+                         r"|uploadpack\.packobjectshook|protocol\.(.+\.)?allow")
+# Values that run nothing of note: a pager or editor that only prints or exits.
+SAFE_PROGRAM = {"", "cat", "true", "false", ":", "less"}
+PROGRAM_REASON = "{} names a program git runs later, out of this guard's sight; the user sets it."
 # Short options that take a value: in a cluster, the rest is that value, not more flags.
 SHORT_VALUE = {"commit": set("mFcCt"), "push": {"o"}}
 
@@ -502,6 +514,10 @@ def git_bypass(command):
         # GIT_CONFIG_* variables inject configuration into every later git run.
         if any(re.match(r"GIT_CONFIG_\w*=", w) and "core.hookspath" in w.lower() for w in words):
             return hooks_reason
+        for w in words:
+            keys = [k for k in re.split(r"[\s'\"=]+", w.lower()) if PROGRAM_KEY.fullmatch(k)]
+            if re.match(r"GIT_CONFIG_\w*=", w) and keys:
+                return PROGRAM_REASON.format(keys[0])
         words = program(words)
         if words and words[0] == "<script>":
             reason = git_bypass(words[1])
@@ -513,9 +529,14 @@ def git_bypass(command):
         rest = list(words[1:])
         while rest and rest[0].startswith("-"):
             flag = rest.pop(0)
-            value = rest.pop(0) if flag in GIT_VALUE_FLAGS and rest else flag
+            value = rest.pop(0) if flag in GIT_VALUE_FLAGS and rest else flag.partition("=")[2]
             if flag.split("=", 1)[0] in ("-c", "--config-env") and "core.hookspath" in value.lower():
                 return hooks_reason
+            key, _, setting = value.partition("=")
+            # --config-env takes its value from a variable this guard cannot see.
+            if flag.split("=", 1)[0] in ("-c", "--config-env") and PROGRAM_KEY.fullmatch(key.lower()) and (
+                    flag.startswith("--config-env") or setting not in SAFE_PROGRAM):
+                return PROGRAM_REASON.format(key)
         sub, args = (rest[0], rest[1:]) if rest else (None, [])
         if sub == "config":
             positional = [a for a in args if not a.startswith("-")]
@@ -535,6 +556,12 @@ def git_bypass(command):
             sections = {"--rename-section", "rename-section", "--remove-section", "remove-section"}
             if sections & set(args) and any(a.lower() == "aeion" for a in positional):
                 return "aeion.mode is the user's switch between team and local flow; the user sets it."
+            programs = [i for i, a in enumerate(positional) if PROGRAM_KEY.fullmatch(a.lower())]
+            unsets = "unset" in positional[:programs[0]] if programs else False
+            if programs and not reads and not unsets and not any(a.startswith("--unset") for a in args):
+                values = positional[programs[0] + 1:]
+                if values and values[0] not in SAFE_PROGRAM:
+                    return PROGRAM_REASON.format(positional[programs[0]])
         value_next = False
         for arg in args:
             if value_next:
@@ -716,7 +743,6 @@ SEARCH_VALUES = {"grep": GREP_VALUES, "egrep": GREP_VALUES, "fgrep": GREP_VALUES
 PATTERN_FLAGS, PATTERN_FILE_FLAGS = {"-e", "--regexp"}, {"-f", "--file"}
 GREP_LONG = sorted(o for o in GREP_VALUES | {"--recursive", "--dereference-recursive", "--regexp", "--file"}
                    if o.startswith("--"))
-WALK_LIMIT = 10000
 
 
 def search_parts(words):
@@ -787,31 +813,6 @@ def without_patterns(tokens, patterns, split, aligned=None):
             index = tokens.index(piece)
             del tokens[index], aligned[index]
     return tokens, aligned
-
-
-def secret_under(directory, follow=False, hidden=True):
-    """The first secret file name under directory, a link judged by its target too, "" when there is none,
-    None when it is too large to check. follow walks linked folders, as grep -R does; hidden=False skips
-    dot files and folders, as plain rg does."""
-    seen = 0
-    for top, folders, files in os.walk(directory, followlinks=follow):
-        folders[:] = [f for f in folders if f != ".git" and (hidden or not f.startswith("."))]
-        files = [f for f in files if hidden or not f.startswith(".")]
-        seen += len(folders) + len(files)
-        if seen > WALK_LIMIT:
-            return None
-        for name in files:
-            path = os.path.join(top, name)
-            target = os.path.basename(os.path.realpath(path)) if os.path.islink(path) else name
-            if is_secret(name) or is_secret(target):
-                return target
-    return ""
-
-
-def inside_git(folder):
-    """Whether folder lies in a git work tree, the only place rg honours .gitignore."""
-    path = Path(folder).resolve()
-    return any((p / ".git").exists() for p in (path, *path.parents))
 
 
 def recursive_secret_read(command, bases):
@@ -964,6 +965,12 @@ if os.environ.get("AEION_LOOP_READ_ONLY") == "1":
         deny(f"read-only loops do not accept shell composition; write finding text to {LOOP_BODIES}<name>.md.")
     # A body file is published: only the loop's own scratch files, never an arbitrary local file.
     if forge:
+        # --jq/-q run gojq (env prints the environment), --template/-t a Go template, --repo/-R another
+        # repository; on create, -t is the title.
+        short = "qR" + ("t" if words[2] in {"list", "view", "checks"} else "")
+        for word in words[3:]:
+            if word.split("=", 1)[0] in ("--jq", "--template", "--repo") or re.fullmatch(rf"-[^-]*[{short}].*", word):
+                deny("read-only loops print issues and pull requests as gh formats them, for this repository only.")
         workdir = Path(event["tool_input"].get("workdir", event["tool_input"].get("cwd", event.get("cwd", "."))))
         for i, word in enumerate(words):
             if word == "--recover" or word.startswith("--recover="):

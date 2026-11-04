@@ -1,0 +1,37 @@
+[
+  {
+    "file": "third-party/aeion-factory/claude-plugins-official/plugins/skill-creator/skills/skill-creator/eval-viewer/generate_review.py",
+    "source_sha256": "fc9d1b9243fe5ab6012ebd579bd76d0035de1b79fd3b969de114defab26478fb",
+    "reason": "Embedded eval outputs cannot close the script element (Claude Security S2-F26).",
+    "needle": "    data_json = json.dumps(embedded)\n",
+    "replacement": "    # Æion Factory security patch: escaped so an eval output holding \"</script>\" cannot close the script element and run its own.\n    data_json = json.dumps(embedded).replace(\"&\", \"\\\\u0026\").replace(\"<\", \"\\\\u003c\").replace(\">\", \"\\\\u003e\")\n"
+  },
+  {
+    "file": "third-party/aeion-factory/claude-plugins-official/plugins/skill-creator/skills/skill-creator/eval-viewer/generate_review.py",
+    "source_sha256": "fc9d1b9243fe5ab6012ebd579bd76d0035de1b79fd3b969de114defab26478fb",
+    "reason": "The viewer answers only its own origin on localhost (Claude Security S2-F19).",
+    "needle": "    def do_GET(self) -> None:\n        if self.path == \"/\" or self.path == \"/index.html\":\n",
+    "replacement": "    def _same_origin(self) -> bool:\n        # Æion Factory security patch: a page from another site, or a hostname rebound to 127.0.0.1, must not read or write feedback.\n        port = self.server.server_address[1]\n        hosts = {f\"localhost:{port}\", f\"127.0.0.1:{port}\"}\n        origin = self.headers.get(\"Origin\")\n        return self.headers.get(\"Host\") in hosts and (origin is None or origin in {f\"http://{host}\" for host in hosts})\n\n    def do_GET(self) -> None:\n        if not self._same_origin():\n            self.send_error(403)\n        elif self.path == \"/\" or self.path == \"/index.html\":\n"
+  },
+  {
+    "file": "third-party/aeion-factory/claude-plugins-official/plugins/skill-creator/skills/skill-creator/eval-viewer/generate_review.py",
+    "source_sha256": "fc9d1b9243fe5ab6012ebd579bd76d0035de1b79fd3b969de114defab26478fb",
+    "reason": "Feedback is saved only from the viewer itself, as JSON (Claude Security S2-F19).",
+    "needle": "    def do_POST(self) -> None:\n        if self.path == \"/api/feedback\":\n",
+    "replacement": "    def do_POST(self) -> None:\n        # Æion Factory security patch: a JSON body cannot come cross-site without a preflight, which this server never answers.\n        if not self._same_origin() or self.headers.get_content_type() != \"application/json\":\n            self.send_error(403)\n        elif self.path == \"/api/feedback\":\n"
+  },
+  {
+    "file": "third-party/ecc/skills/continuous-learning-v2/scripts/instinct-cli.py",
+    "source_sha256": "a2e90e34ee589827592248dbc801bee90f1d5db6d2330e2d5004e4694b8e06f9",
+    "reason": "A redirect cannot reach a host the address check never saw (Claude Security S2-F24).",
+    "needle": "def _fetch_import_url(source: str, *, max_bytes: int = 2 * 1024 * 1024) -> str:\n",
+    "replacement": "class _NoRedirect(urllib.request.HTTPRedirectHandler):\n    # Æion Factory security patch: a redirect would reach a host the address check above never saw.\n    def redirect_request(self, req, fp, code, msg, headers, newurl):\n        raise ValueError(f\"remote import redirects are refused: {newurl}\")\n\n\ndef _fetch_import_url(source: str, *, max_bytes: int = 2 * 1024 * 1024) -> str:\n"
+  },
+  {
+    "file": "third-party/ecc/skills/continuous-learning-v2/scripts/instinct-cli.py",
+    "source_sha256": "a2e90e34ee589827592248dbc801bee90f1d5db6d2330e2d5004e4694b8e06f9",
+    "reason": "The fetch goes through the opener that refuses redirects (Claude Security S2-F24).",
+    "needle": "    with urllib.request.urlopen(req, timeout=15) as response:\n",
+    "replacement": "    with urllib.request.build_opener(_NoRedirect).open(req, timeout=15) as response:\n"
+  }
+]

@@ -6,6 +6,37 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+## [2.0.2] - 2026-11-04
+
+- Fixed: `template-update` also brings forward the factory files a project still holds as an older
+  release left them (updates before 2.0.1 moved only the connectors), instead of reporting false
+  conflicts or never updating them.
+- `template-update` says to run it from the factory clone when started from a project's own copy, and
+  its proposal folder ignores itself, so proposals never show up as files to commit.
+- Security (Claude Security scans of 2026-11-03): secret file names match in any case and also cover
+  `.git-credentials`, `.credentials.json`, `*.env`, `.dev.vars`, `*.ppk`, `*.jks`, `id_*_sk` and
+  `terraform.tfstate`; a Grep over a folder outside git checks every file it would read; Claude Code
+  settings deny reads of SSH, AWS, GitHub CLI, git and Claude credentials.
+- Security: read-only loops refuse `gh` output templates (`--jq`, `--template`) and `--repo`; git
+  settings that run a program (`core.fsmonitor`, pagers, editors) are refused through `git config`,
+  `-c`, `--config-env` and `GIT_CONFIG_*`.
+- Security: loop file tools stay inside the project (`AEION_LOOP`); writing loops get named git
+  subcommands, not `git *`; the retro has no `gh api` and writes only hookify rules and skills; the
+  inner loop takes only an issue a maintainer wrote; the workflows no longer keep the checkout token.
+- Security: an `apply_patch` header padded with spaces or in another case is guarded as the harness
+  reads it, and an unknown header is refused; a grep file filter is checked for every harness.
+- Fixed: Antigravity 2.0 shell calls carrying `toolSummary` were all refused; its `read_file`,
+  `write_file` and `edit_file` tools are now guarded.
+- Security: the OpenCode and Pi plugins run only their own checkout's hooks, never a
+  `tools/agents/hook.py` found above the session folder. The dsh plugin runs a project's hooks only
+  for a project its profile trusts, and refuses tools elsewhere: after installing 2.0.2, run
+  `tools/agents/dsh-install --trust <project>` once per project.
+- Fixed: `adapter-check` read a `.json` path in a config as a `.js` script, and its repair line could
+  name that path instead of the reference.
+- Security: two pooled skill scripts are patched (`tools/skills/patches.json`): the skill-creator
+  eval viewer answers only its own localhost page and escapes the outputs it embeds, and the
+  continuous-learning-v2 instinct import refuses redirects.
+
 ## [2.0.1] - 2026-11-03
 
 - `template-update` updates every factory file a release changed, not only the connectors: files you

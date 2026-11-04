@@ -2580,7 +2580,7 @@
         },
         "eval-viewer/viewer.html": {
           "executable": false,
-          "sha256": "a53213426ee1100441d701a3a0d49cda7a842f992d2c36463f4d3cc0258575fa",
+          "sha256": "19008a31664a007a3404519d107f47680d2de8b6e802cb681fe3d9e0ce3a1fa0",
           "source_sha256": "a53213426ee1100441d701a3a0d49cda7a842f992d2c36463f4d3cc0258575fa"
         },
         "references/schemas.md": {

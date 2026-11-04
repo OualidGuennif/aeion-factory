@@ -92,7 +92,8 @@ binds each comment to an exact original file hash and line. Catalog entries reta
 original and materialized hashes; a changed upstream file requires renewed review.
 
 Two pooled scripts carry behavior patches from `tools/skills/patches.json`: the skill-creator
-eval viewer serves only its own localhost origin and escapes its embedded data, and the
+eval viewer serves only its own localhost origin and escapes its embedded data and every
+benchmark value its page writes (quotes included), and the
 continuous-learning-v2 instinct import refuses redirects. Each patch is bound to the exact
 upstream file hash and a unique needle, applies in order before the annotations, and its
 lines say "Æion Factory security patch"; the [pool policy](../../skills/README.md) has the detail.

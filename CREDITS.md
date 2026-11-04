@@ -57,7 +57,8 @@ Mistakes in how these ideas are combined here are ours, not theirs.
 The versioned skills/catalog.json records exact source commits, entrypoint fingerprints and license
 files. Native Factory text is selectively adapted, not a wholesale copy of upstream prompts. The separate passive pool contains upstream skill/agent files and supporting resources,
 with three source-hash-bound scanner annotation comments recorded in tools/skills/annotations.json, with license texts under skills/licenses/.
-Two of those files are modified by source-hash-bound security patches recorded in tools/skills/patches.json: the
-skill-creator eval-viewer/generate_review.py (Apache-2.0) and the continuous-learning-v2 scripts/instinct-cli.py (MIT);
+Three of those files are modified by source-hash-bound security patches recorded in tools/skills/patches.json: the
+skill-creator eval-viewer/generate_review.py and eval-viewer/viewer.html (Apache-2.0) and the continuous-learning-v2
+scripts/instinct-cli.py (MIT);
 each changed line is marked "Æion Factory security patch".
 No upstream agent-launch mandate, model setting or generic threshold is adopted.

@@ -33,5 +33,89 @@
     "reason": "The fetch goes through the opener that refuses redirects (Claude Security S2-F24).",
     "needle": "    with urllib.request.urlopen(req, timeout=15) as response:\n",
     "replacement": "    with urllib.request.build_opener(_NoRedirect).open(req, timeout=15) as response:\n"
+  },
+  {
+    "file": "third-party/aeion-factory/claude-plugins-official/plugins/skill-creator/skills/skill-creator/eval-viewer/viewer.html",
+    "source_sha256": "a53213426ee1100441d701a3a0d49cda7a842f992d2c36463f4d3cc0258575fa",
+    "reason": "Benchmark values cannot inject markup or attributes into the viewer (Claude Security 2026-11-04 F1).",
+    "needle": "    function escapeHtml(text) {\n      const div = document.createElement(\"div\");\n      div.textContent = text;\n      return div.innerHTML;\n    }\n",
+    "replacement": "    function escapeHtml(text) {\n      // Æion Factory security patch: quotes are escaped too, so the result is safe inside an attribute.\n      return String(text === null || text === undefined ? \"\" : text).replace(/&/g, \"&amp;\").replace(/</g, \"&lt;\")\n        .replace(/>/g, \"&gt;\").replace(/\"/g, \"&quot;\").replace(/'/g, \"&#39;\");\n    }\n"
+  },
+  {
+    "file": "third-party/aeion-factory/claude-plugins-official/plugins/skill-creator/skills/skill-creator/eval-viewer/viewer.html",
+    "source_sha256": "a53213426ee1100441d701a3a0d49cda7a842f992d2c36463f4d3cc0258575fa",
+    "reason": "Benchmark values cannot inject markup or attributes into the viewer (Claude Security 2026-11-04 F1).",
+    "needle": "      if (metadata.timestamp) html += metadata.timestamp + \" &mdash; \";\n",
+    "replacement": "      // Æion Factory security patch: escaped.\n      if (metadata.timestamp) html += escapeHtml(metadata.timestamp) + \" &mdash; \";\n"
+  },
+  {
+    "file": "third-party/aeion-factory/claude-plugins-official/plugins/skill-creator/skills/skill-creator/eval-viewer/viewer.html",
+    "source_sha256": "a53213426ee1100441d701a3a0d49cda7a842f992d2c36463f4d3cc0258575fa",
+    "reason": "Benchmark values cannot inject markup or attributes into the viewer (Claude Security 2026-11-04 F1).",
+    "needle": "      if (metadata.evals_run) html += \"Evals: \" + metadata.evals_run.join(\", \") + \" &mdash; \";\n",
+    "replacement": "      // Æion Factory security patch: escaped.\n      if (metadata.evals_run) html += \"Evals: \" + escapeHtml([].concat(metadata.evals_run).join(\", \")) + \" &mdash; \";\n"
+  },
+  {
+    "file": "third-party/aeion-factory/claude-plugins-official/plugins/skill-creator/skills/skill-creator/eval-viewer/viewer.html",
+    "source_sha256": "a53213426ee1100441d701a3a0d49cda7a842f992d2c36463f4d3cc0258575fa",
+    "reason": "Benchmark values cannot inject markup or attributes into the viewer (Claude Security 2026-11-04 F1).",
+    "needle": "      html += (metadata.runs_per_configuration || \"?\") + \" runs per configuration\";\n",
+    "replacement": "      // Æion Factory security patch: escaped.\n      html += escapeHtml(metadata.runs_per_configuration || \"?\") + \" runs per configuration\";\n"
+  },
+  {
+    "file": "third-party/aeion-factory/claude-plugins-official/plugins/skill-creator/skills/skill-creator/eval-viewer/viewer.html",
+    "source_sha256": "a53213426ee1100441d701a3a0d49cda7a842f992d2c36463f4d3cc0258575fa",
+    "reason": "Benchmark values cannot inject markup or attributes into the viewer (Claude Security 2026-11-04 F1).",
+    "needle": "      html += '<td class=\"' + deltaClass(delta.pass_rate) + '\">' + (delta.pass_rate || \"—\") + \"</td></tr>\";\n",
+    "replacement": "      // Æion Factory security patch: escaped.\n      html += '<td class=\"' + deltaClass(delta.pass_rate) + '\">' + escapeHtml(delta.pass_rate || \"—\") + \"</td></tr>\";\n"
+  },
+  {
+    "file": "third-party/aeion-factory/claude-plugins-official/plugins/skill-creator/skills/skill-creator/eval-viewer/viewer.html",
+    "source_sha256": "a53213426ee1100441d701a3a0d49cda7a842f992d2c36463f4d3cc0258575fa",
+    "reason": "Benchmark values cannot inject markup or attributes into the viewer (Claude Security 2026-11-04 F1).",
+    "needle": "        html += '<td class=\"' + deltaClass(delta.time_seconds) + '\">' + (delta.time_seconds ? delta.time_seconds + \"s\" : \"—\") + \"</td></tr>\";\n",
+    "replacement": "        // Æion Factory security patch: escaped.\n        html += '<td class=\"' + deltaClass(delta.time_seconds) + '\">' + escapeHtml(delta.time_seconds ? delta.time_seconds + \"s\" : \"—\") + \"</td></tr>\";\n"
+  },
+  {
+    "file": "third-party/aeion-factory/claude-plugins-official/plugins/skill-creator/skills/skill-creator/eval-viewer/viewer.html",
+    "source_sha256": "a53213426ee1100441d701a3a0d49cda7a842f992d2c36463f4d3cc0258575fa",
+    "reason": "Benchmark values cannot inject markup or attributes into the viewer (Claude Security 2026-11-04 F1).",
+    "needle": "        html += '<td class=\"' + deltaClass(delta.tokens) + '\">' + (delta.tokens || \"—\") + \"</td></tr>\";\n",
+    "replacement": "        // Æion Factory security patch: escaped.\n        html += '<td class=\"' + deltaClass(delta.tokens) + '\">' + escapeHtml(delta.tokens || \"—\") + \"</td></tr>\";\n"
+  },
+  {
+    "file": "third-party/aeion-factory/claude-plugins-official/plugins/skill-creator/skills/skill-creator/eval-viewer/viewer.html",
+    "source_sha256": "a53213426ee1100441d701a3a0d49cda7a842f992d2c36463f4d3cc0258575fa",
+    "reason": "Benchmark values cannot inject markup or attributes into the viewer (Claude Security 2026-11-04 F1).",
+    "needle": "            const configLabel = config.replace(/_/g, \" \").replace(/\\b\\w/g, c => c.toUpperCase());\n",
+    "replacement": "            // Æion Factory security patch: escaped once, used twice.\n            const configLabel = escapeHtml(config.replace(/_/g, \" \").replace(/\\b\\w/g, c => c.toUpperCase()));\n"
+  },
+  {
+    "file": "third-party/aeion-factory/claude-plugins-official/plugins/skill-creator/skills/skill-creator/eval-viewer/viewer.html",
+    "source_sha256": "a53213426ee1100441d701a3a0d49cda7a842f992d2c36463f4d3cc0258575fa",
+    "reason": "Benchmark values cannot inject markup or attributes into the viewer (Claude Security 2026-11-04 F1).",
+    "needle": "              html += \"<td>\" + run.run_number + \"</td>\";\n",
+    "replacement": "              // Æion Factory security patch: escaped.\n              html += \"<td>\" + escapeHtml(run.run_number) + \"</td>\";\n"
+  },
+  {
+    "file": "third-party/aeion-factory/claude-plugins-official/plugins/skill-creator/skills/skill-creator/eval-viewer/viewer.html",
+    "source_sha256": "a53213426ee1100441d701a3a0d49cda7a842f992d2c36463f4d3cc0258575fa",
+    "reason": "Benchmark values cannot inject markup or attributes into the viewer (Claude Security 2026-11-04 F1).",
+    "needle": "              html += '<td class=\"' + prClass + '\">' + ((r.pass_rate || 0) * 100).toFixed(0) + \"% (\" + (r.passed || 0) + \"/\" + (r.total || 0) + \")</td>\";\n",
+    "replacement": "              // Æion Factory security patch: escaped.\n              html += '<td class=\"' + prClass + '\">' + ((r.pass_rate || 0) * 100).toFixed(0) + \"% (\" + escapeHtml(r.passed || 0) + \"/\" + escapeHtml(r.total || 0) + \")</td>\";\n"
+  },
+  {
+    "file": "third-party/aeion-factory/claude-plugins-official/plugins/skill-creator/skills/skill-creator/eval-viewer/viewer.html",
+    "source_sha256": "a53213426ee1100441d701a3a0d49cda7a842f992d2c36463f4d3cc0258575fa",
+    "reason": "Benchmark values cannot inject markup or attributes into the viewer (Claude Security 2026-11-04 F1).",
+    "needle": "              if (hasErrors) html += \"<td>\" + (r.errors || 0) + \"</td>\";\n",
+    "replacement": "              // Æion Factory security patch: escaped.\n              if (hasErrors) html += \"<td>\" + escapeHtml(r.errors || 0) + \"</td>\";\n"
+  },
+  {
+    "file": "third-party/aeion-factory/claude-plugins-official/plugins/skill-creator/skills/skill-creator/eval-viewer/viewer.html",
+    "source_sha256": "a53213426ee1100441d701a3a0d49cda7a842f992d2c36463f4d3cc0258575fa",
+    "reason": "Benchmark values cannot inject markup or attributes into the viewer (Claude Security 2026-11-04 F1).",
+    "needle": "                    html += '<span class=\"' + cls + '\" title=\"Run ' + run.run_number + ': ' + escapeHtml(exp.evidence || \"\") + '\">' + icon + \"</span> \";\n",
+    "replacement": "                    // Æion Factory security patch: escaped for the attribute.\n                    html += '<span class=\"' + cls + '\" title=\"Run ' + escapeHtml(run.run_number) + ': ' + escapeHtml(exp.evidence || \"\") + '\">' + icon + \"</span> \";\n"
   }
 ]

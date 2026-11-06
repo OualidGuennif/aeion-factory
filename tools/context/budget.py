@@ -422,10 +422,30 @@ def stop(event_name, reason):
     return {"continue": False, "stopReason": reason, "systemMessage": reason}
 
 
+def claude_native_session(event):
+    """Whether Claude's budget hook owns this event.
+
+    Grok loads the same `.claude/settings.json`. It sends Claude's field names plus its own
+    camelCase envelope (`hookEventName` is `user_prompt_submit`) and a `chat_history.jsonl`
+    transcript. Judging that file as a broken Claude transcript latches STOPPED on the first
+    prompt. The Grok adapter owns that session.
+    """
+    native = event.get("hookEventName")
+    if isinstance(native, str) and re.fullmatch(r"[a-z][0-9a-z_]*", native):
+        return False
+    path = event.get("transcript_path")
+    if isinstance(path, str) and Path(path).name == "chat_history.jsonl":
+        return False
+    return True
+
+
 def handle(root, event):
     root = root.resolve()
     if not isinstance(event, dict):
         raise ValueError("hook input must be an object")
+    # Leave Grok's envelope untouched, including a session an older hook already marked STOPPED.
+    if not claude_native_session(event):
+        return {}
     session, transcript, transcript_id = identity(event)
     name = event.get("hook_event_name")
     if name not in {"SessionStart", "UserPromptSubmit", "PreToolUse", "PostToolUse", "PreCompact", "Stop", "SubagentStop"}:

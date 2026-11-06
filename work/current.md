@@ -5,6 +5,13 @@ Finished tasks are deleted: the commit message and knowledge/ keep what matters.
 Status: ACTIVE, WAITING-OWNER, MEASURING, BLOCKED, BACKLOG. An entry is `## <title> — <STATUS>`, then the
 lines `- Owner decision:`, `- State:`, `- Next:` (with who), `- Blocker:`, `- Evidence:`.
 
+## Grok adapter — ACTIVE
+- Owner decision: 2026-11-06, make Æion Factory run under Grok without latching STOPPED, on a local `grok` branch, not on `develop`.
+- State: `.grok/hooks/factory.json` routes Grok events through `tools/agents/hook.py`. The Claude budget hook ignores a Grok envelope. Token totals come from `usage.json`. Not live-qualified.
+- Next: qualify on a live Grok session (`cat .env` refused, an edit names its doc, a new session stays RUNNING) (who: owner).
+- Blocker: none.
+- Evidence: knowledge/operations/agent-compatibility.md; tools/agents/tests/test_hooks.py; tools/context/tests/test_budget.py
+
 ## Connector drift check across all harnesses — ACTIVE
 - Owner decision: 2026-11-01, a stale or hand-edited connector must fail a check, not a session; a branch (`main`/`develop`) verifies too, and an adopted project gets an update path that keeps its own content.
 - State: shipped through 1.9.1: `tools/agents/adapter-check` (any `--ref`), `tools/agents/dsh-install` and the dsh compaction fixes. 2026-11-03 (owner: smarter updates): `tools/agents/template-update` finds the baseline (`.aeion-factory` or tag inference), updates every changed factory file three-way, prints notes, MAJOR and migrations; live v1.9.4 → v2.0.0 update passed adapter-check and the project's tests.

@@ -39,7 +39,7 @@ tools/        knowledge/link/health checks, agent adapters, architecture and loc
 .pi/          Pi extension (shared guards, verified handover before compaction)
 .dsh/         DeepSeek Harness plugin and the patch that loads it (tools/agents/run dsh)
 .devin/       Devin CLI hooks and import settings (Claude import off; shared adapter)
-.factory/     Droid (factory.ai, another product) hooks only; Æion local state is the ignored .aeion/
+.factory/     Droid hooks only; .grok/ is Grok's hooks. Æion local state is the ignored .aeion/
 ```
 
 ## Build and test

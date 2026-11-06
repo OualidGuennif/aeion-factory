@@ -829,6 +829,9 @@ service that was turned on has its cost, its data scope and its off switch writt
 - **Mert Koseoğlu, context-mode** (Elastic-2.0) — bounded output and pre-compaction recovery
   informed the context design. No context-mode code or MCP runtime is bundled.
   https://github.com/mksglu/context-mode
+- **Robert C. Martin, ub-mode** — the three passes and the build principles (the data's shape first,
+  a design fitted to the change, idempotent operations, one writer for shared state) are adapted in
+  our own words; no ub-mode text is copied. https://github.com/unclebob/ub-mode
 - **Graphify Labs, Graphify** (Apache-2.0 with upstream notices) — pinned native code and Markdown
   structural extraction. https://github.com/Graphify-Labs/graphify
 - **tt-a1i, Archify** (upstream Apache-2.0 / MIT notices) — pinned source-backed diagrams,

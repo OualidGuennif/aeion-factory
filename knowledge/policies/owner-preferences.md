@@ -46,6 +46,10 @@ under its heading: `- <preference> (<source>, YYYY-MM-DD)`.
   reference material, with no automatic agent launching, imposed model or generic source-derived
   thresholds. Enrich only from ECC, Addy Osmani agent-skills and the two Anthropic plugin
   repositories; local develop edits authorized, no push requested (chat, 2026-10-31).
+- Avoid overengineering: design a new feature or service from first principles, but in an existing
+  or production-critical system the smallest fitting change wins, a redesign needs a concrete gain
+  and the owner's yes, and the author's design preference comes first; take from ub-mode only what
+  is clearly useful (chat, 2026-11-06).
 
 ## UI
 

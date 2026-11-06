@@ -6,6 +6,11 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+- The engineering policy and the `build` skill add four principles adapted from ub-mode: the data's
+  shape before the logic, a pinned behaviour before a restructuring, a design fitted to the change
+  (first principles for new code, the smallest fitting change in a running system), and state that
+  survives retries and concurrent writers.
+
 - `template-update` run from a project's own copy says to run it from the factory clone even when
   `--root` names no folder, instead of `no such project`.
 

@@ -60,7 +60,7 @@ generated:
   at: 2026-11-06
 verified:
   - at: 2026-11-06
-    what: "tools/factory-tests passed; Grok usage is read from usage.json beside updates.jsonl or chat_history.jsonl"
+    what: "tools/agents/tests/test_hooks.py: 65 passed; Grok's total is inputTokens plus outputTokens, and cached tokens under 250k do not latch"
 ---
 
 # Agent compatibility
@@ -221,7 +221,7 @@ with one line naming a missing agent binary and the setup link, exit 1.
   reads an empty answer as a refusal. Unverified until a live run: whether that `allow` also
   skips Antigravity's own approval prompt (a `run_command` with `SafeToAutoRun: false`); until
   then, assume it may. No compaction checkpoint or token stop.
-- Grok loads `AGENTS.md`, `CLAUDE.md` and the skill folders, and also `.claude/settings.json`. The Claude budget hook returns an empty object for a `hookEventName` envelope or a `chat_history.jsonl` or `updates.jsonl` transcript and does not latch STOPPED. Guards run from `.grok/hooks/factory.json`: `run_terminal_command`, `read_file` (`target_file`), `search_replace`, `write`, `grep` and `list_dir` (`target_directory`) map onto the shared guards; an unknown tool with a `command` string is a shell call. `usage.json` beside `updates.jsonl` or `chat_history.jsonl` supplies the 250k/300k totals (missing is unmeasured, zero is a real reading). `SessionStart` uses `systemMessage`. `PreCompact` cannot be refused; `PostCompact` resumes in closure when the handover was not verified. Not live-qualified.
+- Grok loads `AGENTS.md`, `CLAUDE.md` and the skill folders, and also `.claude/settings.json`. The Claude budget hook returns an empty object for a `hookEventName` envelope or a `chat_history.jsonl` or `updates.jsonl` transcript and does not latch STOPPED. Guards run from `.grok/hooks/factory.json`: `run_terminal_command`, `read_file` (`target_file`), `search_replace`, `write`, `grep` and `list_dir` (`target_directory`) map onto the shared guards; an unknown tool with a `command` string is a shell call. `usage.json` beside `updates.jsonl` or `chat_history.jsonl` supplies the 250k/300k total as `totalTokens` (`inputTokens` plus `outputTokens`; cached and reasoning tokens are already inside it; missing is unmeasured, zero is a real reading). `SessionStart` uses `systemMessage`. `PreCompact` cannot be refused; `PostCompact` resumes in closure when the handover was not verified. Not live-qualified.
 - Managed CLI launchers enter the repository root and check the exact-HEAD architecture baseline;
   its absence is a warning, because installing the integrations needs the user's yes.
 - Raw command/MCP paths, host-managed/cloud orchestration and deliberate local modification are

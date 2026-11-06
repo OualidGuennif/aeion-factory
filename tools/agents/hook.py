@@ -296,13 +296,22 @@ def grok_usage(event):
     session = data.get('session')
     if not isinstance(session, dict):
         raise ValueError('invalid grok usage.json')
-    total = 0
-    for field in ('inputTokens', 'outputTokens', 'cachedReadTokens', 'cacheCreationTokens', 'reasoningTokens'):
-        value = session.get(field, 0)
-        if type(value) is not int or value < 0:
+    # cachedReadTokens, cacheCreationTokens and reasoningTokens already sit inside input and output.
+    # Adding them again counts those tokens twice and latches the 250k gate while totalTokens is still under it.
+    total = _grok_count(session, 'inputTokens') + _grok_count(session, 'outputTokens')
+    if 'totalTokens' in session:
+        reported = session['totalTokens']
+        if type(reported) is not int or reported < 0 or reported != total:
             raise ValueError('invalid grok token counts')
-        total += value
     return total
+
+
+def _grok_count(session, field):
+    """One nonnegative integer from Grok's usage session. A missing field is zero."""
+    value = session.get(field, 0)
+    if type(value) is not int or value < 0:
+        raise ValueError('invalid grok token counts')
+    return value
 
 
 # Harnesses that report their context usage share Claude's 250k/300k rule (tools/context/budget.py).

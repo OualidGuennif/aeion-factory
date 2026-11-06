@@ -942,6 +942,26 @@ class HookTests(unittest.TestCase):
                            tool_name='search_replace', tool_input={'file_path': str(self.root / 'src.py')})
         self.assertNotIn('permissionDecision', opened.get('hookSpecificOutput', {}))
 
+    def test_grok_usage_does_not_count_cached_or_reasoning_tokens_twice(self):
+        session_id = 'grok-cache'
+        folder = self.root / 'grok-cache'
+        folder.mkdir()
+        transcript = folder / 'updates.jsonl'
+        transcript.write_text('')
+        # 200000 input already includes the cached read. The file's own total stays under 250k.
+        usage = {'sessionId': session_id, 'session': {
+            'inputTokens': 200000, 'outputTokens': 1000, 'cachedReadTokens': 180000,
+            'cacheCreationTokens': 0, 'reasoningTokens': 500, 'totalTokens': 201000}}
+        (folder / 'usage.json').write_text(json.dumps(usage))
+        opened = self.call('grok', session_id=session_id, transcript_path=str(transcript),
+                           tool_name='read_file', tool_input={'target_file': 'README.md', 'offset': 1, 'limit': 5})
+        self.assertNotIn('permissionDecision', opened.get('hookSpecificOutput', {}))
+        usage['session']['totalTokens'] = 201001
+        (folder / 'usage.json').write_text(json.dumps(usage))
+        with self.assertRaisesRegex(ValueError, 'token counts'):
+            self.call('grok', session_id=session_id, transcript_path=str(transcript),
+                      tool_name='read_file', tool_input={'target_file': 'README.md', 'offset': 1, 'limit': 5})
+
     def test_grok_refuses_another_sessions_usage_file(self):
         folder = self.root / 'grok-other'
         folder.mkdir()

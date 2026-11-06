@@ -44,6 +44,8 @@ sources:
 - Doc-to-code trace links with LLMs (arXiv 2506.16440, 2025).
 - Microsoft Learn, the developer inner and outer loop.
 - Cyrille Martraire, *Living Documentation*.
+- Robert C. Martin, *ub-mode* — the three passes and the build principles of the engineering
+  policy, adapted in our own words. https://github.com/unclebob/ub-mode
 - OWASP cheat sheets: secrets management, database security.
 - GitHub docs: security policies, CODEOWNERS.
 

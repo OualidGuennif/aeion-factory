@@ -7,7 +7,7 @@ lines `- Owner decision:`, `- State:`, `- Next:` (with who), `- Blocker:`, `- Ev
 
 ## Grok adapter — ACTIVE
 - Owner decision: 2026-11-06, release the Grok adapter as 2.1.1. This replaces the same-day decision to keep it on a local `grok` branch.
-- State: guards run from `.grok/hooks/factory.json`. The Claude budget hook ignores a Grok envelope and a transcript named `updates.jsonl` or `chat_history.jsonl`. Totals come from `usage.json`. The path guard accepts `target_file` and `target_directory`. Not live-qualified.
+- State: guards run from `.grok/hooks/factory.json`. The Claude budget hook ignores a Grok envelope and a transcript named `updates.jsonl` or `chat_history.jsonl`. The context size is `signals.json` `contextTokensUsed`. The path guard accepts `target_file` and `target_directory`. Not live-qualified.
 - Next: after the 2.1.1 release, qualify a live Grok session (`cat .env` refused, an edit names its doc, a new session stays RUNNING) (who: owner).
 - Blocker: none.
 - Evidence: knowledge/operations/agent-compatibility.md; knowledge/operations/context-safety.md; .claude/hooks/test_hooks.py; tools/context/tests/test_budget.py

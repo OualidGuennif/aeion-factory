@@ -8,12 +8,12 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [2.1.1] - 2026-11-06
 
-- Fixed: Grok's hook transcript is `updates.jsonl` (older sessions still use `chat_history.jsonl`). The context total is `usage.json`'s `totalTokens` (`inputTokens` plus `outputTokens`); cached and reasoning tokens already sit inside that sum and are not added again. The shared path guard accepts Grok's `target_file` and `target_directory`.
+- Fixed: Grok's hook transcript is `updates.jsonl` (older sessions still use `chat_history.jsonl`). The 250k/300k size is `signals.json` `contextTokensUsed`, which falls after compaction. `usage.json` is the billed ledger and only grows, so it does not drive the gate. The shared path guard accepts Grok's `target_file` and `target_directory`.
 
 - Grok runs the shared guards through `.grok/hooks/factory.json`. The Claude budget hook no longer
   latches STOPPED when Grok loads `.claude/settings.json`: a `hookEventName` envelope or an
   `updates.jsonl` or `chat_history.jsonl` transcript is left to the Grok adapter, which reads
-  `usage.json` for the 250k/300k rule. Compaction cannot be refused, so a compaction before the
+  `contextTokensUsed` in `signals.json` for the 250k/300k rule. Compaction cannot be refused, so a compaction before the
   verified handover owes that closure.
 
 ## [2.1.0] - 2026-11-06

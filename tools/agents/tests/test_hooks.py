@@ -926,39 +926,35 @@ class HookTests(unittest.TestCase):
         folder.mkdir()
         transcript = folder / 'chat_history.jsonl'
         transcript.write_text('')
-        usage = {'sessionId': session_id, 'session': {'inputTokens': 250000, 'outputTokens': 0,
-                 'cachedReadTokens': 0, 'cacheCreationTokens': 0, 'reasoningTokens': 0}}
-        (folder / 'usage.json').write_text(json.dumps(usage))
+        (folder / 'usage.json').write_text(json.dumps({'sessionId': session_id, 'session': {'inputTokens': 900000}}))
+        (folder / 'signals.json').write_text(json.dumps({'contextTokensUsed': 250000, 'contextWindowTokens': 256000}))
         edit = {'tool_name': 'search_replace', 'tool_input': {'file_path': str(self.root / 'src.py'), 'old_string': 'a', 'new_string': 'b'},
                 'transcript_path': str(transcript)}
         result = self.call('grok', session_id=session_id, **edit)
         self.assertEqual(result['hookSpecificOutput']['permissionDecision'], 'deny')
         self.assertIn('250k', result['hookSpecificOutput']['permissionDecisionReason'])
         # A zero reading is a real measurement, not a missing transcript, so a fresh session is not denied.
-        usage['sessionId'] = 'grok-zero'
-        usage['session']['inputTokens'] = 0
-        (folder / 'usage.json').write_text(json.dumps(usage))
+        (folder / 'usage.json').write_text(json.dumps({'sessionId': 'grok-zero', 'session': {'inputTokens': 0}}))
+        (folder / 'signals.json').write_text(json.dumps({'contextTokensUsed': 0, 'contextWindowTokens': 256000}))
         opened = self.call('grok', session_id='grok-zero', transcript_path=str(transcript),
                            tool_name='search_replace', tool_input={'file_path': str(self.root / 'src.py')})
         self.assertNotIn('permissionDecision', opened.get('hookSpecificOutput', {}))
 
-    def test_grok_usage_does_not_count_cached_or_reasoning_tokens_twice(self):
-        session_id = 'grok-cache'
-        folder = self.root / 'grok-cache'
+    def test_grok_billed_ledger_does_not_latch_the_context_gate(self):
+        session_id = 'grok-ledger'
+        folder = self.root / 'grok-ledger'
         folder.mkdir()
         transcript = folder / 'updates.jsonl'
         transcript.write_text('')
-        # 200000 input already includes the cached read. The file's own total stays under 250k.
-        usage = {'sessionId': session_id, 'session': {
-            'inputTokens': 200000, 'outputTokens': 1000, 'cachedReadTokens': 180000,
-            'cacheCreationTokens': 0, 'reasoningTokens': 500, 'totalTokens': 201000}}
-        (folder / 'usage.json').write_text(json.dumps(usage))
+        # The ledger only grows. The window fell after compaction and stays under 250k.
+        (folder / 'usage.json').write_text(json.dumps({'sessionId': session_id, 'session': {
+            'inputTokens': 2000000, 'outputTokens': 1000, 'totalTokens': 2001000}}))
+        (folder / 'signals.json').write_text(json.dumps({'contextTokensUsed': 44080, 'contextWindowTokens': 256000}))
         opened = self.call('grok', session_id=session_id, transcript_path=str(transcript),
                            tool_name='read_file', tool_input={'target_file': 'README.md', 'offset': 1, 'limit': 5})
         self.assertNotIn('permissionDecision', opened.get('hookSpecificOutput', {}))
-        usage['session']['totalTokens'] = 201001
-        (folder / 'usage.json').write_text(json.dumps(usage))
-        with self.assertRaisesRegex(ValueError, 'token counts'):
+        (folder / 'signals.json').write_text(json.dumps({'contextTokensUsed': 300000, 'contextWindowTokens': 256000}))
+        with self.assertRaisesRegex(ValueError, 'context size'):
             self.call('grok', session_id=session_id, transcript_path=str(transcript),
                       tool_name='read_file', tool_input={'target_file': 'README.md', 'offset': 1, 'limit': 5})
 
@@ -995,7 +991,7 @@ class HookTests(unittest.TestCase):
 
     def test_grok_session_start_is_delivered_as_a_system_message(self):
         result = self.call('grok', hook_event_name='SessionStart', source='new')
-        self.assertIn('usage.json', result['systemMessage'])
+        self.assertIn('signals.json', result['systemMessage'])
         self.assertIn('Checkpoint key', result['systemMessage'])
 
     def test_grok_edits_are_recorded_for_feedback(self):

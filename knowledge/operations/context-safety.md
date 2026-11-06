@@ -9,7 +9,7 @@ generated:
   at: 2026-11-06
 verified:
   - at: 2026-11-06
-    what: "tools/agents/tests/test_hooks.py: 65 passed; Grok totalTokens equals input plus output, and cache is not added again"
+    what: "tools/agents/tests/test_hooks.py: 65 passed; Grok's context size is signals.json contextTokensUsed, which is not the billed ledger"
 sources:
   - id: budget
     resource: ../../tools/context/budget.py
@@ -49,8 +49,7 @@ prompt. After a "prompt is too long" error the real context may exceed that last
 request itself still fails natively. Missing or zero usage is unavailable, not an empty context. A Grok envelope is not a Claude
 transcript: `hookEventName` in snake_case, or a transcript named `updates.jsonl` or `chat_history.jsonl`, makes `handle`
 return an empty object and write no state, so the first Grok prompt cannot latch STOPPED. The Grok
-adapter reads `usage.json` beside that transcript. Its total is `totalTokens`, equal to `inputTokens` plus
-`outputTokens`; cached and reasoning tokens already sit inside those figures and are not added again. A zero total is a real reading. An incomplete final JSONL line is
+adapter reads `contextTokensUsed` from `signals.json` beside that transcript. That figure is the live window and falls after compaction. `usage.json` beside it is the billed ledger and only grows, so it is not the context size. A zero window is a real reading. An incomplete final JSONL line is
 a transient write; a malformed complete record is invalid.
 
 Every event latches the first observed 250k crossing, including PreCompact. The hook alerts both

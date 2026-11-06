@@ -273,45 +273,47 @@ def grok_event(event):
 
 
 def grok_usage(event):
-    """Grok's context: the session totals in usage.json beside updates.jsonl or chat_history.jsonl. Zero is a real reading."""
+    """Grok's context window: contextTokensUsed in signals.json beside the transcript.
+
+    usage.json is the billed ledger for the whole session. Those totals only grow, including
+    after compaction, so they are not the context size. A zero window is a real reading.
+    """
     path = event.get('transcript_path')
     if not isinstance(path, str) or not path:
         return None
     transcript = Path(path)
-    # Grok's hook transcript_path is the update stream (updates.jsonl). usage.json sits in that
-    # same session directory. chat_history.jsonl remains accepted for the older layout.
+    # Grok's hook transcript_path is the update stream (updates.jsonl). The session files sit
+    # beside it. chat_history.jsonl remains accepted for the older layout.
     if transcript.is_symlink() or transcript.name not in {'chat_history.jsonl', 'updates.jsonl'}:
         raise ValueError("usage must come from this session's updates.jsonl or chat_history.jsonl")
-    usage_path = transcript.parent / 'usage.json'
+    folder = transcript.parent
+    usage_path = folder / 'usage.json'
     if usage_path.is_symlink():
         raise ValueError('usage.json must be a regular file')
-    if not usage_path.is_file():
+    # The ledger's session id binds the directory. Its token sums are not the measurement.
+    if usage_path.is_file():
+        try:
+            data = json.loads(usage_path.read_text(encoding='utf-8'))
+        except (OSError, json.JSONDecodeError) as error:
+            raise ValueError('invalid grok usage.json') from error
+        if not isinstance(data, dict) or data.get('sessionId') != event.get('session_id'):
+            raise ValueError('usage.json is for another session')
+    signals_path = folder / 'signals.json'
+    if signals_path.is_symlink():
+        raise ValueError('signals.json must be a regular file')
+    if not signals_path.is_file():
         return None
     try:
-        data = json.loads(usage_path.read_text(encoding='utf-8'))
+        signals = json.loads(signals_path.read_text(encoding='utf-8'))
     except (OSError, json.JSONDecodeError) as error:
-        raise ValueError('invalid grok usage.json') from error
-    if not isinstance(data, dict) or data.get('sessionId') != event.get('session_id'):
-        raise ValueError('usage.json is for another session')
-    session = data.get('session')
-    if not isinstance(session, dict):
-        raise ValueError('invalid grok usage.json')
-    # cachedReadTokens, cacheCreationTokens and reasoningTokens already sit inside input and output.
-    # Adding them again counts those tokens twice and latches the 250k gate while totalTokens is still under it.
-    total = _grok_count(session, 'inputTokens') + _grok_count(session, 'outputTokens')
-    if 'totalTokens' in session:
-        reported = session['totalTokens']
-        if type(reported) is not int or reported < 0 or reported != total:
-            raise ValueError('invalid grok token counts')
-    return total
-
-
-def _grok_count(session, field):
-    """One nonnegative integer from Grok's usage session. A missing field is zero."""
-    value = session.get(field, 0)
-    if type(value) is not int or value < 0:
-        raise ValueError('invalid grok token counts')
-    return value
+        raise ValueError('invalid grok signals.json') from error
+    if not isinstance(signals, dict):
+        raise ValueError('invalid grok signals.json')
+    used = signals.get('contextTokensUsed')
+    window = signals.get('contextWindowTokens', 0)
+    if type(used) is not int or used < 0 or type(window) is not int or window < 0 or (window and used > window):
+        raise ValueError('invalid grok context size')
+    return used
 
 
 # Harnesses that report their context usage share Claude's 250k/300k rule (tools/context/budget.py).
@@ -561,7 +563,7 @@ def handle(root, provider, event):
                        f'A compaction without it owes that closure right after.')
         if provider == 'grok':
             context += (' Grok cannot refuse compaction, so a compaction before the verified handover owes that closure '
-                        'right after. Token counts come from usage.json beside updates.jsonl or chat_history.jsonl.')
+                        'right after. The context size is contextTokensUsed in signals.json beside updates.jsonl or chat_history.jsonl.')
         if provider == 'dsh':
             context += f' {DSH_STOP}'
         context += '\n' + result.get('hookSpecificOutput', {}).get('additionalContext', '')

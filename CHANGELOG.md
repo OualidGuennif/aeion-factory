@@ -6,6 +6,8 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+## [2.1.1] - 2026-11-06
+
 - Fixed: Grok's hook transcript is `updates.jsonl` (older sessions still use `chat_history.jsonl`). Token totals still come from the sibling `usage.json`, and the shared path guard accepts Grok's `target_file` and `target_directory`.
 
 - Grok runs the shared guards through `.grok/hooks/factory.json`. The Claude budget hook no longer

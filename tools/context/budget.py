@@ -426,15 +426,16 @@ def claude_native_session(event):
     """Whether Claude's budget hook owns this event.
 
     Grok loads the same `.claude/settings.json`. It sends Claude's field names plus its own
-    camelCase envelope (`hookEventName` is `user_prompt_submit`) and a `chat_history.jsonl`
-    transcript. Judging that file as a broken Claude transcript latches STOPPED on the first
+    camelCase envelope (`hookEventName` is `user_prompt_submit`) and an `updates.jsonl` or
+    `chat_history.jsonl` transcript. Judging that file as a broken Claude transcript latches STOPPED on the first
     prompt. The Grok adapter owns that session.
     """
     native = event.get("hookEventName")
     if isinstance(native, str) and re.fullmatch(r"[a-z][0-9a-z_]*", native):
         return False
     path = event.get("transcript_path")
-    if isinstance(path, str) and Path(path).name == "chat_history.jsonl":
+    # updates.jsonl is the path Grok puts in transcript_path. chat_history.jsonl is the older name.
+    if isinstance(path, str) and Path(path).name in {"chat_history.jsonl", "updates.jsonl"}:
         return False
     return True
 

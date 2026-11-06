@@ -6,7 +6,10 @@ status: stable
 review_after: 2027-01-29
 generated:
   by: aeion-factory/1.1
-  at: 2026-11-02
+  at: 2026-11-06
+verified:
+  - at: 2026-11-06
+    what: "tools/factory-tests passed; an updates.jsonl transcript returns an empty budget result and writes no session state"
 sources:
   - id: budget
     resource: ../../tools/context/budget.py
@@ -44,7 +47,7 @@ counts once. Synthetic assistant records (API errors and hook stops, model `<syn
 never sent and are skipped, so a stop cannot hide the last real request and block every later
 prompt. After a "prompt is too long" error the real context may exceed that last observation; the
 request itself still fails natively. Missing or zero usage is unavailable, not an empty context. A Grok envelope is not a Claude
-transcript: `hookEventName` in snake_case, or a transcript named `chat_history.jsonl`, makes `handle`
+transcript: `hookEventName` in snake_case, or a transcript named `updates.jsonl` or `chat_history.jsonl`, makes `handle`
 return an empty object and write no state, so the first Grok prompt cannot latch STOPPED. The Grok
 adapter reads `usage.json` beside that transcript; there a zero total is a real reading. An incomplete final JSONL line is
 a transient write; a malformed complete record is invalid.

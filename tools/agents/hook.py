@@ -273,13 +273,15 @@ def grok_event(event):
 
 
 def grok_usage(event):
-    """Grok's context: the session totals in usage.json beside chat_history.jsonl. Zero is a real reading."""
+    """Grok's context: the session totals in usage.json beside updates.jsonl or chat_history.jsonl. Zero is a real reading."""
     path = event.get('transcript_path')
     if not isinstance(path, str) or not path:
         return None
     transcript = Path(path)
-    if transcript.is_symlink() or transcript.name != 'chat_history.jsonl':
-        raise ValueError("usage must come from this session's chat_history.jsonl")
+    # Grok's hook transcript_path is the update stream (updates.jsonl). usage.json sits in that
+    # same session directory. chat_history.jsonl remains accepted for the older layout.
+    if transcript.is_symlink() or transcript.name not in {'chat_history.jsonl', 'updates.jsonl'}:
+        raise ValueError("usage must come from this session's updates.jsonl or chat_history.jsonl")
     usage_path = transcript.parent / 'usage.json'
     if usage_path.is_symlink():
         raise ValueError('usage.json must be a regular file')
@@ -550,7 +552,7 @@ def handle(root, provider, event):
                        f'A compaction without it owes that closure right after.')
         if provider == 'grok':
             context += (' Grok cannot refuse compaction, so a compaction before the verified handover owes that closure '
-                        'right after. Token counts come from usage.json beside chat_history.jsonl.')
+                        'right after. Token counts come from usage.json beside updates.jsonl or chat_history.jsonl.')
         if provider == 'dsh':
             context += f' {DSH_STOP}'
         context += '\n' + result.get('hookSpecificOutput', {}).get('additionalContext', '')

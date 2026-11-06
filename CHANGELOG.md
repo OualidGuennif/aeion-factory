@@ -6,11 +6,13 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+- Fixed: Grok's hook transcript is `updates.jsonl` (older sessions still use `chat_history.jsonl`). Token totals still come from the sibling `usage.json`, and the shared path guard accepts Grok's `target_file` and `target_directory`.
+
 - Grok runs the shared guards through `.grok/hooks/factory.json`. The Claude budget hook no longer
-  latches STOPPED when Grok loads `.claude/settings.json`: a `hookEventName` envelope or a
-  `chat_history.jsonl` transcript is left to the Grok adapter, which reads `usage.json` for the
-  250k/300k rule. Compaction cannot be refused, so a compaction before the verified handover owes
-  that closure.
+  latches STOPPED when Grok loads `.claude/settings.json`: a `hookEventName` envelope or an
+  `updates.jsonl` or `chat_history.jsonl` transcript is left to the Grok adapter, which reads
+  `usage.json` for the 250k/300k rule. Compaction cannot be refused, so a compaction before the
+  verified handover owes that closure.
 
 ## [2.1.0] - 2026-11-06
 

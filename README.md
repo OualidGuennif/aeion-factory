@@ -26,7 +26,7 @@ your project), removes the factory's `demo/` and records the factory release in 
 for later updates. Then give your agent the
 [ready-to-copy setup prompt](knowledge/operations/getting-started.md#new-project).
 
-Replace `claude` with `codex`, `opencode`, `pi`, `dsh`, `devin`, `droid` or `antigravity`. The
+Replace `claude` with `codex`, `opencode`, `pi`, `dsh`, `devin`, `droid`, `antigravity` or `grok`. The
 launcher installs nothing: trust the project and approve its hooks as your agent asks
 (**Codex: enable the hooks in `/hooks`, then restart**). To check the hooks are loaded, ask the agent
 to run `cat .env`: it must be refused. [First-run setup per agent →](knowledge/operations/getting-started.md#prepare-your-agent)
@@ -121,7 +121,7 @@ A skill is a reusable procedure your agent follows for one kind of task. Ask nat
 
 Agent hooks run inside your agent's session as soon as it loads the project's hooks. Claude Code
 reads `.claude/settings.json`; the other agents get the same guards through their adapters
-(`.codex/`, `.opencode/`, `.pi/`, `.dsh/`, `.devin/`, `.factory/`, `.agents/hooks.json`).
+(`.codex/`, `.opencode/`, `.pi/`, `.dsh/`, `.devin/`, `.factory/`, `.agents/hooks.json`, `.grok/hooks/`).
 
 | Hook | Runs | What it does |
 | --- | --- | --- |

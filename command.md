@@ -49,6 +49,7 @@ tools/agents/run pi                                 # Pi 1.4.0+, project extensi
 tools/agents/run devin                              # Devin CLI: .devin/ hooks, shared skills
 tools/agents/run droid                              # Droid (factory.ai): .factory/ hooks, shared skills
 tools/agents/run antigravity                        # Google Antigravity CLI (agy): .agents/hooks.json
+tools/agents/run grok                               # Grok Build: .grok/hooks/factory.json
 git config aeion.mode team                          # team flow: develop, review before push, release PR
 git config --unset aeion.mode                       # back to local mode, the default
 python3 tools/agents/tests/test_hooks.py

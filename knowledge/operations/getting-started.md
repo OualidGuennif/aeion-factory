@@ -110,6 +110,7 @@ in step 3. A present configuration file alone does not prove the hooks are activ
    | Pi | `.pi/extensions/factory/`, `.agents/skills` links | Restart from the project root and accept the trust prompt |
    | dsh | `.dsh/`, `.agents/skills` links | Start with `tools/agents/run dsh [web\|headless]`; see [dsh in detail](#deepseek-harness-dsh-in-detail) |
    | Devin, Droid, Antigravity | `.devin/`, `.factory/`, `.agents/hooks.json` | Approve the project hooks or trust the folder |
+   | Grok | `.grok/hooks/factory.json` | Trust the folder; `/hooks` lists it. The Claude budget hook ignores a Grok envelope |
 
 5. Check the hooks as in a new project (step 3), then say yes to the Git hooks, Graphify and Archify
    unless your policy forbids them. Use [the adoption guide](../../efficiency/00-EFFICIENCY.md) and
@@ -129,6 +130,7 @@ Run these from the repository root. Additional arguments are native CLI argument
 | Devin CLI | `tools/agents/run devin` | `.devin/hooks.v1.json` and `config.json`, `AGENTS.md`, shared `.agents/skills` |
 | Droid (factory.ai) | `tools/agents/run droid` | `.factory/settings.json` hooks, `AGENTS.md`, shared `.agents/skills` |
 | Google Antigravity | `tools/agents/run antigravity` | `.agents/hooks.json`, `AGENTS.md`, shared `.agents/skills` |
+| Grok | `tools/agents/run grok` | `.grok/hooks/factory.json`, `AGENTS.md`, shared `.claude/skills` and `.agents/skills` |
 
 The launchers enter the project root and check the architecture baseline for the current commit;
 without one they recommend it and continue. The original Claude entry point, `tools/context/run`,

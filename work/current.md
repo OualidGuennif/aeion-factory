@@ -5,10 +5,17 @@ Finished tasks are deleted: the commit message and knowledge/ keep what matters.
 Status: ACTIVE, WAITING-OWNER, MEASURING, BLOCKED, BACKLOG. An entry is `## <title> — <STATUS>`, then the
 lines `- Owner decision:`, `- State:`, `- Next:` (with who), `- Blocker:`, `- Evidence:`.
 
+## Grok adapter — ACTIVE
+- Owner decision: 2026-11-06, release the Grok adapter as 2.1.1. This replaces the same-day decision to keep it on a local `grok` branch.
+- State: guards run from `.grok/hooks/factory.json`. The Claude budget hook ignores a Grok envelope and a transcript named `updates.jsonl` or `chat_history.jsonl`. The context size is `signals.json` `contextTokensUsed`. The path guard accepts `target_file` and `target_directory`. Not live-qualified.
+- Next: after the 2.1.1 release, qualify a live Grok session (`cat .env` refused, an edit names its doc, a new session stays RUNNING) (who: owner).
+- Blocker: none.
+- Evidence: knowledge/operations/agent-compatibility.md; knowledge/operations/context-safety.md; .claude/hooks/test_hooks.py; tools/context/tests/test_budget.py
+
 ## Connector drift check across all harnesses — ACTIVE
 - Owner decision: 2026-11-01, a stale or hand-edited connector must fail a check, not a session; a branch (`main`/`develop`) verifies too, and an adopted project gets an update path that keeps its own content.
 - State: shipped through 1.9.1: `tools/agents/adapter-check` (any `--ref`), `tools/agents/dsh-install` and the dsh compaction fixes. 2026-11-03 (owner: smarter updates): `tools/agents/template-update` finds the baseline (`.aeion-factory` or tag inference), updates every changed factory file three-way, prints notes, MAJOR and migrations; live v1.9.4 → v2.0.0 update passed adapter-check and the project's tests.
-- Next: v2.0.3 released 2026-11-04 (2.0.2 fixed the 2026-11-03 scans, 2.0.3 the sweep's F1). From the factory clone, `tools/agents/template-update --ref v2.0.3 --root <project>` in every adopted project after committing its work (who: agent, owner approves merges; aeion-observability is on v2.0.3 as of 2026-11-05: 28/28 connectors match, its own session resolved the 7 merges, not committed there yet) and `tools/agents/dsh-install --tag v2.0.3 --trust <each project>` with a desktop restart (who: owner): from 2.0.2 the plugin refuses a project the profile does not trust.
+- Next: v2.1.0 released 2026-11-06 (ub-mode build principles, template-update hint; 2.0.2/2.0.3 the security fixes). From the factory clone, `tools/agents/template-update --ref v2.1.0 --root <project>` in every adopted project after committing its work (who: agent, owner approves merges; aeion-observability is on v2.0.3 as of 2026-11-05: 28/28 connectors match, its own session resolved the 7 merges, not committed there yet) and `tools/agents/dsh-install --tag v2.1.0 --trust <each project>` with a desktop restart (who: owner): from 2.0.2 the plugin refuses a project the profile does not trust.
 - Blocker: none.
 - Evidence: knowledge/operations/agent-compatibility.md; tools/agents/tests/test_adapter_check.py; tools/agents/tests/test_template_update.py; tools/agents/tests/test_dsh_install.py
 

@@ -414,8 +414,12 @@ def generate(root, spec, model, result, check=False):
         return [f"docs: {error}"]
     root = Path(root)
     generated = root / GENERATED
+    listed = views.listed_outputs(root)
+
+    def owned(rel):
+        return rel in files or views.generator_owns(root, rel, listed)
     existing = {p.relative_to(root).as_posix() for p in generated.rglob("*")
-                if p.is_file() and not incidental(p)} if generated.is_dir() else set()
+                if p.is_file() and not incidental(root, p, owned)} if generated.is_dir() else set()
     cockpit_path = root / COCKPIT
     if check:
         problems = []
@@ -446,14 +450,27 @@ def generate(root, spec, model, result, check=False):
     return []
 
 
-def incidental(path):
-    """Files the desktop or an editor writes on its own (project_files.SKIPPED_FILES, vim swap files, backup
-    copies) and the toolkit's own interrupted temporary files: never a project's content. Any other file the
-    generator did not write, dot-named or not, is the project's and is never deleted."""
+def edited_original(name):
+    """The file an editor's backup (X~), vim swap (.X.swp, .swo, .swx) or emacs autosave (#X#) belongs to."""
+    if len(name) > 1 and name.endswith("~"):
+        return name[:-1]
+    if len(name) > 5 and name.startswith(".") and name.endswith((".swp", ".swo", ".swx")):
+        return name[1:-4]
+    if len(name) > 2 and name.startswith("#") and name.endswith("#"):
+        return name[1:-1]
+    return None
+
+
+def incidental(root, path, owned):
+    """Never a project's content, so regeneration may drop it: a file the desktop writes on its own
+    (project_files.SKIPPED_FILES), the toolkit's own interrupted temporary file, and an editor's backup, swap
+    or autosave of a file the generator wrote (owned(rel)). An editor file of anything else is the project's,
+    like every other file the generator did not write, dot-named or not, and is never deleted."""
     name = path.name
-    return (name in SKIPPED_FILES or name.startswith(TEMP_PREFIX) or name.endswith("~")
-            or (name.startswith(".") and name.endswith((".swp", ".swo", ".swx")))
-            or (name.startswith("#") and name.endswith("#")))
+    if name in SKIPPED_FILES or name.startswith(TEMP_PREFIX):
+        return True
+    original = edited_original(name)
+    return bool(original) and owned((path.parent / original).relative_to(root).as_posix())
 
 
 def foreign_outputs(root):
@@ -467,9 +484,12 @@ def foreign_outputs(root):
     generated = root / GENERATED
     if generated.is_dir():
         listed = views.listed_outputs(root)
+
+        def owned(rel):
+            return views.generator_owns(root, rel, listed)
         foreign = sorted(rel for rel in (p.relative_to(root).as_posix() for p in generated.rglob("*")
-                                         if p.is_file() and not incidental(p))
-                         if not views.generator_owns(root, rel, listed))
+                                         if p.is_file() and not incidental(root, p, owned))
+                         if not owned(rel))
         if foreign:
             problems.append(f"docs: {GENERATED}/ holds files the generator did not write ({', '.join(foreign[:3])}"
                             f"{', …' if len(foreign) > 3 else ''}); move them before generating")

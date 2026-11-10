@@ -389,13 +389,17 @@ class ThirdDocsTests(unittest.TestCase):  # third round
         try:
             self.assertEqual(project.run("docs").returncode, 0)
             kept = [project.write("docs/generated/.nojekyll", ""), project.write("docs/generated/.drafts/.wip", "wip\n")]
-            # What the desktop or an editor writes on its own never blocks a commit.
-            for incidental in (".DS_Store", "views/Thumbs.db", "desktop.ini", "product/.overview.md.swp", "traceability.md~"):
+            # Desktop files, and an editor's swap or backup of a generated file, never block a commit.
+            for incidental in (".DS_Store", "views/Thumbs.db", "desktop.ini", ".traceability.md.swp", "traceability.md~"):
                 project.write(f"docs/generated/{incidental}", "x")
+            # An editor file of anything else is the project's, like any file the generator did not write.
+            kept += [project.write("docs/generated/plan~", "my own notes\n"),
+                     project.write("docs/generated/#ideas.md#", "unsaved own draft\n")]
             checked = project.run("check").stdout
-            self.assertIn(".nojekyll", checked)
-            self.assertNotIn("Thumbs.db", checked)
-            self.assertNotIn(".swp", checked)
+            for name in (".nojekyll", "plan~", "#ideas.md#"):
+                self.assertIn(name, checked)
+            for name in ("Thumbs.db", ".swp", "traceability.md~"):
+                self.assertNotIn(name, checked)
             done = project.run("docs")
             self.assertEqual(done.returncode, 2, done.stdout + done.stderr)
             self.assertTrue(all(path.is_file() for path in kept))

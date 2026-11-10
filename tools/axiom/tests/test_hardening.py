@@ -389,8 +389,13 @@ class ThirdDocsTests(unittest.TestCase):  # third round
         try:
             self.assertEqual(project.run("docs").returncode, 0)
             kept = [project.write("docs/generated/.nojekyll", ""), project.write("docs/generated/.drafts/.wip", "wip\n")]
-            project.write("docs/generated/.DS_Store", "finder")
-            self.assertIn(".nojekyll", project.run("check").stdout)
+            # What the desktop or an editor writes on its own never blocks a commit.
+            for incidental in (".DS_Store", "views/Thumbs.db", "desktop.ini", "product/.overview.md.swp", "traceability.md~"):
+                project.write(f"docs/generated/{incidental}", "x")
+            checked = project.run("check").stdout
+            self.assertIn(".nojekyll", checked)
+            self.assertNotIn("Thumbs.db", checked)
+            self.assertNotIn(".swp", checked)
             done = project.run("docs")
             self.assertEqual(done.returncode, 2, done.stdout + done.stderr)
             self.assertTrue(all(path.is_file() for path in kept))

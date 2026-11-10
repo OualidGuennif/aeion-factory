@@ -23,7 +23,7 @@ ID_PATTERN = r"^[A-Z][A-Z0-9_]*-[0-9]{3,6}$"
 CANONICAL_PREFIXES = ("GOAL", "TERM", "REQ", "CON", "MODEL", "SCN", "TEST", "COMP", "DEC", "ASM", "RISK", "CTRL")
 
 sys.path.insert(0, str(ROOT / ".claude/hooks"))
-from project_files import export_ignored, inside, nested_projects, project_files  # noqa: E402,F401
+from project_files import SKIPPED_FILES, export_ignored, inside, nested_projects, project_files  # noqa: E402,F401
 from secret_names import is_secret  # noqa: E402,F401
 
 

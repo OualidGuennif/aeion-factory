@@ -11,8 +11,8 @@ import shutil
 from pathlib import Path
 
 import views
-from common import (COCKPIT, EVIDENCE_DIR, FEATURE_CATALOG, GENERATED, SPEC_PATH, TEMP_PREFIX, TOOL_VERSION,
-                    VIEW_CATALOG, canonical_digest, pretty, sha256, write_atomic)
+from common import (COCKPIT, EVIDENCE_DIR, FEATURE_CATALOG, GENERATED, SKIPPED_FILES, SPEC_PATH, TEMP_PREFIX,
+                    TOOL_VERSION, VIEW_CATALOG, canonical_digest, pretty, sha256, write_atomic)
 from schema import Validator
 from spec import DESIGN_GATES, GATE_TITLES, render_requirement
 from strict import InputError, load
@@ -447,9 +447,13 @@ def generate(root, spec, model, result, check=False):
 
 
 def incidental(path):
-    """Finder metadata and the toolkit's own interrupted temporary files: never a project's content. Any other
-    file the generator did not write, dot-named or not, is the project's and is never deleted."""
-    return path.name == ".DS_Store" or path.name.startswith(TEMP_PREFIX)
+    """Files the desktop or an editor writes on its own (project_files.SKIPPED_FILES, vim swap files, backup
+    copies) and the toolkit's own interrupted temporary files: never a project's content. Any other file the
+    generator did not write, dot-named or not, is the project's and is never deleted."""
+    name = path.name
+    return (name in SKIPPED_FILES or name.startswith(TEMP_PREFIX) or name.endswith("~")
+            or (name.startswith(".") and name.endswith((".swp", ".swo", ".swx")))
+            or (name.startswith("#") and name.endswith("#")))
 
 
 def foreign_outputs(root):

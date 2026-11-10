@@ -13,7 +13,7 @@
     }
   ],
   "bound_files": {
-    "tools/axiom/tests/test_hardening.py": "bc80363be532cf32fbce881f988ca9fe240072e38c43b66d67150045c1b9b9ec"
+    "tools/axiom/tests/test_hardening.py": "154d7d3b7958c68a9b56b6646612facc775f0c21e35f75fd844c279ab1dad75c"
   },
   "results": {
     "tools/axiom/tests/test_hardening.py::EnvironmentTests.test_unwalkable_environment_schemas_are_diagnostics": "pass"
@@ -28,7 +28,7 @@
   "problems": [],
   "status": "pass",
   "spec_sha256": "e1f434763f2d3e83cfe6f7ccd5678b2e24758e398167463e208cb214195c431c",
-  "source_tree_sha256": "692dcfe698d68cac84d9be72350005532dd6da280e16c0419b0efed845feab24",
+  "source_tree_sha256": "c7c87ad7e22a716408330b45f80e4c606aa67fff3d5fe2771d4b55bd56eed0c5",
   "raw_output_sha256": "622d216a996c5bb3979d41b6c478239de6b39973dc3265215099a1cd2e45733e",
-  "executed_at": "2026-11-10T14:07:33.245708+00:00"
+  "executed_at": "2026-11-10T14:16:09.451511+00:00"
 }

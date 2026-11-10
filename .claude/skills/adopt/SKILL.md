@@ -9,10 +9,9 @@ description: Applies the Æion efficiency guide to an existing repository one ph
 2. Inventory the repository's own instructions, docs, hooks, CI and conventions: they win.
 3. Pick the next phase (1 to 7) and read its chapter; plan the smallest change that fits; list what you keep as is and why.
 4. Wait for a yes; implement on a branch; run the phase's "Done when" checks.
-   Before the first managed task, adapt `knowledge/components/factory-architecture.md` and
-   `tools/architecture/` scope/views to the actual project. Recommend the Graphify/Archify baseline
-   strongly, say what `tools/architecture/setup` installs, ask whether this is a work computer, and
-   run it only on a yes; CI analyses every main update either way.
+   Before the first managed task, adapt `knowledge/components/factory-architecture.md` to the actual
+   project, and offer `tools/axiom/axiom init` for its canonical spec (`knowledge/axiomspec/index.md`):
+   it adds `knowledge/spec/spec.json`, the `docs/` catalogs and a brief, never overwriting an existing file.
 5. Open a PR (skill `sign-off`, then `pr-review`). One phase per PR.
 6. When the connectors land, record the factory release they came from in `.aeion-factory`
    (`v<factory VERSION> <factory commit>`), so skill `template-update` knows the baseline later.

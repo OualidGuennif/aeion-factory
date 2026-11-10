@@ -1,0 +1,34 @@
+{
+  "format": "aeion-test-receipt/0.1",
+  "test_id": "TEST-026",
+  "level": "integration",
+  "adapter": "unittest/3.0.0",
+  "python": "3.15.2",
+  "trust": "untrusted_local",
+  "bindings": [
+    {
+      "id": "BIND-026",
+      "path": "tools/agents/tests/test_hooks.py",
+      "symbol": "HookTests.test_secret_bash_is_denied_by_real_guard"
+    }
+  ],
+  "bound_files": {
+    "tools/agents/tests/test_hooks.py": "20507daf4b65a9e43e4e08496a4f6d7184adbf007df59cd0729b53af98c3b4a1"
+  },
+  "results": {
+    "tools/agents/tests/test_hooks.py::HookTests.test_secret_bash_is_denied_by_real_guard": "pass"
+  },
+  "counts": {
+    "collected": 1,
+    "passed": 1,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "problems": [],
+  "status": "pass",
+  "spec_sha256": "cfdea120e46bf0a30c24e8124b1a74e88c6bc3842b6f4d1b6e33993345a84b80",
+  "source_tree_sha256": "37a3ea9f02883e6511e102d723d367857a7a27493de02da3d227ba42f077bc1c",
+  "raw_output_sha256": "52ff7273f0d05672ec1fec228ee4883ace16e4d1d603eb751310d00ad665d7a8",
+  "executed_at": "2026-11-10T03:24:27.378144+00:00"
+}

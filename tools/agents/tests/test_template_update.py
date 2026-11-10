@@ -123,6 +123,22 @@ class TemplateUpdateTests(unittest.TestCase):
         self.assertEqual((self.project / 'knowledge/note.md').read_text(), 'project knowledge\n')
         self.assertIn('merge     AGENTS.md', output)
 
+    def test_the_project_cockpit_and_spec_are_never_written(self):
+        # 3.0.0 ships the factory's own AxiomSpec cockpit beside docs every project should receive.
+        for name, text in (('docs/README.md', 'factory cockpit\n'), ('docs/views/factory.json', '{}\n'),
+                           ('docs/view-catalog.json', '{"views": []}\n'), ('knowledge/spec/spec.json', '{}\n'),
+                           ('docs/slides/deck.html', 'deck 3\n')):
+            self.write(name, text)
+        self.commit('v3')
+        self.git('tag', 'v3.0.0')
+        self.project_file('docs/README.md', 'the project cockpit\n')
+        code, output = self.run_tool('--from-ref', 'v1.0.0', '--ref', 'v3.0.0')
+        self.assertEqual((self.project / 'docs/README.md').read_text(), 'the project cockpit\n')
+        for name in ('docs/views/factory.json', 'docs/view-catalog.json', 'knowledge/spec/spec.json'):
+            self.assertFalse((self.project / name).exists(), name)
+            self.assertNotIn(f'added     {name}', output)
+        self.assertNotIn('docs/README.md', [line.split()[-1] for line in output.splitlines() if line.startswith(('written', 'updated'))])
+
     def test_check_writes_nothing(self):
         before = (self.project / PLUGIN).read_text()
         code, output = self.run_tool('--from-ref', 'v1.0.0', '--ref', 'v2.0.0', '--check')

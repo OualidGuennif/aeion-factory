@@ -1,0 +1,112 @@
+{
+  "format": "aeion-view/0.1",
+  "kind": "sequence",
+  "participants": [
+    {
+      "id": "traveler",
+      "label": "Traveler",
+      "type": "actor"
+    },
+    {
+      "id": "server",
+      "label": "HTTP API"
+    },
+    {
+      "id": "domain",
+      "label": "Domain rules"
+    },
+    {
+      "id": "store",
+      "label": "Trip store",
+      "type": "store"
+    }
+  ],
+  "steps": [
+    {
+      "from": "traveler",
+      "to": "server",
+      "label": "POST /api/trips/{id}/days/{date}/activities"
+    },
+    {
+      "from": "server",
+      "to": "domain",
+      "label": "validate title, start, duration"
+    },
+    {
+      "fragment": "alt",
+      "branches": [
+        {
+          "label": "invalid",
+          "steps": [
+            {
+              "from": "server",
+              "to": "traveler",
+              "label": "400 field and reason",
+              "kind": "reply"
+            }
+          ]
+        },
+        {
+          "label": "valid",
+          "steps": [
+            {
+              "from": "server",
+              "to": "store",
+              "label": "BEGIN IMMEDIATE, read the day"
+            },
+            {
+              "from": "domain",
+              "to": "domain",
+              "label": "fits the day?",
+              "kind": "self"
+            },
+            {
+              "fragment": "alt",
+              "branches": [
+                {
+                  "label": "overlap",
+                  "steps": [
+                    {
+                      "from": "server",
+                      "to": "store",
+                      "label": "ROLLBACK"
+                    },
+                    {
+                      "from": "server",
+                      "to": "traveler",
+                      "label": "409 overlap",
+                      "kind": "reply"
+                    }
+                  ]
+                },
+                {
+                  "label": "fits",
+                  "steps": [
+                    {
+                      "from": "server",
+                      "to": "store",
+                      "label": "INSERT, COMMIT"
+                    },
+                    {
+                      "from": "server",
+                      "to": "traveler",
+                      "label": "201 activity",
+                      "kind": "reply"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "note": "The write lock makes two concurrent requests check one after the other (TEST-016)",
+      "over": [
+        "server",
+        "store"
+      ]
+    }
+  ]
+}

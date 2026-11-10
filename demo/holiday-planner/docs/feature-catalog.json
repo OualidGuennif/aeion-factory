@@ -1,0 +1,467 @@
+{
+  "format": "aeion-feature-catalog/0.1",
+  "features": [
+    {
+      "goal_id": "GOAL-001",
+      "number": "001",
+      "slug": "trip-workspace",
+      "sequence": 1,
+      "area": "core",
+      "size": "M",
+      "phase": "P1",
+      "parallel": false,
+      "write_paths": [
+        "app/"
+      ],
+      "depends_on": [],
+      "delivery": [
+        "Create app/ with the standard-library server, the SQLite store and a trips table.",
+        "Add create, read and list for trips, newest first, with the name rules.",
+        "Serve a trips page that lists and creates trips."
+      ],
+      "out_of_scope": [
+        "Accounts and logins: the planner runs locally for one household.",
+        "Trip templates."
+      ]
+    },
+    {
+      "goal_id": "GOAL-002",
+      "number": "002",
+      "slug": "trip-dates",
+      "sequence": 2,
+      "area": "core",
+      "size": "S",
+      "phase": "P1",
+      "parallel": false,
+      "write_paths": [
+        "app/"
+      ],
+      "depends_on": [
+        "001"
+      ],
+      "delivery": [
+        "Validate start and end dates and the 60-day limit (DEC-001) in the domain layer.",
+        "Expose date changes through the API with stable 400 answers."
+      ],
+      "out_of_scope": [
+        "Time zones: dates are calendar dates at the destination."
+      ]
+    },
+    {
+      "goal_id": "GOAL-003",
+      "number": "003",
+      "slug": "travelers",
+      "sequence": 3,
+      "area": "core",
+      "size": "S",
+      "phase": "P1",
+      "parallel": false,
+      "write_paths": [
+        "app/"
+      ],
+      "depends_on": [
+        "001"
+      ],
+      "delivery": [
+        "Add travelers with the organizer or companion role.",
+        "Refuse duplicate names within a trip."
+      ],
+      "out_of_scope": [
+        "Contact details and invitations."
+      ]
+    },
+    {
+      "goal_id": "GOAL-004",
+      "number": "004",
+      "slug": "day-by-day",
+      "sequence": 4,
+      "area": "planning",
+      "size": "M",
+      "phase": "P1",
+      "parallel": false,
+      "write_paths": [
+        "app/"
+      ],
+      "depends_on": [
+        "002"
+      ],
+      "delivery": [
+        "Derive one day per calendar date when dates are set or changed.",
+        "Refuse shortening onto days that hold activities, naming them (409)."
+      ],
+      "out_of_scope": [
+        "Moving activities automatically when dates change."
+      ]
+    },
+    {
+      "goal_id": "GOAL-005",
+      "number": "005",
+      "slug": "activities",
+      "sequence": 5,
+      "area": "planning",
+      "size": "M",
+      "phase": "P2",
+      "parallel": false,
+      "write_paths": [
+        "app/"
+      ],
+      "depends_on": [
+        "004"
+      ],
+      "delivery": [
+        "Add activities with title, start minute, duration and category.",
+        "Order them by start minute; refuse invalid times with their field."
+      ],
+      "out_of_scope": [
+        "Recurring activities.",
+        "Travel time between places."
+      ]
+    },
+    {
+      "goal_id": "GOAL-006",
+      "number": "006",
+      "slug": "no-overlaps",
+      "sequence": 6,
+      "area": "planning",
+      "size": "M",
+      "phase": "P2",
+      "parallel": false,
+      "write_paths": [
+        "app/"
+      ],
+      "depends_on": [
+        "005"
+      ],
+      "delivery": [
+        "Check CON-002 inside one BEGIN IMMEDIATE transaction per change.",
+        "Prove two concurrent overlapping requests admit exactly one (barrier test)."
+      ],
+      "out_of_scope": [
+        "Suggesting a free slot."
+      ]
+    },
+    {
+      "goal_id": "GOAL-007",
+      "number": "007",
+      "slug": "budget-and-expenses",
+      "sequence": 7,
+      "area": "money",
+      "size": "M",
+      "phase": "P2",
+      "parallel": false,
+      "write_paths": [
+        "app/"
+      ],
+      "depends_on": [
+        "001"
+      ],
+      "delivery": [
+        "Record expenses in integer cents of the trip currency (DEC-005).",
+        "Show the total and, with a budget, the remaining cents."
+      ],
+      "out_of_scope": [
+        "Currency conversion.",
+        "Receipts and photos."
+      ]
+    },
+    {
+      "goal_id": "GOAL-008",
+      "number": "008",
+      "slug": "over-budget-alert",
+      "sequence": 8,
+      "area": "money",
+      "size": "S",
+      "phase": "P2",
+      "parallel": false,
+      "write_paths": [
+        "app/"
+      ],
+      "depends_on": [
+        "007"
+      ],
+      "delivery": [
+        "Flag a trip whose expenses exceed its budget, with the excess in cents (CON-003)."
+      ],
+      "out_of_scope": [
+        "Refusing expenses: the budget is a guide, not a limit."
+      ]
+    },
+    {
+      "goal_id": "GOAL-009",
+      "number": "009",
+      "slug": "fair-splits",
+      "sequence": 9,
+      "area": "money",
+      "size": "L",
+      "phase": "P3",
+      "parallel": false,
+      "write_paths": [
+        "app/"
+      ],
+      "depends_on": [
+        "007",
+        "003"
+      ],
+      "delivery": [
+        "Split an expense in whole cents, the payer taking the remainder (DEC-002, CON-004).",
+        "Compute balances that add up to zero and expose them through the API.",
+        "Add a seeded property test over 1000 random splits."
+      ],
+      "out_of_scope": [
+        "Settling payments between travelers."
+      ]
+    },
+    {
+      "goal_id": "GOAL-010",
+      "number": "010",
+      "slug": "packing-list",
+      "sequence": 10,
+      "area": "planning",
+      "size": "S",
+      "phase": "P3",
+      "parallel": false,
+      "write_paths": [
+        "app/"
+      ],
+      "depends_on": [
+        "003"
+      ],
+      "delivery": [
+        "Shared and personal packing items with a packed state everyone sees."
+      ],
+      "out_of_scope": [
+        "Packing templates per destination."
+      ]
+    },
+    {
+      "goal_id": "GOAL-011",
+      "number": "011",
+      "slug": "day-notes",
+      "sequence": 11,
+      "area": "planning",
+      "size": "S",
+      "phase": "P3",
+      "parallel": false,
+      "write_paths": [
+        "app/"
+      ],
+      "depends_on": [
+        "004"
+      ],
+      "delivery": [
+        "Plain-text notes per day, escaped wherever they are shown."
+      ],
+      "out_of_scope": [
+        "Rich text and attachments."
+      ]
+    },
+    {
+      "goal_id": "GOAL-012",
+      "number": "012",
+      "slug": "places",
+      "sequence": 12,
+      "area": "planning",
+      "size": "S",
+      "phase": "P3",
+      "parallel": false,
+      "write_paths": [
+        "app/"
+      ],
+      "depends_on": [
+        "001"
+      ],
+      "delivery": [
+        "Save places with integer microdegrees and an OpenStreetMap link.",
+        "Refuse out-of-range coordinates."
+      ],
+      "out_of_scope": [
+        "Geocoding or any call to a map API."
+      ]
+    },
+    {
+      "goal_id": "GOAL-013",
+      "number": "013",
+      "slug": "bookings",
+      "sequence": 13,
+      "area": "travel",
+      "size": "M",
+      "phase": "P3",
+      "parallel": false,
+      "write_paths": [
+        "app/"
+      ],
+      "depends_on": [
+        "002"
+      ],
+      "delivery": [
+        "Attach bookings inside the trip's dates.",
+        "Mask confirmation codes everywhere except their last four characters."
+      ],
+      "out_of_scope": [
+        "Importing booking emails."
+      ]
+    },
+    {
+      "goal_id": "GOAL-014",
+      "number": "014",
+      "slug": "trip-lifecycle",
+      "sequence": 14,
+      "area": "core",
+      "size": "S",
+      "phase": "P3",
+      "parallel": false,
+      "write_paths": [
+        "app/"
+      ],
+      "depends_on": [
+        "001"
+      ],
+      "delivery": [
+        "Implement MODEL-001's transitions; refuse any other change with 409."
+      ],
+      "out_of_scope": [
+        "Read-only completed trips: DEC-006 is still open."
+      ]
+    },
+    {
+      "goal_id": "GOAL-015",
+      "number": "015",
+      "slug": "safe-sharing",
+      "sequence": 15,
+      "area": "sharing",
+      "size": "M",
+      "phase": "P4",
+      "parallel": false,
+      "write_paths": [
+        "app/"
+      ],
+      "depends_on": [
+        "005",
+        "013"
+      ],
+      "delivery": [
+        "Issue 128-bit share tokens and revoke them.",
+        "Serve a read-only itinerary without money or codes (DEC-003).",
+        "Answer unknown and revoked tokens identically (404)."
+      ],
+      "out_of_scope": [
+        "Expiring links.",
+        "Editing through a link."
+      ]
+    },
+    {
+      "goal_id": "GOAL-016",
+      "number": "016",
+      "slug": "calendar-export",
+      "sequence": 16,
+      "area": "sharing",
+      "size": "S",
+      "phase": "P4",
+      "parallel": false,
+      "write_paths": [
+        "app/"
+      ],
+      "depends_on": [
+        "005"
+      ],
+      "delivery": [
+        "Export an .ics file, one VEVENT per activity in floating local time (DEC-004), escaped and folded per RFC 5545."
+      ],
+      "out_of_scope": [
+        "Calendar subscriptions over the network."
+      ]
+    },
+    {
+      "goal_id": "GOAL-017",
+      "number": "017",
+      "slug": "search",
+      "sequence": 17,
+      "area": "planning",
+      "size": "S",
+      "phase": "P4",
+      "parallel": false,
+      "write_paths": [
+        "app/"
+      ],
+      "depends_on": [
+        "005"
+      ],
+      "delivery": [
+        "Search trips, activities, places and notes case-insensitively; refuse terms under 2 or over 100 characters."
+      ],
+      "out_of_scope": [
+        "Fuzzy matching."
+      ]
+    },
+    {
+      "goal_id": "GOAL-018",
+      "number": "018",
+      "slug": "day-timeline",
+      "sequence": 18,
+      "area": "interface",
+      "size": "L",
+      "phase": "P4",
+      "parallel": false,
+      "write_paths": [
+        "app/"
+      ],
+      "depends_on": [
+        "005",
+        "006"
+      ],
+      "delivery": [
+        "Draw each day as a time grid, activities sized by duration and coloured by category.",
+        "Make every page keyboard-usable with visible focus and AA contrast."
+      ],
+      "out_of_scope": [
+        "Drag and drop."
+      ]
+    },
+    {
+      "goal_id": "GOAL-019",
+      "number": "019",
+      "slug": "backup-and-restore",
+      "sequence": 19,
+      "area": "operations",
+      "size": "M",
+      "phase": "P5",
+      "parallel": false,
+      "write_paths": [
+        "app/"
+      ],
+      "depends_on": [
+        "001"
+      ],
+      "delivery": [
+        "Export every trip as versioned JSON, all or nothing.",
+        "Import into the store in one transaction; refuse unknown versions and invalid files without change."
+      ],
+      "out_of_scope": [
+        "Cloud sync."
+      ]
+    },
+    {
+      "goal_id": "GOAL-020",
+      "number": "020",
+      "slug": "health-and-operations",
+      "sequence": 20,
+      "area": "operations",
+      "size": "S",
+      "phase": "P5",
+      "parallel": false,
+      "write_paths": [
+        "app/"
+      ],
+      "depends_on": [
+        "001"
+      ],
+      "delivery": [
+        "Serve /health with storage status and version.",
+        "Read PORT and DATA_PATH; write scrubbed structured logs."
+      ],
+      "out_of_scope": [
+        "Metrics dashboards."
+      ]
+    }
+  ]
+}

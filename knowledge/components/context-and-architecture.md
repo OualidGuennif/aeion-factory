@@ -1,11 +1,11 @@
 ---
 type: Reference
 title: "Æion Factory integration choices"
-description: "The narrow upstream practices retained for context safety, skills and mandatory architecture maintenance."
+description: "The narrow upstream practices retained for context safety and skills, and the AxiomSpec method that replaced Graphify and Archify in 3.0."
 status: stable
 generated:
-  by: aeion-factory/1.1
-  at: 2026-10-25
+  by: aeion-factory/3.0
+  at: 2026-11-10
 sources:
   - id: context
     resource: ../operations/context-safety.md
@@ -13,9 +13,9 @@ sources:
   - id: architecture
     resource: factory-architecture.md
     title: "Complete architecture specification"
-  - id: maintenance
-    resource: ../operations/architecture-maintenance.md
-    title: "Actual analysis contract"
+  - id: method
+    resource: ../axiomspec/index.md
+    title: "The AxiomSpec method and its implementation"
 ---
 
 # Integration choices
@@ -43,20 +43,28 @@ the global bootstrap, mandatory implementer/reviewer rounds or a second task led
 and additional agents remain justified by actual independent work, not enabled by default.
 Adapted material retains its MIT attribution in CREDITS and the accompanying notice.
 
-## Graphify and Archify
+## AxiomSpec instead of Graphify and Archify (3.0)
 
-[Graphify 0.9.97](https://github.com/Graphify-Labs/graphify/tree/0a8cd4e1e342235fe53e881fb5d591bf0460071f) and
-[Archify v3.2.0](https://github.com/tt-a1i/archify/tree/208acba8d412335185b2056fedf54b3405df43fb).
-CI analyses every main update; locally they are strongly recommended and installed only on
-the user's yes. Use native structural code/Markdown
-extraction, including frontmatter, headings and links, instead of making required CI depend on
-LLM credentials or quotas. Full small-corpus rebuilds avoid stale deletion/rename state and
-shared-cache races; optimize only after measured cost warrants it. This replaces the proposed
-semantic-model/incremental baseline with a deterministic structural baseline, explicitly labelled.
+Up to 2.1, a pinned Graphify extracted a structural code graph and Archify rendered source-backed
+diagrams; both needed a virtual environment, Node 18+ and a Chrome browser. 3.0 removes them. The
+[AxiomSpec](../axiomspec/index.md) method supplies what they were for, from declared data instead of
+extraction alone, and [`tools/axiom`](axiom-toolkit.md) implements it with Python's standard library:
 
-Keep a complete reviewed architecture spec in Knowledge. Source-backed Archify views explain
-responsibilities, delivery and context recovery; automatic validation does not prove their
-meaning. Outputs are immutable per SHA, hashed and kept outside tracked source. No graph
-inference writes canonical policy and no generated artifact automatically commits to main.
+- **The canonical source** is `knowledge/spec/spec.json`: goals, terms, requirements, decisions, constraints,
+  scenarios, tests and bindings with stable IDs. Knowledge docs keep their eight sections and
+  `sources`, code keeps its `Spec:` header, and both now point at canonical IDs.
+- **The graph** joins spec, docs and code: declared links, bindings resolved to `file:line` in a hashed
+  snapshot, Python imports from `ast`, ECMAScript imports from a lexical scan. Every edge says how it
+  is known (declared, resolved, static); calls and dynamic loading are a stated limit.
+- **Diagrams** are structured JSON views rendered to SVG by the toolkit: the system, process,
+  sequence and use-case families of the playbook, plus state models taken from the spec. Each states
+  whether it is proposed, intended or observed.
+- **No model** enters validation, the graph or the docs. A model proposes `spec.json` changes; the
+  gates decide.
+
+Rejected: keeping Graphify as an optional extra (two graphs that disagree, and an install the owner
+asked to drop); Mermaid or PlantUML rendering (a browser or Java at build time, and label text that is
+diagram syntax). The cost of the choice is a lexical extractor for ECMAScript and no type-resolved
+call graph; both are named in every query's limits.
 
 No new database, service, scheduler, provider router or agent orchestration layer is introduced.

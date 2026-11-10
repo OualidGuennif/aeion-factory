@@ -564,8 +564,6 @@ class HookTests(unittest.TestCase):
     def test_managed_launch_aligns_pwd_with_the_actual_project_root(self):
         launcher=self.root/'tools/agents/run';launcher.parent.mkdir(parents=True)
         shutil.copy2(ROOT/'tools/agents/run',launcher)
-        gate=self.root/'tools/architecture/refresh';gate.parent.mkdir(parents=True)
-        gate.write_text('#!/bin/sh\nexit 0\n');gate.chmod(0o755)
         native=self.root/'bin/opencode';native.parent.mkdir()
         native.write_text(f'#!{hook.sys.executable}\nimport json,os,sys\nprint("opencode v2.1.4" if "--version" in sys.argv else json.dumps({{"cwd":os.getcwd(),"pwd":os.getenv("PWD")}}))\n')
         native.chmod(0o755)
@@ -592,8 +590,6 @@ class HookTests(unittest.TestCase):
     def test_missing_agent_binary_is_one_line_not_a_traceback(self):
         launcher=self.root/'tools/agents/run';launcher.parent.mkdir(parents=True)
         shutil.copy2(ROOT/'tools/agents/run',launcher)
-        gate=self.root/'tools/architecture/refresh';gate.parent.mkdir(parents=True)
-        gate.write_text('#!/bin/sh\nexit 0\n');gate.chmod(0o755)
         empty=self.root/'empty-bin';empty.mkdir()
         for agent in ['droid','devin','antigravity','codex','dsh','grok']:
             result=subprocess.run([hook.sys.executable,str(launcher),agent],cwd=self.root,
@@ -653,11 +649,9 @@ class HookTests(unittest.TestCase):
         self.call('devin',hook_event_name='PostToolUse',tool_name='edit',tool_input={'file_path':str(self.root/'a.py')})
         self.assertEqual(set(log.read_text().splitlines()),{'a.py'})
 
-    def test_launch_without_baseline_recommends_it_and_still_starts_devin_droid_and_antigravity(self):
+    def test_launch_needs_no_installed_baseline_for_devin_droid_and_antigravity(self):
         launcher=self.root/'tools/agents/run';launcher.parent.mkdir(parents=True)
         shutil.copy2(ROOT/'tools/agents/run',launcher)
-        gate=self.root/'tools/architecture/refresh';gate.parent.mkdir(parents=True)
-        gate.write_text('#!/bin/sh\nexit 1\n');gate.chmod(0o755)
         (self.root/'bin').mkdir()
         for agent,binary in (('devin','devin'),('droid','droid'),('antigravity','agy')):
             native=self.root/'bin'/binary
@@ -666,8 +660,7 @@ class HookTests(unittest.TestCase):
                                   env={'PATH':str(native.parent)+os.pathsep+os.defpath},capture_output=True,text=True)
             self.assertEqual(result.returncode,0,result.stderr)
             self.assertEqual(result.stdout.strip(),f'{binary} --version')
-            self.assertIn('strongly recommended',result.stderr)
-            self.assertIn('never installed automatically',result.stderr)
+            self.assertNotIn('baseline',result.stderr)
 
     def test_droid_tools_reach_the_shared_guards(self):
         with self.assertRaisesRegex(hook.GuardRefusal,'secret'):
@@ -1011,7 +1004,7 @@ class HookTests(unittest.TestCase):
             self.assertTrue(all(h['command'].endswith(f'tools/agents/hook.py" grok {event}') for e in entries for h in e['hooks']))
 
     def test_read_only_loop_denies_writers_and_shell_composition(self):
-        for command in ('tools/efficiency/bundle','tools/architecture/setup','git diff --output=x',
+        for command in ('tools/efficiency/bundle','tools/axiom/axiom docs','git diff --output=x',
                         'gh issue list; touch unexpected'):
             with patch.dict(hook.subprocess.os.environ,{'AEION_LOOP_READ_ONLY':'1'}):
                 with self.assertRaises(ValueError):

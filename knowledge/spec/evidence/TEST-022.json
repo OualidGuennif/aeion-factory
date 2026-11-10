@@ -1,0 +1,34 @@
+{
+  "format": "aeion-test-receipt/0.1",
+  "test_id": "TEST-022",
+  "level": "unit",
+  "adapter": "unittest/3.0.0",
+  "python": "3.15.2",
+  "trust": "untrusted_local",
+  "bindings": [
+    {
+      "id": "BIND-022",
+      "path": "tools/axiom/tests/test_views.py",
+      "symbol": "ViewTests.test_every_family_is_well_formed_and_deterministic"
+    }
+  ],
+  "bound_files": {
+    "tools/axiom/tests/test_views.py": "8e8664820a920cbc653901bab1a333d439a007255e609594ebb101e1f47dcfcf"
+  },
+  "results": {
+    "tools/axiom/tests/test_views.py::ViewTests.test_every_family_is_well_formed_and_deterministic": "pass"
+  },
+  "counts": {
+    "collected": 1,
+    "passed": 1,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "problems": [],
+  "status": "pass",
+  "spec_sha256": "cfdea120e46bf0a30c24e8124b1a74e88c6bc3842b6f4d1b6e33993345a84b80",
+  "source_tree_sha256": "37a3ea9f02883e6511e102d723d367857a7a27493de02da3d227ba42f077bc1c",
+  "raw_output_sha256": "b3426c1582535dd28a71b33b6cdd32d7bcbffdca48ce3f8664d26d2f60bed862",
+  "executed_at": "2026-11-10T03:24:26.820058+00:00"
+}

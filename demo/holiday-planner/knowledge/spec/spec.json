@@ -1,0 +1,6260 @@
+{
+  "format": "axiomspec/0.1",
+  "profile": "AX-CORE-0.1",
+  "project": {
+    "id": "PROJECT-001",
+    "name": "Holiday Planner",
+    "owner": "ACTOR-001",
+    "mode": "product",
+    "description": "A family holiday planner: trips, day-by-day activities, budget and fair splits, packing, bookings and safe sharing, served locally by Python's standard library."
+  },
+  "actors": [
+    {
+      "id": "ACTOR-001",
+      "name": "Product owner",
+      "type": "human_role",
+      "binding_status": "asserted"
+    },
+    {
+      "id": "ACTOR-002",
+      "name": "Coding agent",
+      "type": "ai",
+      "binding_status": "asserted"
+    }
+  ],
+  "sources": [
+    {
+      "id": "SRC-001",
+      "type": "document",
+      "locator": "docs/authored/brief.md",
+      "capture_sha256": null,
+      "review_state": "reviewed"
+    }
+  ],
+  "environments": [
+    {
+      "id": "ENV-001",
+      "title": "One day's schedule and a requested slot",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "day": {
+            "type": "object",
+            "properties": {
+              "activities": {
+                "type": "array",
+                "maxItems": 400,
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64
+                    },
+                    "start_minute": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 1440
+                    },
+                    "end_minute": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 1440
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "start_minute",
+                    "end_minute"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "activities"
+            ],
+            "additionalProperties": false
+          },
+          "request": {
+            "type": "object",
+            "properties": {
+              "start_minute": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1440
+              },
+              "end_minute": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1440
+              }
+            },
+            "required": [
+              "start_minute",
+              "end_minute"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "day",
+          "request"
+        ],
+        "additionalProperties": false
+      },
+      "units": [
+        {
+          "pointer": "/day/activities/*/start_minute",
+          "term_id": "TERM-004"
+        },
+        {
+          "pointer": "/day/activities/*/end_minute",
+          "term_id": "TERM-004"
+        },
+        {
+          "pointer": "/request/start_minute",
+          "term_id": "TERM-004"
+        },
+        {
+          "pointer": "/request/end_minute",
+          "term_id": "TERM-004"
+        }
+      ]
+    },
+    {
+      "id": "ENV-002",
+      "title": "A trip's budget and expenses",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "trip": {
+            "type": "object",
+            "properties": {
+              "budget_cents": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 100000000
+              },
+              "expenses": {
+                "type": "array",
+                "maxItems": 5000,
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64
+                    },
+                    "amount_cents": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 100000000
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "amount_cents"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "budget_cents",
+              "expenses"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "trip"
+        ],
+        "additionalProperties": false
+      },
+      "units": [
+        {
+          "pointer": "/trip/budget_cents",
+          "term_id": "TERM-005"
+        },
+        {
+          "pointer": "/trip/expenses/*/amount_cents",
+          "term_id": "TERM-005"
+        }
+      ]
+    },
+    {
+      "id": "ENV-003",
+      "title": "One expense and its shares",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "expense": {
+            "type": "object",
+            "properties": {
+              "amount_cents": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 100000000
+              },
+              "shares": {
+                "type": "array",
+                "maxItems": 50,
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "traveler": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64
+                    },
+                    "cents": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 100000000
+                    }
+                  },
+                  "required": [
+                    "traveler",
+                    "cents"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "amount_cents",
+              "shares"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "expense"
+        ],
+        "additionalProperties": false
+      },
+      "units": [
+        {
+          "pointer": "/expense/amount_cents",
+          "term_id": "TERM-005"
+        },
+        {
+          "pointer": "/expense/shares/*/cents",
+          "term_id": "TERM-005"
+        }
+      ]
+    },
+    {
+      "id": "ENV-004",
+      "title": "A trip's status",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "trip": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "draft",
+                  "planned",
+                  "booked",
+                  "completed",
+                  "cancelled"
+                ],
+                "maxLength": 9
+              }
+            },
+            "required": [
+              "status"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "trip"
+        ],
+        "additionalProperties": false
+      },
+      "units": []
+    }
+  ],
+  "nodes": [
+    {
+      "id": "GOAL-001",
+      "kind": "Goal",
+      "revision": 1,
+      "status": "active",
+      "title": "Keep every trip in one workspace",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "description": "A family creates trips and finds them again in one place.",
+        "success_measure": "A created trip is listed and opens with everything entered."
+      }
+    },
+    {
+      "id": "GOAL-002",
+      "kind": "Goal",
+      "revision": 1,
+      "status": "active",
+      "title": "Trip dates are always coherent",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "description": "A trip's dates never contradict themselves or exceed the agreed length.",
+        "success_measure": "No stored trip ends before it starts or lasts more than 60 days."
+      }
+    },
+    {
+      "id": "GOAL-003",
+      "kind": "Goal",
+      "revision": 1,
+      "status": "active",
+      "title": "Know who travels",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "description": "Each trip lists its travelers and who organizes.",
+        "success_measure": "Every traveler appears once per trip with a role."
+      }
+    },
+    {
+      "id": "GOAL-004",
+      "kind": "Goal",
+      "revision": 1,
+      "status": "active",
+      "title": "See the trip day by day",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "description": "The trip is laid out as one page per calendar day.",
+        "success_measure": "Days always match the trip's dates without losing planned activities."
+      }
+    },
+    {
+      "id": "GOAL-005",
+      "kind": "Goal",
+      "revision": 1,
+      "status": "active",
+      "title": "Plan activities in each day",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "description": "Travelers place activities at a time on a day.",
+        "success_measure": "Activities appear on their day in time order."
+      }
+    },
+    {
+      "id": "GOAL-006",
+      "kind": "Goal",
+      "revision": 1,
+      "status": "active",
+      "title": "Never double-book a moment",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "description": "Two activities of the same day never overlap.",
+        "success_measure": "No stored day holds overlapping activities, even under concurrent requests."
+      }
+    },
+    {
+      "id": "GOAL-007",
+      "kind": "Goal",
+      "revision": 1,
+      "status": "active",
+      "title": "Know what the trip costs",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "description": "Expenses add up to a visible total, in whole cents.",
+        "success_measure": "The total equals the sum of recorded expenses."
+      }
+    },
+    {
+      "id": "GOAL-008",
+      "kind": "Goal",
+      "revision": 1,
+      "status": "active",
+      "title": "Spot overspending early",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "description": "A trip over its budget is flagged as soon as it happens.",
+        "success_measure": "Every over-budget trip shows the flag; no other trip does."
+      }
+    },
+    {
+      "id": "GOAL-009",
+      "kind": "Goal",
+      "revision": 1,
+      "status": "active",
+      "title": "Settle who owes whom",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "description": "Shared expenses are split fairly and balances settle to zero.",
+        "success_measure": "Shares always add up to the expense, to the cent."
+      }
+    },
+    {
+      "id": "GOAL-010",
+      "kind": "Goal",
+      "revision": 1,
+      "status": "active",
+      "title": "Pack without forgetting",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "description": "Shared and personal packing lists everyone can check.",
+        "success_measure": "Checked items show as packed for every traveler."
+      }
+    },
+    {
+      "id": "GOAL-011",
+      "kind": "Goal",
+      "revision": 1,
+      "status": "active",
+      "title": "Keep notes for each day",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "description": "Plain-text notes per day, safe to display.",
+        "success_measure": "Notes display exactly as typed and never run as code."
+      }
+    },
+    {
+      "id": "GOAL-012",
+      "kind": "Goal",
+      "revision": 1,
+      "status": "active",
+      "title": "Find the places of the trip",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "description": "Saved places with coordinates and a map link.",
+        "success_measure": "Every saved place opens on a map at its coordinates."
+      }
+    },
+    {
+      "id": "GOAL-013",
+      "kind": "Goal",
+      "revision": 1,
+      "status": "active",
+      "title": "Keep bookings together",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "description": "Flights, stays and tickets attached to the trip, codes protected.",
+        "success_measure": "Bookings fit the trip's dates and codes are never fully shown."
+      }
+    },
+    {
+      "id": "GOAL-014",
+      "kind": "Goal",
+      "revision": 1,
+      "status": "active",
+      "title": "Know where each trip stands",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "description": "A trip moves through draft, planned, booked, completed or cancelled.",
+        "success_measure": "Only declared status changes ever happen."
+      }
+    },
+    {
+      "id": "GOAL-015",
+      "kind": "Goal",
+      "revision": 1,
+      "status": "active",
+      "title": "Share the plan safely",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "description": "A read-only link shows the itinerary to family and friends.",
+        "success_measure": "A link reveals nothing beyond the itinerary and stops working once revoked."
+      }
+    },
+    {
+      "id": "GOAL-016",
+      "kind": "Goal",
+      "revision": 1,
+      "status": "active",
+      "title": "Take the plan into a calendar",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "description": "The itinerary exports to any calendar application.",
+        "success_measure": "The exported file imports with one event per activity."
+      }
+    },
+    {
+      "id": "GOAL-017",
+      "kind": "Goal",
+      "revision": 1,
+      "status": "active",
+      "title": "Find anything quickly",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "description": "Search across trips, activities, places and notes.",
+        "success_measure": "A search returns every item containing the text."
+      }
+    },
+    {
+      "id": "GOAL-018",
+      "kind": "Goal",
+      "revision": 1,
+      "status": "active",
+      "title": "See a day at a glance",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "description": "A clear time grid for each day, usable by everyone.",
+        "success_measure": "The day view matches the stored activities and passes the accessibility review."
+      }
+    },
+    {
+      "id": "GOAL-019",
+      "kind": "Goal",
+      "revision": 1,
+      "status": "active",
+      "title": "Never lose a trip",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "description": "Backups export and import every trip safely.",
+        "success_measure": "A backup imports back to identical trips; a bad file changes nothing."
+      }
+    },
+    {
+      "id": "GOAL-020",
+      "kind": "Goal",
+      "revision": 1,
+      "status": "active",
+      "title": "Run it with confidence",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "description": "Health, configuration and logs an operator can trust.",
+        "success_measure": "The health check reports storage, and logs hold no personal data."
+      }
+    },
+    {
+      "id": "REQ-001",
+      "kind": "Requirement",
+      "revision": 1,
+      "status": "active",
+      "title": "Create and list trips",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "category": "functional",
+        "priority": "must",
+        "risk": "medium",
+        "verification_mode": "executable",
+        "pattern": "event",
+        "conditions": [],
+        "trigger": "a traveler creates a trip with a name, a destination and dates",
+        "feature": null,
+        "subject": "planner",
+        "response": "store the trip and return its identifier, newest trips listed first"
+      }
+    },
+    {
+      "id": "REQ-002",
+      "kind": "Requirement",
+      "revision": 1,
+      "status": "active",
+      "title": "Refuse an invalid trip name",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "category": "functional",
+        "priority": "must",
+        "risk": "medium",
+        "verification_mode": "executable",
+        "pattern": "unwanted",
+        "conditions": [],
+        "trigger": "a trip name is empty or longer than 80 characters",
+        "feature": null,
+        "subject": "planner",
+        "response": "refuse the trip with the field name and a reason code"
+      }
+    },
+    {
+      "id": "REQ-003",
+      "kind": "Requirement",
+      "revision": 1,
+      "status": "active",
+      "title": "Refuse incoherent dates",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "category": "data",
+        "priority": "must",
+        "risk": "high",
+        "verification_mode": "executable",
+        "pattern": "unwanted",
+        "conditions": [],
+        "trigger": "a trip would end before it starts or last more than 60 days",
+        "feature": null,
+        "subject": "planner",
+        "response": "refuse the dates without changing the trip"
+      }
+    },
+    {
+      "id": "REQ-004",
+      "kind": "Requirement",
+      "revision": 1,
+      "status": "active",
+      "title": "Add travelers with a role",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "category": "functional",
+        "priority": "must",
+        "risk": "medium",
+        "verification_mode": "executable",
+        "pattern": "event",
+        "conditions": [],
+        "trigger": "an organizer adds a traveler to a trip",
+        "feature": null,
+        "subject": "planner",
+        "response": "store the traveler with the role organizer or companion"
+      }
+    },
+    {
+      "id": "REQ-005",
+      "kind": "Requirement",
+      "revision": 1,
+      "status": "active",
+      "title": "Refuse a duplicate traveler",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "category": "functional",
+        "priority": "must",
+        "risk": "medium",
+        "verification_mode": "executable",
+        "pattern": "unwanted",
+        "conditions": [],
+        "trigger": "a traveler's name already exists in the trip",
+        "feature": null,
+        "subject": "planner",
+        "response": "refuse the duplicate and keep the existing traveler"
+      }
+    },
+    {
+      "id": "REQ-006",
+      "kind": "Requirement",
+      "revision": 1,
+      "status": "active",
+      "title": "One day per calendar date",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "category": "functional",
+        "priority": "must",
+        "risk": "medium",
+        "verification_mode": "executable",
+        "pattern": "event",
+        "conditions": [],
+        "trigger": "a trip's dates are set or changed",
+        "feature": null,
+        "subject": "planner",
+        "response": "list one day per calendar date from start to end, keeping existing day content"
+      }
+    },
+    {
+      "id": "REQ-007",
+      "kind": "Requirement",
+      "revision": 1,
+      "status": "active",
+      "title": "Protect planned days",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "category": "data",
+        "priority": "must",
+        "risk": "high",
+        "verification_mode": "executable",
+        "pattern": "unwanted",
+        "conditions": [],
+        "trigger": "shortening the dates would remove a day that holds activities",
+        "feature": null,
+        "subject": "planner",
+        "response": "refuse the change and name the affected days"
+      }
+    },
+    {
+      "id": "REQ-008",
+      "kind": "Requirement",
+      "revision": 1,
+      "status": "active",
+      "title": "Place activities on a day",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "category": "functional",
+        "priority": "must",
+        "risk": "medium",
+        "verification_mode": "executable",
+        "pattern": "event",
+        "conditions": [],
+        "trigger": "a traveler adds an activity with a title, a day, a start minute and a duration",
+        "feature": null,
+        "subject": "planner",
+        "response": "place it on that day, ordered by start minute"
+      }
+    },
+    {
+      "id": "REQ-009",
+      "kind": "Requirement",
+      "revision": 1,
+      "status": "active",
+      "title": "Refuse an invalid time",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "category": "functional",
+        "priority": "must",
+        "risk": "medium",
+        "verification_mode": "executable",
+        "pattern": "unwanted",
+        "conditions": [],
+        "trigger": "an activity's start minute is outside 0-1439, its duration is not positive or it ends after midnight",
+        "feature": null,
+        "subject": "planner",
+        "response": "refuse the activity with the field and a reason code"
+      }
+    },
+    {
+      "id": "REQ-010",
+      "kind": "Requirement",
+      "revision": 1,
+      "status": "active",
+      "title": "Refuse overlapping activities",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "category": "data",
+        "priority": "must",
+        "risk": "high",
+        "verification_mode": "executable",
+        "pattern": "unwanted",
+        "conditions": [],
+        "trigger": "a new or moved activity would overlap another activity of the same day",
+        "feature": null,
+        "subject": "planner",
+        "response": "refuse it without changing the day"
+      }
+    },
+    {
+      "id": "REQ-011",
+      "kind": "Requirement",
+      "revision": 1,
+      "status": "active",
+      "title": "Record expenses in cents",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "category": "functional",
+        "priority": "must",
+        "risk": "medium",
+        "verification_mode": "executable",
+        "pattern": "event",
+        "conditions": [],
+        "trigger": "a traveler records an expense with an amount, a payer and a category",
+        "feature": null,
+        "subject": "planner",
+        "response": "add it to the trip's total in whole cents"
+      }
+    },
+    {
+      "id": "REQ-012",
+      "kind": "Requirement",
+      "revision": 1,
+      "status": "active",
+      "title": "Show the remaining budget",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "category": "functional",
+        "priority": "should",
+        "risk": "low",
+        "verification_mode": "executable",
+        "pattern": "state",
+        "conditions": [
+          "a trip has a budget"
+        ],
+        "trigger": null,
+        "feature": null,
+        "subject": "planner",
+        "response": "show the remaining budget in cents"
+      }
+    },
+    {
+      "id": "REQ-013",
+      "kind": "Requirement",
+      "revision": 1,
+      "status": "active",
+      "title": "Refuse a non-positive expense",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "category": "functional",
+        "priority": "must",
+        "risk": "medium",
+        "verification_mode": "executable",
+        "pattern": "unwanted",
+        "conditions": [],
+        "trigger": "an expense amount is not a positive number of cents",
+        "feature": null,
+        "subject": "planner",
+        "response": "refuse the expense with the field amount_cents"
+      }
+    },
+    {
+      "id": "REQ-014",
+      "kind": "Requirement",
+      "revision": 1,
+      "status": "active",
+      "title": "Flag an over-budget trip",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "category": "functional",
+        "priority": "must",
+        "risk": "medium",
+        "verification_mode": "executable",
+        "pattern": "unwanted",
+        "conditions": [],
+        "trigger": "the recorded expenses exceed the trip budget",
+        "feature": null,
+        "subject": "planner",
+        "response": "flag the trip as over budget without refusing the expense"
+      }
+    },
+    {
+      "id": "REQ-015",
+      "kind": "Requirement",
+      "revision": 1,
+      "status": "active",
+      "title": "Split in whole cents that add up",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "category": "data",
+        "priority": "must",
+        "risk": "high",
+        "verification_mode": "executable",
+        "pattern": "event",
+        "conditions": [],
+        "trigger": "an expense is split among travelers",
+        "feature": null,
+        "subject": "planner",
+        "response": "assign each share in whole cents so the shares add up exactly to the amount, remaining cents going to the payer"
+      }
+    },
+    {
+      "id": "REQ-016",
+      "kind": "Requirement",
+      "revision": 1,
+      "status": "active",
+      "title": "Compute balances",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "category": "functional",
+        "priority": "must",
+        "risk": "medium",
+        "verification_mode": "executable",
+        "pattern": "ubiquitous",
+        "conditions": [],
+        "trigger": null,
+        "feature": null,
+        "subject": "planner",
+        "response": "compute each traveler's balance as paid minus owed, in cents"
+      }
+    },
+    {
+      "id": "REQ-017",
+      "kind": "Requirement",
+      "revision": 1,
+      "status": "active",
+      "title": "Refuse an impossible split",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "category": "functional",
+        "priority": "must",
+        "risk": "high",
+        "verification_mode": "executable",
+        "pattern": "unwanted",
+        "conditions": [],
+        "trigger": "an expense is split among no traveler or among someone who is not on the trip",
+        "feature": null,
+        "subject": "planner",
+        "response": "refuse the split and keep the expense unsplit"
+      }
+    },
+    {
+      "id": "REQ-018",
+      "kind": "Requirement",
+      "revision": 1,
+      "status": "active",
+      "title": "Keep packing lists",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "category": "functional",
+        "priority": "should",
+        "risk": "low",
+        "verification_mode": "executable",
+        "pattern": "event",
+        "conditions": [],
+        "trigger": "a traveler adds a packing item",
+        "feature": null,
+        "subject": "planner",
+        "response": "list the item unchecked, shared or personal as chosen"
+      }
+    },
+    {
+      "id": "REQ-019",
+      "kind": "Requirement",
+      "revision": 1,
+      "status": "active",
+      "title": "Check items for everyone",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "category": "functional",
+        "priority": "should",
+        "risk": "low",
+        "verification_mode": "executable",
+        "pattern": "event",
+        "conditions": [],
+        "trigger": "a traveler checks a packing item",
+        "feature": null,
+        "subject": "planner",
+        "response": "mark it packed for everyone who sees that list"
+      }
+    },
+    {
+      "id": "REQ-020",
+      "kind": "Requirement",
+      "revision": 1,
+      "status": "active",
+      "title": "Display notes as plain text",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "category": "security",
+        "priority": "must",
+        "risk": "high",
+        "verification_mode": "executable",
+        "pattern": "ubiquitous",
+        "conditions": [],
+        "trigger": null,
+        "feature": null,
+        "subject": "planner",
+        "response": "render day notes as plain text, never as HTML"
+      }
+    },
+    {
+      "id": "REQ-021",
+      "kind": "Requirement",
+      "revision": 1,
+      "status": "active",
+      "title": "Save places with coordinates",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "category": "functional",
+        "priority": "should",
+        "risk": "low",
+        "verification_mode": "executable",
+        "pattern": "event",
+        "conditions": [],
+        "trigger": "a traveler saves a place with a name and coordinates",
+        "feature": null,
+        "subject": "planner",
+        "response": "store latitude and longitude as integer microdegrees and offer a map link"
+      }
+    },
+    {
+      "id": "REQ-022",
+      "kind": "Requirement",
+      "revision": 1,
+      "status": "active",
+      "title": "Refuse impossible coordinates",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "category": "functional",
+        "priority": "must",
+        "risk": "medium",
+        "verification_mode": "executable",
+        "pattern": "unwanted",
+        "conditions": [],
+        "trigger": "a latitude is outside -90..90 degrees or a longitude outside -180..180 degrees",
+        "feature": null,
+        "subject": "planner",
+        "response": "refuse the place with the field and a reason code"
+      }
+    },
+    {
+      "id": "REQ-023",
+      "kind": "Requirement",
+      "revision": 1,
+      "status": "active",
+      "title": "Attach bookings",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "category": "functional",
+        "priority": "must",
+        "risk": "medium",
+        "verification_mode": "executable",
+        "pattern": "event",
+        "conditions": [],
+        "trigger": "a traveler records a booking with a kind, dates and a confirmation code",
+        "feature": null,
+        "subject": "planner",
+        "response": "attach it to the trip"
+      }
+    },
+    {
+      "id": "REQ-024",
+      "kind": "Requirement",
+      "revision": 1,
+      "status": "active",
+      "title": "Mask confirmation codes",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "category": "privacy",
+        "priority": "must",
+        "risk": "high",
+        "verification_mode": "executable",
+        "pattern": "ubiquitous",
+        "conditions": [],
+        "trigger": null,
+        "feature": null,
+        "subject": "planner",
+        "response": "show a confirmation code masked except its last four characters"
+      }
+    },
+    {
+      "id": "REQ-025",
+      "kind": "Requirement",
+      "revision": 1,
+      "status": "active",
+      "title": "Refuse bookings outside the trip",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "category": "functional",
+        "priority": "must",
+        "risk": "medium",
+        "verification_mode": "executable",
+        "pattern": "unwanted",
+        "conditions": [],
+        "trigger": "a booking's dates fall outside the trip",
+        "feature": null,
+        "subject": "planner",
+        "response": "refuse the booking with the field dates"
+      }
+    },
+    {
+      "id": "REQ-026",
+      "kind": "Requirement",
+      "revision": 1,
+      "status": "active",
+      "title": "Allow only declared status changes",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "category": "functional",
+        "priority": "must",
+        "risk": "high",
+        "verification_mode": "executable",
+        "pattern": "unwanted",
+        "conditions": [],
+        "trigger": "a requested status change is not a declared transition",
+        "feature": null,
+        "subject": "planner",
+        "response": "refuse it and keep the current status"
+      }
+    },
+    {
+      "id": "REQ-027",
+      "kind": "Requirement",
+      "revision": 1,
+      "status": "active",
+      "title": "Issue unguessable read-only links",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "category": "security",
+        "priority": "must",
+        "risk": "high",
+        "verification_mode": "executable",
+        "pattern": "event",
+        "conditions": [],
+        "trigger": "an organizer creates a share link",
+        "feature": null,
+        "subject": "planner",
+        "response": "issue a random token of at least 128 bits that opens a read-only itinerary"
+      }
+    },
+    {
+      "id": "REQ-028",
+      "kind": "Requirement",
+      "revision": 1,
+      "status": "active",
+      "title": "Hide unknown and revoked links",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "category": "security",
+        "priority": "must",
+        "risk": "critical",
+        "verification_mode": "executable",
+        "pattern": "unwanted",
+        "conditions": [],
+        "trigger": "a share token is unknown or revoked",
+        "feature": null,
+        "subject": "planner",
+        "response": "answer not found without revealing whether the trip exists"
+      }
+    },
+    {
+      "id": "REQ-029",
+      "kind": "Requirement",
+      "revision": 1,
+      "status": "active",
+      "title": "Keep money and codes out of shared views",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "category": "privacy",
+        "priority": "must",
+        "risk": "high",
+        "verification_mode": "executable",
+        "pattern": "ubiquitous",
+        "conditions": [],
+        "trigger": null,
+        "feature": null,
+        "subject": "planner",
+        "response": "leave expenses, balances and booking codes out of shared views"
+      }
+    },
+    {
+      "id": "REQ-030",
+      "kind": "Requirement",
+      "revision": 1,
+      "status": "active",
+      "title": "Export an iCalendar file",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "category": "functional",
+        "priority": "should",
+        "risk": "medium",
+        "verification_mode": "executable",
+        "pattern": "event",
+        "conditions": [],
+        "trigger": "a traveler exports a trip",
+        "feature": null,
+        "subject": "planner",
+        "response": "produce an iCalendar file with one event per activity, escaping text as RFC 5545 requires"
+      }
+    },
+    {
+      "id": "REQ-031",
+      "kind": "Requirement",
+      "revision": 1,
+      "status": "active",
+      "title": "Search everything",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "category": "functional",
+        "priority": "should",
+        "risk": "low",
+        "verification_mode": "executable",
+        "pattern": "event",
+        "conditions": [],
+        "trigger": "a traveler searches with text",
+        "feature": null,
+        "subject": "planner",
+        "response": "return the trips, activities, places and notes whose text contains it, ignoring case"
+      }
+    },
+    {
+      "id": "REQ-032",
+      "kind": "Requirement",
+      "revision": 1,
+      "status": "active",
+      "title": "Refuse a bad search term",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "category": "functional",
+        "priority": "must",
+        "risk": "low",
+        "verification_mode": "executable",
+        "pattern": "unwanted",
+        "conditions": [],
+        "trigger": "a search term is shorter than 2 or longer than 100 characters",
+        "feature": null,
+        "subject": "planner",
+        "response": "refuse it with the field q and a reason code"
+      }
+    },
+    {
+      "id": "REQ-033",
+      "kind": "Requirement",
+      "revision": 1,
+      "status": "active",
+      "title": "Show a day as a time grid",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "category": "functional",
+        "priority": "should",
+        "risk": "medium",
+        "verification_mode": "executable",
+        "pattern": "ubiquitous",
+        "conditions": [],
+        "trigger": null,
+        "feature": null,
+        "subject": "planner",
+        "response": "show each day as a time grid with activities sized by duration and coloured by category"
+      }
+    },
+    {
+      "id": "REQ-034",
+      "kind": "Requirement",
+      "revision": 1,
+      "status": "active",
+      "title": "Accessible pages",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "category": "quality",
+        "priority": "must",
+        "risk": "medium",
+        "verification_mode": "mixed",
+        "pattern": "ubiquitous",
+        "conditions": [],
+        "trigger": null,
+        "feature": null,
+        "subject": "planner",
+        "response": "keep every page usable with a keyboard alone and at WCAG 2.2 AA contrast"
+      }
+    },
+    {
+      "id": "REQ-035",
+      "kind": "Requirement",
+      "revision": 1,
+      "status": "active",
+      "title": "Export a versioned backup",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "category": "data",
+        "priority": "must",
+        "risk": "high",
+        "verification_mode": "executable",
+        "pattern": "event",
+        "conditions": [],
+        "trigger": "an organizer exports a backup",
+        "feature": null,
+        "subject": "planner",
+        "response": "write every trip as JSON with a schema version, all or nothing"
+      }
+    },
+    {
+      "id": "REQ-036",
+      "kind": "Requirement",
+      "revision": 1,
+      "status": "active",
+      "title": "Refuse a bad backup",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "category": "data",
+        "priority": "must",
+        "risk": "high",
+        "verification_mode": "executable",
+        "pattern": "unwanted",
+        "conditions": [],
+        "trigger": "an imported backup has an unknown schema version or fails validation",
+        "feature": null,
+        "subject": "planner",
+        "response": "refuse it without changing the stored trips"
+      }
+    },
+    {
+      "id": "REQ-037",
+      "kind": "Requirement",
+      "revision": 1,
+      "status": "active",
+      "title": "Report health",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "category": "functional",
+        "priority": "must",
+        "risk": "medium",
+        "verification_mode": "executable",
+        "pattern": "event",
+        "conditions": [],
+        "trigger": "the health endpoint is called",
+        "feature": null,
+        "subject": "planner",
+        "response": "answer 200 with the storage status and the version"
+      }
+    },
+    {
+      "id": "REQ-038",
+      "kind": "Requirement",
+      "revision": 1,
+      "status": "active",
+      "title": "Keep personal data out of logs",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "category": "privacy",
+        "priority": "must",
+        "risk": "high",
+        "verification_mode": "executable",
+        "pattern": "ubiquitous",
+        "conditions": [],
+        "trigger": null,
+        "feature": null,
+        "subject": "planner",
+        "response": "write logs without traveler names, notes, codes or amounts"
+      }
+    },
+    {
+      "id": "REQ-039",
+      "kind": "Requirement",
+      "revision": 1,
+      "status": "active",
+      "title": "Configure from the environment",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "category": "functional",
+        "priority": "must",
+        "risk": "low",
+        "verification_mode": "executable",
+        "pattern": "ubiquitous",
+        "conditions": [],
+        "trigger": null,
+        "feature": null,
+        "subject": "planner",
+        "response": "read its port and data path from PORT and DATA_PATH, with safe local defaults"
+      }
+    },
+    {
+      "id": "TERM-001",
+      "kind": "Term",
+      "revision": 1,
+      "status": "active",
+      "title": "Trip",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "definition": "A named journey with a destination, a start date and an end date, inclusive.",
+        "aliases": [
+          "journey"
+        ],
+        "unit": null,
+        "context": "Holiday Planner"
+      }
+    },
+    {
+      "id": "TERM-002",
+      "kind": "Term",
+      "revision": 1,
+      "status": "active",
+      "title": "Day",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "definition": "One calendar date of a trip, from start to end inclusive.",
+        "aliases": [],
+        "unit": null,
+        "context": "Holiday Planner"
+      }
+    },
+    {
+      "id": "TERM-003",
+      "kind": "Term",
+      "revision": 1,
+      "status": "active",
+      "title": "Activity",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "definition": "A titled item on one day, from a start minute for a positive duration, ending no later than midnight.",
+        "aliases": [],
+        "unit": null,
+        "context": "Holiday Planner"
+      }
+    },
+    {
+      "id": "TERM-004",
+      "kind": "Term",
+      "revision": 1,
+      "status": "active",
+      "title": "Minute of day",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "definition": "An integer from 0 (00:00) to 1440 (midnight at the end of the day), local to the destination.",
+        "aliases": [],
+        "unit": "minute",
+        "context": "Holiday Planner"
+      }
+    },
+    {
+      "id": "TERM-005",
+      "kind": "Term",
+      "revision": 1,
+      "status": "active",
+      "title": "Cents",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "definition": "An integer number of the trip currency's hundredths; one currency per trip.",
+        "aliases": [
+          "amount_cents"
+        ],
+        "unit": "cent",
+        "context": "Holiday Planner"
+      }
+    },
+    {
+      "id": "TERM-006",
+      "kind": "Term",
+      "revision": 1,
+      "status": "active",
+      "title": "Share token",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "definition": "A random string of at least 128 bits that opens one trip's read-only itinerary until revoked.",
+        "aliases": [
+          "share link"
+        ],
+        "unit": null,
+        "context": "Holiday Planner"
+      }
+    },
+    {
+      "id": "TERM-007",
+      "kind": "Term",
+      "revision": 1,
+      "status": "active",
+      "title": "Balance",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "definition": "What a traveler paid minus what they owe, in cents; balances of a trip add up to zero.",
+        "aliases": [],
+        "unit": "cent",
+        "context": "Holiday Planner"
+      }
+    },
+    {
+      "id": "CON-001",
+      "kind": "Constraint",
+      "revision": 1,
+      "status": "active",
+      "title": "No two activities of a day overlap",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "classification": {
+          "category": "domain",
+          "explicitness": "explicit",
+          "temporality": "predefined",
+          "strength": "hard"
+        },
+        "scope": "linked",
+        "roles": [
+          "enforcement",
+          "verification"
+        ],
+        "predicate_role": "invariant",
+        "representation": "bcir",
+        "environment_id": "ENV-001",
+        "expression": {
+          "kind": "quantifier",
+          "operator": "all",
+          "bind": "a",
+          "collection": {
+            "kind": "path",
+            "root": "env",
+            "pointer": "/day/activities"
+          },
+          "predicate": {
+            "kind": "quantifier",
+            "operator": "all",
+            "bind": "b",
+            "collection": {
+              "kind": "path",
+              "root": "env",
+              "pointer": "/day/activities"
+            },
+            "predicate": {
+              "kind": "apply",
+              "operator": "or",
+              "arguments": [
+                {
+                  "kind": "apply",
+                  "operator": "eq",
+                  "arguments": [
+                    {
+                      "kind": "path",
+                      "root": "a",
+                      "pointer": "/id"
+                    },
+                    {
+                      "kind": "path",
+                      "root": "b",
+                      "pointer": "/id"
+                    }
+                  ]
+                },
+                {
+                  "kind": "apply",
+                  "operator": "le",
+                  "arguments": [
+                    {
+                      "kind": "path",
+                      "root": "a",
+                      "pointer": "/end_minute"
+                    },
+                    {
+                      "kind": "path",
+                      "root": "b",
+                      "pointer": "/start_minute"
+                    }
+                  ]
+                },
+                {
+                  "kind": "apply",
+                  "operator": "le",
+                  "arguments": [
+                    {
+                      "kind": "path",
+                      "root": "b",
+                      "pointer": "/end_minute"
+                    },
+                    {
+                      "kind": "path",
+                      "root": "a",
+                      "pointer": "/start_minute"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        "review_protocol": null,
+        "enforcement_binding_id": null,
+        "effective_from": null,
+        "effective_until": null
+      }
+    },
+    {
+      "id": "CON-002",
+      "kind": "Constraint",
+      "revision": 1,
+      "status": "active",
+      "title": "A requested slot fits the day",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "classification": {
+          "category": "domain",
+          "explicitness": "explicit",
+          "temporality": "predefined",
+          "strength": "hard"
+        },
+        "scope": "linked",
+        "roles": [
+          "enforcement",
+          "verification"
+        ],
+        "predicate_role": "admission_guard",
+        "representation": "bcir",
+        "environment_id": "ENV-001",
+        "expression": {
+          "kind": "apply",
+          "operator": "and",
+          "arguments": [
+            {
+              "kind": "apply",
+              "operator": "lt",
+              "arguments": [
+                {
+                  "kind": "path",
+                  "root": "env",
+                  "pointer": "/request/start_minute"
+                },
+                {
+                  "kind": "path",
+                  "root": "env",
+                  "pointer": "/request/end_minute"
+                }
+              ]
+            },
+            {
+              "kind": "quantifier",
+              "operator": "all",
+              "bind": "a",
+              "collection": {
+                "kind": "path",
+                "root": "env",
+                "pointer": "/day/activities"
+              },
+              "predicate": {
+                "kind": "apply",
+                "operator": "or",
+                "arguments": [
+                  {
+                    "kind": "apply",
+                    "operator": "le",
+                    "arguments": [
+                      {
+                        "kind": "path",
+                        "root": "env",
+                        "pointer": "/request/end_minute"
+                      },
+                      {
+                        "kind": "path",
+                        "root": "a",
+                        "pointer": "/start_minute"
+                      }
+                    ]
+                  },
+                  {
+                    "kind": "apply",
+                    "operator": "le",
+                    "arguments": [
+                      {
+                        "kind": "path",
+                        "root": "a",
+                        "pointer": "/end_minute"
+                      },
+                      {
+                        "kind": "path",
+                        "root": "env",
+                        "pointer": "/request/start_minute"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "review_protocol": null,
+        "enforcement_binding_id": null,
+        "effective_from": null,
+        "effective_until": null
+      }
+    },
+    {
+      "id": "CON-003",
+      "kind": "Constraint",
+      "revision": 1,
+      "status": "active",
+      "title": "Expenses stay within the budget",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "classification": {
+          "category": "domain",
+          "explicitness": "explicit",
+          "temporality": "predefined",
+          "strength": "soft"
+        },
+        "scope": "linked",
+        "roles": [
+          "verification"
+        ],
+        "predicate_role": "invariant",
+        "representation": "bcir",
+        "environment_id": "ENV-002",
+        "expression": {
+          "kind": "apply",
+          "operator": "le",
+          "arguments": [
+            {
+              "kind": "aggregate",
+              "operator": "sum",
+              "bind": "e",
+              "collection": {
+                "kind": "path",
+                "root": "env",
+                "pointer": "/trip/expenses"
+              },
+              "filter": {
+                "kind": "literal",
+                "value": true
+              },
+              "projection": {
+                "kind": "path",
+                "root": "e",
+                "pointer": "/amount_cents"
+              }
+            },
+            {
+              "kind": "path",
+              "root": "env",
+              "pointer": "/trip/budget_cents"
+            }
+          ]
+        },
+        "review_protocol": null,
+        "enforcement_binding_id": null,
+        "effective_from": null,
+        "effective_until": null
+      }
+    },
+    {
+      "id": "CON-004",
+      "kind": "Constraint",
+      "revision": 1,
+      "status": "active",
+      "title": "Shares add up to the expense",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "classification": {
+          "category": "domain",
+          "explicitness": "explicit",
+          "temporality": "predefined",
+          "strength": "hard"
+        },
+        "scope": "project",
+        "roles": [
+          "enforcement",
+          "verification"
+        ],
+        "predicate_role": "invariant",
+        "representation": "bcir",
+        "environment_id": "ENV-003",
+        "expression": {
+          "kind": "apply",
+          "operator": "eq",
+          "arguments": [
+            {
+              "kind": "aggregate",
+              "operator": "sum",
+              "bind": "s",
+              "collection": {
+                "kind": "path",
+                "root": "env",
+                "pointer": "/expense/shares"
+              },
+              "filter": {
+                "kind": "literal",
+                "value": true
+              },
+              "projection": {
+                "kind": "path",
+                "root": "s",
+                "pointer": "/cents"
+              }
+            },
+            {
+              "kind": "path",
+              "root": "env",
+              "pointer": "/expense/amount_cents"
+            }
+          ]
+        },
+        "review_protocol": null,
+        "enforcement_binding_id": null,
+        "effective_from": null,
+        "effective_until": null
+      }
+    },
+    {
+      "id": "SCN-001",
+      "kind": "Scenario",
+      "revision": 1,
+      "status": "active",
+      "title": "Back-to-back activities and a free slot",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "intent": "witness",
+        "environment_id": "ENV-001",
+        "given": {
+          "day": {
+            "activities": [
+              {
+                "id": "museum",
+                "start_minute": 540,
+                "end_minute": 600
+              },
+              {
+                "id": "lunch",
+                "start_minute": 600,
+                "end_minute": 660
+              }
+            ]
+          },
+          "request": {
+            "start_minute": 660,
+            "end_minute": 720
+          }
+        },
+        "event": "add activity",
+        "expected": "The new activity is placed after lunch; touching ends are not overlaps.",
+        "constraint_expectations": [
+          {
+            "constraint_id": "CON-001",
+            "expected": true
+          },
+          {
+            "constraint_id": "CON-002",
+            "expected": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "SCN-002",
+      "kind": "Scenario",
+      "revision": 1,
+      "status": "active",
+      "title": "A stored overlap is detected",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "intent": "counterexample",
+        "environment_id": "ENV-001",
+        "given": {
+          "day": {
+            "activities": [
+              {
+                "id": "museum",
+                "start_minute": 540,
+                "end_minute": 620
+              },
+              {
+                "id": "lunch",
+                "start_minute": 600,
+                "end_minute": 660
+              }
+            ]
+          },
+          "request": {
+            "start_minute": 700,
+            "end_minute": 720
+          }
+        },
+        "event": "audit day",
+        "expected": "The day is invalid: museum and lunch overlap by 20 minutes.",
+        "constraint_expectations": [
+          {
+            "constraint_id": "CON-001",
+            "expected": false
+          },
+          {
+            "constraint_id": "CON-002",
+            "expected": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "SCN-003",
+      "kind": "Scenario",
+      "revision": 1,
+      "status": "active",
+      "title": "An overlapping request is refused",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "intent": "witness",
+        "environment_id": "ENV-001",
+        "given": {
+          "day": {
+            "activities": [
+              {
+                "id": "museum",
+                "start_minute": 540,
+                "end_minute": 600
+              }
+            ]
+          },
+          "request": {
+            "start_minute": 570,
+            "end_minute": 630
+          }
+        },
+        "event": "add activity",
+        "expected": "The request is refused and the day keeps only the museum.",
+        "constraint_expectations": [
+          {
+            "constraint_id": "CON-001",
+            "expected": true
+          },
+          {
+            "constraint_id": "CON-002",
+            "expected": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "SCN-004",
+      "kind": "Scenario",
+      "revision": 1,
+      "status": "active",
+      "title": "Expenses within the budget",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "intent": "witness",
+        "environment_id": "ENV-002",
+        "given": {
+          "trip": {
+            "budget_cents": 100000,
+            "expenses": [
+              {
+                "id": "hotel",
+                "amount_cents": 40000
+              },
+              {
+                "id": "train",
+                "amount_cents": 30000
+              }
+            ]
+          }
+        },
+        "event": "record expense",
+        "expected": "No over-budget flag; 30000 cents remain.",
+        "constraint_expectations": [
+          {
+            "constraint_id": "CON-003",
+            "expected": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "SCN-005",
+      "kind": "Scenario",
+      "revision": 1,
+      "status": "active",
+      "title": "Expenses over the budget",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "intent": "counterexample",
+        "environment_id": "ENV-002",
+        "given": {
+          "trip": {
+            "budget_cents": 50000,
+            "expenses": [
+              {
+                "id": "hotel",
+                "amount_cents": 40000
+              },
+              {
+                "id": "train",
+                "amount_cents": 30000
+              }
+            ]
+          }
+        },
+        "event": "record expense",
+        "expected": "The expense is kept and the trip is flagged over budget by 20000 cents.",
+        "constraint_expectations": [
+          {
+            "constraint_id": "CON-003",
+            "expected": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "SCN-006",
+      "kind": "Scenario",
+      "revision": 1,
+      "status": "active",
+      "title": "A three-way split with a remainder",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "intent": "witness",
+        "environment_id": "ENV-003",
+        "given": {
+          "expense": {
+            "amount_cents": 1000,
+            "shares": [
+              {
+                "traveler": "payer",
+                "cents": 334
+              },
+              {
+                "traveler": "ana",
+                "cents": 333
+              },
+              {
+                "traveler": "ben",
+                "cents": 333
+              }
+            ]
+          }
+        },
+        "event": "split expense",
+        "expected": "The payer's share takes the remaining cent; shares add up to 1000.",
+        "constraint_expectations": [
+          {
+            "constraint_id": "CON-004",
+            "expected": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "SCN-007",
+      "kind": "Scenario",
+      "revision": 1,
+      "status": "active",
+      "title": "A split that loses a cent",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "intent": "counterexample",
+        "environment_id": "ENV-003",
+        "given": {
+          "expense": {
+            "amount_cents": 1000,
+            "shares": [
+              {
+                "traveler": "payer",
+                "cents": 333
+              },
+              {
+                "traveler": "ana",
+                "cents": 333
+              },
+              {
+                "traveler": "ben",
+                "cents": 333
+              }
+            ]
+          }
+        },
+        "event": "split expense",
+        "expected": "Invalid: one cent is lost, so balances would not settle.",
+        "constraint_expectations": [
+          {
+            "constraint_id": "CON-004",
+            "expected": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "MODEL-001",
+      "kind": "StateModel",
+      "revision": 1,
+      "status": "active",
+      "title": "Trip lifecycle",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "environment_id": "ENV-004",
+        "initial": "draft",
+        "states": [
+          {
+            "name": "draft",
+            "terminal": false
+          },
+          {
+            "name": "planned",
+            "terminal": false
+          },
+          {
+            "name": "booked",
+            "terminal": false
+          },
+          {
+            "name": "completed",
+            "terminal": true
+          },
+          {
+            "name": "cancelled",
+            "terminal": true
+          }
+        ],
+        "transitions": [
+          {
+            "id": "TRN-001",
+            "from": "draft",
+            "to": "planned",
+            "event": "plan",
+            "guard_id": null,
+            "effect_ref": "trips.plan"
+          },
+          {
+            "id": "TRN-002",
+            "from": "planned",
+            "to": "booked",
+            "event": "book",
+            "guard_id": null,
+            "effect_ref": "trips.book"
+          },
+          {
+            "id": "TRN-003",
+            "from": "booked",
+            "to": "completed",
+            "event": "complete",
+            "guard_id": null,
+            "effect_ref": "trips.complete"
+          },
+          {
+            "id": "TRN-004",
+            "from": "planned",
+            "to": "draft",
+            "event": "reopen",
+            "guard_id": null,
+            "effect_ref": "trips.reopen"
+          },
+          {
+            "id": "TRN-005",
+            "from": "draft",
+            "to": "cancelled",
+            "event": "cancel",
+            "guard_id": null,
+            "effect_ref": "trips.cancel"
+          },
+          {
+            "id": "TRN-006",
+            "from": "planned",
+            "to": "cancelled",
+            "event": "cancel",
+            "guard_id": null,
+            "effect_ref": "trips.cancel"
+          },
+          {
+            "id": "TRN-007",
+            "from": "booked",
+            "to": "cancelled",
+            "event": "cancel",
+            "guard_id": null,
+            "effect_ref": "trips.cancel"
+          }
+        ]
+      }
+    },
+    {
+      "id": "TEST-001",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Create then list trips",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "unit",
+        "oracle": "A created trip returns its identifier, reads back with every field, and lists before older trips.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": false,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-002",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Trip name rules",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "unit",
+        "oracle": "Empty and 81-character names are refused with field name and reason required or too_long; nothing is stored.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": true,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-003",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Date order and length",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "unit",
+        "oracle": "An end before the start and a 61-day trip are refused; the stored trip is unchanged.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": true,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-004",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Sixty days is the maximum",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "unit",
+        "oracle": "A trip of exactly 60 days is accepted and has 60 days.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": false,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-005",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Dates through the API",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "integration",
+        "oracle": "PUT with an end before the start answers 400 with field end_date; a GET returns the old dates.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": true,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-006",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Add travelers with roles",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "unit",
+        "oracle": "An organizer and a companion are stored with their roles; an unknown role is refused.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": false,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-007",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Duplicate traveler refused",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "unit",
+        "oracle": "Adding Ana twice is refused with reason duplicate; the trip has one Ana.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": true,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-008",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Days follow the dates",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "unit",
+        "oracle": "A 3-day trip has 3 days; extending it to 5 keeps the content of the first 3.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": false,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-009",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Shortening onto planned days refused",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "unit",
+        "oracle": "Shortening a trip whose last day holds an activity is refused, naming that day; dates are unchanged.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": true,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-010",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Shortening empty days allowed",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "unit",
+        "oracle": "Shortening a trip whose removed days are empty succeeds and drops exactly those days.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": false,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-011",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Planned days protected through the API",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "integration",
+        "oracle": "The API answers 409 with the affected days and the stored trip keeps its dates and activities.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": true,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-012",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Activities ordered by start",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "unit",
+        "oracle": "Activities added at 14:00 then 09:00 list as 09:00, 14:00.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": false,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-013",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Invalid times refused",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "unit",
+        "oracle": "Start 1440, duration 0 and an end after midnight are each refused with their field; the day is unchanged.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": true,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-014",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Overlap refused",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "unit",
+        "oracle": "Adding 09:30-10:30 to a day holding 09:00-10:00 raises Overlap and the day still holds one activity.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": true,
+        "witness_scenario_ids": [
+          "SCN-003"
+        ]
+      }
+    },
+    {
+      "id": "TEST-015",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Back-to-back accepted",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "unit",
+        "oracle": "Activities 09:00-10:00 and 10:00-11:00 are both accepted: touching ends do not overlap.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": false,
+        "witness_scenario_ids": [
+          "SCN-001"
+        ]
+      }
+    },
+    {
+      "id": "TEST-016",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Concurrent overlapping requests",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "integration",
+        "oracle": "Two simultaneous requests for overlapping slots, released together by a barrier, admit exactly one; the stored day passes CON-001.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": true,
+        "witness_scenario_ids": [
+          "SCN-003"
+        ]
+      }
+    },
+    {
+      "id": "TEST-017",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Expenses add up",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "unit",
+        "oracle": "Expenses of 400.00 and 300.00 against a 1000.00 budget give a total of 70000 and 30000 cents remaining.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": false,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-018",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Non-positive expense refused",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "unit",
+        "oracle": "Amounts 0 and -5 are refused with field amount_cents; the total is unchanged.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": true,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-019",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Over-budget flag",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "unit",
+        "oracle": "The flag is off within the budget and on, with the excess in cents, once expenses exceed it; no expense is refused.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": false,
+        "witness_scenario_ids": [
+          "SCN-004",
+          "SCN-005"
+        ]
+      }
+    },
+    {
+      "id": "TEST-020",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Three-way split",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "unit",
+        "oracle": "1000 cents among the payer, Ana and Ben give 334, 333 and 333; the payer gets the remainder.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": false,
+        "witness_scenario_ids": [
+          "SCN-006"
+        ]
+      }
+    },
+    {
+      "id": "TEST-021",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Impossible split refused",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "unit",
+        "oracle": "A split among nobody, or including someone not on the trip, is refused; the expense stays unsplit.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": true,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-022",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Splits conserve cents",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "property",
+        "oracle": "For 1000 seeded random amounts and traveler counts, shares always add up to the amount and differ by at most one cent.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": true,
+        "witness_scenario_ids": [
+          "SCN-006",
+          "SCN-007"
+        ]
+      }
+    },
+    {
+      "id": "TEST-023",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Balances through the API",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "integration",
+        "oracle": "After three split expenses, the balances endpoint returns paid minus owed per traveler and they add up to zero.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": false,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-024",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Impossible split through the API",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "integration",
+        "oracle": "Splitting with a traveler not on the trip answers 400 and the expense stays unsplit.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": true,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-025",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Packing lists",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "unit",
+        "oracle": "A shared item checked by Ana shows packed for Ben; a personal item shows only on its owner's list.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": false,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-026",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Notes never run as HTML",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "unit",
+        "oracle": "A note holding <script> renders as the literal text &lt;script&gt;.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": true,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-027",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Notes keep their text",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "unit",
+        "oracle": "A note with accents and line breaks renders the same characters and line breaks.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": false,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-028",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Notes in the page",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "e2e",
+        "oracle": "The served day page shows the note's markup as text and holds no injected element.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": true,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-029",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Save a place",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "unit",
+        "oracle": "Paris at 48.8566, 2.3522 is stored as 48856600 and 2352200 microdegrees with a map link to those coordinates.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": false,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-030",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Impossible coordinates refused",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "unit",
+        "oracle": "Latitude 91 and longitude -181 are refused with their field.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": true,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-031",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Attach a booking",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "unit",
+        "oracle": "A hotel booking inside the trip is attached and listed with its kind and dates.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": false,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-032",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Booking outside the trip refused",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "unit",
+        "oracle": "A booking starting the day before the trip is refused with field dates.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": true,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-033",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Codes are masked",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "unit",
+        "oracle": "Code ABC12345 displays as ****2345.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": false,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-034",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Short codes fully masked",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "unit",
+        "oracle": "A code of four characters or fewer displays as **** only.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": true,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-035",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "API never returns a full code",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "integration",
+        "oracle": "No API response body for a trip with bookings contains a full confirmation code.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": true,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-036",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Undeclared status change refused",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "unit",
+        "oracle": "completed -> draft and cancelled -> planned are refused; the status is unchanged.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": true,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-037",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Declared path to completed",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "unit",
+        "oracle": "draft -> planned -> booked -> completed succeeds step by step.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": false,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-038",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Status change through the API",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "integration",
+        "oracle": "POST status draft on a completed trip answers 409 and the trip stays completed.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": true,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-039",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Tokens are long and random",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "unit",
+        "oracle": "A token decodes to at least 16 random bytes; 1000 tokens are all distinct.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": false,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-040",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Revoked and unknown links look the same",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "integration",
+        "oracle": "A revoked token and a never-issued token both answer 404 with byte-identical bodies.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": true,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-041",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Shared views hold no money or codes",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "integration",
+        "oracle": "The shared itinerary holds activities and places, and no expense, balance or confirmation code.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": true,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-042",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Share then open read-only",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "e2e",
+        "oracle": "An organizer shares a trip; the link shows its itinerary and offers no editing control.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": false,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-043",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Writes refused with a share token",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "unit",
+        "oracle": "Any write attempted with a share token is refused; the trip is unchanged.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": true,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-044",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "One event per activity",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "unit",
+        "oracle": "A trip with three activities exports a VCALENDAR with three VEVENTs at floating local times.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": false,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-045",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Calendar text is escaped",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "unit",
+        "oracle": "Commas, semicolons, backslashes and line breaks in titles are escaped; long lines are folded at 75 octets.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": true,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-046",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Search finds every match",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "unit",
+        "oracle": "Searching 'louvre' returns the activity, the place and the note that contain Louvre.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": false,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-047",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Bad search term refused",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "unit",
+        "oracle": "Terms of 1 and 101 characters are refused with field q.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": true,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-048",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Day grid matches the data",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "e2e",
+        "oracle": "The day page places a 90-minute activity at 09:00 over three half-hour rows, coloured by its category.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": false,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-049",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Accessibility review",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "manual",
+        "oracle": "A reviewer completes every flow with the keyboard alone and measures contrast of 4.5:1 or more on text, with notes.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": false,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-050",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Keyboard focus is visible",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "e2e",
+        "oracle": "Every interactive element of the main pages is reachable by Tab and has a visible focus style.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": true,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-051",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Backup round trip",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "unit",
+        "oracle": "Exporting then importing into an empty store gives byte-identical trip records.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": false,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-052",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Unknown backup version refused",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "unit",
+        "oracle": "A backup with schema version 99 is refused with reason unsupported_version.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": true,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-053",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Bad import changes nothing",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "integration",
+        "oracle": "An import whose third trip is invalid answers 400 and the store keeps exactly its previous trips.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": true,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-054",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Interrupted export leaves no file",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "unit",
+        "oracle": "An export interrupted after the first trip leaves no partial backup file.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": true,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-055",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Export and import through the API",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "integration",
+        "oracle": "GET /api/backup then POST it to a fresh store answers 200 and lists the same trips.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": false,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-056",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Health reports storage",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "integration",
+        "oracle": "GET /health answers 200 with storage ok and the version.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": false,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-057",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Logs scrub personal data",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "unit",
+        "oracle": "A log record carrying a name, a note, a code and an amount is written without those values.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": true,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-058",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Ordinary log lines kept",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "unit",
+        "oracle": "Method, path template, status and duration remain in the log line.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": false,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-059",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "No personal data during a request",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "integration",
+        "oracle": "After creating a trip with a traveler and a note through the API, the captured logs contain none of their values.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": true,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-060",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Configuration from the environment",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "unit",
+        "oracle": "PORT=9000 and DATA_PATH are read; without them the server uses 8000 and ./data/planner.sqlite3.",
+        "state": "planned",
+        "runner": "unittest",
+        "negative": false,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "COMP-001",
+      "kind": "Component",
+      "revision": 1,
+      "status": "active",
+      "title": "Trip store",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "responsibility": "Persists trips, days, activities, expenses and bookings in one SQLite file, each change in one transaction.",
+        "boundary": "app/store.py: the only module that opens the database"
+      }
+    },
+    {
+      "id": "COMP-002",
+      "kind": "Component",
+      "revision": 1,
+      "status": "active",
+      "title": "Domain rules",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "responsibility": "Validates trips, dates, activities, splits, places, bookings and status changes as pure functions.",
+        "boundary": "app/domain/: no I/O"
+      }
+    },
+    {
+      "id": "COMP-003",
+      "kind": "Component",
+      "revision": 1,
+      "status": "active",
+      "title": "HTTP API and server",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "responsibility": "Serves the JSON API, the pages and the health check; maps refusals to stable status codes.",
+        "boundary": "app/server.py: the only network boundary"
+      }
+    },
+    {
+      "id": "COMP-004",
+      "kind": "Component",
+      "revision": 1,
+      "status": "active",
+      "title": "Web pages",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "responsibility": "Renders the trip, day timeline, shared view and forms, escaping every value.",
+        "boundary": "app/pages.py and app/static/"
+      }
+    },
+    {
+      "id": "COMP-005",
+      "kind": "Component",
+      "revision": 1,
+      "status": "active",
+      "title": "Sharing",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "responsibility": "Issues, checks and revokes share tokens and builds the shared view.",
+        "boundary": "app/domain/sharing.py"
+      }
+    },
+    {
+      "id": "COMP-006",
+      "kind": "Component",
+      "revision": 1,
+      "status": "active",
+      "title": "Exports and search",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "responsibility": "Builds iCalendar files, backups and search results.",
+        "boundary": "app/exports.py and app/search.py"
+      }
+    },
+    {
+      "id": "COMP-007",
+      "kind": "Component",
+      "revision": 1,
+      "status": "active",
+      "title": "Operations",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "responsibility": "Reads configuration and writes scrubbed structured logs.",
+        "boundary": "app/config.py and app/logs.py"
+      }
+    },
+    {
+      "id": "DEC-001",
+      "kind": "Decision",
+      "revision": 1,
+      "status": "active",
+      "title": "Longest trip",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "question": "How long may one trip last?",
+        "options": [
+          "60 days",
+          "365 days"
+        ],
+        "answer": "60 days",
+        "blocking": true,
+        "rationale": "Day pages and calendar exports stay readable; longer journeys are split into trips."
+      }
+    },
+    {
+      "id": "DEC-002",
+      "kind": "Decision",
+      "revision": 1,
+      "status": "active",
+      "title": "Split remainder",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "question": "Who receives the cents left over when an expense does not divide evenly?",
+        "options": [
+          "the payer",
+          "the first traveler by name"
+        ],
+        "answer": "the payer",
+        "blocking": true,
+        "rationale": "The payer already advanced the money; the rule is simple to explain."
+      }
+    },
+    {
+      "id": "DEC-003",
+      "kind": "Decision",
+      "revision": 1,
+      "status": "active",
+      "title": "What a shared link shows",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "question": "What may a read-only share link show?",
+        "options": [
+          "itinerary, places and packing list, no money or codes",
+          "everything, read-only"
+        ],
+        "answer": "itinerary, places and packing list, no money or codes",
+        "blocking": true,
+        "rationale": "Family and friends need the plan, not who paid what or booking codes."
+      }
+    },
+    {
+      "id": "DEC-004",
+      "kind": "Decision",
+      "revision": 1,
+      "status": "active",
+      "title": "Calendar time",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "question": "Which time do exported calendar events use?",
+        "options": [
+          "floating local time at the destination",
+          "UTC with the destination's offset"
+        ],
+        "answer": "floating local time at the destination",
+        "blocking": true,
+        "rationale": "Activities are planned in local time; floating time keeps them at the same clock time in any calendar."
+      }
+    },
+    {
+      "id": "DEC-005",
+      "kind": "Decision",
+      "revision": 1,
+      "status": "active",
+      "title": "Money",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "question": "How is money stored?",
+        "options": [
+          "one currency per trip, integer cents",
+          "several currencies with conversion"
+        ],
+        "answer": "one currency per trip, integer cents",
+        "blocking": true,
+        "rationale": "Integer cents avoid rounding drift; conversion is out of the first scope."
+      }
+    },
+    {
+      "id": "DEC-006",
+      "kind": "Decision",
+      "revision": 1,
+      "status": "active",
+      "title": "Completed trips",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "question": "Should a completed trip become read-only?",
+        "options": [
+          "yes, except its notes",
+          "no"
+        ],
+        "answer": null,
+        "blocking": false,
+        "rationale": "Open: travelers may want to add photos or notes afterwards; the answer does not block the first scope."
+      }
+    },
+    {
+      "id": "ASM-001",
+      "kind": "Assumption",
+      "revision": 1,
+      "status": "active",
+      "title": "Family-sized trips",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "claim": "A trip holds at most 8 travelers and 400 activities.",
+        "validation_method": "A load test with 8 travelers and 400 activities in round 10 keeps every page under 300 ms locally.",
+        "state": "unverified",
+        "blocking": false
+      }
+    },
+    {
+      "id": "RISK-001",
+      "kind": "Risk",
+      "revision": 1,
+      "status": "active",
+      "title": "Exposed itinerary",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "asset": "a family's itinerary behind a share link",
+        "threat": "a guessed, leaked or old token is used",
+        "impact": "a stranger learns where and when a family travels",
+        "severity": "high"
+      }
+    },
+    {
+      "id": "CTRL-001",
+      "kind": "Control",
+      "revision": 1,
+      "status": "active",
+      "title": "Strong, revocable, uniform links",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "description": "128-bit random tokens, revocation, and one identical not-found answer for unknown and revoked tokens.",
+        "enforcement_location": "app/domain/sharing.py and app/server.py",
+        "verification": "TEST-039, TEST-040 and TEST-041"
+      }
+    },
+    {
+      "id": "RISK-002",
+      "kind": "Risk",
+      "revision": 1,
+      "status": "active",
+      "title": "Personal data in logs",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "asset": "names, notes, codes and amounts",
+        "threat": "logs copied to a support channel",
+        "impact": "personal data leaves the family's control",
+        "severity": "medium"
+      }
+    },
+    {
+      "id": "CTRL-002",
+      "kind": "Control",
+      "revision": 1,
+      "status": "active",
+      "title": "Scrubbed structured logs",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "description": "Logs carry only operational fields; personal fields are removed before writing.",
+        "enforcement_location": "app/logs.py",
+        "verification": "TEST-056 and TEST-058"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "EDGE-001",
+      "from": "REQ-001",
+      "relation": "satisfies",
+      "to": "GOAL-001",
+      "origin": "declared",
+      "rationale": "This requirement is one way the goal is met."
+    },
+    {
+      "id": "EDGE-002",
+      "from": "REQ-002",
+      "relation": "satisfies",
+      "to": "GOAL-001",
+      "origin": "declared",
+      "rationale": "This requirement is one way the goal is met."
+    },
+    {
+      "id": "EDGE-003",
+      "from": "REQ-003",
+      "relation": "satisfies",
+      "to": "GOAL-002",
+      "origin": "declared",
+      "rationale": "This requirement is one way the goal is met."
+    },
+    {
+      "id": "EDGE-004",
+      "from": "REQ-004",
+      "relation": "satisfies",
+      "to": "GOAL-003",
+      "origin": "declared",
+      "rationale": "This requirement is one way the goal is met."
+    },
+    {
+      "id": "EDGE-005",
+      "from": "REQ-005",
+      "relation": "satisfies",
+      "to": "GOAL-003",
+      "origin": "declared",
+      "rationale": "This requirement is one way the goal is met."
+    },
+    {
+      "id": "EDGE-006",
+      "from": "REQ-006",
+      "relation": "satisfies",
+      "to": "GOAL-004",
+      "origin": "declared",
+      "rationale": "This requirement is one way the goal is met."
+    },
+    {
+      "id": "EDGE-007",
+      "from": "REQ-007",
+      "relation": "satisfies",
+      "to": "GOAL-004",
+      "origin": "declared",
+      "rationale": "This requirement is one way the goal is met."
+    },
+    {
+      "id": "EDGE-008",
+      "from": "REQ-008",
+      "relation": "satisfies",
+      "to": "GOAL-005",
+      "origin": "declared",
+      "rationale": "This requirement is one way the goal is met."
+    },
+    {
+      "id": "EDGE-009",
+      "from": "REQ-009",
+      "relation": "satisfies",
+      "to": "GOAL-005",
+      "origin": "declared",
+      "rationale": "This requirement is one way the goal is met."
+    },
+    {
+      "id": "EDGE-010",
+      "from": "REQ-010",
+      "relation": "satisfies",
+      "to": "GOAL-006",
+      "origin": "declared",
+      "rationale": "This requirement is one way the goal is met."
+    },
+    {
+      "id": "EDGE-011",
+      "from": "REQ-011",
+      "relation": "satisfies",
+      "to": "GOAL-007",
+      "origin": "declared",
+      "rationale": "This requirement is one way the goal is met."
+    },
+    {
+      "id": "EDGE-012",
+      "from": "REQ-012",
+      "relation": "satisfies",
+      "to": "GOAL-007",
+      "origin": "declared",
+      "rationale": "This requirement is one way the goal is met."
+    },
+    {
+      "id": "EDGE-013",
+      "from": "REQ-013",
+      "relation": "satisfies",
+      "to": "GOAL-007",
+      "origin": "declared",
+      "rationale": "This requirement is one way the goal is met."
+    },
+    {
+      "id": "EDGE-014",
+      "from": "REQ-014",
+      "relation": "satisfies",
+      "to": "GOAL-008",
+      "origin": "declared",
+      "rationale": "This requirement is one way the goal is met."
+    },
+    {
+      "id": "EDGE-015",
+      "from": "REQ-015",
+      "relation": "satisfies",
+      "to": "GOAL-009",
+      "origin": "declared",
+      "rationale": "This requirement is one way the goal is met."
+    },
+    {
+      "id": "EDGE-016",
+      "from": "REQ-016",
+      "relation": "satisfies",
+      "to": "GOAL-009",
+      "origin": "declared",
+      "rationale": "This requirement is one way the goal is met."
+    },
+    {
+      "id": "EDGE-017",
+      "from": "REQ-017",
+      "relation": "satisfies",
+      "to": "GOAL-009",
+      "origin": "declared",
+      "rationale": "This requirement is one way the goal is met."
+    },
+    {
+      "id": "EDGE-018",
+      "from": "REQ-018",
+      "relation": "satisfies",
+      "to": "GOAL-010",
+      "origin": "declared",
+      "rationale": "This requirement is one way the goal is met."
+    },
+    {
+      "id": "EDGE-019",
+      "from": "REQ-019",
+      "relation": "satisfies",
+      "to": "GOAL-010",
+      "origin": "declared",
+      "rationale": "This requirement is one way the goal is met."
+    },
+    {
+      "id": "EDGE-020",
+      "from": "REQ-020",
+      "relation": "satisfies",
+      "to": "GOAL-011",
+      "origin": "declared",
+      "rationale": "This requirement is one way the goal is met."
+    },
+    {
+      "id": "EDGE-021",
+      "from": "REQ-021",
+      "relation": "satisfies",
+      "to": "GOAL-012",
+      "origin": "declared",
+      "rationale": "This requirement is one way the goal is met."
+    },
+    {
+      "id": "EDGE-022",
+      "from": "REQ-022",
+      "relation": "satisfies",
+      "to": "GOAL-012",
+      "origin": "declared",
+      "rationale": "This requirement is one way the goal is met."
+    },
+    {
+      "id": "EDGE-023",
+      "from": "REQ-023",
+      "relation": "satisfies",
+      "to": "GOAL-013",
+      "origin": "declared",
+      "rationale": "This requirement is one way the goal is met."
+    },
+    {
+      "id": "EDGE-024",
+      "from": "REQ-024",
+      "relation": "satisfies",
+      "to": "GOAL-013",
+      "origin": "declared",
+      "rationale": "This requirement is one way the goal is met."
+    },
+    {
+      "id": "EDGE-025",
+      "from": "REQ-025",
+      "relation": "satisfies",
+      "to": "GOAL-013",
+      "origin": "declared",
+      "rationale": "This requirement is one way the goal is met."
+    },
+    {
+      "id": "EDGE-026",
+      "from": "REQ-026",
+      "relation": "satisfies",
+      "to": "GOAL-014",
+      "origin": "declared",
+      "rationale": "This requirement is one way the goal is met."
+    },
+    {
+      "id": "EDGE-027",
+      "from": "REQ-027",
+      "relation": "satisfies",
+      "to": "GOAL-015",
+      "origin": "declared",
+      "rationale": "This requirement is one way the goal is met."
+    },
+    {
+      "id": "EDGE-028",
+      "from": "REQ-028",
+      "relation": "satisfies",
+      "to": "GOAL-015",
+      "origin": "declared",
+      "rationale": "This requirement is one way the goal is met."
+    },
+    {
+      "id": "EDGE-029",
+      "from": "REQ-029",
+      "relation": "satisfies",
+      "to": "GOAL-015",
+      "origin": "declared",
+      "rationale": "This requirement is one way the goal is met."
+    },
+    {
+      "id": "EDGE-030",
+      "from": "REQ-030",
+      "relation": "satisfies",
+      "to": "GOAL-016",
+      "origin": "declared",
+      "rationale": "This requirement is one way the goal is met."
+    },
+    {
+      "id": "EDGE-031",
+      "from": "REQ-031",
+      "relation": "satisfies",
+      "to": "GOAL-017",
+      "origin": "declared",
+      "rationale": "This requirement is one way the goal is met."
+    },
+    {
+      "id": "EDGE-032",
+      "from": "REQ-032",
+      "relation": "satisfies",
+      "to": "GOAL-017",
+      "origin": "declared",
+      "rationale": "This requirement is one way the goal is met."
+    },
+    {
+      "id": "EDGE-033",
+      "from": "REQ-033",
+      "relation": "satisfies",
+      "to": "GOAL-018",
+      "origin": "declared",
+      "rationale": "This requirement is one way the goal is met."
+    },
+    {
+      "id": "EDGE-034",
+      "from": "REQ-034",
+      "relation": "satisfies",
+      "to": "GOAL-018",
+      "origin": "declared",
+      "rationale": "This requirement is one way the goal is met."
+    },
+    {
+      "id": "EDGE-035",
+      "from": "REQ-035",
+      "relation": "satisfies",
+      "to": "GOAL-019",
+      "origin": "declared",
+      "rationale": "This requirement is one way the goal is met."
+    },
+    {
+      "id": "EDGE-036",
+      "from": "REQ-036",
+      "relation": "satisfies",
+      "to": "GOAL-019",
+      "origin": "declared",
+      "rationale": "This requirement is one way the goal is met."
+    },
+    {
+      "id": "EDGE-037",
+      "from": "REQ-037",
+      "relation": "satisfies",
+      "to": "GOAL-020",
+      "origin": "declared",
+      "rationale": "This requirement is one way the goal is met."
+    },
+    {
+      "id": "EDGE-038",
+      "from": "REQ-038",
+      "relation": "satisfies",
+      "to": "GOAL-020",
+      "origin": "declared",
+      "rationale": "This requirement is one way the goal is met."
+    },
+    {
+      "id": "EDGE-039",
+      "from": "REQ-039",
+      "relation": "satisfies",
+      "to": "GOAL-020",
+      "origin": "declared",
+      "rationale": "This requirement is one way the goal is met."
+    },
+    {
+      "id": "EDGE-040",
+      "from": "REQ-006",
+      "relation": "depends_on",
+      "to": "REQ-003",
+      "origin": "declared",
+      "rationale": "This requirement needs the other one in place."
+    },
+    {
+      "id": "EDGE-041",
+      "from": "REQ-007",
+      "relation": "depends_on",
+      "to": "REQ-006",
+      "origin": "declared",
+      "rationale": "This requirement needs the other one in place."
+    },
+    {
+      "id": "EDGE-042",
+      "from": "REQ-010",
+      "relation": "depends_on",
+      "to": "REQ-008",
+      "origin": "declared",
+      "rationale": "This requirement needs the other one in place."
+    },
+    {
+      "id": "EDGE-043",
+      "from": "REQ-014",
+      "relation": "depends_on",
+      "to": "REQ-011",
+      "origin": "declared",
+      "rationale": "This requirement needs the other one in place."
+    },
+    {
+      "id": "EDGE-044",
+      "from": "REQ-015",
+      "relation": "depends_on",
+      "to": "REQ-011",
+      "origin": "declared",
+      "rationale": "This requirement needs the other one in place."
+    },
+    {
+      "id": "EDGE-045",
+      "from": "REQ-016",
+      "relation": "depends_on",
+      "to": "REQ-015",
+      "origin": "declared",
+      "rationale": "This requirement needs the other one in place."
+    },
+    {
+      "id": "EDGE-046",
+      "from": "REQ-025",
+      "relation": "depends_on",
+      "to": "REQ-003",
+      "origin": "declared",
+      "rationale": "This requirement needs the other one in place."
+    },
+    {
+      "id": "EDGE-047",
+      "from": "REQ-029",
+      "relation": "depends_on",
+      "to": "REQ-027",
+      "origin": "declared",
+      "rationale": "This requirement needs the other one in place."
+    },
+    {
+      "id": "EDGE-048",
+      "from": "REQ-033",
+      "relation": "depends_on",
+      "to": "REQ-010",
+      "origin": "declared",
+      "rationale": "This requirement needs the other one in place."
+    },
+    {
+      "id": "EDGE-049",
+      "from": "REQ-036",
+      "relation": "depends_on",
+      "to": "REQ-035",
+      "origin": "declared",
+      "rationale": "This requirement needs the other one in place."
+    },
+    {
+      "id": "EDGE-050",
+      "from": "REQ-001",
+      "relation": "uses_term",
+      "to": "TERM-001",
+      "origin": "declared",
+      "rationale": "The wording relies on this term."
+    },
+    {
+      "id": "EDGE-051",
+      "from": "REQ-006",
+      "relation": "uses_term",
+      "to": "TERM-002",
+      "origin": "declared",
+      "rationale": "The wording relies on this term."
+    },
+    {
+      "id": "EDGE-052",
+      "from": "REQ-008",
+      "relation": "uses_term",
+      "to": "TERM-003",
+      "origin": "declared",
+      "rationale": "The wording relies on this term."
+    },
+    {
+      "id": "EDGE-053",
+      "from": "REQ-009",
+      "relation": "uses_term",
+      "to": "TERM-004",
+      "origin": "declared",
+      "rationale": "The wording relies on this term."
+    },
+    {
+      "id": "EDGE-054",
+      "from": "REQ-010",
+      "relation": "uses_term",
+      "to": "TERM-003",
+      "origin": "declared",
+      "rationale": "The wording relies on this term."
+    },
+    {
+      "id": "EDGE-055",
+      "from": "REQ-010",
+      "relation": "uses_term",
+      "to": "TERM-004",
+      "origin": "declared",
+      "rationale": "The wording relies on this term."
+    },
+    {
+      "id": "EDGE-056",
+      "from": "REQ-011",
+      "relation": "uses_term",
+      "to": "TERM-005",
+      "origin": "declared",
+      "rationale": "The wording relies on this term."
+    },
+    {
+      "id": "EDGE-057",
+      "from": "REQ-014",
+      "relation": "uses_term",
+      "to": "TERM-005",
+      "origin": "declared",
+      "rationale": "The wording relies on this term."
+    },
+    {
+      "id": "EDGE-058",
+      "from": "REQ-015",
+      "relation": "uses_term",
+      "to": "TERM-005",
+      "origin": "declared",
+      "rationale": "The wording relies on this term."
+    },
+    {
+      "id": "EDGE-059",
+      "from": "REQ-016",
+      "relation": "uses_term",
+      "to": "TERM-007",
+      "origin": "declared",
+      "rationale": "The wording relies on this term."
+    },
+    {
+      "id": "EDGE-060",
+      "from": "REQ-027",
+      "relation": "uses_term",
+      "to": "TERM-006",
+      "origin": "declared",
+      "rationale": "The wording relies on this term."
+    },
+    {
+      "id": "EDGE-061",
+      "from": "REQ-028",
+      "relation": "uses_term",
+      "to": "TERM-006",
+      "origin": "declared",
+      "rationale": "The wording relies on this term."
+    },
+    {
+      "id": "EDGE-062",
+      "from": "CON-001",
+      "relation": "formalizes",
+      "to": "REQ-010",
+      "origin": "declared",
+      "rationale": "The predicate captures the calculable part of the requirement."
+    },
+    {
+      "id": "EDGE-063",
+      "from": "CON-002",
+      "relation": "formalizes",
+      "to": "REQ-010",
+      "origin": "declared",
+      "rationale": "The predicate captures the calculable part of the requirement."
+    },
+    {
+      "id": "EDGE-064",
+      "from": "CON-003",
+      "relation": "formalizes",
+      "to": "REQ-014",
+      "origin": "declared",
+      "rationale": "The predicate captures the calculable part of the requirement."
+    },
+    {
+      "id": "EDGE-065",
+      "from": "CON-004",
+      "relation": "formalizes",
+      "to": "REQ-015",
+      "origin": "declared",
+      "rationale": "The predicate captures the calculable part of the requirement."
+    },
+    {
+      "id": "EDGE-066",
+      "from": "CON-001",
+      "relation": "uses_term",
+      "to": "TERM-004",
+      "origin": "declared",
+      "rationale": "The wording relies on this term."
+    },
+    {
+      "id": "EDGE-067",
+      "from": "CON-004",
+      "relation": "uses_term",
+      "to": "TERM-005",
+      "origin": "declared",
+      "rationale": "The wording relies on this term."
+    },
+    {
+      "id": "EDGE-068",
+      "from": "SCN-001",
+      "relation": "illustrates",
+      "to": "REQ-010",
+      "origin": "declared",
+      "rationale": "The scenario is a concrete case of the requirement."
+    },
+    {
+      "id": "EDGE-069",
+      "from": "SCN-002",
+      "relation": "illustrates",
+      "to": "REQ-010",
+      "origin": "declared",
+      "rationale": "The scenario is a concrete case of the requirement."
+    },
+    {
+      "id": "EDGE-070",
+      "from": "SCN-003",
+      "relation": "illustrates",
+      "to": "REQ-010",
+      "origin": "declared",
+      "rationale": "The scenario is a concrete case of the requirement."
+    },
+    {
+      "id": "EDGE-071",
+      "from": "SCN-004",
+      "relation": "illustrates",
+      "to": "REQ-014",
+      "origin": "declared",
+      "rationale": "The scenario is a concrete case of the requirement."
+    },
+    {
+      "id": "EDGE-072",
+      "from": "SCN-005",
+      "relation": "illustrates",
+      "to": "REQ-014",
+      "origin": "declared",
+      "rationale": "The scenario is a concrete case of the requirement."
+    },
+    {
+      "id": "EDGE-073",
+      "from": "SCN-006",
+      "relation": "illustrates",
+      "to": "REQ-015",
+      "origin": "declared",
+      "rationale": "The scenario is a concrete case of the requirement."
+    },
+    {
+      "id": "EDGE-074",
+      "from": "SCN-007",
+      "relation": "illustrates",
+      "to": "REQ-015",
+      "origin": "declared",
+      "rationale": "The scenario is a concrete case of the requirement."
+    },
+    {
+      "id": "EDGE-075",
+      "from": "MODEL-001",
+      "relation": "models",
+      "to": "REQ-026",
+      "origin": "declared",
+      "rationale": "The state model lists the allowed transitions."
+    },
+    {
+      "id": "EDGE-076",
+      "from": "TEST-001",
+      "relation": "verifies",
+      "to": "REQ-001",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-077",
+      "from": "TEST-002",
+      "relation": "verifies",
+      "to": "REQ-002",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-078",
+      "from": "TEST-003",
+      "relation": "verifies",
+      "to": "REQ-003",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-079",
+      "from": "TEST-004",
+      "relation": "verifies",
+      "to": "REQ-003",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-080",
+      "from": "TEST-005",
+      "relation": "verifies",
+      "to": "REQ-003",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-081",
+      "from": "TEST-006",
+      "relation": "verifies",
+      "to": "REQ-004",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-082",
+      "from": "TEST-007",
+      "relation": "verifies",
+      "to": "REQ-005",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-083",
+      "from": "TEST-008",
+      "relation": "verifies",
+      "to": "REQ-006",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-084",
+      "from": "TEST-009",
+      "relation": "verifies",
+      "to": "REQ-007",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-085",
+      "from": "TEST-010",
+      "relation": "verifies",
+      "to": "REQ-007",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-086",
+      "from": "TEST-011",
+      "relation": "verifies",
+      "to": "REQ-007",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-087",
+      "from": "TEST-012",
+      "relation": "verifies",
+      "to": "REQ-008",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-088",
+      "from": "TEST-013",
+      "relation": "verifies",
+      "to": "REQ-009",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-089",
+      "from": "TEST-014",
+      "relation": "verifies",
+      "to": "REQ-010",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-090",
+      "from": "TEST-014",
+      "relation": "checks",
+      "to": "CON-001",
+      "origin": "declared",
+      "rationale": "The test exercises the predicate."
+    },
+    {
+      "id": "EDGE-091",
+      "from": "TEST-014",
+      "relation": "checks",
+      "to": "CON-002",
+      "origin": "declared",
+      "rationale": "The test exercises the predicate."
+    },
+    {
+      "id": "EDGE-092",
+      "from": "TEST-015",
+      "relation": "verifies",
+      "to": "REQ-010",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-093",
+      "from": "TEST-015",
+      "relation": "checks",
+      "to": "CON-001",
+      "origin": "declared",
+      "rationale": "The test exercises the predicate."
+    },
+    {
+      "id": "EDGE-094",
+      "from": "TEST-015",
+      "relation": "checks",
+      "to": "CON-002",
+      "origin": "declared",
+      "rationale": "The test exercises the predicate."
+    },
+    {
+      "id": "EDGE-095",
+      "from": "TEST-016",
+      "relation": "verifies",
+      "to": "REQ-010",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-096",
+      "from": "TEST-016",
+      "relation": "checks",
+      "to": "CON-001",
+      "origin": "declared",
+      "rationale": "The test exercises the predicate."
+    },
+    {
+      "id": "EDGE-097",
+      "from": "TEST-017",
+      "relation": "verifies",
+      "to": "REQ-011",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-098",
+      "from": "TEST-017",
+      "relation": "verifies",
+      "to": "REQ-012",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-099",
+      "from": "TEST-018",
+      "relation": "verifies",
+      "to": "REQ-013",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-100",
+      "from": "TEST-019",
+      "relation": "verifies",
+      "to": "REQ-014",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-101",
+      "from": "TEST-019",
+      "relation": "checks",
+      "to": "CON-003",
+      "origin": "declared",
+      "rationale": "The test exercises the predicate."
+    },
+    {
+      "id": "EDGE-102",
+      "from": "TEST-020",
+      "relation": "verifies",
+      "to": "REQ-015",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-103",
+      "from": "TEST-020",
+      "relation": "verifies",
+      "to": "REQ-017",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-104",
+      "from": "TEST-020",
+      "relation": "checks",
+      "to": "CON-004",
+      "origin": "declared",
+      "rationale": "The test exercises the predicate."
+    },
+    {
+      "id": "EDGE-105",
+      "from": "TEST-021",
+      "relation": "verifies",
+      "to": "REQ-017",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-106",
+      "from": "TEST-022",
+      "relation": "verifies",
+      "to": "REQ-015",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-107",
+      "from": "TEST-022",
+      "relation": "checks",
+      "to": "CON-004",
+      "origin": "declared",
+      "rationale": "The test exercises the predicate."
+    },
+    {
+      "id": "EDGE-108",
+      "from": "TEST-023",
+      "relation": "verifies",
+      "to": "REQ-015",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-109",
+      "from": "TEST-023",
+      "relation": "verifies",
+      "to": "REQ-016",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-110",
+      "from": "TEST-024",
+      "relation": "verifies",
+      "to": "REQ-017",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-111",
+      "from": "TEST-025",
+      "relation": "verifies",
+      "to": "REQ-018",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-112",
+      "from": "TEST-025",
+      "relation": "verifies",
+      "to": "REQ-019",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-113",
+      "from": "TEST-026",
+      "relation": "verifies",
+      "to": "REQ-020",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-114",
+      "from": "TEST-027",
+      "relation": "verifies",
+      "to": "REQ-020",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-115",
+      "from": "TEST-028",
+      "relation": "verifies",
+      "to": "REQ-020",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-116",
+      "from": "TEST-029",
+      "relation": "verifies",
+      "to": "REQ-021",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-117",
+      "from": "TEST-030",
+      "relation": "verifies",
+      "to": "REQ-022",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-118",
+      "from": "TEST-031",
+      "relation": "verifies",
+      "to": "REQ-023",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-119",
+      "from": "TEST-032",
+      "relation": "verifies",
+      "to": "REQ-025",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-120",
+      "from": "TEST-033",
+      "relation": "verifies",
+      "to": "REQ-024",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-121",
+      "from": "TEST-034",
+      "relation": "verifies",
+      "to": "REQ-024",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-122",
+      "from": "TEST-035",
+      "relation": "verifies",
+      "to": "REQ-024",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-123",
+      "from": "TEST-036",
+      "relation": "verifies",
+      "to": "REQ-026",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-124",
+      "from": "TEST-037",
+      "relation": "verifies",
+      "to": "REQ-026",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-125",
+      "from": "TEST-038",
+      "relation": "verifies",
+      "to": "REQ-026",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-126",
+      "from": "TEST-039",
+      "relation": "verifies",
+      "to": "REQ-027",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-127",
+      "from": "TEST-040",
+      "relation": "verifies",
+      "to": "REQ-028",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-128",
+      "from": "TEST-041",
+      "relation": "verifies",
+      "to": "REQ-029",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-129",
+      "from": "TEST-042",
+      "relation": "verifies",
+      "to": "REQ-027",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-130",
+      "from": "TEST-042",
+      "relation": "verifies",
+      "to": "REQ-028",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-131",
+      "from": "TEST-042",
+      "relation": "verifies",
+      "to": "REQ-029",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-132",
+      "from": "TEST-043",
+      "relation": "verifies",
+      "to": "REQ-027",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-133",
+      "from": "TEST-044",
+      "relation": "verifies",
+      "to": "REQ-030",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-134",
+      "from": "TEST-045",
+      "relation": "verifies",
+      "to": "REQ-030",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-135",
+      "from": "TEST-046",
+      "relation": "verifies",
+      "to": "REQ-031",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-136",
+      "from": "TEST-047",
+      "relation": "verifies",
+      "to": "REQ-032",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-137",
+      "from": "TEST-048",
+      "relation": "verifies",
+      "to": "REQ-033",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-138",
+      "from": "TEST-049",
+      "relation": "verifies",
+      "to": "REQ-034",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-139",
+      "from": "TEST-050",
+      "relation": "verifies",
+      "to": "REQ-034",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-140",
+      "from": "TEST-051",
+      "relation": "verifies",
+      "to": "REQ-035",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-141",
+      "from": "TEST-052",
+      "relation": "verifies",
+      "to": "REQ-036",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-142",
+      "from": "TEST-053",
+      "relation": "verifies",
+      "to": "REQ-036",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-143",
+      "from": "TEST-054",
+      "relation": "verifies",
+      "to": "REQ-035",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-144",
+      "from": "TEST-055",
+      "relation": "verifies",
+      "to": "REQ-035",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-145",
+      "from": "TEST-055",
+      "relation": "verifies",
+      "to": "REQ-036",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-146",
+      "from": "TEST-056",
+      "relation": "verifies",
+      "to": "REQ-037",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-147",
+      "from": "TEST-057",
+      "relation": "verifies",
+      "to": "REQ-038",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-148",
+      "from": "TEST-058",
+      "relation": "verifies",
+      "to": "REQ-038",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-149",
+      "from": "TEST-059",
+      "relation": "verifies",
+      "to": "REQ-038",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-150",
+      "from": "TEST-060",
+      "relation": "verifies",
+      "to": "REQ-039",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-151",
+      "from": "COMP-001",
+      "relation": "implements",
+      "to": "REQ-001",
+      "origin": "declared",
+      "rationale": "The component realizes this obligation."
+    },
+    {
+      "id": "EDGE-152",
+      "from": "COMP-001",
+      "relation": "implements",
+      "to": "REQ-006",
+      "origin": "declared",
+      "rationale": "The component realizes this obligation."
+    },
+    {
+      "id": "EDGE-153",
+      "from": "COMP-001",
+      "relation": "implements",
+      "to": "REQ-007",
+      "origin": "declared",
+      "rationale": "The component realizes this obligation."
+    },
+    {
+      "id": "EDGE-154",
+      "from": "COMP-001",
+      "relation": "implements",
+      "to": "REQ-010",
+      "origin": "declared",
+      "rationale": "The component realizes this obligation."
+    },
+    {
+      "id": "EDGE-155",
+      "from": "COMP-001",
+      "relation": "implements",
+      "to": "REQ-011",
+      "origin": "declared",
+      "rationale": "The component realizes this obligation."
+    },
+    {
+      "id": "EDGE-156",
+      "from": "COMP-001",
+      "relation": "implements",
+      "to": "REQ-035",
+      "origin": "declared",
+      "rationale": "The component realizes this obligation."
+    },
+    {
+      "id": "EDGE-157",
+      "from": "COMP-001",
+      "relation": "implements",
+      "to": "REQ-036",
+      "origin": "declared",
+      "rationale": "The component realizes this obligation."
+    },
+    {
+      "id": "EDGE-158",
+      "from": "COMP-002",
+      "relation": "implements",
+      "to": "REQ-002",
+      "origin": "declared",
+      "rationale": "The component realizes this obligation."
+    },
+    {
+      "id": "EDGE-159",
+      "from": "COMP-002",
+      "relation": "implements",
+      "to": "REQ-003",
+      "origin": "declared",
+      "rationale": "The component realizes this obligation."
+    },
+    {
+      "id": "EDGE-160",
+      "from": "COMP-002",
+      "relation": "implements",
+      "to": "REQ-004",
+      "origin": "declared",
+      "rationale": "The component realizes this obligation."
+    },
+    {
+      "id": "EDGE-161",
+      "from": "COMP-002",
+      "relation": "implements",
+      "to": "REQ-005",
+      "origin": "declared",
+      "rationale": "The component realizes this obligation."
+    },
+    {
+      "id": "EDGE-162",
+      "from": "COMP-002",
+      "relation": "implements",
+      "to": "REQ-008",
+      "origin": "declared",
+      "rationale": "The component realizes this obligation."
+    },
+    {
+      "id": "EDGE-163",
+      "from": "COMP-002",
+      "relation": "implements",
+      "to": "REQ-009",
+      "origin": "declared",
+      "rationale": "The component realizes this obligation."
+    },
+    {
+      "id": "EDGE-164",
+      "from": "COMP-002",
+      "relation": "implements",
+      "to": "REQ-010",
+      "origin": "declared",
+      "rationale": "The component realizes this obligation."
+    },
+    {
+      "id": "EDGE-165",
+      "from": "COMP-002",
+      "relation": "implements",
+      "to": "REQ-013",
+      "origin": "declared",
+      "rationale": "The component realizes this obligation."
+    },
+    {
+      "id": "EDGE-166",
+      "from": "COMP-002",
+      "relation": "implements",
+      "to": "REQ-014",
+      "origin": "declared",
+      "rationale": "The component realizes this obligation."
+    },
+    {
+      "id": "EDGE-167",
+      "from": "COMP-002",
+      "relation": "implements",
+      "to": "REQ-015",
+      "origin": "declared",
+      "rationale": "The component realizes this obligation."
+    },
+    {
+      "id": "EDGE-168",
+      "from": "COMP-002",
+      "relation": "implements",
+      "to": "REQ-016",
+      "origin": "declared",
+      "rationale": "The component realizes this obligation."
+    },
+    {
+      "id": "EDGE-169",
+      "from": "COMP-002",
+      "relation": "implements",
+      "to": "REQ-017",
+      "origin": "declared",
+      "rationale": "The component realizes this obligation."
+    },
+    {
+      "id": "EDGE-170",
+      "from": "COMP-002",
+      "relation": "implements",
+      "to": "REQ-018",
+      "origin": "declared",
+      "rationale": "The component realizes this obligation."
+    },
+    {
+      "id": "EDGE-171",
+      "from": "COMP-002",
+      "relation": "implements",
+      "to": "REQ-019",
+      "origin": "declared",
+      "rationale": "The component realizes this obligation."
+    },
+    {
+      "id": "EDGE-172",
+      "from": "COMP-002",
+      "relation": "implements",
+      "to": "REQ-021",
+      "origin": "declared",
+      "rationale": "The component realizes this obligation."
+    },
+    {
+      "id": "EDGE-173",
+      "from": "COMP-002",
+      "relation": "implements",
+      "to": "REQ-022",
+      "origin": "declared",
+      "rationale": "The component realizes this obligation."
+    },
+    {
+      "id": "EDGE-174",
+      "from": "COMP-002",
+      "relation": "implements",
+      "to": "REQ-023",
+      "origin": "declared",
+      "rationale": "The component realizes this obligation."
+    },
+    {
+      "id": "EDGE-175",
+      "from": "COMP-002",
+      "relation": "implements",
+      "to": "REQ-025",
+      "origin": "declared",
+      "rationale": "The component realizes this obligation."
+    },
+    {
+      "id": "EDGE-176",
+      "from": "COMP-002",
+      "relation": "implements",
+      "to": "REQ-026",
+      "origin": "declared",
+      "rationale": "The component realizes this obligation."
+    },
+    {
+      "id": "EDGE-177",
+      "from": "COMP-003",
+      "relation": "implements",
+      "to": "REQ-012",
+      "origin": "declared",
+      "rationale": "The component realizes this obligation."
+    },
+    {
+      "id": "EDGE-178",
+      "from": "COMP-003",
+      "relation": "implements",
+      "to": "REQ-028",
+      "origin": "declared",
+      "rationale": "The component realizes this obligation."
+    },
+    {
+      "id": "EDGE-179",
+      "from": "COMP-003",
+      "relation": "implements",
+      "to": "REQ-029",
+      "origin": "declared",
+      "rationale": "The component realizes this obligation."
+    },
+    {
+      "id": "EDGE-180",
+      "from": "COMP-003",
+      "relation": "implements",
+      "to": "REQ-032",
+      "origin": "declared",
+      "rationale": "The component realizes this obligation."
+    },
+    {
+      "id": "EDGE-181",
+      "from": "COMP-003",
+      "relation": "implements",
+      "to": "REQ-037",
+      "origin": "declared",
+      "rationale": "The component realizes this obligation."
+    },
+    {
+      "id": "EDGE-182",
+      "from": "COMP-003",
+      "relation": "implements",
+      "to": "REQ-039",
+      "origin": "declared",
+      "rationale": "The component realizes this obligation."
+    },
+    {
+      "id": "EDGE-183",
+      "from": "COMP-004",
+      "relation": "implements",
+      "to": "REQ-020",
+      "origin": "declared",
+      "rationale": "The component realizes this obligation."
+    },
+    {
+      "id": "EDGE-184",
+      "from": "COMP-004",
+      "relation": "implements",
+      "to": "REQ-024",
+      "origin": "declared",
+      "rationale": "The component realizes this obligation."
+    },
+    {
+      "id": "EDGE-185",
+      "from": "COMP-004",
+      "relation": "implements",
+      "to": "REQ-033",
+      "origin": "declared",
+      "rationale": "The component realizes this obligation."
+    },
+    {
+      "id": "EDGE-186",
+      "from": "COMP-004",
+      "relation": "implements",
+      "to": "REQ-034",
+      "origin": "declared",
+      "rationale": "The component realizes this obligation."
+    },
+    {
+      "id": "EDGE-187",
+      "from": "COMP-005",
+      "relation": "implements",
+      "to": "REQ-027",
+      "origin": "declared",
+      "rationale": "The component realizes this obligation."
+    },
+    {
+      "id": "EDGE-188",
+      "from": "COMP-005",
+      "relation": "implements",
+      "to": "REQ-028",
+      "origin": "declared",
+      "rationale": "The component realizes this obligation."
+    },
+    {
+      "id": "EDGE-189",
+      "from": "COMP-005",
+      "relation": "implements",
+      "to": "REQ-029",
+      "origin": "declared",
+      "rationale": "The component realizes this obligation."
+    },
+    {
+      "id": "EDGE-190",
+      "from": "COMP-006",
+      "relation": "implements",
+      "to": "REQ-030",
+      "origin": "declared",
+      "rationale": "The component realizes this obligation."
+    },
+    {
+      "id": "EDGE-191",
+      "from": "COMP-006",
+      "relation": "implements",
+      "to": "REQ-031",
+      "origin": "declared",
+      "rationale": "The component realizes this obligation."
+    },
+    {
+      "id": "EDGE-192",
+      "from": "COMP-006",
+      "relation": "implements",
+      "to": "REQ-035",
+      "origin": "declared",
+      "rationale": "The component realizes this obligation."
+    },
+    {
+      "id": "EDGE-193",
+      "from": "COMP-007",
+      "relation": "implements",
+      "to": "REQ-038",
+      "origin": "declared",
+      "rationale": "The component realizes this obligation."
+    },
+    {
+      "id": "EDGE-194",
+      "from": "COMP-007",
+      "relation": "implements",
+      "to": "REQ-039",
+      "origin": "declared",
+      "rationale": "The component realizes this obligation."
+    },
+    {
+      "id": "EDGE-195",
+      "from": "DEC-001",
+      "relation": "governs",
+      "to": "REQ-003",
+      "origin": "declared",
+      "rationale": "The decision fixes how this is met."
+    },
+    {
+      "id": "EDGE-196",
+      "from": "DEC-002",
+      "relation": "governs",
+      "to": "REQ-015",
+      "origin": "declared",
+      "rationale": "The decision fixes how this is met."
+    },
+    {
+      "id": "EDGE-197",
+      "from": "DEC-003",
+      "relation": "governs",
+      "to": "REQ-029",
+      "origin": "declared",
+      "rationale": "The decision fixes how this is met."
+    },
+    {
+      "id": "EDGE-198",
+      "from": "DEC-004",
+      "relation": "governs",
+      "to": "REQ-030",
+      "origin": "declared",
+      "rationale": "The decision fixes how this is met."
+    },
+    {
+      "id": "EDGE-199",
+      "from": "DEC-005",
+      "relation": "governs",
+      "to": "REQ-011",
+      "origin": "declared",
+      "rationale": "The decision fixes how this is met."
+    },
+    {
+      "id": "EDGE-200",
+      "from": "DEC-006",
+      "relation": "governs",
+      "to": "REQ-026",
+      "origin": "declared",
+      "rationale": "The decision fixes how this is met."
+    },
+    {
+      "id": "EDGE-201",
+      "from": "REQ-010",
+      "relation": "assumes",
+      "to": "ASM-001",
+      "origin": "declared",
+      "rationale": "The requirement holds under this assumption."
+    },
+    {
+      "id": "EDGE-202",
+      "from": "RISK-001",
+      "relation": "threatens",
+      "to": "REQ-027",
+      "origin": "declared",
+      "rationale": "The risk would break this obligation."
+    },
+    {
+      "id": "EDGE-203",
+      "from": "RISK-001",
+      "relation": "threatens",
+      "to": "REQ-028",
+      "origin": "declared",
+      "rationale": "The risk would break this obligation."
+    },
+    {
+      "id": "EDGE-204",
+      "from": "CTRL-001",
+      "relation": "mitigates",
+      "to": "RISK-001",
+      "origin": "declared",
+      "rationale": "The control reduces the risk."
+    },
+    {
+      "id": "EDGE-205",
+      "from": "REQ-027",
+      "relation": "realizes",
+      "to": "CTRL-001",
+      "origin": "declared",
+      "rationale": "Meeting the requirement puts the control in place."
+    },
+    {
+      "id": "EDGE-206",
+      "from": "REQ-028",
+      "relation": "realizes",
+      "to": "CTRL-001",
+      "origin": "declared",
+      "rationale": "Meeting the requirement puts the control in place."
+    },
+    {
+      "id": "EDGE-207",
+      "from": "RISK-002",
+      "relation": "threatens",
+      "to": "REQ-038",
+      "origin": "declared",
+      "rationale": "The risk would break this obligation."
+    },
+    {
+      "id": "EDGE-208",
+      "from": "CTRL-002",
+      "relation": "mitigates",
+      "to": "RISK-002",
+      "origin": "declared",
+      "rationale": "The control reduces the risk."
+    },
+    {
+      "id": "EDGE-209",
+      "from": "REQ-038",
+      "relation": "realizes",
+      "to": "CTRL-002",
+      "origin": "declared",
+      "rationale": "Meeting the requirement puts the control in place."
+    }
+  ],
+  "bindings": [
+    {
+      "id": "BIND-001",
+      "kind": "test",
+      "node_id": "TEST-001",
+      "path": "app/tests/test_trips.py",
+      "symbol": "TripTests.test_create_then_list",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-002",
+      "kind": "test",
+      "node_id": "TEST-002",
+      "path": "app/tests/test_trips.py",
+      "symbol": "TripTests.test_name_rules",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-003",
+      "kind": "test",
+      "node_id": "TEST-003",
+      "path": "app/tests/test_trips.py",
+      "symbol": "TripTests.test_incoherent_dates_refused",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-004",
+      "kind": "test",
+      "node_id": "TEST-004",
+      "path": "app/tests/test_trips.py",
+      "symbol": "TripTests.test_sixty_days_accepted",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-005",
+      "kind": "test",
+      "node_id": "TEST-005",
+      "path": "app/tests/test_api.py",
+      "symbol": "ApiTests.test_incoherent_dates_answer_400",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-006",
+      "kind": "test",
+      "node_id": "TEST-006",
+      "path": "app/tests/test_travelers.py",
+      "symbol": "TravelerTests.test_add_with_role",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-007",
+      "kind": "test",
+      "node_id": "TEST-007",
+      "path": "app/tests/test_travelers.py",
+      "symbol": "TravelerTests.test_duplicate_refused",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-008",
+      "kind": "test",
+      "node_id": "TEST-008",
+      "path": "app/tests/test_days.py",
+      "symbol": "DayTests.test_days_follow_dates",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-009",
+      "kind": "test",
+      "node_id": "TEST-009",
+      "path": "app/tests/test_days.py",
+      "symbol": "DayTests.test_shortening_planned_days_refused",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-010",
+      "kind": "test",
+      "node_id": "TEST-010",
+      "path": "app/tests/test_days.py",
+      "symbol": "DayTests.test_shortening_empty_days_allowed",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-011",
+      "kind": "test",
+      "node_id": "TEST-011",
+      "path": "app/tests/test_api.py",
+      "symbol": "ApiTests.test_shortening_planned_days_answers_409",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-012",
+      "kind": "test",
+      "node_id": "TEST-012",
+      "path": "app/tests/test_schedule.py",
+      "symbol": "ScheduleTests.test_activities_ordered_by_start",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-013",
+      "kind": "test",
+      "node_id": "TEST-013",
+      "path": "app/tests/test_schedule.py",
+      "symbol": "ScheduleTests.test_invalid_times_refused",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-014",
+      "kind": "test",
+      "node_id": "TEST-014",
+      "path": "app/tests/test_schedule.py",
+      "symbol": "ScheduleTests.test_overlap_refused",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-015",
+      "kind": "test",
+      "node_id": "TEST-015",
+      "path": "app/tests/test_schedule.py",
+      "symbol": "ScheduleTests.test_back_to_back_accepted",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-016",
+      "kind": "test",
+      "node_id": "TEST-016",
+      "path": "app/tests/test_api.py",
+      "symbol": "ApiTests.test_concurrent_overlaps_admit_one",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-017",
+      "kind": "test",
+      "node_id": "TEST-017",
+      "path": "app/tests/test_budget.py",
+      "symbol": "BudgetTests.test_total_and_remaining",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-018",
+      "kind": "test",
+      "node_id": "TEST-018",
+      "path": "app/tests/test_budget.py",
+      "symbol": "BudgetTests.test_non_positive_refused",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-019",
+      "kind": "test",
+      "node_id": "TEST-019",
+      "path": "app/tests/test_budget.py",
+      "symbol": "BudgetTests.test_over_budget_flag",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-020",
+      "kind": "test",
+      "node_id": "TEST-020",
+      "path": "app/tests/test_split.py",
+      "symbol": "SplitTests.test_three_way_split",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-021",
+      "kind": "test",
+      "node_id": "TEST-021",
+      "path": "app/tests/test_split.py",
+      "symbol": "SplitTests.test_impossible_split_refused",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-022",
+      "kind": "test",
+      "node_id": "TEST-022",
+      "path": "app/tests/test_split.py",
+      "symbol": "SplitTests.test_random_splits_conserve",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-023",
+      "kind": "test",
+      "node_id": "TEST-023",
+      "path": "app/tests/test_api.py",
+      "symbol": "ApiTests.test_balances_settle_to_zero",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-024",
+      "kind": "test",
+      "node_id": "TEST-024",
+      "path": "app/tests/test_api.py",
+      "symbol": "ApiTests.test_split_with_stranger_answers_400",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-025",
+      "kind": "test",
+      "node_id": "TEST-025",
+      "path": "app/tests/test_packing.py",
+      "symbol": "PackingTests.test_shared_and_personal_items",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-026",
+      "kind": "test",
+      "node_id": "TEST-026",
+      "path": "app/tests/test_notes.py",
+      "symbol": "NoteTests.test_markup_is_escaped",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-027",
+      "kind": "test",
+      "node_id": "TEST-027",
+      "path": "app/tests/test_notes.py",
+      "symbol": "NoteTests.test_text_and_line_breaks_kept",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-028",
+      "kind": "test",
+      "node_id": "TEST-028",
+      "path": "app/tests/test_pages.py",
+      "symbol": "PageTests.test_day_page_escapes_notes",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-029",
+      "kind": "test",
+      "node_id": "TEST-029",
+      "path": "app/tests/test_places.py",
+      "symbol": "PlaceTests.test_save_with_map_link",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-030",
+      "kind": "test",
+      "node_id": "TEST-030",
+      "path": "app/tests/test_places.py",
+      "symbol": "PlaceTests.test_out_of_range_refused",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-031",
+      "kind": "test",
+      "node_id": "TEST-031",
+      "path": "app/tests/test_bookings.py",
+      "symbol": "BookingTests.test_attach",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-032",
+      "kind": "test",
+      "node_id": "TEST-032",
+      "path": "app/tests/test_bookings.py",
+      "symbol": "BookingTests.test_outside_trip_refused",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-033",
+      "kind": "test",
+      "node_id": "TEST-033",
+      "path": "app/tests/test_bookings.py",
+      "symbol": "BookingTests.test_code_masked",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-034",
+      "kind": "test",
+      "node_id": "TEST-034",
+      "path": "app/tests/test_bookings.py",
+      "symbol": "BookingTests.test_short_code_fully_masked",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-035",
+      "kind": "test",
+      "node_id": "TEST-035",
+      "path": "app/tests/test_api.py",
+      "symbol": "ApiTests.test_booking_code_never_returned",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-036",
+      "kind": "test",
+      "node_id": "TEST-036",
+      "path": "app/tests/test_lifecycle.py",
+      "symbol": "LifecycleTests.test_undeclared_change_refused",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-037",
+      "kind": "test",
+      "node_id": "TEST-037",
+      "path": "app/tests/test_lifecycle.py",
+      "symbol": "LifecycleTests.test_declared_path",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-038",
+      "kind": "test",
+      "node_id": "TEST-038",
+      "path": "app/tests/test_api.py",
+      "symbol": "ApiTests.test_undeclared_status_answers_409",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-039",
+      "kind": "test",
+      "node_id": "TEST-039",
+      "path": "app/tests/test_sharing.py",
+      "symbol": "SharingTests.test_token_entropy",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-040",
+      "kind": "test",
+      "node_id": "TEST-040",
+      "path": "app/tests/test_api.py",
+      "symbol": "ApiTests.test_revoked_and_unknown_links_identical",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-041",
+      "kind": "test",
+      "node_id": "TEST-041",
+      "path": "app/tests/test_api.py",
+      "symbol": "ApiTests.test_shared_view_has_no_money_or_codes",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-042",
+      "kind": "test",
+      "node_id": "TEST-042",
+      "path": "app/tests/test_pages.py",
+      "symbol": "PageTests.test_shared_page_is_read_only",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-043",
+      "kind": "test",
+      "node_id": "TEST-043",
+      "path": "app/tests/test_sharing.py",
+      "symbol": "SharingTests.test_share_token_cannot_write",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-044",
+      "kind": "test",
+      "node_id": "TEST-044",
+      "path": "app/tests/test_calendar.py",
+      "symbol": "CalendarTests.test_one_event_per_activity",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-045",
+      "kind": "test",
+      "node_id": "TEST-045",
+      "path": "app/tests/test_calendar.py",
+      "symbol": "CalendarTests.test_rfc5545_escaping",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-046",
+      "kind": "test",
+      "node_id": "TEST-046",
+      "path": "app/tests/test_search.py",
+      "symbol": "SearchTests.test_finds_across_kinds",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-047",
+      "kind": "test",
+      "node_id": "TEST-047",
+      "path": "app/tests/test_search.py",
+      "symbol": "SearchTests.test_term_length_refused",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-048",
+      "kind": "test",
+      "node_id": "TEST-048",
+      "path": "app/tests/test_pages.py",
+      "symbol": "PageTests.test_day_grid_positions",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-049",
+      "kind": "test",
+      "node_id": "TEST-049",
+      "path": "app/tests/manual/accessibility.md",
+      "symbol": "keyboard and contrast review",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-050",
+      "kind": "test",
+      "node_id": "TEST-050",
+      "path": "app/tests/test_pages.py",
+      "symbol": "PageTests.test_focus_is_visible",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-051",
+      "kind": "test",
+      "node_id": "TEST-051",
+      "path": "app/tests/test_backup.py",
+      "symbol": "BackupTests.test_round_trip",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-052",
+      "kind": "test",
+      "node_id": "TEST-052",
+      "path": "app/tests/test_backup.py",
+      "symbol": "BackupTests.test_unknown_version_refused",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-053",
+      "kind": "test",
+      "node_id": "TEST-053",
+      "path": "app/tests/test_api.py",
+      "symbol": "ApiTests.test_invalid_import_changes_nothing",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-054",
+      "kind": "test",
+      "node_id": "TEST-054",
+      "path": "app/tests/test_backup.py",
+      "symbol": "BackupTests.test_interrupted_export_leaves_nothing",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-055",
+      "kind": "test",
+      "node_id": "TEST-055",
+      "path": "app/tests/test_api.py",
+      "symbol": "ApiTests.test_backup_export_import",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-056",
+      "kind": "test",
+      "node_id": "TEST-056",
+      "path": "app/tests/test_api.py",
+      "symbol": "ApiTests.test_health",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-057",
+      "kind": "test",
+      "node_id": "TEST-057",
+      "path": "app/tests/test_logs.py",
+      "symbol": "LogTests.test_personal_fields_scrubbed",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-058",
+      "kind": "test",
+      "node_id": "TEST-058",
+      "path": "app/tests/test_logs.py",
+      "symbol": "LogTests.test_operational_fields_kept",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-059",
+      "kind": "test",
+      "node_id": "TEST-059",
+      "path": "app/tests/test_api.py",
+      "symbol": "ApiTests.test_request_logs_hold_no_personal_data",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-060",
+      "kind": "test",
+      "node_id": "TEST-060",
+      "path": "app/tests/test_config.py",
+      "symbol": "ConfigTests.test_environment_and_defaults",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-061",
+      "kind": "code",
+      "node_id": "COMP-001",
+      "path": "app/store.py",
+      "symbol": "Store.transaction",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-062",
+      "kind": "code",
+      "node_id": "COMP-002",
+      "path": "app/domain/schedule.py",
+      "symbol": "Schedule.add",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-063",
+      "kind": "code",
+      "node_id": "COMP-002",
+      "path": "app/domain/money.py",
+      "symbol": "split",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-064",
+      "kind": "code",
+      "node_id": "COMP-002",
+      "path": "app/domain/trips.py",
+      "symbol": "change_status",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-065",
+      "kind": "code",
+      "node_id": "COMP-003",
+      "path": "app/server.py",
+      "symbol": "make_server",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-066",
+      "kind": "code",
+      "node_id": "COMP-004",
+      "path": "app/pages.py",
+      "symbol": "render_day",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-067",
+      "kind": "code",
+      "node_id": "COMP-005",
+      "path": "app/domain/sharing.py",
+      "symbol": "issue_token",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-068",
+      "kind": "code",
+      "node_id": "COMP-006",
+      "path": "app/exports.py",
+      "symbol": "to_icalendar",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-069",
+      "kind": "code",
+      "node_id": "COMP-006",
+      "path": "app/search.py",
+      "symbol": "search",
+      "language": "python",
+      "expected_resolution": "planned"
+    },
+    {
+      "id": "BIND-070",
+      "kind": "code",
+      "node_id": "COMP-007",
+      "path": "app/logs.py",
+      "symbol": "scrub",
+      "language": "python",
+      "expected_resolution": "planned"
+    }
+  ],
+  "context_assets": []
+}

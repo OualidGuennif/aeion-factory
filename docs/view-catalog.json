@@ -1,0 +1,110 @@
+{
+  "format": "project-doc-views/0.1",
+  "views": [
+    {
+      "id": "VIEW-SYSTEM-CONTEXT",
+      "kind": "system",
+      "title": "System context",
+      "question": "Who works with an Æion Factory project, and what crosses its boundary?",
+      "audience": "contributors and owners",
+      "claim": "intended",
+      "canonical_ids": [
+        "GOAL-005",
+        "GOAL-006"
+      ],
+      "source_path": "docs/views/system-context.json",
+      "scope": "People and systems only; no deployment topology.",
+      "review": "drafted by the coding agent, 2026-11-10; owner review pending"
+    },
+    {
+      "id": "VIEW-COMPONENTS",
+      "kind": "system",
+      "title": "Components",
+      "question": "Which parts make up the factory, and what does each own?",
+      "audience": "contributors and owners",
+      "claim": "intended",
+      "canonical_ids": [
+        "COMP-001",
+        "COMP-002",
+        "COMP-003"
+      ],
+      "source_path": "docs/views/components.json",
+      "scope": "Main responsibilities; the passive skill pool and loops are left out.",
+      "review": "drafted by the coding agent, 2026-11-10; owner review pending"
+    },
+    {
+      "id": "VIEW-TASK-FLOW",
+      "kind": "process",
+      "title": "Task flow",
+      "question": "How does a change go from request to release?",
+      "audience": "contributors and owners",
+      "claim": "intended",
+      "canonical_ids": [
+        "REQ-004",
+        "REQ-006",
+        "REQ-010"
+      ],
+      "source_path": "docs/views/task-flow.json",
+      "scope": "Team flow; local mode skips review and release.",
+      "review": "drafted by the coding agent, 2026-11-10; owner review pending"
+    },
+    {
+      "id": "VIEW-AXIOM-PIPELINE",
+      "kind": "process",
+      "title": "Axiom pipeline",
+      "question": "How does one spec become checks, context and documentation?",
+      "audience": "contributors and owners",
+      "claim": "intended",
+      "canonical_ids": [
+        "REQ-001",
+        "REQ-006",
+        "REQ-010",
+        "REQ-012"
+      ],
+      "source_path": "docs/views/axiom-pipeline.json",
+      "scope": "Data flow of tools/axiom; each step is a separate command.",
+      "review": "drafted by the coding agent, 2026-11-10; owner review pending"
+    },
+    {
+      "id": "VIEW-GUARDED-EDIT",
+      "kind": "sequence",
+      "title": "A guarded edit",
+      "question": "What happens between an agent's tool call and the file system?",
+      "audience": "contributors and owners",
+      "claim": "intended",
+      "canonical_ids": [
+        "REQ-013"
+      ],
+      "source_path": "docs/views/guarded-edit.json",
+      "scope": "One tool call; harness-specific adapters are folded into Harness.",
+      "review": "drafted by the coding agent, 2026-11-10; owner review pending"
+    },
+    {
+      "id": "VIEW-USECASES",
+      "kind": "usecase",
+      "title": "Who does what",
+      "question": "Which goals can each actor pursue?",
+      "audience": "contributors and owners",
+      "claim": "intended",
+      "canonical_ids": [
+        "GOAL-002",
+        "GOAL-004"
+      ],
+      "source_path": "docs/views/usecases.json",
+      "scope": "Capabilities, not permissions; rights come from the guards and the owner.",
+      "review": "drafted by the coding agent, 2026-11-10; owner review pending"
+    },
+    {
+      "id": "VIEW-CONTEXT-LIFECYCLE",
+      "kind": "state",
+      "title": "Context lifecycle",
+      "question": "How does a long session hand over before compaction?",
+      "audience": "contributors and owners",
+      "claim": "intended",
+      "canonical_ids": [],
+      "source_path": "docs/views/context-lifecycle.json",
+      "scope": "Claude profile; harness differences are in agent-compatibility.",
+      "review": "drafted by the coding agent, 2026-11-10; owner review pending"
+    }
+  ]
+}

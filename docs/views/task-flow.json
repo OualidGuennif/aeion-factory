@@ -1,0 +1,103 @@
+{
+  "format": "aeion-view/0.1",
+  "kind": "flow",
+  "direction": "TB",
+  "nodes": [
+    {
+      "id": "ask",
+      "label": "Owner asks for a change",
+      "shape": "round"
+    },
+    {
+      "id": "plan",
+      "label": "Plan the smallest fitting change"
+    },
+    {
+      "id": "approved",
+      "label": "Approved?",
+      "shape": "decision"
+    },
+    {
+      "id": "spec",
+      "label": "Specify: requirement, test case, open decisions"
+    },
+    {
+      "id": "ready",
+      "label": "Design ready?",
+      "shape": "decision"
+    },
+    {
+      "id": "decide",
+      "label": "Owner answers the open decision"
+    },
+    {
+      "id": "packet",
+      "label": "Read the context packet"
+    },
+    {
+      "id": "build",
+      "label": "Build and test in thin slices"
+    },
+    {
+      "id": "evidence",
+      "label": "Evidence, regenerated docs, axiom check"
+    },
+    {
+      "id": "ship",
+      "label": "Review and release",
+      "shape": "round"
+    }
+  ],
+  "edges": [
+    {
+      "from": "ask",
+      "to": "plan"
+    },
+    {
+      "from": "plan",
+      "to": "approved"
+    },
+    {
+      "from": "approved",
+      "to": "spec",
+      "label": "yes"
+    },
+    {
+      "from": "approved",
+      "to": "plan",
+      "label": "no, revise"
+    },
+    {
+      "from": "spec",
+      "to": "ready"
+    },
+    {
+      "from": "ready",
+      "to": "decide",
+      "label": "blocking decision open"
+    },
+    {
+      "from": "decide",
+      "to": "spec",
+      "label": "answer recorded",
+      "style": "dashed"
+    },
+    {
+      "from": "ready",
+      "to": "packet",
+      "label": "yes"
+    },
+    {
+      "from": "packet",
+      "to": "build"
+    },
+    {
+      "from": "build",
+      "to": "evidence"
+    },
+    {
+      "from": "evidence",
+      "to": "ship"
+    }
+  ]
+}

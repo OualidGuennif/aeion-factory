@@ -5,6 +5,13 @@ Finished tasks are deleted: the commit message and knowledge/ keep what matters.
 Status: ACTIVE, WAITING-OWNER, MEASURING, BLOCKED, BACKLOG. An entry is `## <title> — <STATUS>`, then the
 lines `- Owner decision:`, `- State:`, `- Next:` (with who), `- Blocker:`, `- Evidence:`.
 
+## Factory 3.0.0: AxiomSpec replaces Graphify and Archify — ACTIVE
+- Owner decision: 2026-11-09, remove Graphify/Archify (Python 3 and an agent only), integrate AxiomSpec, new demo, release to main; AxiomSpec fully public.
+- State: tools/axiom (76 tests), vendored package, factory spec design_ready, cockpit and diagrams, demo/check 17/17; release PR next.
+- Next: review, release v3.0.0, then build aeion-core from the template and update adopted projects with template-update (who: agent, owner approves).
+- Blocker: none.
+- Evidence: knowledge/components/axiom-toolkit.md; knowledge/axiomspec/index.md; tools/axiom/tests/; demo/check
+
 ## Grok adapter — ACTIVE
 - Owner decision: 2026-11-06, release the Grok adapter as 2.1.1. This replaces the same-day decision to keep it on a local `grok` branch.
 - State: guards run from `.grok/hooks/factory.json`. The Claude budget hook ignores a Grok envelope and a transcript named `updates.jsonl` or `chat_history.jsonl`. The context size is `signals.json` `contextTokensUsed`. The path guard accepts `target_file` and `target_directory`. Not live-qualified.
@@ -26,13 +33,12 @@ lines `- Owner decision:`, `- State:`, `- Next:` (with who), `- Blocker:`, `- Ev
 - Blocker: one harness measured, so no across-harness comparison is possible yet.
 - Evidence: knowledge/operations/evals.md; tools/evals/tasks/architecture-answer/BASELINE.md
 
-## demo/ Idea Board run 2 — WAITING-OWNER
-- Owner decision: 2026-10-28, each harness builds the Idea Board in a git-less copy, journals each round and files feedback; 2026-10-29, the run 1 wrap-up plan and run 2 driven by one orchestrator session.
-- State: run 1 done and archived for all five harnesses (demo/<h>/archive/run-01/, comparison in demo/README.md); its feedback fixed in the factory (c3f586f, fd288e9) or in the run 2 brief (e1f30ad); orchestrator brief in cfc92e1.
-- Next: run 2 is planned for the week of 2026-11-02, not before; on the owner's go, a Claude Code session runs demo/start/orchestrator/START.md, one harness at a time (who: owner, then agent).
-- Checked 2026-10-29: the four run 1 galleries load 14/14 previews from file:// in headless Chrome, viewer opens, pages and closes; OpenCode is `opencode2` 2.2.0.
+## Holiday Planner demo runs — WAITING-OWNER
+- Owner decision: 2026-11-09, remove the Idea Board demo; a holiday planner on 20 feature specs replaces it.
+- State: spec, views, 20 feature files, rounds 00-10 and `demo/check` (17 steps, all passing) are in demo/; no harness run yet.
+- Next: run round 00 then 01-10 with one harness at a time, records in demo/runs/<harness>-run-NN/ (who: owner starts, agent builds).
 - Blocker: none.
-- Evidence: demo/README.md; demo/start/orchestrator/START.md; work/handovers/b5bf5c06-1101-47fa-a0b7-f0ca1ac15381.md
+- Evidence: demo/README.md; demo/check; demo/holiday-planner/knowledge/spec/spec.json
 
 ## Live Devin, Droid, Antigravity and Pi hook qualification — WAITING-OWNER
 - Owner decision: 2026-10-27, support Devin, Droid and Antigravity; 2026-10-28, Pi 1.4.0; adapters use documented, not live-run, payloads.

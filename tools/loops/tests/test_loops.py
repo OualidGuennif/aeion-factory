@@ -52,7 +52,6 @@ class LoopTests(unittest.TestCase):
         self.root=Path(self.tmp.name).resolve()
         shutil.copytree(ROOT/'loops',self.root/'loops')
         shutil.copytree(ROOT/'tools/loops',self.root/'tools/loops')
-        shutil.copytree(ROOT/'tools/architecture',self.root/'tools/architecture')
         (self.root/'tools/context').mkdir(parents=True)
         native=self.root/'tools/context/run'
         native.write_text('#!/usr/bin/env python3\nimport json,os,sys\nfrom pathlib import Path\n'

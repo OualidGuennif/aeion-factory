@@ -16,5 +16,5 @@ Start from [the template](_template.md).
 | Component | Status | Notes |
 | --- | --- | --- |
 | [Integration choices](context-and-architecture.md) | stable | scoped upstream adoption and runtime qualification boundaries |
-| [Æion Factory architecture](factory-architecture.md) | stable | complete spec with maintained source-backed diagrams |
-| [Code graph queries](graph-queries.md) | draft | `tools/architecture/ask`: exact structural answers from a fresh working graph |
+| [Æion Factory architecture](factory-architecture.md) | stable | complete spec; its diagrams are in the [cockpit](../../docs/README.md) |
+| [Axiom toolkit](axiom-toolkit.md) | stable | `tools/axiom/axiom`: AxiomSpec gates, knowledge graph, queries, packets, views, cockpit, export, evidence |

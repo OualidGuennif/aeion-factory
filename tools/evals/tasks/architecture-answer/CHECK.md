@@ -2,7 +2,7 @@
 
 ## Success
 
-- Command: `tools/architecture/ask deps tools/evals/record` and `tools/architecture/ask tests tools/evals/record`
+- Command: `tools/axiom/axiom query deps tools/evals/record` and `tools/axiom/axiom query tests tools/evals/record`
 - Expected: both exit 0, and every path the answer cites exists
 - Command: `git status --short`
 - Expected: empty

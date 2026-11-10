@@ -257,9 +257,9 @@ qualification and setup commands are recorded below.
 
 ## Setup
 
-1. Follow the [getting-started checks](getting-started.md). Offer the recommended architecture
-   baseline and install it only on the user's yes ([architecture maintenance](architecture-maintenance.md)). Install the
-   chosen native CLI separately; preserve user account/provider settings.
+1. Follow the [getting-started checks](getting-started.md). Nothing beyond Python 3 is needed for the
+   factory's checks, graph and docs. Install the chosen native CLI separately; preserve user
+   account/provider settings.
 2. Claude: trust the workspace, then `tools/agents/run claude`.
 3. Codex: trust the project in native settings, review/enable the local hooks in `/hooks`, restart,
    then `tools/agents/run codex`. A trusted project and trusted hook sources are distinct. Do not

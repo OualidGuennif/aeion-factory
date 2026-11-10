@@ -18,6 +18,8 @@ check tools/knowledge/knowledge-check
 check tools/knowledge/doc-links
 # Caps on what makes the repository expensive for agents.
 check tools/repo-health/repo-health
+# The canonical spec parses and links, docs cite only real IDs, generated docs are current.
+check tools/axiom/axiom check
 # Add your project's fast checks here (formatter, linter).
 if [[ $status -ne 0 ]]; then
     echo "pre-commit: commit refused. Fix the findings above; never bypass with --no-verify."

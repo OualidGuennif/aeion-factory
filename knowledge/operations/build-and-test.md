@@ -55,25 +55,25 @@ it and fails when the committed bundle differs.
 | Knowledge reachability | `tools/knowledge/orphans`: a document nothing links | the root |
 | Docs and code links | `tools/knowledge/doc-links` (`--diff origin/develop` before a push) | the root |
 | Comments, file size, caps | `tools/repo-health/repo-health` | the root |
-| The factory's own test suites (hooks, tools, evals, push gate, release, context, analysis and graph queries, adapters including the OpenCode, Pi and dsh plugins and the Pi RPC bridge, connector drift, the tag-pinned desktop install, loops) | `tools/factory-tests` (each suite also runs alone; the script lists them) | root; Node 18+ |
+| The factory's own test suites (hooks, tools, evals, push gate, release, context, the axiom toolkit, adapters including the OpenCode, Pi and dsh plugins and the Pi RPC bridge, connector drift, the tag-pinned desktop install, loops) | `tools/factory-tests` (each suite also runs alone; the script lists them) | root; Node 18+ for the three JavaScript adapter suites, reported NOT RUN without it |
 | Connector copies | `tools/agents/adapter-check` (`--root` for a project that adopted the factory) | the root |
 | Efficiency bundle | `tools/efficiency/bundle`, then `git diff --exit-code efficiency/efficiency-bundle.md` | the root |
-| Source analysis (CI on every main update; local run recommended) | `tools/architecture/refresh --target HEAD --base origin/main` after committing | pinned tools installed on the user's yes, Node and Chrome required |
+| Spec, graph and cockpit | `tools/axiom/axiom check` (structure, references, dangling IDs, generated docs current); `tools/axiom/axiom validate` for design readiness | the root; Python 3 only |
 | Your code | add your build, lint and test commands here, copied from CI | |
 
 `stale` and `orphans` reject a missing root or `knowledge/` directory with a nonzero exit;
 `orphans` also requires `knowledge/index.md`. An absent tree is not a successful empty check.
 A valid knowledge directory with no dated documents still passes `stale`.
 
-The pre-commit (`git config core.hooksPath tools/git-hooks`) runs `knowledge-check`, `doc-links`
-and `repo-health`. The pre-push refuses a push of `develop` without a recorded `Review: OK`
-and any direct push to `main`. CI runs those three checks, `factory-tests`, the efficiency-bundle
+The pre-commit (`git config core.hooksPath tools/git-hooks`) runs `knowledge-check`, `doc-links`,
+`repo-health` and `axiom check`. The pre-push refuses a push of `develop` without a recorded `Review: OK`
+and any direct push to `main`. CI runs those four checks, `factory-tests`, the efficiency-bundle
 check and security scans on pushes to `main` or `develop` and pull requests targeting either; the
 Semgrep container is pinned by digest like the actions.
 `stale` and `orphans` remain manual checks; CI exercises their fixtures through `factory-tests`.
 
 Many people run Æion Factory in a plain folder, without git. The link and health checks, the context
-fingerprint, the code graph (`tools/architecture/ask`) and the session-start summary then walk the files on disk (skipping `.git`, `.aeion`,
+fingerprint, the knowledge graph (`tools/axiom/axiom`) and the session-start summary then walk the files on disk (skipping `.git`, `.aeion`,
 dependencies, caches, the root's build output such as `dist/` or `target/`, and desktop files such as
 `.DS_Store`; `.claude/hooks/project_files.py`). Each folder's `.gitignore` applies to it and below for
 its simple rules (a name or glob, optionally ending in `/`); negations and paths with a slash are not

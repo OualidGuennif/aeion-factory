@@ -8,10 +8,10 @@ Everything you can run here, grouped by loop. Skills are invoked by name in a Cl
 | Skill | When |
 | --- | --- |
 | `plan` | start any non-trivial task: inspect, propose, wait for a yes |
-| `spec` | a feature or component changes: write its spec sections first |
+| `spec` | a feature or component changes: its requirement and test case in `knowledge/spec/spec.json`, then its spec sections |
 | `build` | implement in thin, tested slices |
 | `test` | add or fix tests; never weaken an assertion |
-| `graph` | before changing or tracing code: `knowledge/`, then `tools/architecture/ask`, then the language server |
+| `axiom` | before changing or tracing code: the requirement and context packet, then `tools/axiom/axiom query`, then the language server |
 | `debug` | reproduce a failure, test one hypothesis, fix its root cause and prove the regression |
 | `sign-off` | end a task: tests, docs and links, task state, security on sensitive diffs |
 | `pr-review` | a pull request is open: fresh reviewer, verified findings, one verdict comment |
@@ -36,11 +36,13 @@ tools/factory-tests                                   # every factory test suite
 python3 tools/knowledge/tests/test_doc_links.py       # tool tests
 python3 .claude/hooks/test_hooks.py                   # hook tests
 python3 tools/context/tests/test_budget.py            # context boundary/recovery regressions
-python3 tools/architecture/tests/test_refresh.py       # analysis provenance/coverage regressions
-tools/architecture/setup                             # installs pinned Graphify/Archify locally: ask the user first
-tools/architecture/refresh --target HEAD              # recommended initial baseline, after commit
-tools/architecture/refresh --target HEAD --base origin/main  # refresh the reviewed change
-tools/architecture/refresh --check --target HEAD       # verify persisted artifact hashes
+python3 -m unittest discover -s tools/axiom/tests -t tools/axiom/tests   # the axiom toolkit's tests
+tools/axiom/axiom check                               # the commit gate: spec structure, dangling IDs, docs current
+tools/axiom/axiom validate [--phase implementation]   # design gates G01-G07 (G08-G12 for implementation)
+tools/axiom/axiom query spec|tests|rdeps|path|impact|gaps|requirement|node ...   # bounded graph answers
+tools/axiom/axiom packet --files a.py,b.py            # the mandatory context of a change
+tools/axiom/axiom docs | views | export --all | evidence run   # cockpit, diagrams, feature export, receipts
+tools/axiom/axiom init                                # a new project's spec skeleton, catalogs and brief
 tools/agents/run claude                             # existing Claude integration
 tools/agents/run codex                              # trust project/hooks first
 tools/agents/run opencode                           # native plugin, shared skills
@@ -76,8 +78,7 @@ loops/orchestrator.sh <job> [--dry-run] [--issue N]
 
 Every job reads `env.local`, refuses to run while `LOOPS_ENABLED=false` (except `--dry-run`), and
 prints the managed command it runs. Schedules: `loops/schedules/`.
-The command uses `tools/context/run` so enabled loops get the same architecture-baseline check
-(a warning when absent) and the same native compaction profile. Dry-run still launches no agent or integration.
+The command uses `tools/context/run` so enabled loops get the same native compaction profile. Dry-run still launches no agent or integration.
 
 ## Plugins (Claude Code)
 

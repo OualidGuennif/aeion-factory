@@ -1,46 +1,53 @@
-# Demo: Æion Factory on a real app, one agent harness at a time
+# Demo: the Holiday Planner, specified with AxiomSpec
 
-An agent builds the same small app, **Idea Board**, inside a copy of Æion Factory that has no git. The
-stack is Deno 2, Fresh 2 with Vite, Hono under `/api`, Deno KV, and Docker. The agent follows the
-briefs in [`plan/`](plan/00-start.md), one round per file, and journals what really happened.
+An agent builds a real product, **Holiday Planner**, inside a copy of Æion Factory, starting from a
+canonical AxiomSpec specification instead of loose briefs. Twenty features, each one goal of
+[`holiday-planner/knowledge/spec/spec.json`](holiday-planner/knowledge/spec/spec.json), are built in
+ten rounds. Python's standard library only: an HTTP server, SQLite and a hand-written web interface.
 
-Each friction with the factory becomes a feedback file. The small ones are fixed in the base factory
-on `develop`, each with a test, so the next harness starts from a better factory.
+The demo proves two things: the factory's AxiomSpec layer works end to end (`check`, no agent
+needed), and a coding agent can deliver a product against checked obligations (the rounds).
 
-## Replay it with another harness
+## The self-check, in six seconds
 
-1. Create the copy from the repository root, replacing `<harness>` with the harness name:
+```bash
+demo/check            # 17 steps on a fresh copy; exit 0 when all pass
+demo/check --keep     # keep the copy (its path is printed) to look around or start a round there
+demo/check --refresh  # rewrite holiday-planner/features/ after changing the spec, then check
+```
 
-   ```bash
-   mkdir -p demo/<harness>/workspace && git archive HEAD -- . ':(exclude)demo' | tar -x -C demo/<harness>/workspace && tools/release/release --new-project --root demo/<harness>/workspace
-   ```
+It creates a new project from the factory, installs the Holiday Planner's spec, and checks every
+step: design gates G01-G07 (with BCIR scenarios), the cockpit and its six diagrams, the export of
+the 20 feature files (eight sections, checkable acceptance items, under 12,000 bytes), graph
+queries and the context packet of a change, a reference slice whose bindings resolve and whose
+tests run through the evidence adapter, and three faults the checks must catch: stale evidence, a
+dangling ID and a hand-edited generated page. `tools/factory-tests` runs it too.
 
-2. Create `journal/`, `feedback_for_aeion/` and `render/` beside it. The layout is in
-   [`plan/00-start.md`](plan/00-start.md).
-3. Open the agent at the repository root ([why](plan/00-start.md)), one harness at a time. Give it the
-   harness's `START.md` as its first message from [`start/`](start/README.md), which also says how to set up each harness's skills and hooks, then one round
-   at a time.
-4. Every round's journal ends with the same record block, so the runs can be compared.
+## The product
+
+| | |
+| --- | --- |
+| Brief | [`holiday-planner/docs/authored/brief.md`](holiday-planner/docs/authored/brief.md) |
+| Canonical spec | 20 goals, 39 requirements, 60 test cases, 4 BCIR constraints, 7 scenarios, a lifecycle model, 6 decisions (one open on purpose) |
+| Feature files | [`holiday-planner/features/`](holiday-planner/features/), exported by `tools/axiom/axiom export`, the format a build factory receives |
+| Diagrams | [`holiday-planner/docs/views/`](holiday-planner/docs/views/): context, components, plan a day, add an activity, use cases, trip lifecycle |
+| Reference slice | [`holiday-planner/reference/`](holiday-planner/reference/): the day schedule (features 005-006), used by the self-check |
+
+## Run it with a coding agent
+
+1. `demo/check --keep` and note the copy's path, or make a copy yourself: copy the factory without
+   `demo/`, run `tools/release/release --new-project` in it, then copy the Holiday Planner's
+   `knowledge/spec/spec.json`, `docs/` catalogs, views and brief into it (`demo/check` shows how).
+2. Open the agent **in the copy** (it is a plain folder, so the copy's own hooks and instructions apply)
+   and give it [`plan/START.md`](plan/START.md) as the first message, then one round at a time:
+   [round 00](plan/00-start.md), then rounds 01 to 10.
+3. Each round ends with the same record block, so harnesses can be compared. Keep the journal and
+   feedback beside the copy, in `demo/runs/<harness>-run-NN/` (create it; `workspace/` stays ignored).
 
 ## Results by harness
 
-| Harness | Factory | Rounds done | Final tests | Feedback (fixed) | Human help | Run |
+| Harness | Factory | Rounds done | Design ready | Tests with receipts | Human help | Run |
 | --- | --- | --- | --- | --- | --- | --- |
-| Claude Code, run 1 | 1.3.0 `fb2af90` | 8 of 8 | 72 + 5 container checks | 10 (9) | approvals, 3 checkpoints | [archive/run-01/](claude_code/archive/run-01/SUMMARY.md) |
-| Codex, run 1 | 1.4.0 `578f4f3` | 8 of 8 | 50 + 14 diagram checks | 3 (3) | 1 authorization, commit approvals | [archive/run-01/](codex/archive/run-01/SUMMARY.md) |
-| OpenCode, run 1 | 1.4.0 `578f4f3` | 8 of 8 | 51 + 5 container checks | 3 (3) | 2: authorization, a compaction request | [archive/run-01/](opencode/archive/run-01/SUMMARY.md) |
-| Pi, run 1 | 1.5.0 `6e98daa` | 8 of 8 | 79 + 5 container checks | 4 (4) | 1: a model switch | [archive/run-01/](pi/archive/run-01/SUMMARY.md) |
-| dsh, run 1 | 1.5.0 `6e98daa` | 8 of 8 | 79 + container checks | 9 (9) | each round's commit, 2 closure assists | [archive/run-01/](dsh/archive/run-01/SUMMARY.md) |
-| Claude Code, run 2 | `develop` after run 1's fixes | not started | | | | [claude_code/](claude_code/README.md) |
-| Codex, run 2 | `develop` after run 1's fixes | not started | | | | [codex/](codex/README.md) |
-| OpenCode, run 2 | `develop` after run 1's fixes | not started | | | | [opencode/](opencode/README.md) |
-| Pi, run 2 | `develop` after run 1's fixes | not started | | | | [pi/](pi/README.md) |
-| dsh, run 2 | `develop` after run 1's fixes | not started | | | | [dsh/](dsh/README.md) |
+| (none yet) | 3.0.0 | | | | | |
 
-"Fixed" counts feedback applied in the base factory or in the run 2 brief, and documented limits;
-the one open item is Claude Code's FB-001, an upstream Archify constraint. Run 1's
-lesson for every harness: open at the repository root, one harness at a time, and keep live logs and
-rendered HTML out of git ([`plan/00-start.md`](plan/00-start.md)).
-
-Shared tools: [`batteries/hooks_battery.py`](batteries/hooks_battery.py) feeds real payloads to a
-copy's Claude hooks.
+Earlier demos (the Idea Board, factory 1.x-2.x) remain readable at tag `v2.1.1`.

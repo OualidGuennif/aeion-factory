@@ -6,6 +6,28 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+- **Breaking: Graphify and Archify are removed.** The factory now needs only Python 3 and a coding
+  agent: no virtual environment, Node or browser install for analysis or diagrams. `tools/architecture/`,
+  its CI workflow, the `graph` skill and the Bash guard's Graphify rules are gone; the `axiom` skill and
+  `tools/axiom/axiom query` replace `tools/architecture/ask`.
+- **AxiomSpec is built in.** The AxiomSpec package (edition 0.3.0) and its two playbooks are vendored in
+  `knowledge/axiomspec/`. Each project has one canonical `knowledge/spec/spec.json` (goals, terms,
+  requirements, decisions, constraints, scenarios, tests, bindings); `tools/release/release --new-project`
+  and `tools/axiom/axiom init` create it.
+- `tools/axiom/axiom` (standard library only): strict validation and gates G01-G07 (BCIR constraints
+  evaluated on scenarios), a knowledge graph joining spec, docs and code, bounded queries, context
+  packets for a change, the generated cockpit `docs/README.md` with SVG diagrams (system, process,
+  sequence, use case, state), an eight-section feature export for a build factory, and test evidence
+  receipts through a unittest adapter (G09-G11). Unknown is never reported as pass.
+- `tools/axiom/axiom check` runs in the pre-commit hook and CI: the spec parses and links, docs cite
+  only real IDs, generated docs are current. Docs name the IDs they cover in frontmatter `spec_ids`.
+- The factory specifies itself in `knowledge/spec/spec.json`; its architecture diagrams are in the cockpit.
+- New demo: the Holiday Planner, a 20-feature AxiomSpec product built in ten rounds, with `demo/check`
+  replaying every AxiomSpec step on a fresh copy in seconds. The Idea Board runs stay readable at v2.1.1.
+- `template-update` never writes a project's spec, cockpit, views or catalogs; repo-health no longer
+  counts a folder releases leave out (`export-ignore`); `factory-tests` reports the JavaScript adapter
+  suites as not run when Node is absent.
+
 ## [2.1.1] - 2026-11-06
 
 - Fixed: Grok's hook transcript is `updates.jsonl` (older sessions still use `chat_history.jsonl`). The 250k/300k size is `signals.json` `contextTokensUsed`, which falls after compaction. `usage.json` is the billed ledger and only grows, so it does not drive the gate. The shared path guard accepts Grok's `target_file` and `target_directory`.

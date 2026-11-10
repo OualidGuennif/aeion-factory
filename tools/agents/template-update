@@ -4,8 +4,9 @@
 
 Every file the factory changed between the project's baseline and the target is decided on its own:
 - contract connectors (connectors.CONTRACT) are copied byte for byte, as a harness loads them;
-- the project's own files (VERSION, CHANGELOG.md, work/, knowledge/, demo/, the marker) are never
-  written; changed knowledge/ docs are listed for review;
+- the project's own files (VERSION, CHANGELOG.md, work/, knowledge/ with its spec, demo/, the marker,
+  and the AxiomSpec cockpit, views and catalogs in docs/) are never written; changed knowledge/ docs
+  are listed for review;
 - AGENTS.md and the merged settings (connectors.MERGE) are never written; a merge proposal is;
 - every other file is a three-way update: untouched since the baseline takes the target, an edited
   one is merged with git merge-file, and a conflict leaves the project's file as it is;
@@ -35,8 +36,9 @@ from refs import Refused, git, ref_bytes, ref_diff, ref_exists, ref_mode, requir
 
 SEMVER = re.compile(r"(\d+)\.(\d+)\.(\d+)")
 MARKER = ".aeion-factory"
-OWNED_FILES = ("VERSION", "CHANGELOG.md", MARKER)
-OWNED_FOLDERS = ("work/", "knowledge/", "demo/")
+# The AxiomSpec cockpit, views and catalogs under docs/ describe the project, like knowledge/spec/.
+OWNED_FILES = ("VERSION", "CHANGELOG.md", MARKER, "docs/README.md", "docs/view-catalog.json", "docs/feature-catalog.json")
+OWNED_FOLDERS = ("work/", "knowledge/", "demo/", "docs/generated/", "docs/views/", "docs/features/", "docs/authored/")
 LINK, GITLINK = "120000", "160000"
 NOTES_CAP = 80
 PROPOSALS = ".aeion/template-update"

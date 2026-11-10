@@ -33,7 +33,7 @@ experimental plugin, not the shipped Æion Factory plugin. `tools/agents/run --s
 Æion Factory source was `a2edecdf48a25e1451912ca91d959fad62e2c1f7`. All model requests selected paid
 `opencode-go/deepseek-v4.1-flash` through native OpenCode **2.1.4**, in a disposable repository
 outside the configured Æion Factory ancestor. Each case used a fresh isolated native profile and the
-managed launcher. Each experimental source snapshot had its own passing Graphify/Archify baseline.
+managed launcher. Each experimental source snapshot had its own passing structural baseline.
 No free auxiliary model was used: the title hook supplied a fixed title, retries were disabled,
 and experimental WebSocket handshakes were refused. The runs used public synthetic text, not a
 real engineering task or a model-quality benchmark.

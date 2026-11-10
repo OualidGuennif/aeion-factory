@@ -1,0 +1,34 @@
+{
+  "format": "aeion-test-receipt/0.1",
+  "test_id": "TEST-010",
+  "level": "unit",
+  "adapter": "unittest/3.0.0",
+  "python": "3.15.2",
+  "trust": "untrusted_local",
+  "bindings": [
+    {
+      "id": "BIND-010",
+      "path": "tools/axiom/tests/test_spec.py",
+      "symbol": "GateTests.test_open_blocking_decision_prevents_design_ready"
+    }
+  ],
+  "bound_files": {
+    "tools/axiom/tests/test_spec.py": "e5fd749a0ab8e0632a8235e638ed838c58fc233201daa7d94676b6ba7cff97a8"
+  },
+  "results": {
+    "tools/axiom/tests/test_spec.py::GateTests.test_open_blocking_decision_prevents_design_ready": "pass"
+  },
+  "counts": {
+    "collected": 1,
+    "passed": 1,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "problems": [],
+  "status": "pass",
+  "spec_sha256": "cfdea120e46bf0a30c24e8124b1a74e88c6bc3842b6f4d1b6e33993345a84b80",
+  "source_tree_sha256": "37a3ea9f02883e6511e102d723d367857a7a27493de02da3d227ba42f077bc1c",
+  "raw_output_sha256": "8986e373f7ca5105ecead507ff6a93e2c84988097141076672abb8d09a567609",
+  "executed_at": "2026-11-10T03:24:24.485250+00:00"
+}

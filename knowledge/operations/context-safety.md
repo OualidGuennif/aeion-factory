@@ -140,9 +140,8 @@ crossed the experimental reserved budget. It establishes a primary HTTP admissio
 an isolated profile; it does not enable Æion Factory strict mode or qualify handover/compaction and
 auxiliary-call coverage.
 
-Use `tools/context/run [claude arguments]` for managed interactive/headless runs. It checks the
-current architecture baseline (a warning, not a refusal, when absent), passes `--autocompact 250000`,
-and refuses explicit compaction overrides. Hooks are an accidental-behavior guard, not isolation against malicious code that can
+Use `tools/context/run [claude arguments]` for managed interactive/headless runs. It passes
+`--autocompact 250000` and refuses explicit compaction overrides. Hooks are an accidental-behavior guard, not isolation against malicious code that can
 edit its own scripts/settings. Raw CLI launches outside the managed entry point are not qualified.
 
 ## One rule, five harnesses

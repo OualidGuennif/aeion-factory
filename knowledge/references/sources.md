@@ -31,9 +31,8 @@ sources:
   Eclipse JDT Language Server.
 - **Superpowers** informs the focused debugging, planning, test, verification and review updates;
   **context-mode** informs bounded output and recovery without bundling its runtime.
-- **Graphify** supplies native structural code/Markdown extraction; **Archify** supplies
-  source-backed architecture views and browser/provenance gates. Reviewed revisions live in
-  `tools/architecture/integrations.json`; attribution and notices are in [CREDITS](../../CREDITS.md).
+- **AxiomSpec** (edition 0.3.0, vendored in [knowledge/axiomspec](../axiomspec/index.md)) supplies
+  the canonical specification format, gates, graph and query contracts that `tools/axiom` implements.
 
 ## Research and practice
 

@@ -1,0 +1,34 @@
+{
+  "format": "aeion-test-receipt/0.1",
+  "test_id": "TEST-029",
+  "level": "integration",
+  "adapter": "unittest/3.0.0",
+  "python": "3.15.2",
+  "trust": "untrusted_local",
+  "bindings": [
+    {
+      "id": "BIND-029",
+      "path": "tools/repo-health/tests/test_repo_health.py",
+      "symbol": "RepoHealthTests.test_a_folder_releases_leave_out_does_not_count"
+    }
+  ],
+  "bound_files": {
+    "tools/repo-health/tests/test_repo_health.py": "2bf79733cf3e49823cfcb7ca137f31c2908b9308671c0bce453abe9981811d85"
+  },
+  "results": {
+    "tools/repo-health/tests/test_repo_health.py::RepoHealthTests.test_a_folder_releases_leave_out_does_not_count": "pass"
+  },
+  "counts": {
+    "collected": 1,
+    "passed": 1,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "problems": [],
+  "status": "pass",
+  "spec_sha256": "cfdea120e46bf0a30c24e8124b1a74e88c6bc3842b6f4d1b6e33993345a84b80",
+  "source_tree_sha256": "37a3ea9f02883e6511e102d723d367857a7a27493de02da3d227ba42f077bc1c",
+  "raw_output_sha256": "abadb9c808a382fc276a2fd34ad4135606b0189317340356d50e408fa4bd8c5c",
+  "executed_at": "2026-11-10T03:24:28.000677+00:00"
+}

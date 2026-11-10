@@ -19,9 +19,10 @@ under its heading: `- <preference> (<source>, YYYY-MM-DD)`.
 
 ## Workflow
 
-- Never install Graphify/Archify (or anything outside the repository's existing tools) without the
-  user's explicit yes; say the baseline is strongly recommended and ask whether the machine is a
-  work computer first. This replaces Æion Factory's mandatory pre-run baseline (chat, 2026-10-27)
+- Never install anything outside the repository's existing tools without the user's explicit yes;
+  ask whether the machine is a work computer first (chat, 2026-10-27)
+- The factory runs on Python 3 and a coding agent only: no virtual environment, browser or Node
+  install for analysis or diagrams; Graphify and Archify are gone, AxiomSpec replaces them (chat, 2026-11-09)
 - Colleagues may play locally without a Git/CI cycle: local mode commits on `main` (chat, 2026-10-27)
 - The git lifecycle is off by default: local mode unless the owner sets `aeion.mode team`; the README
   opens with new project, existing project, optional tools, skills and hooks (chat, 2026-11-03)

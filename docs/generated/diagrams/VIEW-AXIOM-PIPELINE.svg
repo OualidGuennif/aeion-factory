@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" class="v" width="1091" height="264" viewBox="0 0 1091 264" role="img" aria-labelledby="t d">
+<title id="t">Axiom pipeline</title>
+<desc id="d">How does one spec become checks, context and documentation?</desc>
+<style>
+.v{--bg:#ffffff;--fg:#0f172a;--muted:#475569;--line:#64748b;--node:#ffffff;--soft:#f8fafc;--group:#94a3b8;
+--accent:#2563eb;--decision:#fef3c7;--store:#ecfeff;--note:#fefce8}
+@media (prefers-color-scheme:dark){.v{--bg:#0b1120;--fg:#e2e8f0;--muted:#94a3b8;--line:#94a3b8;--node:#1e293b;
+--soft:#0b1120;--group:#475569;--accent:#60a5fa;--decision:#3b2f0b;--store:#083344;--note:#2a2a12}}
+.v .bg{fill:var(--bg)}
+.v text{font:13px system-ui,-apple-system,"Segoe UI",sans-serif;fill:var(--fg)}
+.v .muted{fill:var(--muted);font-size:12px}.v .title{font-weight:600}
+.v .n{fill:var(--node);stroke:var(--line);stroke-width:1.3}.v .d{fill:var(--decision);stroke:var(--line);stroke-width:1.3}
+.v .s{fill:var(--store);stroke:var(--line);stroke-width:1.3}.v .x{fill:var(--node);stroke:var(--line);stroke-dasharray:5 3}
+.v .g{fill:none;stroke:var(--group);stroke-dasharray:6 4;stroke-width:1.2}.v .e{fill:none;stroke:var(--line);stroke-width:1.3}
+.v .dash{stroke-dasharray:5 4}.v .a{fill:var(--line)}.v .lab{fill:var(--soft);opacity:.92}
+.v .act{fill:none;stroke:var(--accent);stroke-width:1.6}.v .life{stroke:var(--group);stroke-dasharray:4 4}
+.v .frag{fill:none;stroke:var(--group);stroke-width:1.2}.v .note{fill:var(--note);stroke:var(--group)}
+.v .solid{fill:var(--fg)}.v .ring{fill:none;stroke:var(--fg);stroke-width:1.5}
+</style>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="a" d="M0,0 L10,5 L0,10 z"/></marker><marker id="open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path class="e" d="M0,0 L10,5 L0,10"/></marker></defs>
+<rect class="bg" width="100%" height="100%" rx="10"/>
+<path class="e" d="M240.2,132.0 C279.2,132.0 279.2,132.0 318.2,132.0" marker-end="url(#arrow)"/>
+<path class="e" d="M476.2,154.3 C534.4,154.3 534.4,187.3 592.7,187.3" marker-end="url(#arrow)"/>
+<path class="e" d="M743.2,184.0 C831.0,184.0 831.0,119.0 918.8,119.0" marker-end="url(#arrow)"/>
+<path class="e" d="M476.2,109.7 C532.6,109.7 532.6,77.8 588.9,77.8" marker-end="url(#arrow)"/>
+<path class="e" d="M476.2,132.0 C536.0,132.0 536.0,132.0 595.8,132.0" marker-end="url(#arrow)"/>
+<path class="e" d="M753.4,200.1 C840.8,200.1 840.8,178.5 928.2,178.5" marker-end="url(#arrow)"/>
+<path class="s" d="M50.0,114.5 v35.0 a95.1,7 0 0 0 190.2,0 v-35.0 a95.1,7 0 0 0 -190.2,0 a95.1,7 0 0 0 190.2,0"/>
+<text x="145.1" y="140.5" text-anchor="middle">knowledge/spec/spec.json</text>
+<rect class="n" x="318.2" y="106.0" width="158.0" height="52.0" rx="6"/>
+<text x="397.2" y="128.0" text-anchor="middle">Strict parse, schema,</text>
+<text x="397.2" y="145.0" text-anchor="middle">gates G01-G07</text>
+<rect class="n" x="592.7" y="184.0" width="160.7" height="52.0" rx="6"/>
+<text x="673.0" y="206.0" text-anchor="middle">Graph: spec, docs and</text>
+<text x="673.0" y="223.0" text-anchor="middle">code</text>
+<rect class="n" x="915.7" y="67.0" width="146.7" height="52.0" rx="6"/>
+<text x="989.1" y="89.0" text-anchor="middle">Queries and context</text>
+<text x="989.1" y="106.0" text-anchor="middle">packets</text>
+<rect class="n" x="588.9" y="28.0" width="168.2" height="52.0" rx="6"/>
+<text x="673.0" y="50.0" text-anchor="middle">Cockpit, pages and SVG</text>
+<text x="673.0" y="67.0" text-anchor="middle">views</text>
+<rect class="n" x="595.8" y="106.0" width="154.5" height="52.0" rx="6"/>
+<text x="673.0" y="128.0" text-anchor="middle">Feature export (eight</text>
+<text x="673.0" y="145.0" text-anchor="middle">sections)</text>
+<rect class="n" x="928.2" y="145.0" width="121.8" height="52.0" rx="6"/>
+<text x="989.1" y="167.0" text-anchor="middle">Bound tests and</text>
+<text x="989.1" y="184.0" text-anchor="middle">receipts</text>
+<rect class="lab" x="509.8" y="166.1" width="70.7" height="21.0" rx="4"/>
+<text x="545.1" y="181.1" text-anchor="middle" class="muted">valid spec</text>
+<rect class="lab" x="798.5" y="175.0" width="116.6" height="21.0" rx="4"/>
+<text x="856.8" y="190.0" text-anchor="middle" class="muted">resolved bindings</text>
+</svg>

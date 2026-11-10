@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" class="v" width="528" height="1143" viewBox="0 0 528 1143" role="img" aria-labelledby="t d">
+<title id="t">Task flow</title>
+<desc id="d">How does a change go from request to release?</desc>
+<style>
+.v{--bg:#ffffff;--fg:#0f172a;--muted:#475569;--line:#64748b;--node:#ffffff;--soft:#f8fafc;--group:#94a3b8;
+--accent:#2563eb;--decision:#fef3c7;--store:#ecfeff;--note:#fefce8}
+@media (prefers-color-scheme:dark){.v{--bg:#0b1120;--fg:#e2e8f0;--muted:#94a3b8;--line:#94a3b8;--node:#1e293b;
+--soft:#0b1120;--group:#475569;--accent:#60a5fa;--decision:#3b2f0b;--store:#083344;--note:#2a2a12}}
+.v .bg{fill:var(--bg)}
+.v text{font:13px system-ui,-apple-system,"Segoe UI",sans-serif;fill:var(--fg)}
+.v .muted{fill:var(--muted);font-size:12px}.v .title{font-weight:600}
+.v .n{fill:var(--node);stroke:var(--line);stroke-width:1.3}.v .d{fill:var(--decision);stroke:var(--line);stroke-width:1.3}
+.v .s{fill:var(--store);stroke:var(--line);stroke-width:1.3}.v .x{fill:var(--node);stroke:var(--line);stroke-dasharray:5 3}
+.v .g{fill:none;stroke:var(--group);stroke-dasharray:6 4;stroke-width:1.2}.v .e{fill:none;stroke:var(--line);stroke-width:1.3}
+.v .dash{stroke-dasharray:5 4}.v .a{fill:var(--line)}.v .lab{fill:var(--soft);opacity:.92}
+.v .act{fill:none;stroke:var(--accent);stroke-width:1.6}.v .life{stroke:var(--group);stroke-dasharray:4 4}
+.v .frag{fill:none;stroke:var(--group);stroke-width:1.2}.v .note{fill:var(--note);stroke:var(--group)}
+.v .solid{fill:var(--fg)}.v .ring{fill:none;stroke:var(--fg);stroke-width:1.5}
+</style>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="a" d="M0,0 L10,5 L0,10 z"/></marker><marker id="open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path class="e" d="M0,0 L10,5 L0,10"/></marker></defs>
+<rect class="bg" width="100%" height="100%" rx="10"/>
+<g transform="translate(63.7,0.0)">
+<path class="e" d="M196.8,102.0 C196.8,137.0 196.8,137.0 196.8,172.0" marker-end="url(#arrow)"/>
+<path class="e" d="M196.8,224.0 C196.8,259.0 196.8,259.0 196.8,294.0" marker-end="url(#arrow)"/>
+<path class="e" d="M196.8,358.0 C196.8,393.0 196.8,393.0 196.8,428.0" marker-end="url(#arrow)"/>
+<path class="e" d="M263.6,326.0 C293.6,326.0 293.6,198.0 261.8,198.0" marker-end="url(#arrow)"/>
+<path class="e" d="M196.8,497.0 C196.8,532.0 196.8,532.0 196.8,567.0" marker-end="url(#arrow)"/>
+<path class="e" d="M181.4,625.1 C181.4,667.0 132.2,667.0 132.2,709.0" marker-end="url(#arrow)"/>
+<path class="e dash" d="M28.0,735.0 C-2.0,735.0 -2.0,462.5 116.2,462.5" marker-end="url(#arrow)"/>
+<path class="e" d="M215.9,623.6 C215.9,666.3 282.4,666.3 282.4,709.0" marker-end="url(#arrow)"/>
+<path class="e" d="M280.1,761.0 C280.1,796.0 219.3,796.0 219.3,831.0" marker-end="url(#arrow)"/>
+<path class="e" d="M196.8,883.0 C196.8,918.0 196.8,918.0 196.8,953.0" marker-end="url(#arrow)"/>
+<path class="e" d="M196.8,1005.0 C196.8,1040.0 196.8,1040.0 196.8,1075.0" marker-end="url(#arrow)"/>
+<rect class="n" x="129.1" y="50.0" width="135.4" height="52.0" rx="16"/>
+<text x="196.8" y="72.0" text-anchor="middle">Owner asks for a</text>
+<text x="196.8" y="89.0" text-anchor="middle">change</text>
+<rect class="n" x="131.8" y="172.0" width="130.0" height="52.0" rx="6"/>
+<text x="196.8" y="194.0" text-anchor="middle">Plan the smallest</text>
+<text x="196.8" y="211.0" text-anchor="middle">fitting change</text>
+<polygon class="d" points="196.8,294.0 263.6,326.0 196.8,358.0 129.9,326.0"/>
+<text x="196.8" y="330.5" text-anchor="middle">Approved?</text>
+<rect class="n" x="116.2" y="428.0" width="161.1" height="69.0" rx="6"/>
+<text x="196.8" y="450.0" text-anchor="middle">Specify: requirement,</text>
+<text x="196.8" y="467.0" text-anchor="middle">test case, open</text>
+<text x="196.8" y="484.0" text-anchor="middle">decisions</text>
+<polygon class="d" points="196.8,567.0 279.4,599.0 196.8,631.0 114.1,599.0"/>
+<text x="196.8" y="603.5" text-anchor="middle">Design ready?</text>
+<rect class="n" x="28.0" y="709.0" width="177.8" height="52.0" rx="6"/>
+<text x="116.9" y="731.0" text-anchor="middle">Owner answers the open</text>
+<text x="116.9" y="748.0" text-anchor="middle">decision</text>
+<rect class="n" x="239.8" y="709.0" width="125.7" height="52.0" rx="6"/>
+<text x="302.7" y="731.0" text-anchor="middle">Read the context</text>
+<text x="302.7" y="748.0" text-anchor="middle">packet</text>
+<rect class="n" x="122.2" y="831.0" width="149.1" height="52.0" rx="6"/>
+<text x="196.8" y="853.0" text-anchor="middle">Build and test in thin</text>
+<text x="196.8" y="870.0" text-anchor="middle">slices</text>
+<rect class="n" x="114.8" y="953.0" width="163.8" height="52.0" rx="6"/>
+<text x="196.8" y="975.0" text-anchor="middle">Evidence, regenerated</text>
+<text x="196.8" y="992.0" text-anchor="middle">docs, axiom check</text>
+<rect class="n" x="123.6" y="1075.0" width="146.3" height="40.0" rx="16"/>
+<text x="196.8" y="1099.5" text-anchor="middle">Review and release</text>
+<rect class="lab" x="181.2" y="388.9" width="31.0" height="21.0" rx="4"/>
+<text x="196.8" y="403.9" text-anchor="middle" class="muted">yes</text>
+<rect class="lab" x="250.2" y="251.5" width="70.7" height="21.0" rx="4"/>
+<text x="285.6" y="266.5" text-anchor="middle" class="muted">no, revise</text>
+<rect class="lab" x="91.4" y="655.7" width="113.5" height="38.0" rx="4"/>
+<text x="148.1" y="670.7" text-anchor="middle" class="muted">blocking decision</text>
+<text x="148.1" y="687.7" text-anchor="middle" class="muted">open</text>
+<rect class="lab" x="-51.7" y="588.2" width="115.4" height="21.0" rx="4"/>
+<text x="6.0" y="603.2" text-anchor="middle" class="muted">answer recorded</text>
+<rect class="lab" x="245.4" y="663.6" width="31.0" height="21.0" rx="4"/>
+<text x="260.9" y="678.6" text-anchor="middle" class="muted">yes</text>
+</g>
+</svg>

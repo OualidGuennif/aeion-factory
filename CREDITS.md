@@ -28,10 +28,10 @@
 - **Robert C. Martin, ub-mode** — the three passes and the build principles (the data's shape first,
   a design fitted to the change, idempotent operations, one writer for shared state) are adapted in
   our own words; no ub-mode text is copied. https://github.com/unclebob/ub-mode
-- **Graphify Labs, Graphify** (Apache-2.0 with upstream notices) — pinned native code and Markdown
-  structural extraction. https://github.com/Graphify-Labs/graphify
-- **tt-a1i, Archify** (upstream Apache-2.0 / MIT notices) — pinned source-backed diagrams,
-  schema/provenance/browser checks. https://github.com/tt-a1i/archify
+- **AxiomSpec**, edition 0.3.0, and its two playbooks — the specification method, schemas,
+  conformance fixtures and reference example, authored for the Æion project and vendored verbatim in
+  `knowledge/axiomspec/`. Its optional CROA profile adapts selected inputs of the CROA public review
+  draft (The CROA Project, CC BY 4.0), with the attribution stated in that profile.
 
 - Chroma, *Context Rot* (2025) — long inputs degrade every model measured.
 - Gloaguen et al., context files and agent success (arXiv 2602.11988, 2026).

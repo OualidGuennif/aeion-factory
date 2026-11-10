@@ -6,6 +6,8 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+## [3.0.0] - 2026-11-10
+
 - **Breaking: Graphify and Archify are removed.** The factory now needs only Python 3 and a coding
   agent: no virtual environment, Node or browser install for analysis or diagrams. `tools/architecture/`,
   its CI workflow, the `graph` skill and the Bash guard's Graphify rules are gone; the `axiom` skill and

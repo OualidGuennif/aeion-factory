@@ -34,7 +34,7 @@ functional · must · risk high · verification executable · status active · r
 
 functional · must · risk high · verification executable · status active · revision 1
 
-- Tests: [TEST-006](../verification/index.md#test-006), [TEST-007](../verification/index.md#test-007), [TEST-008](../verification/index.md#test-008), [TEST-009](../verification/index.md#test-009), [TEST-032](../verification/index.md#test-032), [TEST-033](../verification/index.md#test-033)
+- Tests: [TEST-006](../verification/index.md#test-006), [TEST-007](../verification/index.md#test-007), [TEST-008](../verification/index.md#test-008), [TEST-009](../verification/index.md#test-009), [TEST-032](../verification/index.md#test-032), [TEST-033](../verification/index.md#test-033), [TEST-039](../verification/index.md#test-039), [TEST-044](../verification/index.md#test-044), [TEST-045](../verification/index.md#test-045)
 - Components: [COMP-001](../system/components.md#comp-001)
 
 <a id="req-004"></a>
@@ -103,7 +103,7 @@ functional · must · risk high · verification executable · status active · r
 functional · must · risk high · verification executable · status active · revision 1
 
 - Terms: [TERM-002](terms.md#term-002)
-- Tests: [TEST-017](../verification/index.md#test-017), [TEST-018](../verification/index.md#test-018), [TEST-034](../verification/index.md#test-034), [TEST-035](../verification/index.md#test-035)
+- Tests: [TEST-017](../verification/index.md#test-017), [TEST-018](../verification/index.md#test-018), [TEST-034](../verification/index.md#test-034), [TEST-035](../verification/index.md#test-035), [TEST-043](../verification/index.md#test-043)
 - Components: [COMP-001](../system/components.md#comp-001)
 
 ## GOAL-004 Documentation is derived, current and safe
@@ -115,7 +115,7 @@ functional · must · risk high · verification executable · status active · r
 
 functional · must · risk medium · verification executable · status active · revision 1
 
-- Tests: [TEST-019](../verification/index.md#test-019), [TEST-036](../verification/index.md#test-036), [TEST-038](../verification/index.md#test-038)
+- Tests: [TEST-019](../verification/index.md#test-019), [TEST-036](../verification/index.md#test-036), [TEST-038](../verification/index.md#test-038), [TEST-040](../verification/index.md#test-040), [TEST-041](../verification/index.md#test-041), [TEST-042](../verification/index.md#test-042)
 - Components: [COMP-001](../system/components.md#comp-001)
 
 <a id="req-011"></a>

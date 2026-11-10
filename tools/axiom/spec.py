@@ -459,9 +459,7 @@ def expectation_outcome(model, scenario, expectation, validator, evaluated_at=No
     data = constraint["data"]
     if data["representation"] != "bcir" or data["environment_id"] != scenario["data"]["environment_id"]:
         return ("fail", "INCOMPATIBLE_EXPECTATION", f"{constraint['id']} is not BCIR in this scenario's environment")
-    hard_invariant = data["predicate_role"] == "invariant" and data["classification"]["strength"] == "hard"
-    if scenario["data"]["intent"] == "witness" and hard_invariant and expectation["expected"] is False:
-        return ("fail", "WITNESS_VIOLATES_INVARIANT", f"a witness cannot expect hard invariant {constraint['id']} false")
+    # Applicability first (docs/05): only an applicable hard invariant binds a witness.
     if data["effective_from"] or data["effective_until"]:
         # AX-C-013: applies when effective_from <= evaluated_at < effective_until; out of window is not pass.
         if evaluated_at is None:
@@ -475,6 +473,9 @@ def expectation_outcome(model, scenario, expectation, validator, evaluated_at=No
                     "a UTC instant")
         if (start and moment < start) or (end and moment >= end):
             return ("unknown", "NOT_IN_EFFECT", f"{constraint['id']} is not in effect at {evaluated_at}")
+    hard_invariant = data["predicate_role"] == "invariant" and data["classification"]["strength"] == "hard"
+    if scenario["data"]["intent"] == "witness" and hard_invariant and expectation["expected"] is False:
+        return ("fail", "WITNESS_VIOLATES_INVARIANT", f"a witness cannot expect hard invariant {constraint['id']} false")
     observed = bcir.evaluate(data["expression"], scenario["data"]["given"] if given is None else given, validator)
     if observed["result"] in ("unknown", "error"):
         return (observed["result"], "EVALUATION_" + observed["result"].upper(),

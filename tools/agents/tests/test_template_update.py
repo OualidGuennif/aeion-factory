@@ -235,12 +235,76 @@ class TemplateUpdateTests(unittest.TestCase):
         # A folder the project never kept does not come back through a new file.
         self.assertFalse((self.project / 'efficiency').exists())
 
-    def test_knowledge_is_listed_never_written(self):
+    def test_knowledge_the_project_lacks_stays_out(self):
         code, output = self.run_tool('--from-ref', 'v1.0.0', '--ref', 'v2.0.0')
         self.assertEqual(code, 1, output)
-        self.assertIn('review    knowledge/policies/security.md', output)
         self.assertFalse((self.project / 'knowledge/policies/security.md').exists())
         self.assertFalse((self.project / 'CHANGELOG.md').exists())
+
+    def test_untouched_knowledge_follows_the_factory(self):
+        self.project_file('knowledge/policies/security.md', 'policy 1\n')
+        code, output = self.run_tool('--from-ref', 'v1.0.0', '--ref', 'v2.0.0')
+        self.assertEqual((self.project / 'knowledge/policies/security.md').read_text(), 'policy 2\n')
+        self.assertIn('updated   knowledge/policies/security.md', output)
+
+    def test_edited_knowledge_is_listed_never_merged(self):
+        self.project_file('knowledge/policies/security.md', 'policy 1\nour own rule\n')
+        code, output = self.run_tool('--from-ref', 'v1.0.0', '--ref', 'v2.0.0')
+        self.assertEqual(code, 1, output)
+        self.assertEqual((self.project / 'knowledge/policies/security.md').read_text(), 'policy 1\nour own rule\n')
+        self.assertIn('review    knowledge/policies/security.md', output)
+        self.assertFalse((self.project / '.aeion/template-update/v2.0.0/knowledge').exists())
+
+    def release(self, version, changes):
+        """A further factory release on top of v2.0.0: changes is a callable editing the factory tree."""
+        self.write('VERSION', f'{version}\n')
+        changes()
+        self.commit(version)
+        self.git('tag', f'v{version}')
+
+    def test_a_removed_factory_link_is_removed(self):
+        link = '.agents/skills/retired'
+
+        def add():
+            (self.repo / link).parent.mkdir(parents=True, exist_ok=True)
+            (self.repo / link).symlink_to('../../.claude/skills/retired')
+        self.release('2.1.0', add)
+        self.release('3.0.0', lambda: (self.repo / link).unlink())
+        (self.project / link).parent.mkdir(parents=True, exist_ok=True)
+        (self.project / link).symlink_to('../../.claude/skills/retired')
+        code, output = self.run_tool('--from-ref', 'v2.1.0', '--ref', 'v3.0.0')
+        self.assertNotIn('refusing', output)
+        self.assertFalse((self.project / link).is_symlink(), output)
+
+    def test_a_new_factory_folder_comes_in_and_a_left_out_one_does_not(self):
+        (self.project / 'efficiency/old.md').unlink()
+        (self.project / 'efficiency').rmdir()
+
+        def add():
+            self.write('tools/newtool/run', 'new tool\n')
+            self.write('efficiency/more.md', 'more guide\n')
+        self.release('3.0.0', add)
+        code, output = self.run_tool('--from-ref', 'v2.0.0', '--ref', 'v3.0.0')
+        self.assertEqual((self.project / 'tools/newtool/run').read_text(), 'new tool\n')
+        # efficiency/ existed at the baseline, so its absence is the project's choice.
+        self.assertFalse((self.project / 'efficiency').exists())
+
+    def test_a_renamed_factory_file_moves_and_its_empty_folder_goes(self):
+        self.release('2.1.0', lambda: self.write('tools/old/process.py', 'shared code\n'))
+        self.release('3.0.0', lambda: self.git('mv', 'tools/old/process.py', 'tools/new-process.py'))
+        self.project_file('tools/old/process.py', 'shared code\n')
+        code, output = self.run_tool('--from-ref', 'v2.1.0', '--ref', 'v3.0.0')
+        self.assertIn('removed   tools/old/process.py', output)
+        self.assertFalse((self.project / 'tools/old').exists())
+        self.assertEqual((self.project / 'tools/new-process.py').read_text(), 'shared code\n')
+
+    def test_the_axiomspec_migration_is_named_until_the_project_has_a_spec(self):
+        self.release('3.0.0', lambda: self.write('tools/axiom/axiom', 'toolkit\n'))
+        code, output = self.run_tool('--from-ref', 'v2.0.0', '--ref', 'v3.0.0', '--check')
+        self.assertIn('migrate   AxiomSpec replaces Graphify', output)
+        self.project_file('knowledge/spec/spec.json', '{}\n')
+        code, output = self.run_tool('--from-ref', 'v2.0.0', '--ref', 'v3.0.0', '--check')
+        self.assertNotIn('migrate   AxiomSpec', output)
 
     def test_the_marker_is_written_then_used(self):
         code, output = self.run_tool('--from-ref', 'v1.0.0', '--ref', 'v2.0.0')
@@ -426,6 +490,47 @@ class TemplateUpdateTests(unittest.TestCase):
         self.assertEqual(code, 2, output)
         self.assertIn('refusing linked connector destination .claude/hooks', output)
         self.assertTrue(hooks.is_symlink())
+
+
+def factory_has(ref):
+    return subprocess.run(['git', 'rev-parse', '--verify', '--quiet', f'{ref}^{{commit}}'], cwd=ROOT,
+                          capture_output=True).returncode == 0
+
+
+@unittest.skipUnless(factory_has('v2.1.1') and factory_has('HEAD'), 'needs the factory history with tag v2.1.1')
+class ReleaseUpdateTests(unittest.TestCase):
+    """A project adopted at v2.1.1, untouched, updated to this commit: it must commit again after the
+    two steps the update names (the AGENTS.md proposal and `axiom init`)."""
+
+    def test_a_2_1_1_project_takes_this_release(self):
+        with tempfile.TemporaryDirectory() as folder:
+            project = Path(folder).resolve() / 'app'
+            project.mkdir()
+            archive = subprocess.run(['git', 'archive', 'v2.1.1'], cwd=ROOT, capture_output=True, check=True)
+            subprocess.run(['tar', '-x', '-C', str(project)], input=archive.stdout, check=True)
+            commit = subprocess.run(['git', 'rev-parse', 'v2.1.1^{commit}'], cwd=ROOT, capture_output=True,
+                                    text=True, check=True).stdout.strip()
+            (project / '.aeion-factory').write_text(f'v2.1.1 {commit}\n')
+
+            def git(*arguments):
+                return subprocess.run(['git', '-c', 'user.name=Test', '-c', 'user.email=test@example.com',
+                                       *arguments], cwd=project, capture_output=True, text=True)
+            git('init', '-q', '-b', 'main'), git('add', '-A'), git('commit', '-q', '-m', 'adopt 2.1.1')
+            done = subprocess.run([sys.executable, str(ROOT / 'tools/agents/template-update'), '--ref', 'HEAD',
+                                   '--repo', str(ROOT), '--root', str(project)], capture_output=True, text=True)
+            self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+            self.assertNotIn('refusing', done.stdout + done.stderr)
+            self.assertIn('migrate   AxiomSpec', done.stdout)
+            self.assertFalse((project / 'tools/architecture').exists())
+            for link in (project / '.agents/skills').iterdir():
+                self.assertTrue(link.exists(), f'{link.name} dangles')
+            # The owner's two steps, then the project's own commit gate.
+            shutil.copyfile(project / '.aeion/template-update/HEAD/AGENTS.md', project / 'AGENTS.md')
+            init = subprocess.run([str(project / 'tools/axiom/axiom'), 'init'], cwd=project, capture_output=True, text=True)
+            self.assertEqual(init.returncode, 0, init.stdout + init.stderr)
+            git('add', '-A')
+            hook = subprocess.run(['sh', 'tools/git-hooks/pre-commit'], cwd=project, capture_output=True, text=True)
+            self.assertEqual(hook.returncode, 0, hook.stdout + hook.stderr)
 
 
 if __name__ == '__main__':

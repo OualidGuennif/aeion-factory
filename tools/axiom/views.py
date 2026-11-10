@@ -15,6 +15,8 @@ from strict import InputError, load
 
 FORMAT = "aeion-view/0.1"
 RENDERER = "aeion-svg/1"
+# Every rendered SVG carries this on its root element: what the generator wrote, it may replace or delete.
+MARK = 'data-generator="tools/axiom"'
 FONT = 13
 LINE = 17
 _id = {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$"}
@@ -148,7 +150,7 @@ class Canvas:
         if dx or dy:
             body = f'<g transform="translate({dx:.1f},{dy:.1f})">\n{body}\n</g>'
             width, height = width + dx, height + dy
-        return (f'<svg xmlns="http://www.w3.org/2000/svg" class="v" width="{math.ceil(width)}" '
+        return (f'<svg xmlns="http://www.w3.org/2000/svg" class="v" {MARK} width="{math.ceil(width)}" '
                 f'height="{math.ceil(height)}" viewBox="0 0 {math.ceil(width)} {math.ceil(height)}" role="img" '
                 f'aria-labelledby="t d">\n<title id="t">{escape(title)}</title>\n<desc id="d">{escape(description)}</desc>\n'
                 f"<style>{STYLE}</style>\n<defs><marker id=\"arrow\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" "
@@ -700,6 +702,32 @@ def rendered(root, model=None):
     return outputs
 
 
+def listed_outputs(root):
+    """The paths the docs manifest says the generator wrote, or None when there is no valid manifest."""
+    try:
+        manifest = json.loads((Path(root) / GENERATED / "manifest.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(manifest, dict) or manifest.get("format") != "aeion-docs-manifest/0.1":
+        return None
+    outputs = manifest.get("outputs")
+    return {rel for rel in outputs if isinstance(rel, str)} if isinstance(outputs, (dict, list)) else set()
+
+
+def generator_owns(root, rel, listed):
+    """Whether a file under docs/generated/ is the generator's: the manifest lists it, or it is an SVG with
+    the mark. A project's own file there is never overwritten, deleted or reported as stale."""
+    if rel in (listed or ()) or (listed is not None and rel == f"{GENERATED.as_posix()}/manifest.json"):
+        return True
+    if not rel.endswith(".svg"):
+        return False
+    try:
+        with open(Path(root) / rel, encoding="utf-8", errors="replace") as handle:
+            return MARK in handle.read(400)
+    except OSError:
+        return False
+
+
 def render_all(root, check=False, model=None):
     """Write (or, with check, compare) every view's SVG; returns problems, empty when all is current."""
     if model is None:
@@ -711,16 +739,22 @@ def render_all(root, check=False, model=None):
     problems = []
     folder = Path(root) / GENERATED / "diagrams"
     existing = {p.relative_to(root).as_posix() for p in folder.glob("*.svg")} if folder.is_dir() else set()
+    listed = listed_outputs(root)
     for rel, svg in sorted(outputs.items()):
         path = Path(root) / rel
-        current = path.read_text(encoding="utf-8") if path.is_file() else None
+        current = path.read_text(encoding="utf-8", errors="replace") if path.is_file() else None
         if current == svg:
+            continue
+        if current is not None and not generator_owns(root, rel, listed):
+            problems.append(f"views: {rel} exists and was not generated; move it before its view is rendered there")
             continue
         if check:
             problems.append(f"views: {rel} is {'missing' if current is None else 'stale'} (run tools/axiom/axiom views)")
         else:
             write_atomic(path, svg)
     for rel in sorted(existing - set(outputs)):
+        if not generator_owns(root, rel, listed):
+            continue
         if check:
             problems.append(f"views: {rel} has no catalogued view (run tools/axiom/axiom views)")
         else:

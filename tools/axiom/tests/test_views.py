@@ -65,9 +65,11 @@ class ViewTests(unittest.TestCase):
             self.assertTrue(views.render_all(root, check=True))
             self.assertEqual(views.render_all(root), [])
             self.assertEqual(views.render_all(root, check=True), [])
-            (root / "docs/generated/diagrams/VIEW-FLOW.svg").write_text("<svg/>")
+            # A hand edit of a generated diagram keeps its mark, so it is the generator's and stale.
+            svg = root / "docs/generated/diagrams/VIEW-FLOW.svg"
+            svg.write_text(svg.read_text().replace("Who talks to whom?", "Edited by hand"))
             self.assertIn("stale", views.render_all(root, check=True)[0])
-            (root / "docs/generated/diagrams/VIEW-OLD.svg").write_text("<svg/>")
+            (root / "docs/generated/diagrams/VIEW-OLD.svg").write_text(f"<svg {views.MARK}/>")
             self.assertTrue(any("no catalogued view" in p for p in views.render_all(root, check=True)))
         finally:
             project.close()

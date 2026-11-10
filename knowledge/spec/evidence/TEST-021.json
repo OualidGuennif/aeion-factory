@@ -13,7 +13,7 @@
     }
   ],
   "bound_files": {
-    "tools/axiom/tests/test_views.py": "8e8664820a920cbc653901bab1a333d439a007255e609594ebb101e1f47dcfcf"
+    "tools/axiom/tests/test_views.py": "ba00f74252a4e02ffb316602848dc35dd38b7ee9bd90648fbd187fd7fec4be2e"
   },
   "results": {
     "tools/axiom/tests/test_views.py::ViewTests.test_labels_are_data_not_markup": "pass"
@@ -27,8 +27,8 @@
   },
   "problems": [],
   "status": "pass",
-  "spec_sha256": "9f2bec0f944b022224dffea39975d9050b5d2e1b94aced28ff1a0ce4d065da66",
-  "source_tree_sha256": "88432febc347dda11606635a4c6d5411e0aedfd482fb8cd63f969e16161978f5",
+  "spec_sha256": "0912bac6c6dc0b895f6a305e772eae0f93d8fdbf29555c660498bedc042847cc",
+  "source_tree_sha256": "b4c8dc9187ad0bac904012e269b2b298fd0a8c1115b70813d57c553d556ec4ba",
   "raw_output_sha256": "b73c66638cb5af8f1e7aeba73a595797563e5f3fa4f3f31bc58944a2431d7304",
-  "executed_at": "2026-11-10T09:02:34.709781+00:00"
+  "executed_at": "2026-11-10T13:56:55.320888+00:00"
 }

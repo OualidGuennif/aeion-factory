@@ -1,0 +1,34 @@
+{
+  "format": "aeion-test-receipt/0.1",
+  "test_id": "TEST-039",
+  "level": "integration",
+  "adapter": "unittest/3.0.0",
+  "python": "3.15.2",
+  "trust": "untrusted_local",
+  "bindings": [
+    {
+      "id": "BIND-052",
+      "path": "tools/axiom/tests/test_hardening.py",
+      "symbol": "SecondEvaluateTests.test_evaluate_on_a_rejected_environment_is_unknown_not_a_traceback"
+    }
+  ],
+  "bound_files": {
+    "tools/axiom/tests/test_hardening.py": "8dec3e4fead673dee990ffe1312dbf5501b729bed8781ffe393bec97e57b3f23"
+  },
+  "results": {
+    "tools/axiom/tests/test_hardening.py::SecondEvaluateTests.test_evaluate_on_a_rejected_environment_is_unknown_not_a_traceback": "pass"
+  },
+  "counts": {
+    "collected": 1,
+    "passed": 1,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "problems": [],
+  "status": "pass",
+  "spec_sha256": "0912bac6c6dc0b895f6a305e772eae0f93d8fdbf29555c660498bedc042847cc",
+  "source_tree_sha256": "b4c8dc9187ad0bac904012e269b2b298fd0a8c1115b70813d57c553d556ec4ba",
+  "raw_output_sha256": "06fdee8bf78365ea4c6f64338623df79daebdd6fe8c9bdb77a1a845921a05aaf",
+  "executed_at": "2026-11-10T13:56:57.744043+00:00"
+}

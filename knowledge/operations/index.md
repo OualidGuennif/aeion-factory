@@ -20,5 +20,6 @@ generated:
 | [The loops](loops.md) | stable | inner, middle, outer: jobs, schedules, safety |
 
 - [Claude Code, Codex, OpenCode, Pi, Grok and other agents](agent-compatibility.md)
+- [Updating a project to a new release](template-update.md)
 - [GitHub main protection](github-protection.md)
 - [Local evaluation harness](evals.md)

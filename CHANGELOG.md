@@ -34,6 +34,20 @@ dates them at release time. Spec: knowledge/policies/engineering.md
   sequence steps, huge integers and null binding symbols give diagnostics, never tracebacks; the unittest
   adapter runs isolated so a project's modules are never shadowed; receipts count for their own test only;
   `--spec` reaches every gate; an export profile cannot rename or relocate the exported file.
+- A second independent review found six more, each with a regression test (classes `Second*` in
+  `test_hardening.py`): `evaluate` keeps an environment G03 rejected unknown instead of crashing;
+  `views` and `check` never overwrite, delete or flag a diagram the generator did not write (generated
+  SVGs carry `data-generator="tools/axiom"`), and `views` before the first `docs` no longer blocks it;
+  bound tests run with `python -P`, so `PYTHONPATH` applies again; `init` reports a missing schema
+  (exit 4) and a failed first generation (exit 1); a witness binds only an applicable hard invariant.
+  `--spec` also works after the command, as AxiomSpec's interface writes it (`axiom validate --spec`).
+- **Updating from 2.x works end to end** (`tools/agents/template-update`, tested from the v2.1.1 tag):
+  a factory knowledge doc the project never edited now follows the release (updated, removed or added),
+  while an edited one is listed for review and kept byte for byte; `knowledge/spec/` and the cockpit
+  are never written. Folders new in the factory (`tools/axiom/`, `knowledge/axiomspec/`) come in whole,
+  a removed factory skill link is removed, a renamed file moves (the old path was never removed before)
+  and a folder a removal empties goes too. A `migrate` line names `tools/axiom/axiom init` for a project
+  without a spec.
 - `template-update` never writes a project's spec, cockpit, views or catalogs; repo-health no longer
   counts a folder releases leave out (`export-ignore`); `factory-tests` reports the JavaScript adapter
   suites as not run when Node is absent.

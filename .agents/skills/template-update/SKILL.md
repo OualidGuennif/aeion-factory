@@ -15,7 +15,8 @@ skill is keeping those three apart, and saying what the release changes for this
 | --- | --- | --- |
 | Contract | `CONTRACT` in `tools/agents/connectors.py`: adapters, hooks, plugins, native registrations | **The factory wins, byte for byte.** Never hand-merge one: a difference is the bug. |
 | Merge | `AGENTS.md`, `.claude/settings.json`, `.codex/config.toml`, `.devin/config.json` | **The project wins.** The factory's change arrives as a proposal you apply by hand. |
-| Project-owned | `VERSION`, `CHANGELOG.md`, `.aeion-factory`, `work/`, `knowledge/`, `demo/` | **Never written.** A changed factory `knowledge/` doc is listed for review. |
+| Project-owned | `VERSION`, `CHANGELOG.md`, `.aeion-factory`, `work/`, `knowledge/spec/`, `demo/`, the AxiomSpec cockpit in `docs/` | **Never written.** |
+| Knowledge | the factory's other `knowledge/` docs | **Your words win.** Untouched: follows the release. Edited: listed for review, kept byte for byte, never merged. |
 | Three-way | every other factory file: git hooks, skills, tools, CI, guides, README | Untouched since the baseline, or still an older release's exact copy (`untouched since <tag>`): takes the release. Edited: merged with `git merge-file`. Conflict: kept as it is, with a proposal. Deleted by the project: stays deleted. |
 
 ## Steps
@@ -56,8 +57,8 @@ skill is keeping those three apart, and saying what the release changes for this
 
 ## What this must never do
 
-- Rewrite `AGENTS.md`, `knowledge/`, `work/`, `CHANGELOG.md`, `VERSION` or a merged settings file
-  without the owner's yes on that file.
+- Rewrite `AGENTS.md`, an edited `knowledge/` doc, `knowledge/spec/`, `work/`, `CHANGELOG.md`, `VERSION`
+  or a merged settings file without the owner's yes on that file.
 - Resolve a conflict by taking the factory's side wholesale, or by deleting the project's lines.
 - Improve, tidy or modernise the project's own instructions during an update.
 - Write on a guessed baseline: a partial inference is `--check` only until `--from-ref` confirms it.

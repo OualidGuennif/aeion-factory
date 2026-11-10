@@ -115,12 +115,13 @@ and says which capabilities it does not have.
 **deterministic.** Pure functions of the inputs: no clock (except report `metadata` and receipt
 `executed_at`), no network, no model. Sorting is by ID, then path, then line. The test runner is
 the only process the toolkit starts, and only on `evidence run`: `unittest_adapter.py`, started with
-`python -I` so no toolkit module or `PYTHON*` variable can shadow what the project's tests import.
+`python -P` so no toolkit module can shadow what the project's tests import, while `PYTHONPATH` and
+user site-packages apply as under `python -m unittest`.
 
 ## Acceptance checks
 ```bash
 python3 -m unittest discover -s tools/axiom/tests -t . -v
-tools/axiom/axiom validate --spec knowledge/axiomspec/AxiomSpec/examples/refund-ledger/spec.json
+tools/axiom/axiom validate --spec knowledge/axiomspec/AxiomSpec/examples/refund-ledger/spec.json  # G07 fails, as documented
 tools/axiom/axiom evaluate --spec knowledge/axiomspec/AxiomSpec/examples/refund-ledger/spec.json \
   --observations knowledge/axiomspec/AxiomSpec/examples/refund-ledger/observations.json
 tools/axiom/axiom check

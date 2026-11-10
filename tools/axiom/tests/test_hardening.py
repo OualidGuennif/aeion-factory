@@ -1,4 +1,5 @@
-"""Refusals and fail-closed paths found by the 3.0.0 independent review: one test per finding."""
+"""Refusals and fail-closed paths found by the 3.0.0 independent reviews: one test per finding
+(first round: findings 1-14; second round: classes named Second*)."""
 import importlib.machinery
 import importlib.util
 import json
@@ -168,7 +169,7 @@ class AdapterTests(unittest.TestCase):  # finding 8
             (folder / "tests/test_x.py").write_text("import unittest\nfrom common import helper\n\n\n"
                                                     "class Case(unittest.TestCase):\n    def test_ok(self):\n"
                                                     "        self.assertEqual(helper(), 42)\n")
-            done = subprocess.run([sys.executable, "-I", "-B", str(evidence.ADAPTER_SCRIPT), "tests/test_x.py", "Case.test_ok"],
+            done = subprocess.run(evidence.adapter_command("tests/test_x.py", "Case.test_ok"),
                                   cwd=folder, capture_output=True, text=True, timeout=60)
             self.assertEqual(json.loads(done.stdout.strip().splitlines()[-1])["results"], {"Case.test_ok": "pass"}, done.stderr)
         finally:
@@ -252,6 +253,131 @@ class ReceiptTests(unittest.TestCase):  # finding 14
             self.assertEqual(evidence.receipts_state(project.root, model)["TEST-001"][0], "failed")
             (folder / "TEST-001.json").write_text("[1, 2]")
             self.assertEqual(evidence.receipts_state(project.root, model)["TEST-001"][0], "failed")
+        finally:
+            project.close()
+
+
+class SecondEvaluateTests(unittest.TestCase):  # second round, finding 2
+    def test_evaluate_on_a_rejected_environment_is_unknown_not_a_traceback(self):
+        example = FACTORY / "knowledge/axiomspec/AxiomSpec/examples/refund-ledger"
+        project = pantry_project()
+        try:
+            for mutate_schema in (lambda s: s.update(patternProperties={"^x": {"type": "integer"}}),
+                                  lambda s: (s.setdefault("$defs", {}).update(loop={"$ref": "#/$defs/loop"}),
+                                             s["properties"].update({next(iter(s["properties"])): {"$ref": "#/$defs/loop"}}))):
+                spec = ledger()
+                mutate_schema(spec["environments"][0]["schema"])
+                path = project.write("broken.json", spec)
+                done = project.run("evaluate", "--spec", str(path), "--observations", str(example / "observations.json"))
+                self.assertEqual(done.returncode, 3, done.stdout + done.stderr)
+                self.assertNotIn("Traceback", done.stderr)
+                self.assertIn("failed G03; not evaluated", done.stdout)
+        finally:
+            project.close()
+
+
+class SecondViewsTests(unittest.TestCase):  # second round, finding 3
+    VIEW = {"format": views.FORMAT, "kind": "sequence",
+            "participants": [{"id": "a", "label": "A", "type": "actor"}, {"id": "b", "label": "B", "type": "participant"}],
+            "steps": [{"from": "a", "to": "b", "label": "asks"}]}
+
+    def catalogued(self, project):
+        project.write("docs/views/one.json", self.VIEW)
+        project.write("docs/view-catalog.json", {"format": views.CATALOG_FORMAT, "views": [
+            {"id": "VIEW-ONE", "kind": "sequence", "title": "One", "question": "Who asks?", "claim": "intended",
+             "canonical_ids": [], "source_path": "docs/views/one.json", "scope": "test"}]})
+
+    def test_a_projects_own_diagram_is_never_flagged_or_deleted(self):
+        project = pantry_project()
+        try:
+            (project.root / "knowledge/spec/spec.json").unlink()
+            own = project.write("docs/generated/diagrams/architecture.svg", '<svg xmlns="http://www.w3.org/2000/svg"/>')
+            self.assertEqual(project.run("check").returncode, 0)
+            self.assertEqual(project.run("views").returncode, 0)
+            self.assertTrue(own.is_file())
+        finally:
+            project.close()
+
+    def test_a_view_never_overwrites_a_file_it_did_not_write(self):
+        project = pantry_project()
+        try:
+            self.catalogued(project)
+            own = project.write("docs/generated/diagrams/VIEW-ONE.svg", "<svg>ours</svg>")
+            done = project.run("views")
+            self.assertEqual(done.returncode, 2)
+            self.assertIn("was not generated", done.stderr)
+            self.assertEqual(own.read_text(), "<svg>ours</svg>")
+        finally:
+            project.close()
+
+    def test_views_then_docs_publish_and_a_retired_view_goes(self):
+        project = pantry_project()
+        try:
+            self.catalogued(project)
+            self.assertEqual(project.run("views").returncode, 0)
+            self.assertIn(views.MARK, (project.root / "docs/generated/diagrams/VIEW-ONE.svg").read_text())
+            done = project.run("docs")
+            self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+            project.write("docs/view-catalog.json", {"format": views.CATALOG_FORMAT, "views": []})
+            self.assertEqual(project.run("views").returncode, 0)
+            self.assertFalse((project.root / "docs/generated/diagrams/VIEW-ONE.svg").exists())
+        finally:
+            project.close()
+
+
+class SecondAdapterTests(unittest.TestCase):  # second round, finding 4
+    def test_pythonpath_still_reaches_the_bound_test(self):
+        folder = Path(tempfile.mkdtemp(prefix="axiom-adapter-"))
+        try:
+            (folder / "lib").mkdir()
+            (folder / "lib/sharedlib.py").write_text("VALUE = 7\n")
+            (folder / "tests").mkdir()
+            (folder / "tests/test_y.py").write_text("import unittest\nimport sharedlib\n\n\n"
+                                                    "class Case(unittest.TestCase):\n    def test_ok(self):\n"
+                                                    "        self.assertEqual(sharedlib.VALUE, 7)\n")
+            done = subprocess.run(evidence.adapter_command("tests/test_y.py", "Case.test_ok"), cwd=folder,
+                                  capture_output=True, text=True, timeout=60,
+                                  env={"PATH": "/usr/bin:/bin", "PYTHONPATH": "lib"})
+            self.assertEqual(json.loads(done.stdout.strip().splitlines()[-1])["results"], {"Case.test_ok": "pass"}, done.stderr)
+        finally:
+            shutil.rmtree(folder, ignore_errors=True)
+
+
+class SecondInitTests(unittest.TestCase):  # second round, finding 5
+    def test_init_reports_a_missing_schema(self):
+        project = pantry_project()
+        try:
+            (project.root / "knowledge/spec/spec.json").unlink()
+            shutil.rmtree(project.root / "knowledge/axiomspec/AxiomSpec/schemas")
+            done = project.run("init")
+            self.assertEqual(done.returncode, 4, done.stdout + done.stderr)
+            self.assertIn("SCHEMA_UNAVAILABLE", done.stdout)
+        finally:
+            project.close()
+
+
+class SecondWitnessTests(unittest.TestCase):  # second round, finding 6
+    setUp, outcome = WindowTests.setUp, WindowTests.outcome
+
+    def test_a_witness_binds_only_an_applicable_hard_invariant(self):
+        data = self.constraint["data"]
+        data["predicate_role"], data["classification"]["strength"] = "invariant", "hard"
+        data["effective_from"] = "2030-01-01T00:00:00Z"
+        self.scenario["data"]["intent"] = "witness"
+        self.expectation["expected"] = False
+        self.assertEqual(self.outcome("2026-01-01T00:00:00Z")[:2], ("unknown", "NOT_IN_EFFECT"))
+        self.assertEqual(self.outcome("2031-01-01T00:00:00Z")[:2], ("fail", "WITNESS_VIOLATES_INVARIANT"))
+
+
+class SecondCliTests(unittest.TestCase):  # found with the second round: AxiomSpec's own interface
+    def test_spec_works_before_and_after_the_command(self):
+        project = pantry_project()
+        try:
+            path = str(project.root / "knowledge/spec/spec.json")
+            before = project.run("--spec", path, "validate")
+            after = project.run("validate", "--spec", path)
+            self.assertEqual((before.returncode, before.stdout), (after.returncode, after.stdout))
+            self.assertNotIn("unrecognized", after.stderr)
         finally:
             project.close()
 

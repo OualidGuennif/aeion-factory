@@ -26,6 +26,12 @@ def source_tree(root):
     return canonical_digest([[rel, sha256((Path(root) / rel).read_bytes())] for rel in files])
 
 
+def adapter_command(path, symbol):
+    """The runner for one bound test. -P keeps the toolkit's own folder off sys.path, so no toolkit module
+    shadows what the test imports, while PYTHONPATH and user site-packages still apply as under
+    `python -m unittest`; -B writes no bytecode into the project."""
+    return [sys.executable, "-P", "-B", str(ADAPTER_SCRIPT), path, symbol]
+
 def run(root, model, ids):
     """Execute the bound tests of the selected active TestCases; one receipt each. Exit 0 all pass, 2 otherwise."""
     root = Path(root)
@@ -64,8 +70,7 @@ def _execute(root, test, bindings, spec_digest, tree):
         if not binding["symbol"]:
             problems.append(f"{binding['id']}: a test binding names a test (Class.test_method); this one names none")
             continue
-        # Isolated (-I): no toolkit module and no PYTHON* variable can shadow what the project's test imports.
-        command = [sys.executable, "-I", "-B", str(ADAPTER_SCRIPT), path, binding["symbol"]]
+        command = adapter_command(path, binding["symbol"])
         try:
             done = subprocess.run(command, cwd=root, capture_output=True, text=True, timeout=TIMEOUT,
                                   env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1"))

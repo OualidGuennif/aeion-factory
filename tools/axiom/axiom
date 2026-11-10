@@ -65,6 +65,10 @@ def main(argv):
     evidence.add_argument("action", choices=("run", "check"))
     evidence.add_argument("--ids", default="")
     commands.add_parser("check", help="the commit/CI gate")
+    # AxiomSpec's proposed interface puts --spec after the command (`axiom validate --spec spec.json`);
+    # both places work, and a value given after the command wins.
+    for command in commands.choices.values():
+        command.add_argument("--spec", type=Path, default=argparse.SUPPRESS, help=argparse.SUPPRESS)
     args = parser.parse_args(argv)
     args.root = args.root.resolve()
     args.spec = (args.spec if args.spec else args.root / common.SPEC_PATH).resolve()
@@ -177,7 +181,15 @@ def cmd_evaluate(args):
             continue
         covered.append(scenario["id"])
         env = model.envs[case["environment_id"]]
-        validator = bcir.environment_validator(env)
+        refused = None
+        if env["id"] in getattr(model, "broken_envs", ()):
+            # G03 rejected the environment: nothing can be evaluated in it, so every row is unknown.
+            refused = ("unknown", f"{env['id']} failed G03; not evaluated")
+        else:
+            try:
+                validator = bcir.environment_validator(env)
+            except (bcir.AnalysisError, RecursionError, TypeError, AttributeError) as error:
+                refused = ("error", f"the environment schema cannot validate data: {type(error).__name__}")
         declared = {e["constraint_id"]: e["expected"] for e in scenario["data"]["constraint_expectations"]}
         if declared != case["expected"]:
             problems.append(f"{scenario['id']}: observation expectations differ from the scenario's")
@@ -186,8 +198,15 @@ def cmd_evaluate(args):
         if set(case["expected"]) != active:
             problems.append(f"{scenario['id']}: expectations must cover exactly the active BCIR constraints of {env['id']}")
         for constraint_id, expected in sorted(case["expected"].items()):
-            outcome = specs.expectation_outcome(model, scenario, {"constraint_id": constraint_id, "expected": expected},
-                                                validator, getattr(args, "evaluated_at", None), case["environment"])
+            if refused:
+                rows.append({"scenario": scenario["id"], "constraint": constraint_id, "expected": expected,
+                             "status": refused[0], "detail": refused[1]})
+                continue
+            try:
+                outcome = specs.expectation_outcome(model, scenario, {"constraint_id": constraint_id, "expected": expected},
+                                                    validator, getattr(args, "evaluated_at", None), case["environment"])
+            except (bcir.AnalysisError, RecursionError, TypeError, AttributeError) as error:
+                outcome = ("error", "EVALUATION_ERROR", f"{constraint_id}: {type(error).__name__}")
             rows.append({"scenario": scenario["id"], "constraint": constraint_id, "expected": expected,
                          "status": "match" if outcome is None else outcome[0], "detail": outcome[2] if outcome else ""})
     missing = sorted(set(scenarios) - set(covered))

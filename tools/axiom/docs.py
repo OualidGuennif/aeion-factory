@@ -414,7 +414,8 @@ def generate(root, spec, model, result, check=False):
         return [f"docs: {error}"]
     root = Path(root)
     generated = root / GENERATED
-    existing = {p.relative_to(root).as_posix() for p in generated.rglob("*") if p.is_file()} if generated.is_dir() else set()
+    existing = {p.relative_to(root).as_posix() for p in generated.rglob("*")
+                if p.is_file() and not p.name.startswith(".")} if generated.is_dir() else set()
     cockpit_path = root / COCKPIT
     if check:
         problems = []
@@ -454,15 +455,14 @@ def foreign_outputs(root):
         problems.append(f"docs: {COCKPIT} exists and was not generated; move it (for example to docs/authored/) "
                         "before the cockpit is written there")
     generated = root / GENERATED
-    manifest = generated / "manifest.json"
-    if generated.is_dir() and any(generated.iterdir()):
-        try:
-            owned = json.loads(manifest.read_text(encoding="utf-8")).get("format") == "aeion-docs-manifest/0.1"
-        except (OSError, ValueError, AttributeError):
-            owned = False
-        if not owned:
-            problems.append(f"docs: {GENERATED}/ holds files the generator did not write (no manifest); move them "
-                            "before generating")
+    if generated.is_dir():
+        listed = views.listed_outputs(root)
+        foreign = sorted(rel for rel in (p.relative_to(root).as_posix() for p in generated.rglob("*")
+                                         if p.is_file() and not p.name.startswith("."))
+                         if not views.generator_owns(root, rel, listed))
+        if foreign:
+            problems.append(f"docs: {GENERATED}/ holds files the generator did not write ({', '.join(foreign[:3])}"
+                            f"{', …' if len(foreign) > 3 else ''}); move them before generating")
     return problems
 
 
@@ -509,10 +509,17 @@ def init(root, spec_path, name, owner_role):
     if foreign:
         print("\n".join(foreign))
         return 1
-    if loaded is not None:
-        model, _ = specs.validate(loaded, result=result)
-        problems = generate(root, loaded, model, result)
-        print("wrote docs/README.md and docs/generated/" if not problems else "\n".join(problems))
+    if loaded is None:
+        # The skeleton could not be read back (a missing schema, for one): say why, never a quiet success.
+        for d in result.diagnostics:
+            print(f"{d['gate']} {d['status']} {d['code']}: {d['message']}")
+        return 4
+    model, _ = specs.validate(loaded, result=result)
+    problems = generate(root, loaded, model, result)
+    if problems:
+        print("\n".join(problems))
+        return 1
+    print("wrote docs/README.md and docs/generated/")
     print("next: fill docs/authored/brief.md, add goals and requirements to knowledge/spec/spec.json, then "
           "tools/axiom/axiom validate && tools/axiom/axiom docs")
     return 0

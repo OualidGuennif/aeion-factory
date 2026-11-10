@@ -1,7 +1,7 @@
 # Spec: knowledge/components/axiom-toolkit.md
 """The fixed unittest runner behind `axiom evidence run`: imports one test file as its own script would, runs
-one test name, prints one JSON line. Standard library only, and started isolated (-I): it must not put any
-toolkit module where the project's tests import theirs."""
+one test name, prints one JSON line. Standard library only, and started with -P (evidence.adapter_command): no
+toolkit module may sit where the project's tests import theirs, while PYTHONPATH still applies."""
 import io
 import json
 import sys

@@ -1491,6 +1491,146 @@
         "negative": false,
         "witness_scenario_ids": []
       }
+    },
+    {
+      "id": "TEST-039",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Evaluate keeps a rejected environment unknown",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "integration",
+        "oracle": "An environment G03 rejected gives unknown rows, never a traceback.",
+        "state": "implemented",
+        "runner": "unittest",
+        "negative": false,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-040",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "A project's own diagram is left alone",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "integration",
+        "oracle": "An unmarked SVG under docs/generated/diagrams/ is neither flagged by check nor deleted by views.",
+        "state": "implemented",
+        "runner": "unittest",
+        "negative": false,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-041",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "A view never overwrites a foreign file",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "integration",
+        "oracle": "views refuses with exit 2 and keeps the file when its output path holds an SVG it did not write.",
+        "state": "implemented",
+        "runner": "unittest",
+        "negative": true,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-042",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Views then docs publish, a retired view goes",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "integration",
+        "oracle": "Marked SVGs written by views let docs publish; a view removed from the catalog loses its SVG.",
+        "state": "implemented",
+        "runner": "unittest",
+        "negative": false,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-043",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "PYTHONPATH reaches a bound test",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "integration",
+        "oracle": "A bound test importing a module from PYTHONPATH passes through the adapter.",
+        "state": "implemented",
+        "runner": "unittest",
+        "negative": false,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-044",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Init reports a missing schema",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "integration",
+        "oracle": "init without the vendored schemas exits 4 and prints G01 SCHEMA_UNAVAILABLE.",
+        "state": "implemented",
+        "runner": "unittest",
+        "negative": true,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-045",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "A witness binds only an applicable invariant",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "integration",
+        "oracle": "Out of window gives unknown NOT_IN_EFFECT; in window, a witness expecting a hard invariant false fails.",
+        "state": "implemented",
+        "runner": "unittest",
+        "negative": false,
+        "witness_scenario_ids": []
+      }
     }
   ],
   "edges": [
@@ -2181,6 +2321,62 @@
       "to": "REQ-010",
       "origin": "declared",
       "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-087",
+      "from": "TEST-039",
+      "relation": "verifies",
+      "to": "REQ-003",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-088",
+      "from": "TEST-040",
+      "relation": "verifies",
+      "to": "REQ-010",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-089",
+      "from": "TEST-041",
+      "relation": "verifies",
+      "to": "REQ-010",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-090",
+      "from": "TEST-042",
+      "relation": "verifies",
+      "to": "REQ-010",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-091",
+      "from": "TEST-043",
+      "relation": "verifies",
+      "to": "REQ-009",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-092",
+      "from": "TEST-044",
+      "relation": "verifies",
+      "to": "REQ-003",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-093",
+      "from": "TEST-045",
+      "relation": "verifies",
+      "to": "REQ-003",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
     }
   ],
   "bindings": [
@@ -2640,6 +2836,69 @@
       "node_id": "TEST-038",
       "path": "tools/axiom/tests/test_hardening.py",
       "symbol": "DanglingTests.test_only_knowledge_and_docs_cite_the_spec",
+      "language": "python",
+      "expected_resolution": "must_resolve"
+    },
+    {
+      "id": "BIND-052",
+      "kind": "test",
+      "node_id": "TEST-039",
+      "path": "tools/axiom/tests/test_hardening.py",
+      "symbol": "SecondEvaluateTests.test_evaluate_on_a_rejected_environment_is_unknown_not_a_traceback",
+      "language": "python",
+      "expected_resolution": "must_resolve"
+    },
+    {
+      "id": "BIND-053",
+      "kind": "test",
+      "node_id": "TEST-040",
+      "path": "tools/axiom/tests/test_hardening.py",
+      "symbol": "SecondViewsTests.test_a_projects_own_diagram_is_never_flagged_or_deleted",
+      "language": "python",
+      "expected_resolution": "must_resolve"
+    },
+    {
+      "id": "BIND-054",
+      "kind": "test",
+      "node_id": "TEST-041",
+      "path": "tools/axiom/tests/test_hardening.py",
+      "symbol": "SecondViewsTests.test_a_view_never_overwrites_a_file_it_did_not_write",
+      "language": "python",
+      "expected_resolution": "must_resolve"
+    },
+    {
+      "id": "BIND-055",
+      "kind": "test",
+      "node_id": "TEST-042",
+      "path": "tools/axiom/tests/test_hardening.py",
+      "symbol": "SecondViewsTests.test_views_then_docs_publish_and_a_retired_view_goes",
+      "language": "python",
+      "expected_resolution": "must_resolve"
+    },
+    {
+      "id": "BIND-056",
+      "kind": "test",
+      "node_id": "TEST-043",
+      "path": "tools/axiom/tests/test_hardening.py",
+      "symbol": "SecondAdapterTests.test_pythonpath_still_reaches_the_bound_test",
+      "language": "python",
+      "expected_resolution": "must_resolve"
+    },
+    {
+      "id": "BIND-057",
+      "kind": "test",
+      "node_id": "TEST-044",
+      "path": "tools/axiom/tests/test_hardening.py",
+      "symbol": "SecondInitTests.test_init_reports_a_missing_schema",
+      "language": "python",
+      "expected_resolution": "must_resolve"
+    },
+    {
+      "id": "BIND-058",
+      "kind": "test",
+      "node_id": "TEST-045",
+      "path": "tools/axiom/tests/test_hardening.py",
+      "symbol": "SecondWitnessTests.test_a_witness_binds_only_an_applicable_hard_invariant",
       "language": "python",
       "expected_resolution": "must_resolve"
     }

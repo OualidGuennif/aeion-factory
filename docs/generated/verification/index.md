@@ -58,6 +58,13 @@ Gate results are computed from `knowledge/spec/spec.json` by `tools/axiom/axiom 
 | <a id="test-036"></a>TEST-036 | Init keeps a project's own docs | integration | refusal | implemented | [REQ-010](../product/requirements.md#req-010) | init in a project with its own docs/README.md and docs/generated/api.html exits 1 and leaves both unchanged. |
 | <a id="test-037"></a>TEST-037 | A profile cannot rename the export | integration | refusal | implemented | [REQ-012](../product/requirements.md#req-012) | A profile setting file and id leaves the computed file name and id; nothing is written outside the output folder. |
 | <a id="test-038"></a>TEST-038 | Only knowledge and docs cite the spec | integration | normal | implemented | [REQ-010](../product/requirements.md#req-010) | A ticket key in notes/ is ignored; an unknown ID in docs/ is reported. |
+| <a id="test-039"></a>TEST-039 | Evaluate keeps a rejected environment unknown | integration | normal | implemented | [REQ-003](../product/requirements.md#req-003) | An environment G03 rejected gives unknown rows, never a traceback. |
+| <a id="test-040"></a>TEST-040 | A project's own diagram is left alone | integration | normal | implemented | [REQ-010](../product/requirements.md#req-010) | An unmarked SVG under docs/generated/diagrams/ is neither flagged by check nor deleted by views. |
+| <a id="test-041"></a>TEST-041 | A view never overwrites a foreign file | integration | refusal | implemented | [REQ-010](../product/requirements.md#req-010) | views refuses with exit 2 and keeps the file when its output path holds an SVG it did not write. |
+| <a id="test-042"></a>TEST-042 | Views then docs publish, a retired view goes | integration | normal | implemented | [REQ-010](../product/requirements.md#req-010) | Marked SVGs written by views let docs publish; a view removed from the catalog loses its SVG. |
+| <a id="test-043"></a>TEST-043 | PYTHONPATH reaches a bound test | integration | normal | implemented | [REQ-009](../product/requirements.md#req-009) | A bound test importing a module from PYTHONPATH passes through the adapter. |
+| <a id="test-044"></a>TEST-044 | Init reports a missing schema | integration | refusal | implemented | [REQ-003](../product/requirements.md#req-003) | init without the vendored schemas exits 4 and prints G01 SCHEMA\_UNAVAILABLE. |
+| <a id="test-045"></a>TEST-045 | A witness binds only an applicable invariant | integration | normal | implemented | [REQ-003](../product/requirements.md#req-003) | Out of window gives unknown NOT\_IN\_EFFECT; in window, a witness expecting a hard invariant false fails. |
 
 ## Scenarios
 
@@ -68,43 +75,50 @@ Gate results are computed from `knowledge/spec/spec.json` by `tools/axiom/axiom 
 
 | Test | Result | Collected | Spec at execution | Matches current spec |
 | --- | --- | --- | --- | --- |
-| TEST-001 | pass | 1 | `9f2bec0f944b` | yes |
-| TEST-002 | pass | 1 | `9f2bec0f944b` | yes |
-| TEST-003 | pass | 1 | `9f2bec0f944b` | yes |
-| TEST-004 | pass | 1 | `9f2bec0f944b` | yes |
-| TEST-005 | pass | 1 | `9f2bec0f944b` | yes |
-| TEST-006 | pass | 1 | `9f2bec0f944b` | yes |
-| TEST-007 | pass | 1 | `9f2bec0f944b` | yes |
-| TEST-008 | pass | 1 | `9f2bec0f944b` | yes |
-| TEST-009 | pass | 1 | `9f2bec0f944b` | yes |
-| TEST-010 | pass | 1 | `9f2bec0f944b` | yes |
-| TEST-011 | pass | 1 | `9f2bec0f944b` | yes |
-| TEST-012 | pass | 1 | `9f2bec0f944b` | yes |
-| TEST-013 | pass | 1 | `9f2bec0f944b` | yes |
-| TEST-014 | pass | 1 | `9f2bec0f944b` | yes |
-| TEST-015 | pass | 1 | `9f2bec0f944b` | yes |
-| TEST-016 | pass | 1 | `9f2bec0f944b` | yes |
-| TEST-017 | pass | 1 | `9f2bec0f944b` | yes |
-| TEST-018 | pass | 1 | `9f2bec0f944b` | yes |
-| TEST-019 | pass | 1 | `9f2bec0f944b` | yes |
-| TEST-020 | pass | 1 | `9f2bec0f944b` | yes |
-| TEST-021 | pass | 1 | `9f2bec0f944b` | yes |
-| TEST-022 | pass | 1 | `9f2bec0f944b` | yes |
-| TEST-023 | pass | 1 | `9f2bec0f944b` | yes |
-| TEST-024 | pass | 1 | `9f2bec0f944b` | yes |
-| TEST-025 | pass | 1 | `9f2bec0f944b` | yes |
-| TEST-026 | pass | 1 | `9f2bec0f944b` | yes |
-| TEST-027 | pass | 1 | `9f2bec0f944b` | yes |
-| TEST-028 | pass | 1 | `9f2bec0f944b` | yes |
-| TEST-029 | pass | 1 | `9f2bec0f944b` | yes |
-| TEST-030 | pass | 1 | `9f2bec0f944b` | yes |
-| TEST-031 | pass | 1 | `9f2bec0f944b` | yes |
-| TEST-032 | pass | 1 | `9f2bec0f944b` | yes |
-| TEST-033 | pass | 1 | `9f2bec0f944b` | yes |
-| TEST-034 | pass | 1 | `9f2bec0f944b` | yes |
-| TEST-035 | pass | 1 | `9f2bec0f944b` | yes |
-| TEST-036 | pass | 1 | `9f2bec0f944b` | yes |
-| TEST-037 | pass | 1 | `9f2bec0f944b` | yes |
-| TEST-038 | pass | 1 | `9f2bec0f944b` | yes |
+| TEST-001 | pass | 1 | `0912bac6c6dc` | yes |
+| TEST-002 | pass | 1 | `0912bac6c6dc` | yes |
+| TEST-003 | pass | 1 | `0912bac6c6dc` | yes |
+| TEST-004 | pass | 1 | `0912bac6c6dc` | yes |
+| TEST-005 | pass | 1 | `0912bac6c6dc` | yes |
+| TEST-006 | pass | 1 | `0912bac6c6dc` | yes |
+| TEST-007 | pass | 1 | `0912bac6c6dc` | yes |
+| TEST-008 | pass | 1 | `0912bac6c6dc` | yes |
+| TEST-009 | pass | 1 | `0912bac6c6dc` | yes |
+| TEST-010 | pass | 1 | `0912bac6c6dc` | yes |
+| TEST-011 | pass | 1 | `0912bac6c6dc` | yes |
+| TEST-012 | pass | 1 | `0912bac6c6dc` | yes |
+| TEST-013 | pass | 1 | `0912bac6c6dc` | yes |
+| TEST-014 | pass | 1 | `0912bac6c6dc` | yes |
+| TEST-015 | pass | 1 | `0912bac6c6dc` | yes |
+| TEST-016 | pass | 1 | `0912bac6c6dc` | yes |
+| TEST-017 | pass | 1 | `0912bac6c6dc` | yes |
+| TEST-018 | pass | 1 | `0912bac6c6dc` | yes |
+| TEST-019 | pass | 1 | `0912bac6c6dc` | yes |
+| TEST-020 | pass | 1 | `0912bac6c6dc` | yes |
+| TEST-021 | pass | 1 | `0912bac6c6dc` | yes |
+| TEST-022 | pass | 1 | `0912bac6c6dc` | yes |
+| TEST-023 | pass | 1 | `0912bac6c6dc` | yes |
+| TEST-024 | pass | 1 | `0912bac6c6dc` | yes |
+| TEST-025 | pass | 1 | `0912bac6c6dc` | yes |
+| TEST-026 | pass | 1 | `0912bac6c6dc` | yes |
+| TEST-027 | pass | 1 | `0912bac6c6dc` | yes |
+| TEST-028 | pass | 1 | `0912bac6c6dc` | yes |
+| TEST-029 | pass | 1 | `0912bac6c6dc` | yes |
+| TEST-030 | pass | 1 | `0912bac6c6dc` | yes |
+| TEST-031 | pass | 1 | `0912bac6c6dc` | yes |
+| TEST-032 | pass | 1 | `0912bac6c6dc` | yes |
+| TEST-033 | pass | 1 | `0912bac6c6dc` | yes |
+| TEST-034 | pass | 1 | `0912bac6c6dc` | yes |
+| TEST-035 | pass | 1 | `0912bac6c6dc` | yes |
+| TEST-036 | pass | 1 | `0912bac6c6dc` | yes |
+| TEST-037 | pass | 1 | `0912bac6c6dc` | yes |
+| TEST-038 | pass | 1 | `0912bac6c6dc` | yes |
+| TEST-039 | pass | 1 | `0912bac6c6dc` | yes |
+| TEST-040 | pass | 1 | `0912bac6c6dc` | yes |
+| TEST-041 | pass | 1 | `0912bac6c6dc` | yes |
+| TEST-042 | pass | 1 | `0912bac6c6dc` | yes |
+| TEST-043 | pass | 1 | `0912bac6c6dc` | yes |
+| TEST-044 | pass | 1 | `0912bac6c6dc` | yes |
+| TEST-045 | pass | 1 | `0912bac6c6dc` | yes |
 
 Source-tree freshness is checked live by `tools/axiom/axiom evidence check`, not here.

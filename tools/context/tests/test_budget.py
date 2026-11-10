@@ -219,6 +219,17 @@ class BudgetTests(unittest.TestCase):
         self.addCleanup(plain.cleanup)
         self.assertNotIn('--base', budget.checkpoint_command(Path(plain.name), 'test-session'))
 
+    def test_a_repository_before_its_first_commit_has_a_fingerprint(self):
+        # `git init`, then the tests, then the first commit: the gate must still measure the files.
+        fresh = tempfile.TemporaryDirectory()
+        self.addCleanup(fresh.cleanup)
+        root = Path(fresh.name)
+        subprocess.run(['git', 'init', '-q'], cwd=root, check=True)
+        (root / 'app.py').write_text('value = 1\n')
+        before = budget.fingerprint(root)
+        (root / 'app.py').write_text('value = 2\n')
+        self.assertNotEqual(budget.fingerprint(root), before)
+
     def test_plain_folder_checkpoints_without_git_or_base(self):
         # Many users have no git: the fingerprint is the files on disk and no diff check runs.
         plain = tempfile.TemporaryDirectory()

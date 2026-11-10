@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Run the real release tool on disposable plain folders (no git needed)."""
+import json
 import subprocess
 import sys
 import tempfile
@@ -83,6 +84,38 @@ class ReleaseTests(unittest.TestCase):
         self.assertEqual(self.release("--new-project").returncode, 0)
         self.assertEqual((self.root / "work/current.md").read_text(), expected)
         self.assertEqual((self.root / ".aeion-factory").read_text(), "v1.4.0\n")
+
+    def test_new_project_restarts_the_factory_spec_once(self):
+        import shutil
+        factory = TOOL.parents[2]
+        for rel in ("tools/release", "tools/axiom", ".claude/hooks", "knowledge/axiomspec/AxiomSpec/schemas"):
+            shutil.copytree(factory / rel, self.root / rel, ignore=shutil.ignore_patterns("tests", "__pycache__"))
+        self.write("3.0.0\n", HEAD)
+        (self.root / "work").mkdir()
+        (self.root / "work/current.md").write_text("# Current work\n\n## Adapt Æion Factory to this project — ACTIVE\n- x\n")
+        (self.root / "knowledge/spec").mkdir(parents=True)
+        (self.root / "knowledge/spec/spec.json").write_text('{"project": {"name": "Æion Factory"}}')
+        (self.root / "docs/views").mkdir(parents=True)
+        (self.root / "docs/views/factory.json").write_text("{}")
+        (self.root / "docs/licenses").mkdir()
+        (self.root / "docs/licenses/MIT.txt").write_text("kept")
+        tool = self.root / "tools/release/release"
+        run = lambda: subprocess.run([sys.executable, str(tool), "--date", "2026-11-10", "--new-project"],
+                                     capture_output=True, text=True, timeout=120)
+        result = run()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("knowledge/spec/ and docs/ restarted", result.stdout)
+        spec = json.loads((self.root / "knowledge/spec/spec.json").read_text())
+        self.assertEqual(spec["project"]["name"], self.root.name)
+        self.assertFalse((self.root / "docs/views/factory.json").exists())
+        self.assertTrue((self.root / "docs/README.md").is_file())
+        self.assertEqual((self.root / "docs/licenses/MIT.txt").read_text(), "kept")
+        # A second run keeps the project's own specification.
+        spec["project"]["description"] = "Edited by the project."
+        (self.root / "knowledge/spec/spec.json").write_text(json.dumps(spec))
+        self.assertEqual(run().returncode, 0)
+        self.assertEqual(json.loads((self.root / "knowledge/spec/spec.json").read_text())["project"]["description"],
+                         "Edited by the project.")
 
     def test_new_project_refuses_in_the_factory_clone(self):
         self.write("1.4.0\n", HEAD)

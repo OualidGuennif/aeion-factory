@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" class="v" data-generator="tools/axiom" width="1021" height="271" viewBox="0 0 1021 271" role="img" aria-labelledby="t d">
+<title id="t">System context</title>
+<desc id="d">Who works with an Æion Factory project, and what crosses its boundary?</desc>
+<style>
+.v{--bg:#ffffff;--fg:#0f172a;--muted:#475569;--line:#64748b;--node:#ffffff;--soft:#f8fafc;--group:#94a3b8;
+--accent:#2563eb;--decision:#fef3c7;--store:#ecfeff;--note:#fefce8}
+@media (prefers-color-scheme:dark){.v{--bg:#0b1120;--fg:#e2e8f0;--muted:#94a3b8;--line:#94a3b8;--node:#1e293b;
+--soft:#0b1120;--group:#475569;--accent:#60a5fa;--decision:#3b2f0b;--store:#083344;--note:#2a2a12}}
+.v .bg{fill:var(--bg)}
+.v text{font:13px system-ui,-apple-system,"Segoe UI",sans-serif;fill:var(--fg)}
+.v .muted{fill:var(--muted);font-size:12px}.v .title{font-weight:600}
+.v .n{fill:var(--node);stroke:var(--line);stroke-width:1.3}.v .d{fill:var(--decision);stroke:var(--line);stroke-width:1.3}
+.v .s{fill:var(--store);stroke:var(--line);stroke-width:1.3}.v .x{fill:var(--node);stroke:var(--line);stroke-dasharray:5 3}
+.v .g{fill:none;stroke:var(--group);stroke-dasharray:6 4;stroke-width:1.2}.v .e{fill:none;stroke:var(--line);stroke-width:1.3}
+.v .dash{stroke-dasharray:5 4}.v .a{fill:var(--line)}.v .lab{fill:var(--soft);opacity:.92}
+.v .act{fill:none;stroke:var(--accent);stroke-width:1.6}.v .life{stroke:var(--group);stroke-dasharray:4 4}
+.v .frag{fill:none;stroke:var(--group);stroke-width:1.2}.v .note{fill:var(--note);stroke:var(--group)}
+.v .solid{fill:var(--fg)}.v .ring{fill:none;stroke:var(--fg);stroke-width:1.5}
+</style>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="a" d="M0,0 L10,5 L0,10 z"/></marker><marker id="open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path class="e" d="M0,0 L10,5 L0,10"/></marker></defs>
+<rect class="bg" width="100%" height="100%" rx="10"/>
+<path class="e" d="M170.7,69.2 C305.6,69.2 305.6,121.0 440.6,121.0" marker-end="url(#arrow)"/>
+<path class="e" d="M221.3,172.3 C331.0,172.3 331.0,145.0 440.6,145.0" marker-end="url(#arrow)"/>
+<path class="e" d="M592.4,128.1 C714.3,128.1 714.3,104.2 836.2,104.2" marker-end="url(#arrow)"/>
+<path class="e" d="M592.4,142.9 C715.1,142.9 715.1,167.0 837.8,167.0" marker-end="url(#arrow)"/>
+<g class="act"><circle cx="135.7" cy="37.0" r="7"/><path d="M135.7,44.0 v14 M125.7,49.0 h20 M135.7,58.0 l-8,10 M135.7,58.0 l8,10"/></g>
+<text x="135.7" y="84.0" text-anchor="middle">Owner</text>
+<g class="act"><circle cx="135.7" cy="132.0" r="7"/><path d="M135.7,139.0 v14 M125.7,144.0 h20 M135.7,153.0 l-8,10 M135.7,153.0 l8,10"/></g>
+<text x="135.7" y="179.0" text-anchor="middle">Coding agent (Claude</text>
+<text x="135.7" y="196.0" text-anchor="middle">Code, Codex, OpenCode,</text>
+<text x="135.7" y="213.0" text-anchor="middle">Pi, dsh, Devin, Droid,</text>
+<text x="135.7" y="230.0" text-anchor="middle">Antigravity, Grok)</text>
+<rect class="n" x="440.6" y="115.5" width="151.8" height="40.0" rx="16"/>
+<text x="516.5" y="140.0" text-anchor="middle">Æion Factory project</text>
+<rect class="x" x="836.2" y="70.5" width="156.5" height="52.0" rx="6"/>
+<text x="914.5" y="92.5" text-anchor="middle">GitHub: pull requests,</text>
+<text x="914.5" y="109.5" text-anchor="middle">CI, tags</text>
+<rect class="x" x="837.8" y="148.5" width="153.3" height="52.0" rx="6"/>
+<text x="914.5" y="170.5" text-anchor="middle">Build factory</text>
+<text x="914.5" y="187.5" text-anchor="middle">(aeion-observability)</text>
+<rect class="lab" x="241.7" y="93.7" width="177.3" height="21.0" rx="4"/>
+<text x="330.4" y="108.7" text-anchor="middle" class="muted">scope, decisions, approvals</text>
+<rect class="lab" x="278.4" y="134.8" width="145.4" height="38.0" rx="4"/>
+<text x="351.1" y="149.8" text-anchor="middle" class="muted">guarded edits, checks,</text>
+<text x="351.1" y="166.8" text-anchor="middle" class="muted">receipts</text>
+<rect class="lab" x="635.8" y="101.4" width="201.8" height="21.0" rx="4"/>
+<text x="736.7" y="116.4" text-anchor="middle" class="muted">reviewed commits and releases</text>
+<rect class="lab" x="661.8" y="148.7" width="151.6" height="21.0" rx="4"/>
+<text x="737.6" y="163.7" text-anchor="middle" class="muted">exported feature specs</text>
+</svg>

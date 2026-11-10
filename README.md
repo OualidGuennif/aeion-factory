@@ -2,10 +2,11 @@
 
 **Your coding agent. A clear workflow. Checks you can verify.**
 
-A repository template that gives coding agents shared instructions, reusable skills, linked
-documentation and automatic safety checks. Your project's rules and your decisions come first.
+A repository template that gives coding agents shared instructions, reusable skills, a checkable
+specification, linked documentation and automatic safety checks. Your project's rules and your
+decisions come first. It runs on **Python 3 and your coding agent, nothing else**.
 
-[New project](#start-a-new-project) · [Existing project](#existing-project) · [Optional tools](#enable-optional-tools) · [Skills](#skills) · [Hooks](#hooks) · [Docs](#documentation)
+[New project](#start-a-new-project) · [Existing project](#existing-project) · [Specify with AxiomSpec](#specify-with-axiomspec) · [Optional tools](#enable-optional-tools) · [Skills](#skills) · [Hooks](#hooks) · [Docs](#documentation)
 
 ## Start a new project
 
@@ -57,7 +58,7 @@ tools/agents/template-update --ref v2.0.2 --root ../your-project
 
 It finds the release your project came from (`.aeion-factory`, else the closest tag), shows the
 release notes, updates every factory file you left untouched, merges the ones you edited, and leaves
-your instructions, settings, knowledge and changelog to you with a proposal for each. The
+your instructions, settings, knowledge (with your `knowledge/spec/spec.json`), the AxiomSpec cockpit and views in `docs/`, and your changelog to you, with a proposal for each. The
 [template-update skill](.agents/skills/template-update/SKILL.md) walks your agent through it.
 
 ## Enable optional tools
@@ -68,7 +69,6 @@ to switch the flow mode for you.
 | Option | What you get | Turn on |
 | --- | --- | --- |
 | [Team git flow](#team-git-flow) | Work on `develop`, checks before each commit, a recorded review before each push, releases by pull request to `main` | 4 commands below |
-| [Graphify + Archify](#graphify-and-archify) | Dependency queries and architecture diagrams built from source, no LLM | `python3 tools/architecture/setup` |
 | Claude Code plugins | Optional hook, skill, security and language-server tools | [Plugin commands](command.md#plugins-claude-code) |
 | Scheduled loops | Recurring checks, reviews and approved tasks | [Loop setup](knowledge/operations/loops.md) |
 
@@ -90,12 +90,26 @@ push (the pre-push hook refuses `develop` without a `Review: OK`), and releases 
 Back to local mode: `git config --unset aeion.mode`. The pre-commit checks also work on their own in
 local mode: run only the `core.hooksPath` line.
 
-### Graphify and Archify
+## Specify with AxiomSpec
 
-`python3 tools/architecture/setup` creates a virtual environment with pinned packages and an Archify
-clone in `.aeion/`. It needs **Node 18+ and Chrome/Chromium** (Python 3.14.1 is excluded). The agent
-explains the installation and asks before running it; on a work computer, check your company's
-policy. [Installation and first analysis →](knowledge/operations/architecture-maintenance.md)
+Every project gets one canonical **`knowledge/spec/spec.json`** ([AxiomSpec](knowledge/axiomspec/index.md)):
+goals, terms, structured requirements, decisions, constraints, scenarios, tests and the code that
+implements them, each with a stable ID. `tools/axiom/axiom` (Python standard library, no model)
+checks it and derives everything else:
+
+```bash
+tools/axiom/axiom validate                 # gates G01-G07: is the design ready, and if not, exactly why
+tools/axiom/axiom packet --files src/a.py  # every requirement, rule, decision and test a change must respect
+tools/axiom/axiom query tests src/a.py     # which tests reach a file; also spec, rdeps, path, impact, gaps
+tools/axiom/axiom docs                     # the cockpit (docs/README.md), pages and SVG diagrams
+tools/axiom/axiom export --all             # one eight-section feature Markdown per goal, for a build factory
+tools/axiom/axiom evidence run             # run the bound unittest tests and keep a receipt
+```
+
+The knowledge graph joins the spec, `knowledge/` and the code: declared links, bindings resolved to
+`file:line`, Python and ECMAScript imports, `Spec:` headers. Diagrams (system, process, sequence, use
+case, state) are rendered to SVG from JSON views. Unknown is never pass. [The toolkit →](knowledge/components/axiom-toolkit.md)
+· [The method →](knowledge/axiomspec/index.md) · [The demo →](https://github.com/OualidGuennif/aeion-factory/tree/main/demo)
 
 ## Skills
 
@@ -107,7 +121,7 @@ A skill is a reusable procedure your agent follows for one kind of task. Ask nat
 | Pick task guidance, without launching agents | [skill-route](.claude/skills/skill-route/SKILL.md) — native skills first, optional passive pool |
 | Plan a change and define its behaviour | [plan](.claude/skills/plan/SKILL.md) · [spec](.claude/skills/spec/SKILL.md) |
 | Implement, test or fix a bug | [build](.claude/skills/build/SKILL.md) · [test](.claude/skills/test/SKILL.md) · [debug](.claude/skills/debug/SKILL.md) |
-| Find dependencies, affected tests and specs | [graph](.claude/skills/graph/SKILL.md) — needs Graphify + Archify |
+| Know a change's obligations, dependencies and tests | [axiom](.claude/skills/axiom/SKILL.md) — spec, graph and context packet, no LLM |
 | Update the docs and finish a task | [okf-update](.claude/skills/okf-update/SKILL.md) · [sign-off](.claude/skills/sign-off/SKILL.md) |
 | Review and release (team flow) | [pr-review](.claude/skills/pr-review/SKILL.md) · [ship](.claude/skills/ship/SKILL.md) |
 | Check a sensitive change | [security-scan](.claude/skills/security-scan/SKILL.md) |
@@ -126,7 +140,7 @@ reads `.claude/settings.json`; the other agents get the same guards through thei
 | Hook | Runs | What it does |
 | --- | --- | --- |
 | `session-start` | Session start, resume, compaction | Shows the mode, branch, git status, last commits, open tasks and repo health |
-| `guard-bash` | Before every shell command | **Refuses** secret reads (also through globs, links and recursive searches), force-push, skipping git hooks, switching the flow mode, writing `.git/config`, Graphify's LLM commands, unbounded dumps |
+| `guard-bash` | Before every shell command | **Refuses** secret reads (also through globs, links and recursive searches), force-push, skipping git hooks, switching the flow mode, writing `.git/config`, unbounded dumps |
 | `guard-path` | Before Read, Edit, Write, Grep | **Refuses** secret files (a link judged by its target), writing `.git/config`, oversized reads |
 | `after-edit` | After each edit | Runs the fast checks for the edited file and names the doc that covers it |
 | `context-budget` | Every event | At 250k tokens: a verified handover, then compaction; at 300k, both are forced |
@@ -141,9 +155,9 @@ request and on pushes to `main` and `develop`.
 
 ## How the pieces fit
 
-**Plan → define the change → build → test → review → release.** `AGENTS.md` sets the rules,
-`knowledge/` holds the documentation, skills guide each task, hooks check the work as it happens,
-and `work/current.md` tracks open tasks. You approve meaningful plans; the agent reports the checks
+**Plan → specify → build → test → review → release.** `AGENTS.md` sets the rules, `knowledge/spec/spec.json`
+says what the product must do, `knowledge/` explains how, skills guide each task, hooks check the
+work as it happens, and `work/current.md` tracks open tasks. You approve meaningful plans; the agent reports the checks
 it actually ran.
 
 ## Documentation

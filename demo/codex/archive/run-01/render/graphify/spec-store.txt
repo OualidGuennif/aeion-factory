@@ -1,4 +1,0 @@
-$ ../tools/architecture/ask --root codex/workspace spec app/store/ideas.ts
-knowledge/components/idea-board-api.md  [both]
-
-exit=0

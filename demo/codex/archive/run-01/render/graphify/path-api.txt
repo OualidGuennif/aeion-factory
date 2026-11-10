@@ -1,4 +1,0 @@
-$ ../tools/architecture/ask --root codex/workspace path app/routes/api/[...path].ts app/api/app.ts
-app/routes/api/[...path].ts -> app/api/app.ts  [imports at app/routes/api/[...path].ts:3]
-
-exit=0

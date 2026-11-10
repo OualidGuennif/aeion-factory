@@ -65,14 +65,14 @@ in step 3. A present configuration file alone does not prove the hooks are activ
 4. Give the agent this setup request:
 
    > Read AGENTS.md, README.md and efficiency/00-EFFICIENCY.md. Prepare Æion Factory for this new
-   > project: describe the project and owner, add its actual build/test commands, adapt the
-   > architecture spec and analysis scope/views, and configure my chosen agent's native setup.
-   > Run the checks. Ask me before enabling the Git hooks and before installing the recommended
-   > Graphify/Archify baseline; tell me what it installs first. Keep one maintained source for
-   > instructions, Knowledge and skills. Report anything that still needs configuration. Wait for
-   > approval before implementing application features.
+   > project: describe the project and owner, add its actual build/test commands, fill
+   > docs/authored/brief.md with me and start knowledge/spec/spec.json from it (knowledge/axiomspec/index.md),
+   > and configure my chosen agent's native setup. Run the checks, including tools/axiom/axiom
+   > check. Ask me before enabling the Git hooks. Keep one maintained source for instructions,
+   > Knowledge and skills. Report anything that still needs configuration. Wait for approval before
+   > implementing application features.
 
-5. Say yes to Graphify and Archify unless your policy forbids them, and turn on the team git flow when the project has a remote and reviews (see [optional tools](../../README.md#enable-optional-tools)).
+5. Turn on the team git flow when the project has a remote and reviews (see [optional tools](../../README.md#enable-optional-tools)).
 6. From then on, start work with the managed launcher (`tools/agents/run <harness>`, below). Configure
    [GitHub main protection](github-protection.md) in the new repository;
    GitHub settings are not copied by templates.
@@ -94,9 +94,8 @@ in step 3. A present configuration file alone does not prove the hooks are activ
    > Inspect this project's existing instructions, docs, CI, skills and hooks first. Propose the
    > smallest adoption plan, one phase at a time. Merge useful Æion Factory pieces into what exists;
    > preserve my project's authority, conventions and working tools. Include native setup for my
-   > agent, linked specs and relevant checks; offer the Git hooks and the recommended
-   > Graphify/Archify baseline and ask me before installing anything. Wait for my approval before
-   > changing files.
+   > agent, linked specs (knowledge/spec/spec.json for the product's obligations) and relevant checks; offer
+   > the Git hooks and ask me before installing anything. Wait for my approval before changing files.
 
 4. Approve the fitting phases, validate each one and deliver through your project's PR workflow.
    This first session has no Æion Factory hooks yet: they arrive with the phase that copies your
@@ -112,8 +111,8 @@ in step 3. A present configuration file alone does not prove the hooks are activ
    | Devin, Droid, Antigravity | `.devin/`, `.factory/`, `.agents/hooks.json` | Approve the project hooks or trust the folder |
    | Grok | `.grok/hooks/factory.json` | Trust the folder; `/hooks` lists it. The Claude budget hook ignores a Grok envelope |
 
-5. Check the hooks as in a new project (step 3), then say yes to the Git hooks, Graphify and Archify
-   unless your policy forbids them. Use [the adoption guide](../../efficiency/00-EFFICIENCY.md) and
+5. Check the hooks as in a new project (step 3), then say yes to the Git hooks unless your policy
+   forbids them. Use [the adoption guide](../../efficiency/00-EFFICIENCY.md) and
    [runtime setup](agent-compatibility.md) for exact requirements.
 
 ## Start a prepared project

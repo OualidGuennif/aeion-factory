@@ -1,0 +1,77 @@
+{
+  "format": "aeion-view/0.1",
+  "kind": "flow",
+  "direction": "TB",
+  "nodes": [
+    {
+      "id": "start",
+      "label": "Traveler adds an activity",
+      "shape": "round"
+    },
+    {
+      "id": "valid",
+      "label": "Valid time and duration?",
+      "shape": "decision"
+    },
+    {
+      "id": "refuse_time",
+      "label": "Refuse with the field and reason"
+    },
+    {
+      "id": "lock",
+      "label": "Open one write transaction on the day"
+    },
+    {
+      "id": "fits",
+      "label": "Fits the day (CON-002)?",
+      "shape": "decision"
+    },
+    {
+      "id": "refuse_overlap",
+      "label": "Refuse: overlap, day unchanged"
+    },
+    {
+      "id": "save",
+      "label": "Save, ordered by start minute"
+    },
+    {
+      "id": "done",
+      "label": "Day shows the activity",
+      "shape": "round"
+    }
+  ],
+  "edges": [
+    {
+      "from": "start",
+      "to": "valid"
+    },
+    {
+      "from": "valid",
+      "to": "refuse_time",
+      "label": "no"
+    },
+    {
+      "from": "valid",
+      "to": "lock",
+      "label": "yes"
+    },
+    {
+      "from": "lock",
+      "to": "fits"
+    },
+    {
+      "from": "fits",
+      "to": "refuse_overlap",
+      "label": "no"
+    },
+    {
+      "from": "fits",
+      "to": "save",
+      "label": "yes"
+    },
+    {
+      "from": "save",
+      "to": "done"
+    }
+  ]
+}

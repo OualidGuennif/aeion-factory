@@ -484,7 +484,7 @@ description: What it does, in the third person. Use when <the trigger>.   # <= ~
 | `tech-watch` | the monthly watch (Phase 3's method) |
 | `pr-taste` | the owner commented on a PR: durable preferences into the knowledge base |
 | `retro` | after a session or weekly: lessons, new hook rules, new skills (Phase 7) |
-| `graph` | before changing or tracing code: exact structural answers from `tools/architecture/ask` |
+| `axiom` | before changing or tracing code: the change's requirements and context packet, then exact answers from `tools/axiom/axiom query` |
 | `loop-triage` | an outer-loop finding: turn it into an issue an inner loop can pick up |
 | `adopt` | applying this guide to an existing repository, phase by phase |
 
@@ -650,9 +650,8 @@ local edit-build-test cycle, the outer loop the integration, review and release 
   one line and a source each; a checkable one becomes a `hookify` rule. The next review applies
   them, so the owner never has to say it twice.
 - The same comment becomes the input of the next review: corrections compound.
-- Every main update runs the mandatory Graphify/Archify round, including docs-only merges.
-  Keep the complete architecture spec current and wait for the exact merged SHA's passing
-  analysis before closing work or releasing (`knowledge/operations/architecture-maintenance.md`).
+- Every commit keeps the canonical `knowledge/spec/spec.json` valid and the generated cockpit current
+  (`tools/axiom/axiom check` in the pre-commit and CI); the architecture spec stays complete.
 
 ### Outer loop (scheduled, read-only)
 
@@ -832,10 +831,10 @@ service that was turned on has its cost, its data scope and its off switch writt
 - **Robert C. Martin, ub-mode** — the three passes and the build principles (the data's shape first,
   a design fitted to the change, idempotent operations, one writer for shared state) are adapted in
   our own words; no ub-mode text is copied. https://github.com/unclebob/ub-mode
-- **Graphify Labs, Graphify** (Apache-2.0 with upstream notices) — pinned native code and Markdown
-  structural extraction. https://github.com/Graphify-Labs/graphify
-- **tt-a1i, Archify** (upstream Apache-2.0 / MIT notices) — pinned source-backed diagrams,
-  schema/provenance/browser checks. https://github.com/tt-a1i/archify
+- **AxiomSpec**, edition 0.3.0, and its two playbooks — the specification method, schemas,
+  conformance fixtures and reference example, authored for the Æion project and vendored verbatim in
+  `knowledge/axiomspec/`. Its optional CROA profile adapts selected inputs of the CROA public review
+  draft (The CROA Project, CC BY 4.0), with the attribution stated in that profile.
 
 - Chroma, *Context Rot* (2025) — long inputs degrade every model measured.
 - Gloaguen et al., context files and agent success (arXiv 2602.11988, 2026).

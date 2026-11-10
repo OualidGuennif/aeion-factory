@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" class="v" data-generator="tools/axiom" width="1156" height="235" viewBox="0 0 1156 235" role="img" aria-labelledby="t d">
+<title id="t">Context lifecycle</title>
+<desc id="d">How does a long session hand over before compaction?</desc>
+<style>
+.v{--bg:#ffffff;--fg:#0f172a;--muted:#475569;--line:#64748b;--node:#ffffff;--soft:#f8fafc;--group:#94a3b8;
+--accent:#2563eb;--decision:#fef3c7;--store:#ecfeff;--note:#fefce8}
+@media (prefers-color-scheme:dark){.v{--bg:#0b1120;--fg:#e2e8f0;--muted:#94a3b8;--line:#94a3b8;--node:#1e293b;
+--soft:#0b1120;--group:#475569;--accent:#60a5fa;--decision:#3b2f0b;--store:#083344;--note:#2a2a12}}
+.v .bg{fill:var(--bg)}
+.v text{font:13px system-ui,-apple-system,"Segoe UI",sans-serif;fill:var(--fg)}
+.v .muted{fill:var(--muted);font-size:12px}.v .title{font-weight:600}
+.v .n{fill:var(--node);stroke:var(--line);stroke-width:1.3}.v .d{fill:var(--decision);stroke:var(--line);stroke-width:1.3}
+.v .s{fill:var(--store);stroke:var(--line);stroke-width:1.3}.v .x{fill:var(--node);stroke:var(--line);stroke-dasharray:5 3}
+.v .g{fill:none;stroke:var(--group);stroke-dasharray:6 4;stroke-width:1.2}.v .e{fill:none;stroke:var(--line);stroke-width:1.3}
+.v .dash{stroke-dasharray:5 4}.v .a{fill:var(--line)}.v .lab{fill:var(--soft);opacity:.92}
+.v .act{fill:none;stroke:var(--accent);stroke-width:1.6}.v .life{stroke:var(--group);stroke-dasharray:4 4}
+.v .frag{fill:none;stroke:var(--group);stroke-width:1.2}.v .note{fill:var(--note);stroke:var(--group)}
+.v .solid{fill:var(--fg)}.v .ring{fill:none;stroke:var(--fg);stroke-width:1.5}
+</style>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="a" d="M0,0 L10,5 L0,10 z"/></marker><marker id="open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path class="e" d="M0,0 L10,5 L0,10"/></marker></defs>
+<rect class="bg" width="100%" height="100%" rx="10"/>
+<g transform="translate(0.0,16.5)">
+<path class="e" d="M72.0,81.0 C111.0,81.0 111.0,81.0 150.0,81.0" marker-end="url(#arrow)"/>
+<path class="e" d="M246.0,81.0 C333.7,81.0 333.7,81.0 421.4,81.0" marker-end="url(#arrow)"/>
+<path class="e" d="M587.6,72.7 C679.6,72.7 679.6,54.3 771.6,54.3" marker-end="url(#arrow)"/>
+<path class="e" d="M898.0,50.4 C957.7,50.4 957.7,54.9 1017.3,54.9" marker-end="url(#arrow)"/>
+<path class="e" d="M1072.3,37.0 C1072.3,-2.0 198.0,-2.0 198.0,61.0" marker-end="url(#arrow)"/>
+<path class="e" d="M587.6,89.3 C687.2,89.3 687.2,109.2 786.8,109.2" marker-end="url(#arrow)"/>
+<path class="e" d="M882.8,114.0 C972.1,114.0 972.1,114.0 1061.3,114.0" marker-end="url(#arrow)"/>
+<circle class="solid" cx="61.0" cy="81.0" r="9"/>
+<rect class="n" x="150.0" y="61.0" width="96.0" height="40.0" rx="16"/>
+<text x="198.0" y="85.5" text-anchor="middle">RUNNING</text>
+<rect class="n" x="421.4" y="61.0" width="166.2" height="40.0" rx="16"/>
+<text x="504.5" y="85.5" text-anchor="middle">HANDOVER_REQUIRED</text>
+<rect class="n" x="771.6" y="28.0" width="126.4" height="40.0" rx="16"/>
+<text x="834.8" y="52.5" text-anchor="middle">CHECKPOINTED</text>
+<rect class="n" x="1017.3" y="37.0" width="110.0" height="40.0" rx="16"/>
+<text x="1072.3" y="61.5" text-anchor="middle">RECOVERING</text>
+<rect class="n" x="786.8" y="94.0" width="96.0" height="40.0" rx="16"/>
+<text x="834.8" y="118.5" text-anchor="middle">STOPPED</text>
+<circle class="ring" cx="1072.3" cy="114.0" r="10"/><circle class="solid" cx="1072.3" cy="114.0" r="6"/>
+<rect class="lab" x="283.1" y="70.5" width="133.4" height="21.0" rx="4"/>
+<text x="349.8" y="85.5" text-anchor="middle" class="muted">usage reaches 250k</text>
+<rect class="lab" x="636.6" y="49.8" width="119.7" height="21.0" rx="4"/>
+<text x="696.5" y="64.8" text-anchor="middle" class="muted">verified handover</text>
+<rect class="lab" x="929.9" y="43.0" width="77.3" height="21.0" rx="4"/>
+<text x="968.6" y="58.0" text-anchor="middle" class="muted">compaction</text>
+<rect class="lab" x="573.2" y="-4.5" width="124.0" height="21.0" rx="4"/>
+<text x="635.2" y="10.5" text-anchor="middle" class="muted">new positive usage</text>
+<rect class="lab" x="634.5" y="92.3" width="142.0" height="21.0" rx="4"/>
+<text x="705.5" y="107.3" text-anchor="middle" class="muted">300k or invalid usage</text>
+</g>
+</svg>

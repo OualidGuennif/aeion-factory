@@ -18,6 +18,8 @@ jobs:
         with:
           fetch-depth: 0
       - run: ./tools/knowledge/knowledge-check
+      - name: AxiomSpec gate (structure, references, generated docs current)
+        run: ./tools/axiom/axiom check
       - name: doc-links (with --diff on pull requests)
         env:
           BASE_REF: ${{ github.base_ref }}

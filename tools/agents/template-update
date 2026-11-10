@@ -1,16 +1,22 @@
 #!/usr/bin/env python3
-# Spec: knowledge/operations/agent-compatibility.md
+# Spec: knowledge/operations/template-update.md
 """Move an adopted project from one factory release to another, keeping the project's own content.
 
 Every file the factory changed between the project's baseline and the target is decided on its own:
 - contract connectors (connectors.CONTRACT) are copied byte for byte, as a harness loads them;
-- the project's own files (VERSION, CHANGELOG.md, work/, knowledge/, demo/, the marker) are never
-  written; changed knowledge/ docs are listed for review;
+- the project's own files (VERSION, CHANGELOG.md, work/, knowledge/spec/, demo/, the marker, and the
+  AxiomSpec cockpit, views and catalogs in docs/) are never written;
+- a factory knowledge/ doc follows the factory only while the project has not edited it: an untouched
+  copy is updated or removed, a new doc is added, and an edited one is listed for review, never merged;
+  the vendored AxiomSpec package (knowledge/axiomspec/) updates like any factory file, since
+  tools/axiom/ cannot run without its schemas;
 - AGENTS.md and the merged settings (connectors.MERGE) are never written; a merge proposal is;
 - every other file is a three-way update: untouched since the baseline takes the target, an edited
   one is merged with git merge-file, and a conflict leaves the project's file as it is;
 - a factory file the project still holds as an older release's untouched copy (an update before 2.0.1
-  moved only the connectors) diffs from that release, so it takes the target too.
+  moved only the connectors) diffs from that release, so it takes the target too;
+- a new file in a folder the project lacks is skipped when the baseline had that folder (the project
+  left it out), and added when the folder is new in the factory (3.0.0's tools/axiom/, for example).
 
 The baseline is --from-ref, else the tracked marker .aeion-factory a previous update or
 `release --new-project` wrote, else the release tag whose files the project matches best. The
@@ -31,12 +37,18 @@ FACTORY = Path(__file__).resolve().parents[2]
 
 sys.path.insert(0, str(FACTORY / "tools/agents"))
 from connectors import CONTRACT, MERGE, executable, linked  # noqa: E402
-from refs import Refused, git, ref_bytes, ref_diff, ref_exists, ref_mode, require_repository  # noqa: E402
+from refs import Refused, git, ref_bytes, ref_diff, ref_exists, ref_files, ref_mode, require_repository  # noqa: E402
 
 SEMVER = re.compile(r"(\d+)\.(\d+)\.(\d+)")
 MARKER = ".aeion-factory"
-OWNED_FILES = ("VERSION", "CHANGELOG.md", MARKER)
-OWNED_FOLDERS = ("work/", "knowledge/", "demo/")
+# The AxiomSpec cockpit, views and catalogs under docs/ describe the project, like knowledge/spec/.
+OWNED_FILES = ("VERSION", "CHANGELOG.md", MARKER, "docs/README.md", "docs/view-catalog.json", "docs/feature-catalog.json")
+OWNED_FOLDERS = ("work/", "knowledge/spec/", "demo/", "docs/generated/", "docs/views/", "docs/features/", "docs/authored/")
+# The project's knowledge: a doc it edited is its own words, so a factory change there is only listed.
+REVIEWED_FOLDERS = ("knowledge/",)
+# The vendored AxiomSpec package (contracts, schemas the toolkit loads, playbooks) belongs to the template:
+# tools/axiom/ cannot run without its schemas, so an update carries both or neither.
+TEMPLATE_FOLDERS = ("knowledge/axiomspec/",)
 LINK, GITLINK = "120000", "160000"
 NOTES_CAP = 80
 PROPOSALS = ".aeion/template-update"
@@ -64,6 +76,8 @@ def allowed(baseline, target):
 
 
 def owned(relative):
+    if relative.startswith(TEMPLATE_FOLDERS):
+        return False
     return relative in OWNED_FILES or relative.startswith(OWNED_FOLDERS)
 
 
@@ -184,11 +198,19 @@ def develop_without_team_mode(root):
     return has_develop and local_git(root, "config", "--local", "--get", "aeion.mode") != "team"
 
 
+def without_a_spec(root):
+    """3.0.0's knowledge docs and checks cite a project's AxiomSpec spec, catalogs and cockpit."""
+    return not (root / "knowledge/spec/spec.json").is_file()
+
+
 # (release, applies to this project, what the owner runs): the tool never runs these itself.
 MIGRATIONS = (
     ("2.0.0", develop_without_team_mode,
      "the git lifecycle is now off unless aeion.mode is team; this project has a develop branch, so the "
      "owner runs `git config aeion.mode team` in each clone to keep the team flow"),
+    ("3.0.0", without_a_spec,
+     "AxiomSpec replaces Graphify and Archify; the owner runs `tools/axiom/axiom init` once, which starts "
+     "this project's spec, catalogs and cockpit (the factory's knowledge docs cite them)"),
 )
 
 
@@ -230,6 +252,16 @@ def project_entry(root, relative):
     return None, None
 
 
+def missing_folder(root, relative):
+    """The outermost folder of a path that the project lacks, or None when the path's folder exists."""
+    parts = Path(relative).parent.parts
+    for depth in range(1, len(parts) + 1):
+        folder = Path(*parts[:depth])
+        if not (root / folder).is_dir():
+            return folder.as_posix()
+    return None
+
+
 def plan_file(repo, root, base, ref, relative):
     """One factory file's decision: (label, data to write or None, mode, proposal or None)."""
     base_mode, base_data = ref_entry(repo, base, relative)
@@ -247,9 +279,10 @@ def plan_file(repo, root, base, ref, relative):
             return "kept-deleted", None, mode, None
         if mode is None:
             return "current", None, mode, None
-        # A partial adoption leaves whole folders out; a new file follows its folder in.
-        parent = Path(relative).parent
-        if parent != Path(".") and not (root / parent).is_dir():
+        # A partial adoption leaves whole folders out; a new file follows its folder in. A folder the
+        # baseline did not have is new in the factory, so the project cannot have left it out.
+        folder = missing_folder(root, relative)
+        if folder and ref_files(repo, base, folder):
             return "skipped", None, mode, None
         return "added", data, mode, None
     if mode is None:
@@ -259,6 +292,8 @@ def plan_file(repo, root, base, ref, relative):
         return ("mode" if stale_mode else "current"), None, mode, None
     if base_data is not None and ours == base_data:
         return "updated", data, mode, None
+    if relative.startswith(REVIEWED_FOLDERS) and not relative.startswith(TEMPLATE_FOLDERS):
+        return "review", None, mode, None
     merged, clean = three_way(ours, base_data or b"", data)
     return ("merged", merged, mode, None) if clean else ("conflict", None, mode, merged)
 
@@ -318,7 +353,6 @@ def update(root, repo, ref, from_ref, check, force):
             continue
         contract.append(("written", relative, expected, mode))
     diff = set(ref_diff(repo, base, ref))
-    reviews = sorted(relative for relative in diff if relative.startswith("knowledge/"))
     target_tree, base_tree = tree(repo, ref), tree(repo, base)
     factory_files = {relative for relative in diff | set(target_tree)
                      if relative not in CONTRACT and not owned(relative)}
@@ -349,9 +383,10 @@ def update(root, repo, ref, from_ref, check, force):
             continue
         decisions.append((label, relative, data, mode, proposal, None if since == base else since))
     # A write must not go through a link into a file the project does not own; a factory symlink
-    # (a skill link) is itself the destination, so only its folders are checked.
+    # (a skill link, added, replaced or removed) is itself the destination, so only its folders are checked.
     writes = [(relative, relative) for relative in CONTRACT] + [
-        (str(Path(relative).parent) if label == "link" else relative, relative)
+        (str(Path(relative).parent) if label == "link" or (label == "removed" and (root / relative).is_symlink())
+         else relative, relative)
         for label, relative, *_ in decisions if label in ("added", "updated", "merged", "removed", "link", "mode")]
     for checked, relative in writes:
         link = linked(root, checked)
@@ -404,6 +439,12 @@ def update(root, repo, ref, from_ref, check, force):
         found = root / relative
         if label == "removed" or (label == "link" and found.is_symlink()):
             found.unlink(missing_ok=True)
+        if label == "removed":
+            # A folder the factory emptied goes too; one holding anything of the project's stays.
+            for folder in found.parents:
+                if folder == root or not folder.is_dir() or any(folder.iterdir()):
+                    break
+                folder.rmdir()
         if label == "link" and data is not None:
             found.parent.mkdir(parents=True, exist_ok=True)
             found.symlink_to(data.decode())
@@ -414,10 +455,8 @@ def update(root, repo, ref, from_ref, check, force):
             found.chmod(0o755)
     for relative, merged in merges:
         print(f"merge     {relative} — the factory changed it; proposal: {propose(relative, merged)}")
-    for relative in reviews:
-        print(f"review    {relative}")
-    if reviews:
-        print(f"          factory knowledge the project owns; compare: git -C {repo} diff {base} {ref} -- knowledge/")
+    if any(label == "review" and relative.startswith(REVIEWED_FOLDERS) for label, relative, *_ in decisions):
+        print(f"          your knowledge/ edits stay; compare: git -C {repo} diff {base} {ref} -- knowledge/")
     hints = [message for release, applies, message in MIGRATIONS
              if old and semver(release) > old and (not new or semver(release) <= new) and applies(root)]
     for message in hints:
@@ -425,17 +464,15 @@ def update(root, repo, ref, from_ref, check, force):
     skipped = counts.get("skipped", 0) + counts.get("kept-deleted", 0)
     if skipped:
         print(f"untouched {skipped} file(s) the project removed or never adopted; "
-              "VERSION, CHANGELOG.md, work/ and knowledge/ are never written")
+              "VERSION, CHANGELOG.md, work/ and knowledge/spec/ are never written")
 
-    pending = counts.get("conflict", 0) + counts.get("review", 0) + len(merges) + len(reviews) + len(hints)
+    pending = counts.get("conflict", 0) + counts.get("review", 0) + len(merges) + len(hints)
     changed = sum(counts.get(label, 0) for label in ("written", "mode", "added", "updated", "merged", "removed", "link"))
     summary = ", ".join(f"{counts[label]} {label}" for label in
                         ("written", "mode", "added", "updated", "merged", "removed", "link", "conflict", "review")
                         if counts.get(label))
     if merges:
         summary += f"{', ' if summary else ''}{len(merges)} to merge"
-    if reviews:
-        summary += f"{', ' if summary else ''}{len(reviews)} knowledge doc(s) to review"
     print(f"\n{'would change' if check else 'done'}: {summary or 'nothing to do'}")
     if check:
         return 1 if changed or pending or not exact else 0

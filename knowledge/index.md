@@ -14,6 +14,7 @@ Open only what the task needs. Each folder has its own `index.md`.
 
 | To | Open |
 | --- | --- |
+| Specify a product: one canonical `knowledge/spec/spec.json`, its gates, graph and cockpit | [axiomspec/index.md](axiomspec/index.md) (the AxiomSpec method) |
 | Follow a durable rule (engineering, security, specs, layout, UI, the owner's taste) | [policies/index.md](policies/index.md) |
 | Change a component | [components/index.md](components/index.md) (one spec per unit) |
 | Understand why a choice exists | [decisions/index.md](decisions/index.md) |

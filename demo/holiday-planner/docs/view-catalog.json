@@ -1,0 +1,107 @@
+{
+  "format": "project-doc-views/0.1",
+  "views": [
+    {
+      "id": "VIEW-CONTEXT",
+      "kind": "system",
+      "title": "System context",
+      "question": "Who uses the planner, and what leaves it?",
+      "audience": "the team building the planner",
+      "claim": "intended",
+      "canonical_ids": [
+        "GOAL-015",
+        "GOAL-016",
+        "GOAL-012"
+      ],
+      "source_path": "docs/views/context.json",
+      "scope": "People and systems; no hosting is in scope.",
+      "review": "accepted with the spec; becomes observed once its tests have receipts"
+    },
+    {
+      "id": "VIEW-COMPONENTS",
+      "kind": "system",
+      "title": "Components",
+      "question": "Which part owns which responsibility?",
+      "audience": "the team building the planner",
+      "claim": "intended",
+      "canonical_ids": [
+        "COMP-001",
+        "COMP-002",
+        "COMP-003",
+        "COMP-004",
+        "COMP-005",
+        "COMP-006",
+        "COMP-007"
+      ],
+      "source_path": "docs/views/components.json",
+      "scope": "Modules of app/; the browser is the only client.",
+      "review": "accepted with the spec; becomes observed once its tests have receipts"
+    },
+    {
+      "id": "VIEW-PLAN-A-DAY",
+      "kind": "process",
+      "title": "Plan a day",
+      "question": "How is a new activity accepted or refused?",
+      "audience": "the team building the planner",
+      "claim": "intended",
+      "canonical_ids": [
+        "REQ-008",
+        "REQ-009",
+        "REQ-010",
+        "CON-002"
+      ],
+      "source_path": "docs/views/plan-a-day.json",
+      "scope": "One activity; moving an activity follows the same path.",
+      "review": "accepted with the spec; becomes observed once its tests have receipts"
+    },
+    {
+      "id": "VIEW-ADD-ACTIVITY",
+      "kind": "sequence",
+      "title": "Add an activity",
+      "question": "In which order do the parts act, and where is the race closed?",
+      "audience": "the team building the planner",
+      "claim": "intended",
+      "canonical_ids": [
+        "REQ-010",
+        "CON-001",
+        "CON-002"
+      ],
+      "source_path": "docs/views/add-activity.json",
+      "scope": "Happy path and both refusals; network errors are left out.",
+      "review": "accepted with the spec; becomes observed once its tests have receipts"
+    },
+    {
+      "id": "VIEW-USECASES",
+      "kind": "usecase",
+      "title": "Who does what",
+      "question": "Which goals can each actor pursue?",
+      "audience": "the team building the planner",
+      "claim": "intended",
+      "canonical_ids": [
+        "GOAL-001",
+        "GOAL-005",
+        "GOAL-009",
+        "GOAL-010",
+        "GOAL-015"
+      ],
+      "source_path": "docs/views/usecases.json",
+      "scope": "Capabilities, not permissions.",
+      "review": "accepted with the spec; becomes observed once its tests have receipts"
+    },
+    {
+      "id": "VIEW-LIFECYCLE",
+      "kind": "state",
+      "title": "Trip lifecycle",
+      "question": "Which status changes are allowed?",
+      "audience": "the team building the planner",
+      "claim": "intended",
+      "canonical_ids": [
+        "MODEL-001",
+        "REQ-026"
+      ],
+      "source_path": "docs/views/lifecycle.json",
+      "scope": "Taken from MODEL-001; DEC-006 on completed trips is open.",
+      "review": "accepted with the spec; becomes observed once its tests have receipts"
+    }
+  ]
+}

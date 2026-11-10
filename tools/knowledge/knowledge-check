@@ -8,7 +8,7 @@ description over 250 characters; a `review_after` that is not a real YYYY-MM-DD 
 `verified` entries or one over 300 characters; a body over 600 lines; a broken relative Markdown link; a stable concept missing from its folder index;
 a Component without the eight spec sections; AGENTS.md over 120 lines; CLAUDE.md that is neither a
 link to AGENTS.md nor `@AGENTS.md`; work/current.md over 150 lines or an entry over 10 lines or
-without its five fields. Spec: knowledge/policies/specs-first.md
+without its five fields. The vendored AxiomSpec package is exempt. Spec: knowledge/policies/specs-first.md
 """
 import argparse
 import re
@@ -23,6 +23,8 @@ STATUSES = {"draft", "stable", "deprecated"}
 SPEC_SECTIONS = ("## Intent", "## Data sources", "## Inputs", "## Outputs", "## Invariants",
                  "## Determinism", "## Acceptance checks", "## Out of scope")
 WORK_FIELDS = ("- Owner decision:", "- State:", "- Next:", "- Blocker:", "- Evidence:")
+# Vendored packages keep their upstream format; tools/axiom/tests checks their own links.
+VENDORED = ("knowledge/axiomspec/AxiomSpec/", "knowledge/axiomspec/playbooks/")
 
 
 def field(block, key):
@@ -84,6 +86,8 @@ def main(argv):
     # Every concept, and the index of its folder.
     kb = root / "knowledge"
     for path in sorted(kb.rglob("*.md")) if kb.is_dir() else []:
+        if path.relative_to(root).as_posix().startswith(VENDORED):
+            continue
         check_links(path, root, problems)
         if path.name == "index.md":
             continue

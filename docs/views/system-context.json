@@ -1,0 +1,54 @@
+{
+  "format": "aeion-view/0.1",
+  "kind": "flow",
+  "direction": "LR",
+  "nodes": [
+    {
+      "id": "owner",
+      "label": "Owner",
+      "shape": "actor"
+    },
+    {
+      "id": "agent",
+      "label": "Coding agent (Claude Code, Codex, OpenCode, Pi, dsh, Devin, Droid, Antigravity, Grok)",
+      "shape": "actor"
+    },
+    {
+      "id": "factory",
+      "label": "Æion Factory project",
+      "shape": "round"
+    },
+    {
+      "id": "github",
+      "label": "GitHub: pull requests, CI, tags",
+      "shape": "external"
+    },
+    {
+      "id": "builder",
+      "label": "Build factory (aeion-observability)",
+      "shape": "external"
+    }
+  ],
+  "edges": [
+    {
+      "from": "owner",
+      "to": "factory",
+      "label": "scope, decisions, approvals"
+    },
+    {
+      "from": "agent",
+      "to": "factory",
+      "label": "guarded edits, checks, receipts"
+    },
+    {
+      "from": "factory",
+      "to": "github",
+      "label": "reviewed commits and releases"
+    },
+    {
+      "from": "factory",
+      "to": "builder",
+      "label": "exported feature specs"
+    }
+  ]
+}

@@ -55,6 +55,25 @@ for value in ('', '""', '"  "'):
 check_doc("a malformed review_after is named", "review_after: 2027-1-9\n", 1,
           "review_after '2027-1-9' is not a YYYY-MM-DD date")
 
+
+
+def check_vendored(name, folder, want_code, want_text=""):
+    """A vendored package keeps its upstream format: no frontmatter, links the package checks itself."""
+    global passes
+    root = Path(tempfile.mkdtemp())
+    (root / folder).mkdir(parents=True)
+    (root / folder / "README.md").write_text("# Upstream\n\n[missing](nowhere.md)\n")
+    r = subprocess.run([sys.executable, str(TOOL), "--root", str(root)], capture_output=True, text=True)
+    if r.returncode == want_code and want_text in r.stdout:
+        passes += 1
+    else:
+        failures.append(f"{name}: exit {r.returncode}, stdout {r.stdout!r}")
+
+
+check_vendored("the vendored AxiomSpec package is exempt", "knowledge/axiomspec/AxiomSpec", 0, "PASS")
+check_vendored("a playbook beside it is exempt", "knowledge/axiomspec/playbooks", 0, "PASS")
+check_vendored("any other folder is checked", "knowledge/axiomspec/other", 1, "no frontmatter")
+
 for f in failures:
     print("FAIL:", f)
 print(f"{passes} passed, {len(failures)} failed")

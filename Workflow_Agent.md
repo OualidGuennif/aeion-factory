@@ -8,8 +8,7 @@ knowledge base.
 - Read `AGENTS.md` (it is short). The session starts with a summary from the `SessionStart` hook:
   git status, recent commits, open tasks.
 - Instructions that existed before Æion Factory, and the owner's words, win.
-- The Graphify/Archify baseline is strongly recommended and installed only on the user's yes
-  (`knowledge/operations/architecture-maintenance.md`). Start through `tools/agents/run <claude|codex|opencode|pi|devin|droid|antigravity|grok>`; Claude also retains `tools/context/run`.
+- Nothing needs installing beyond Python 3 and the agent. Start through `tools/agents/run <claude|codex|opencode|pi|devin|droid|antigravity|grok>`; Claude also retains `tools/context/run`.
 
 ## 1. Plan (skill `plan`)
 
@@ -19,8 +18,10 @@ change that fits; list what you will not do. Wait for a yes.
 
 ## 2. Spec (skill `spec`)
 
-For a feature or a component, write or update its spec sections first (intent, inputs, outputs,
-invariants and their tests, acceptance checks). The spec is the source of truth.
+For a feature or a component, change `knowledge/spec/spec.json` first (the requirement, its test case and
+oracle, an open decision for any choice that is not yours), run `tools/axiom/axiom validate`, then
+update the component doc's spec sections. Before editing code, read the change's context packet:
+`tools/axiom/axiom packet --files <files>` (skill `axiom`). The spec is the source of truth.
 
 ## 3. Branch
 
@@ -54,8 +55,7 @@ until OK, then push: `tools/git-hooks/pre-push` refuses `develop` without it.
 
 A pull request `develop → main`, reviewed again, merged with a merge commit after a green CI, then
 tagged `vX.Y.Z`. Anything that needs a deploy or a human decision waits for that human.
-Wait for Graphify/Archify's analysis round on the exact merged SHA, even for docs-only merges.
-Keep the complete architecture spec current; failed analysis leaves the work incomplete.
+Keep the complete architecture spec and the generated cockpit current (`tools/axiom/axiom check` in CI).
 
 ## 8. Learn (skills `pr-taste`, `retro`)
 

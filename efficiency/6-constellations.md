@@ -53,9 +53,8 @@ local edit-build-test cycle, the outer loop the integration, review and release 
   one line and a source each; a checkable one becomes a `hookify` rule. The next review applies
   them, so the owner never has to say it twice.
 - The same comment becomes the input of the next review: corrections compound.
-- Every main update runs the mandatory Graphify/Archify round, including docs-only merges.
-  Keep the complete architecture spec current and wait for the exact merged SHA's passing
-  analysis before closing work or releasing (`knowledge/operations/architecture-maintenance.md`).
+- Every commit keeps the canonical `knowledge/spec/spec.json` valid and the generated cockpit current
+  (`tools/axiom/axiom check` in the pre-commit and CI); the architecture spec stays complete.
 
 ### Outer loop (scheduled, read-only)
 

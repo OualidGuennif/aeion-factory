@@ -1,14 +1,14 @@
 ---
 type: Component
 title: "Æion Factory architecture"
-description: "Complete source-backed specification of Æion Factory's authority, execution, Knowledge, context checkpoints, analysis and delivery."
+description: "Complete specification of Æion Factory's authority, execution, Knowledge and AxiomSpec layer, context checkpoints and delivery."
 status: stable
 generated:
-  by: aeion-factory/1.6.2
-  at: 2026-11-06
+  by: aeion-factory/3.0
+  at: 2026-11-10
 verified:
-  - at: 2026-11-06
-    what: "tools/factory-tests passed after Grok joined the harness list; the budget state machine is unchanged"
+  - at: 2026-11-10
+    what: "tools/factory-tests and tools/axiom/axiom check passed with the AxiomSpec toolkit as the only analysis layer"
 sources:
   - id: instructions
     resource: ../../AGENTS.md
@@ -19,18 +19,18 @@ sources:
   - id: launcher
     resource: ../../loops/orchestrator.sh
     title: "Optional loop execution"
-  - id: refresh
-    resource: ../../tools/architecture/refresh
-    title: "Analysis snapshots and provenance"
-  - id: graph
-    resource: ../../tools/architecture/graph.py
-    title: "Native structural Graphify extraction"
-  - id: workflow
-    resource: ../../.github/workflows/architecture-refresh.yml
-    title: "PR and main maintenance rounds"
+  - id: spec
+    resource: ../../knowledge/spec/spec.json
+    title: "The factory's own canonical AxiomSpec specification"
+  - id: toolkit
+    resource: ../../tools/axiom/axiom
+    title: "Gates, knowledge graph, views and cockpit"
   - id: views
-    resource: ../../tools/architecture/views.json
-    title: "Reviewed Archify views and evidence anchors"
+    resource: ../../docs/view-catalog.json
+    title: "The architecture views, rendered in docs/generated/diagrams/"
+  - id: ci
+    resource: ../../.github/workflows/ci.yml
+    title: "Pull request and branch checks"
 ---
 
 # Æion Factory architecture
@@ -60,8 +60,8 @@ enforcement. See [agent compatibility](../operations/agent-compatibility.md).
 
 Knowledge is canonical policy/specification; OKF is the maintained concept/frontmatter/link
 discipline. Skills describe task procedures. Hooks are event-triggered feedback/control within
-the supported harness. A checkpoint preserves an unfinished task; a baseline records source
-analysis at a commit. Neither replaces owner authorization, tests or canonical documentation.
+the supported harness. A checkpoint preserves an unfinished task; a specification baseline is the
+digest of `knowledge/spec/spec.json` that gates and evidence name. Neither replaces owner authorization, tests or canonical documentation.
 
 Agents keep reasoning private and omit optional progress narration, including JSON notes.
 Necessary user decisions and final validation remain visible. [Token feedback](../policies/bounded-intake.md)
@@ -76,7 +76,8 @@ is advisory; it does not enforce the model's private reasoning format or a token
 | `work/current.md` | Open task state / current worker | Every meaningful sign-off/checkpoint |
 | Git objects and diff | Immutable source and changed/deleted paths / Git | Explicit target/base SHA |
 | Current session transcript | Latest native input/cache/output token counts / Claude Code | Bounded tail at each control event |
-| Graphify/Archify | Structural relations, rendered views and check receipts / pinned tools | Per target commit; derived, never policy |
+| `knowledge/spec/spec.json` | Canonical goals, requirements, decisions, tests and bindings / owner and authors | Changed with the behaviour it specifies; gates on every commit |
+| Knowledge graph | Spec, docs and code joined in `.aeion/graph/` / `tools/axiom` | Rebuilt when an input changes; derived, never policy |
 
 ## Inputs
 
@@ -93,22 +94,13 @@ limit remain terminal. Every event, including PreCompact, latches a warning cros
 Subagent tool events key state by parent plus `agent_id` and read the child's own transcript.
 Unavailable child usage stops that child's profile without contaminating the parent's state.
 
-Analysis takes an explicit target commit, optional comparison base and reviewed integration/view
-manifests. A diverged PR uses the effective merge base while preserving its exact requested
-base and target SHAs in the receipt. Main pushes retain their ordinary ancestor comparison.
-Only allowed tracked text enters extraction. Secret paths (one list for the guards, analysis and
-the context fingerprint, `.claude/hooks/secret_names.py`) refuse analysis, symlinks
-are excluded, and unsupported formats remain explicitly inventory-only. Tool versions are pinned.
-The graph includes code and native Markdown structure/frontmatter/links; semantic inference by
-an LLM is outside the baseline. Each doc's frontmatter `sources`, read from disk, adds a `specifies` edge to
-the file it names (Graphify alone links only code names written in a body); `coverage.json` lists any
-`resource` that names no file in the corpus. `refresh` runs only on a root that is its own git
-repository; a plain folder nested in another one is refused before any git call. This keeps the default independent of model credentials.
-`graph.py` also adds `specified_by` edges from `Spec:` lines, `names_file` edges from tests that name a
-file, and exact `imports` from `deno info` in a Deno project. For day-to-day questions on the working
-tree, [`tools/architecture/ask`](graph-queries.md) keeps its own graph in `.aeion/graph/`, apart from the baselines.
-Setup stamps Graphify's commit archive URL and SHA-256, including replacement of a same-version wheel
-from another source; analysis refuses mismatched package provenance or a dirty Archify checkout.
+The AxiomSpec layer reads `knowledge/spec/spec.json`, the knowledge docs and the project files. The graph is
+built from declared data (spec edges, frontmatter `sources` and `spec_ids`, `Spec:` lines, Markdown
+links), bindings resolved in a hashed snapshot, Python imports from `ast` and ECMAScript imports from a
+lexical scan. Secret paths (one list for the guards, the graph and the context fingerprint,
+`.claude/hooks/secret_names.py`) are never read; symlinks are skipped; nested projects and the passive
+`skills/` pool belong to their own checks. No language model takes part. Details and limits:
+[axiom toolkit](axiom-toolkit.md).
 
 ## Outputs
 
@@ -128,13 +120,14 @@ from another source; analysis refuses mismatched package provenance or a dirty A
 | Handover | Recovery facts for the current session | Ignored `work/handovers/<session>.md`, created atomically only when closure needs it |
 | Knowledge/link/health checkers | Frontmatter, caps, traceability and diff coverage | Exit code + bounded diagnostics; no provider |
 | Optional loops | Select prompt/model/tools and run a managed headless task | Off unless enabled; outer loop reads production only through its configured read path; `AEION_LOOP` keeps file tools in the project, writing jobs get named git subcommands only, inner needs a maintainer-written issue |
-| Analysis wrapper | Freeze Git, Graphify, evidence validation and Archify finalization | Ignored `.aeion/analysis/<sha>/` and immutable receipts |
-| GitHub workflows | PR checks and post-main analysis; artifact retention | Read-only checkout/job permissions; no generated-source push |
+| Axiom toolkit | AxiomSpec gates, knowledge graph, bounded queries, context packets, views, cockpit, feature export, test evidence | `tools/axiom/axiom`; `knowledge/spec/`, `docs/`, ignored `.aeion/graph/` |
+| GitHub workflows | PR and branch checks, including `axiom check` | Read-only checkout/job permissions; no generated-source push |
 | Native language servers | Editor diagnostics for their registered language | Local processes; explicit plugin enablement |
-| Demo playground | An agent builds a real app on a git-less copy of the factory and files feedback for the base | `demo/plan/` briefs; per harness a tracked journal and `feedback_for_aeion/`, an ignored `workspace/` copy |
+| Demo playground | The Holiday Planner: a 20-feature AxiomSpec product an agent builds on a git-less copy; an automated self-check replays every toolkit step | `demo/check`, `demo/holiday-planner/`, `demo/plan/` rounds; an ignored `workspace/` copy per harness |
 
-Normal task: read -> approved plan -> component spec -> thin changes/tests -> docs/current task
-update -> fresh review -> authorized PR merge -> exact-merged-SHA analysis -> closure/release.
+Normal task: read -> approved plan -> spec change (`knowledge/spec/spec.json` and the component doc) -> context
+packet -> thin changes/tests -> evidence and regenerated docs -> current task update -> fresh review ->
+authorized PR merge -> closure/release.
 Deployment remains the adopting project's own guarded procedure. Æion Factory loops never deploy.
 
 ### Context and recovery
@@ -183,50 +176,43 @@ are preserved. This reduces accidental intake without rewriting tool output or a
 
 ### Knowledge, state and retention
 
-Canonical facts exist once in Knowledge with sources and `Spec:` pointers. Frontmatter/tags
-retain existing formats and limits. Generated graphs/views are navigation aids; inferred links
-retain confidence labels and cannot create canonical facts. `work/current.md` retains only open
+Canonical facts exist once: product obligations in `knowledge/spec/spec.json`, engineering knowledge in
+Knowledge with sources and `Spec:` pointers, linked both ways by canonical IDs. Frontmatter/tags
+retain existing formats and limits. The graph and the generated cockpit are derived views: they
+name each edge's origin and cannot create canonical facts. `work/current.md` retains only open
 tasks. Completed task state is removed; durable choices go to ADRs/policies and commit history.
 Local handovers are concise, contain no transcripts/secrets, and can be removed after completed
 task recovery/closure. State deletion is a manual recovery decision, not an automatic stop bypass.
 
-Analysis output and caches stay ignored locally. CI artifacts retain the workflow's configured
-retention period (14 days); a missing/expired baseline must be rebuilt. There is no mutable
-latest pointer, graph database, shared writable cache or exactly-once delivery assumption.
+The graph snapshot stays ignored locally and is rebuilt from the files; generated docs are tracked
+and checked current on every commit. There is no graph database, shared writable cache or
+exactly-once delivery assumption.
 
 ### Trust and failure behavior
 
 Scripts never execute model-produced commands. Only fixed closure commands and validated Git
-arguments pass to subprocesses. Tool installations are project-local and pinned; normal analysis
-requires no LLM credential; agents ask before installing them. CI uses a read-only token and
+arguments pass to subprocesses. Nothing is installed beyond Python 3 and the agent; analysis
+requires no LLM credential; agents ask before installing anything. CI uses a read-only token and
 never sends source to a model. A local
 agent/runtime still needs its existing account. Raw CLI sessions outside the managed launcher
 and deliberately modified local hooks are outside the enforcement claim.
 
-Each analysis builds a clean immutable snapshot. File hashes, source anchors, native coverage
-and Archify's schema/provenance/browser gates must pass before publication. Missing tools,
-browser, refs, evidence anchors, extraction coverage or output fail the round. Jobs run separately
-per target; duplicates use a valid same-SHA receipt only after artifact verification. A newer
-failed round leaves older SHA artifacts intact but stale. Bounded subprocess timeouts terminate
-the invocation; no background service/retry queue continues it. CI reruns retry the same target.
-Each requested comparison has a separate receipt bound to the baseline receipt hash; reusing
-the graph never substitutes an earlier base or changed-path set for the current comparison.
+A graph snapshot and a generated docs tree are each published whole: written beside the old one, then
+swapped, so a reader never mixes generations. A spec that fails its strict parse or schema yields no
+canonical nodes and an error, never a partial graph. Receipts from `axiom evidence` are local and
+untrusted: they bind the spec and source-tree digests, and any later change makes them stale.
 
 ### Delivery and rollback
 
 Pre-commit/CI retain Knowledge, doc-link, health and security gates; CI also fails when the
-efficiency bundle drifts from its sources. Daily work lands on `develop`, whose pre-push hook
-requires a recorded review of the exact commit; CI runs for `main`, `develop` and pull requests, architecture for `main`: on the
-release PR `develop → main` (merged with a merge commit, then tagged `vX.Y.Z`)
-and every main push, including docs-only and multi-commit pushes, records changed/removed paths,
-and uploads immutable outputs. It cannot undo a merge: a failed round prevents release and
-completed-work claims until corrected. A local baseline is recommended before managed execution
-and installed only on the user's yes; launchers warn without one.
-Rendering uses its permanent SHA directory; an atomic final receipt publishes success only
-after every gate passes. Moving Archify HTML would invalidate its native path provenance.
+efficiency bundle drifts from its sources, and `axiom check` when the spec does not parse or link or
+the generated docs are stale. Daily work lands on `develop`, whose pre-push hook requires a recorded
+review of the exact commit; CI runs for `main`, `develop` and pull requests; a release is the PR
+`develop → main`, merged with a merge commit, then tagged `vX.Y.Z`. Nothing needs installing beyond
+Python 3 and the agent.
 
-Rollback is a reviewed normal Git revert, followed by checks and a fresh analysis for that
-revert SHA. Never force-push main or reuse an older graph as if it describes the reverted tree.
+Rollback is a reviewed normal Git revert, followed by the checks. Never force-push main; the graph
+rebuilds itself from the reverted files.
 No production migration, rollback command or availability/SLO is applicable to this template.
 
 ## Invariants
@@ -238,35 +224,31 @@ No production migration, rollback command or availability/SLO is applicable to t
 3. Compaction readiness binds the handover and exact source state; later edits invalidate it
    (`test_budget.py`, checkpoint/compaction tests). At the alert the checkpoint is admitted only when
    its path resolves to this root's `budget.py`, from any working directory.
-4. Source evidence belongs to the target SHA; missing/ambiguous anchors, secret paths and nodes
-   outside Archify's one-to-three sources fail
-   (`tools/architecture/tests/test_refresh.py` and real Archify gates).
-5. Required code/Markdown extraction is complete structurally; deletions cannot survive in a
-   freshly assembled current graph (coverage checks and the real baseline).
-6. A PASS receipt names its SHA and artifact hashes; tampered/missing output is never reused
-   (`test_refresh.py`, corruption and missing artifact tests).
+4. The spec gates never turn unknown into pass, and a blocking open decision prevents design
+   readiness (`tools/axiom/tests/test_spec.py`).
+5. The graph is a pure function of its inputs, rebuilt when one changes; secret files are never read
+   (`tools/axiom/tests/test_graph.py`).
+6. A receipt is current only for the exact spec and source tree it ran on (`test_evidence.py`).
 
 ## Determinism
 
-Source enumeration, hashing, native structural extraction, state transitions and schema checks
-are deterministic within pinned tools. Rendering/browser evidence depends on the browser/runtime
-and records its receipts. Spec/diagram meaning is reviewed engineering judgment. Neither tests
+Source enumeration, hashing, the graph, the gates, the views and the generated docs are
+deterministic: same inputs, same bytes. Spec/diagram meaning is reviewed engineering judgment. Neither tests
 nor schema checks prove complete semantic understanding. No throughput/latency/token-saving
 measurement or live 250k/300k guarantee is asserted. No extra agents are required for execution;
 the existing fresh PR reviewer remains.
 
 ## Acceptance checks
 
-Run the commands in [build and test](../operations/build-and-test.md), plus the two context and
-architecture test scripts, setup, and `tools/architecture/refresh --target HEAD --base <sha>`.
-The baseline must include code/docs coverage, source-backed overview/delivery/context views and
-passing Archify browser receipts. Inspect the initial views visually before claiming readability.
-After merge, inspect the analysis job for that exact main SHA. Native long-session qualification
+Run the commands in [build and test](../operations/build-and-test.md), including `tools/factory-tests`
+and `tools/axiom/axiom check`. The architecture views are in the [cockpit](../../docs/README.md);
+inspect a changed view visually before claiming it reads well. Native long-session qualification
 remains unavailable until a real controlled run succeeds; a failed or partial run is not a pass.
 
 ## Out of scope
 
-Production infrastructure, a hosted documentation service, LLM-generated canonical specs,
+Production infrastructure, a hosted documentation service, LLM-generated canonical specs, a
+type-resolved call graph,
 semantic completeness guarantees, universal harness support, a strict token ceiling without
 runtime admission control, and automatically enabling additional agents or Superpowers bootstrap.
 

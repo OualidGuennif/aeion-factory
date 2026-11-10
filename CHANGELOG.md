@@ -6,6 +6,56 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+## [3.0.0] - 2026-11-10
+
+- **Breaking: Graphify and Archify are removed.** The factory now needs only Python 3 and a coding
+  agent: no virtual environment, Node or browser install for analysis or diagrams. `tools/architecture/`,
+  its CI workflow, the `graph` skill and the Bash guard's Graphify rules are gone; the `axiom` skill and
+  `tools/axiom/axiom query` replace `tools/architecture/ask`.
+- **AxiomSpec is built in.** The AxiomSpec package (edition 0.3.0) and its two playbooks are vendored in
+  `knowledge/axiomspec/`. Each project has one canonical `knowledge/spec/spec.json` (goals, terms,
+  requirements, decisions, constraints, scenarios, tests, bindings); `tools/release/release --new-project`
+  and `tools/axiom/axiom init` create it.
+- `tools/axiom/axiom` (standard library only): strict validation and gates G01-G07 (BCIR constraints
+  evaluated on scenarios), a knowledge graph joining spec, docs and code, bounded queries, context
+  packets for a change, the generated cockpit `docs/README.md` with SVG diagrams (system, process,
+  sequence, use case, state), an eight-section feature export for a build factory, and test evidence
+  receipts through a unittest adapter (G09-G11). Unknown is never reported as pass.
+- `tools/axiom/axiom check` runs in the pre-commit hook and CI: the spec parses and links, docs cite
+  only real IDs, generated docs are current. Docs name the IDs they cover in frontmatter `spec_ids`.
+- The factory specifies itself in `knowledge/spec/spec.json`; its architecture diagrams are in the cockpit.
+- New demo: the Holiday Planner, a 20-feature AxiomSpec product built in ten rounds, with `demo/check`
+  replaying every AxiomSpec step on a fresh copy in seconds. The Idea Board runs stay readable at v2.1.1.
+- Hardened after an independent review (15 findings, each with a regression test in
+  `tools/axiom/tests/test_hardening.py`): `init` never replaces docs the generator did not write;
+  `template-update` carries the vendored AxiomSpec package with the toolkit and a missing schema is a G01
+  error; effective windows are applied to `--evaluated-at` (out of window is not pass); gates that did not
+  run are unknown; only `knowledge/` and `docs/` cite the spec; malformed environments, observation files,
+  sequence steps, huge integers and null binding symbols give diagnostics, never tracebacks; the unittest
+  adapter runs isolated so a project's modules are never shadowed; receipts count for their own test only;
+  `--spec` reaches every gate; an export profile cannot rename or relocate the exported file.
+- A second independent review found six more, each with a regression test (classes `Second*` in
+  `test_hardening.py`): `evaluate` keeps an environment G03 rejected unknown instead of crashing;
+  `views` and `check` never overwrite, delete or flag a diagram the generator did not write (generated
+  SVGs carry `data-generator="tools/axiom"`), and `views` before the first `docs` no longer blocks it;
+  bound tests run with `python -P`, so `PYTHONPATH` applies again; `init` reports a missing schema
+  (exit 4) and a failed first generation (exit 1); a witness binds only an applicable hard invariant.
+  `--spec` also works after the command, as AxiomSpec's interface writes it (`axiom validate --spec`).
+  A third review pass: `docs` never deletes a project's dot-files under `docs/generated/` (it refuses,
+  like any file it did not write; desktop files such as `Thumbs.db` and an editor's swap or backup of a
+  generated file are ignored), written files are no longer left `0600`, and the context gate works
+  in a repository before its first commit (it failed closed, so `factory-tests` failed after `git init`).
+- **Updating from 2.x works end to end** (`tools/agents/template-update`, tested from the v2.1.1 tag):
+  a factory knowledge doc the project never edited now follows the release (updated, removed or added),
+  while an edited one is listed for review and kept byte for byte; `knowledge/spec/` and the cockpit
+  are never written. Folders new in the factory (`tools/axiom/`, `knowledge/axiomspec/`) come in whole,
+  a removed factory skill link is removed, a renamed file moves (the old path was never removed before)
+  and a folder a removal empties goes too. A `migrate` line names `tools/axiom/axiom init` for a project
+  without a spec.
+- `template-update` never writes a project's spec, cockpit, views or catalogs; repo-health no longer
+  counts a folder releases leave out (`export-ignore`); `factory-tests` reports the JavaScript adapter
+  suites as not run when Node is absent.
+
 ## [2.1.1] - 2026-11-06
 
 - Fixed: Grok's hook transcript is `updates.jsonl` (older sessions still use `chat_history.jsonl`). The 250k/300k size is `signals.json` `contextTokensUsed`, which falls after compaction. `usage.json` is the billed ledger and only grows, so it does not drive the gate. The shared path guard accepts Grok's `target_file` and `target_directory`.

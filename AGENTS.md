@@ -19,20 +19,22 @@ win; on conflict keep theirs and note it in `knowledge/policies/owner-preference
 
 **Plan first.** For any non-trivial task, enter plan mode, propose, and wait for a yes.
 
-**Recently changed (2026-10-31).** `CHANGELOG.md` says what changed and when, newest first;
+**Recently changed (2026-11-10).** `CHANGELOG.md` says what changed and when, newest first;
 `work/current.md` says what is open now. Where these disagree with prose here, they win.
 
 ## Repository map
 
 ```
 efficiency/   the seven-phase guide (read 00-EFFICIENCY.md first)
-knowledge/    canonical knowledge (index.md first): policies, components, decisions, operations
+knowledge/    canonical knowledge (index.md first): policies, components, decisions, operations, axiomspec/;
+              spec/spec.json is the product's canonical AxiomSpec specification, spec/evidence/ its test receipts
+docs/         README.md, the generated cockpit; views/ diagram sources; generated/ (never hand-edited)
 work/         current.md, the state of open tasks only
 tech-watch/   the technical watch: method, and pending dated packages
 loops/        orchestrator.sh and its prompts, schedules, issue protocol, Decisions API client (off)
 skills/       versioned passive skills and agent profiles; no automatic agent launching
-demo/         playground: plan/ briefs; per harness a journal, feedback_for_aeion/ and a local workspace/
-tools/        knowledge/link/health checks, agent adapters, architecture and local language servers
+demo/         the Holiday Planner: a 20-feature AxiomSpec product, rounds in plan/, self-check `demo/check`
+tools/        knowledge/link/health checks, axiom/ (AxiomSpec engine), agent adapters, language servers
 .claude/      original hooks, maintained skills, path-scoped rules, hookify examples
 .codex/       Codex native config/hooks; .agents/ holds skill links and Antigravity's hooks.json
 .opencode/    OpenCode native plugin; root opencode.json selects shared skills/compaction
@@ -47,7 +49,7 @@ tools/        knowledge/link/health checks, agent adapters, architecture and loc
 ```bash
 tools/knowledge/knowledge-check && tools/knowledge/doc-links && tools/repo-health/repo-health
 tools/factory-tests                          # the factory's own test suites, as CI runs them
-tools/architecture/refresh --target HEAD --base origin/main  # after committing
+tools/axiom/axiom check && tools/axiom/axiom validate   # spec gates, dangling IDs, generated docs current
 loops/orchestrator.sh outer --dry-run        # shows the command a loop would run, runs nothing
 ```
 
@@ -61,8 +63,8 @@ A skill is `.agents/skills/<name>/SKILL.md`; open it when your agent does not of
 | Updating an adopted project to a new release | `.agents/skills/template-update/SKILL.md`; `tools/agents/template-update` |
 | Task guidance | `.agents/skills/skill-route/SKILL.md`: native first, optional passive pool; no automatic agents |
 | Any change | `knowledge/index.md`, then the doc of the area; `.agents/skills/plan/SKILL.md` |
-| A feature or component | `knowledge/policies/specs-first.md`; `.agents/skills/spec/SKILL.md` |
-| Tracing code before changing it | `.agents/skills/graph/SKILL.md`; `tools/architecture/ask` (no LLM) |
+| A feature or component | `knowledge/policies/specs-first.md`; `.agents/skills/spec/SKILL.md`; `knowledge/spec/spec.json` |
+| Tracing code before changing it | `.agents/skills/axiom/SKILL.md`; `tools/axiom/axiom packet`/`query` (no LLM) |
 | A bug or a failing check | `.agents/skills/debug/SKILL.md`, then `.agents/skills/test/SKILL.md` |
 | Finishing a task | `.agents/skills/sign-off/SKILL.md` (team flow) |
 | Security-sensitive code | `knowledge/policies/security.md`; `.agents/skills/security-scan/SKILL.md` |
@@ -70,7 +72,7 @@ A skill is `.agents/skills/<name>/SKILL.md`; open it when your agent does not of
 | The loops and schedules | `knowledge/operations/loops.md`, `command.md` |
 | Adopting Æion Factory in another repo | `efficiency/00-EFFICIENCY.md`; `.agents/skills/adopt/SKILL.md` |
 | Large files, logs and tool output | [Bounded intake](knowledge/policies/bounded-intake.md); targeted reads and summary commands |
-| Graphify, Archify and architecture changes | [Architecture maintenance](knowledge/operations/architecture-maintenance.md), [complete spec](knowledge/components/factory-architecture.md) |
+| AxiomSpec method, gates, graph, cockpit | [AxiomSpec](knowledge/axiomspec/index.md), [axiom toolkit](knowledge/components/axiom-toolkit.md), [architecture](knowledge/components/factory-architecture.md) |
 
 ## Critical rules
 
@@ -82,8 +84,7 @@ A skill is `.agents/skills/<name>/SKILL.md`; open it when your agent does not of
 
 Rule owners: read-only loops and what no loop may do, `knowledge/operations/loops.md`; the
 250k/300k handover and compaction rule, `knowledge/operations/context-safety.md`; installs only on
-the owner's yes, `knowledge/policies/owner-preferences.md`, setup details in
-`knowledge/operations/architecture-maintenance.md`.
+the owner's yes, `knowledge/policies/owner-preferences.md`.
 
 ## How code is written here
 
@@ -108,11 +109,10 @@ and CI do the same, and an `exit 2` names the rule and its fix.
 
 ## Definition of done
 
-- The project's tests for what changed pass; `CHANGELOG.md` has its `Unreleased` line.
+- The project's tests for what changed pass; `tools/axiom/axiom check` passes; `CHANGELOG.md` has its `Unreleased` line.
 - Touched docs are updated with their links (`tools/knowledge/doc-links --diff origin/develop`
   passes); `work/current.md` is updated or its entry deleted (skill `sign-off`).
-- Team flow: `develop` pushed with `Review: OK`; a release PR reviewed and green in CI; the merged
-  main SHA a passing Graphify/Archify round with a current spec.
+- Team flow: `develop` pushed with `Review: OK`; a release PR reviewed and green in CI.
 
 ## What not to do
 

@@ -28,10 +28,6 @@ os.chdir(root)
 os.environ['PWD'] = str(root)
 if provider == 'claude':
     launch(['./tools/context/run', *arguments])
-# The baseline needs local installs, which the user approves; its absence is a warning, not a refusal.
-if subprocess.run([str(root / 'tools/architecture/refresh'), '--check', '--target', 'HEAD'], cwd=root).returncode:
-    print('Æion Factory: no verified Graphify/Archify baseline for this commit. It is strongly recommended and never '
-          'installed automatically; see knowledge/operations/architecture-maintenance.md. Continuing.', file=sys.stderr)
 if provider == 'codex':
     for value in arguments:
         if any(key in value for key in ('model_auto_compact_token_limit', 'features.hooks', 'disableAllHooks')):

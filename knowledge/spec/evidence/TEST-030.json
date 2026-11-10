@@ -1,0 +1,34 @@
+{
+  "format": "aeion-test-receipt/0.1",
+  "test_id": "TEST-030",
+  "level": "unit",
+  "adapter": "unittest/3.0.0",
+  "python": "3.15.2",
+  "trust": "untrusted_local",
+  "bindings": [
+    {
+      "id": "BIND-043",
+      "path": "tools/axiom/tests/test_hardening.py",
+      "symbol": "StrictTests.test_a_huge_integer_is_an_input_error"
+    }
+  ],
+  "bound_files": {
+    "tools/axiom/tests/test_hardening.py": "1a7c827df0cd5447a8f125970e8a822df5c21d9b67c882a955e3e8319f198635"
+  },
+  "results": {
+    "tools/axiom/tests/test_hardening.py::StrictTests.test_a_huge_integer_is_an_input_error": "pass"
+  },
+  "counts": {
+    "collected": 1,
+    "passed": 1,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "problems": [],
+  "status": "pass",
+  "spec_sha256": "e1f434763f2d3e83cfe6f7ccd5678b2e24758e398167463e208cb214195c431c",
+  "source_tree_sha256": "6e11e93640e78ebf06f7e138b0ea7e9384e36ebca17d1db769f2fa7de16c4b29",
+  "raw_output_sha256": "c5c889787887e32e104a2206eb3264eb95e71ad77a29187e02ba0b5975a5a47b",
+  "executed_at": "2026-11-10T14:25:09.035949+00:00"
+}

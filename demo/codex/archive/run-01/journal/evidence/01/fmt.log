@@ -1,4 +1,0 @@
-$ deno fmt --check
-Checked 11 files
-
-exit=0

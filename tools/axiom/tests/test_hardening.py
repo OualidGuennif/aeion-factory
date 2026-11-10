@@ -3,6 +3,7 @@
 import importlib.machinery
 import importlib.util
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -380,6 +381,41 @@ class SecondCliTests(unittest.TestCase):  # found with the second round: AxiomSp
             self.assertNotIn("unrecognized", after.stderr)
         finally:
             project.close()
+
+
+class ThirdDocsTests(unittest.TestCase):  # third round
+    def test_docs_never_deletes_a_projects_dot_files(self):
+        project = pantry_project()
+        try:
+            self.assertEqual(project.run("docs").returncode, 0)
+            kept = [project.write("docs/generated/.nojekyll", ""), project.write("docs/generated/.drafts/.wip", "wip\n")]
+            project.write("docs/generated/.DS_Store", "finder")
+            self.assertIn(".nojekyll", project.run("check").stdout)
+            done = project.run("docs")
+            self.assertEqual(done.returncode, 2, done.stdout + done.stderr)
+            self.assertTrue(all(path.is_file() for path in kept))
+        finally:
+            project.close()
+
+    def test_written_files_keep_a_readable_mode(self):
+        project = pantry_project()
+        try:
+            self.assertEqual(project.run("docs").returncode, 0)
+            # A new file gets what the umask gives (mkstemp alone would leave 0600); a rewritten one keeps its mode.
+            manifest = project.root / "docs/generated/manifest.json"
+            self.assertEqual(manifest.stat().st_mode & 0o777, 0o666 & ~_umask())
+            cockpit = project.root / "docs/README.md"
+            cockpit.chmod(0o640)
+            self.assertEqual(project.run("docs").returncode, 0)
+            self.assertEqual(cockpit.stat().st_mode & 0o777, 0o640)
+        finally:
+            project.close()
+
+
+def _umask():
+    mask = os.umask(0)
+    os.umask(mask)
+    return mask
 
 
 if __name__ == "__main__":

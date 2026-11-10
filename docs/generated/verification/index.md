@@ -65,6 +65,7 @@ Gate results are computed from `knowledge/spec/spec.json` by `tools/axiom/axiom 
 | <a id="test-043"></a>TEST-043 | PYTHONPATH reaches a bound test | integration | normal | implemented | [REQ-009](../product/requirements.md#req-009) | A bound test importing a module from PYTHONPATH passes through the adapter. |
 | <a id="test-044"></a>TEST-044 | Init reports a missing schema | integration | refusal | implemented | [REQ-003](../product/requirements.md#req-003) | init without the vendored schemas exits 4 and prints G01 SCHEMA\_UNAVAILABLE. |
 | <a id="test-045"></a>TEST-045 | A witness binds only an applicable invariant | integration | normal | implemented | [REQ-003](../product/requirements.md#req-003) | Out of window gives unknown NOT\_IN\_EFFECT; in window, a witness expecting a hard invariant false fails. |
+| <a id="test-046"></a>TEST-046 | Docs never delete a project's dot-files | integration | refusal | implemented | [REQ-010](../product/requirements.md#req-010) | docs refuses with exit 2 and keeps .nojekyll and .drafts/.wip under docs/generated/; check names them. |
 
 ## Scenarios
 
@@ -75,50 +76,51 @@ Gate results are computed from `knowledge/spec/spec.json` by `tools/axiom/axiom 
 
 | Test | Result | Collected | Spec at execution | Matches current spec |
 | --- | --- | --- | --- | --- |
-| TEST-001 | pass | 1 | `0912bac6c6dc` | yes |
-| TEST-002 | pass | 1 | `0912bac6c6dc` | yes |
-| TEST-003 | pass | 1 | `0912bac6c6dc` | yes |
-| TEST-004 | pass | 1 | `0912bac6c6dc` | yes |
-| TEST-005 | pass | 1 | `0912bac6c6dc` | yes |
-| TEST-006 | pass | 1 | `0912bac6c6dc` | yes |
-| TEST-007 | pass | 1 | `0912bac6c6dc` | yes |
-| TEST-008 | pass | 1 | `0912bac6c6dc` | yes |
-| TEST-009 | pass | 1 | `0912bac6c6dc` | yes |
-| TEST-010 | pass | 1 | `0912bac6c6dc` | yes |
-| TEST-011 | pass | 1 | `0912bac6c6dc` | yes |
-| TEST-012 | pass | 1 | `0912bac6c6dc` | yes |
-| TEST-013 | pass | 1 | `0912bac6c6dc` | yes |
-| TEST-014 | pass | 1 | `0912bac6c6dc` | yes |
-| TEST-015 | pass | 1 | `0912bac6c6dc` | yes |
-| TEST-016 | pass | 1 | `0912bac6c6dc` | yes |
-| TEST-017 | pass | 1 | `0912bac6c6dc` | yes |
-| TEST-018 | pass | 1 | `0912bac6c6dc` | yes |
-| TEST-019 | pass | 1 | `0912bac6c6dc` | yes |
-| TEST-020 | pass | 1 | `0912bac6c6dc` | yes |
-| TEST-021 | pass | 1 | `0912bac6c6dc` | yes |
-| TEST-022 | pass | 1 | `0912bac6c6dc` | yes |
-| TEST-023 | pass | 1 | `0912bac6c6dc` | yes |
-| TEST-024 | pass | 1 | `0912bac6c6dc` | yes |
-| TEST-025 | pass | 1 | `0912bac6c6dc` | yes |
-| TEST-026 | pass | 1 | `0912bac6c6dc` | yes |
-| TEST-027 | pass | 1 | `0912bac6c6dc` | yes |
-| TEST-028 | pass | 1 | `0912bac6c6dc` | yes |
-| TEST-029 | pass | 1 | `0912bac6c6dc` | yes |
-| TEST-030 | pass | 1 | `0912bac6c6dc` | yes |
-| TEST-031 | pass | 1 | `0912bac6c6dc` | yes |
-| TEST-032 | pass | 1 | `0912bac6c6dc` | yes |
-| TEST-033 | pass | 1 | `0912bac6c6dc` | yes |
-| TEST-034 | pass | 1 | `0912bac6c6dc` | yes |
-| TEST-035 | pass | 1 | `0912bac6c6dc` | yes |
-| TEST-036 | pass | 1 | `0912bac6c6dc` | yes |
-| TEST-037 | pass | 1 | `0912bac6c6dc` | yes |
-| TEST-038 | pass | 1 | `0912bac6c6dc` | yes |
-| TEST-039 | pass | 1 | `0912bac6c6dc` | yes |
-| TEST-040 | pass | 1 | `0912bac6c6dc` | yes |
-| TEST-041 | pass | 1 | `0912bac6c6dc` | yes |
-| TEST-042 | pass | 1 | `0912bac6c6dc` | yes |
-| TEST-043 | pass | 1 | `0912bac6c6dc` | yes |
-| TEST-044 | pass | 1 | `0912bac6c6dc` | yes |
-| TEST-045 | pass | 1 | `0912bac6c6dc` | yes |
+| TEST-001 | pass | 1 | `e1f434763f2d` | yes |
+| TEST-002 | pass | 1 | `e1f434763f2d` | yes |
+| TEST-003 | pass | 1 | `e1f434763f2d` | yes |
+| TEST-004 | pass | 1 | `e1f434763f2d` | yes |
+| TEST-005 | pass | 1 | `e1f434763f2d` | yes |
+| TEST-006 | pass | 1 | `e1f434763f2d` | yes |
+| TEST-007 | pass | 1 | `e1f434763f2d` | yes |
+| TEST-008 | pass | 1 | `e1f434763f2d` | yes |
+| TEST-009 | pass | 1 | `e1f434763f2d` | yes |
+| TEST-010 | pass | 1 | `e1f434763f2d` | yes |
+| TEST-011 | pass | 1 | `e1f434763f2d` | yes |
+| TEST-012 | pass | 1 | `e1f434763f2d` | yes |
+| TEST-013 | pass | 1 | `e1f434763f2d` | yes |
+| TEST-014 | pass | 1 | `e1f434763f2d` | yes |
+| TEST-015 | pass | 1 | `e1f434763f2d` | yes |
+| TEST-016 | pass | 1 | `e1f434763f2d` | yes |
+| TEST-017 | pass | 1 | `e1f434763f2d` | yes |
+| TEST-018 | pass | 1 | `e1f434763f2d` | yes |
+| TEST-019 | pass | 1 | `e1f434763f2d` | yes |
+| TEST-020 | pass | 1 | `e1f434763f2d` | yes |
+| TEST-021 | pass | 1 | `e1f434763f2d` | yes |
+| TEST-022 | pass | 1 | `e1f434763f2d` | yes |
+| TEST-023 | pass | 1 | `e1f434763f2d` | yes |
+| TEST-024 | pass | 1 | `e1f434763f2d` | yes |
+| TEST-025 | pass | 1 | `e1f434763f2d` | yes |
+| TEST-026 | pass | 1 | `e1f434763f2d` | yes |
+| TEST-027 | pass | 1 | `e1f434763f2d` | yes |
+| TEST-028 | pass | 1 | `e1f434763f2d` | yes |
+| TEST-029 | pass | 1 | `e1f434763f2d` | yes |
+| TEST-030 | pass | 1 | `e1f434763f2d` | yes |
+| TEST-031 | pass | 1 | `e1f434763f2d` | yes |
+| TEST-032 | pass | 1 | `e1f434763f2d` | yes |
+| TEST-033 | pass | 1 | `e1f434763f2d` | yes |
+| TEST-034 | pass | 1 | `e1f434763f2d` | yes |
+| TEST-035 | pass | 1 | `e1f434763f2d` | yes |
+| TEST-036 | pass | 1 | `e1f434763f2d` | yes |
+| TEST-037 | pass | 1 | `e1f434763f2d` | yes |
+| TEST-038 | pass | 1 | `e1f434763f2d` | yes |
+| TEST-039 | pass | 1 | `e1f434763f2d` | yes |
+| TEST-040 | pass | 1 | `e1f434763f2d` | yes |
+| TEST-041 | pass | 1 | `e1f434763f2d` | yes |
+| TEST-042 | pass | 1 | `e1f434763f2d` | yes |
+| TEST-043 | pass | 1 | `e1f434763f2d` | yes |
+| TEST-044 | pass | 1 | `e1f434763f2d` | yes |
+| TEST-045 | pass | 1 | `e1f434763f2d` | yes |
+| TEST-046 | pass | 1 | `e1f434763f2d` | yes |
 
 Source-tree freshness is checked live by `tools/axiom/axiom evidence check`, not here.

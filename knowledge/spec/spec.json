@@ -1631,6 +1631,26 @@
         "negative": false,
         "witness_scenario_ids": []
       }
+    },
+    {
+      "id": "TEST-046",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Docs never delete a project's dot-files",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "integration",
+        "oracle": "docs refuses with exit 2 and keeps .nojekyll and .drafts/.wip under docs/generated/; check names them.",
+        "state": "implemented",
+        "runner": "unittest",
+        "negative": true,
+        "witness_scenario_ids": []
+      }
     }
   ],
   "edges": [
@@ -2377,6 +2397,14 @@
       "to": "REQ-003",
       "origin": "declared",
       "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-094",
+      "from": "TEST-046",
+      "relation": "verifies",
+      "to": "REQ-010",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
     }
   ],
   "bindings": [
@@ -2899,6 +2927,15 @@
       "node_id": "TEST-045",
       "path": "tools/axiom/tests/test_hardening.py",
       "symbol": "SecondWitnessTests.test_a_witness_binds_only_an_applicable_hard_invariant",
+      "language": "python",
+      "expected_resolution": "must_resolve"
+    },
+    {
+      "id": "BIND-059",
+      "kind": "test",
+      "node_id": "TEST-046",
+      "path": "tools/axiom/tests/test_hardening.py",
+      "symbol": "ThirdDocsTests.test_docs_never_deletes_a_projects_dot_files",
       "language": "python",
       "expected_resolution": "must_resolve"
     }

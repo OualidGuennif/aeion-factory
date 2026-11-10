@@ -80,8 +80,9 @@ its simple rules (a name or glob, optionally ending in `/`); negations and paths
 read, so what they would hide stays listed. Git counts only when its top level is the project
 root: a folder nested in another repository, even a monorepo subfolder that repository tracks, is plain,
 and the Stop sign-off reminder, which compares branches, stays silent there. Every harness hook command
-falls back from `git rev-parse --show-toplevel` to the current folder. Only `doc-links --diff`, which compares
-commits, needs git. A folder whose `.git` git cannot read is a broken repository and fails, as does a
+falls back from `git rev-parse --show-toplevel` to the current folder. A repository before its first commit
+has no `HEAD`, so the context fingerprint is its files alone, as in a plain folder. Only `doc-links --diff`,
+which compares commits, needs git. A folder whose `.git` git cannot read is a broken repository and fails, as does a
 missing comparison base; a valid empty change set remains successful and an unavailable check is
 never reported as clean.
 

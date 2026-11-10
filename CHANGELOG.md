@@ -41,6 +41,9 @@ dates them at release time. Spec: knowledge/policies/engineering.md
   bound tests run with `python -P`, so `PYTHONPATH` applies again; `init` reports a missing schema
   (exit 4) and a failed first generation (exit 1); a witness binds only an applicable hard invariant.
   `--spec` also works after the command, as AxiomSpec's interface writes it (`axiom validate --spec`).
+  A third review pass: `docs` never deletes a project's dot-files under `docs/generated/` (it refuses,
+  like any file it did not write), written files are no longer left `0600`, and the context gate works
+  in a repository before its first commit (it failed closed, so `factory-tests` failed after `git init`).
 - **Updating from 2.x works end to end** (`tools/agents/template-update`, tested from the v2.1.1 tag):
   a factory knowledge doc the project never edited now follows the release (updated, removed or added),
   while an edited one is listed for review and kept byte for byte; `knowledge/spec/` and the cockpit

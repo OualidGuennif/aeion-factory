@@ -13,7 +13,7 @@
     }
   ],
   "bound_files": {
-    "tools/axiom/tests/test_hardening.py": "8dec3e4fead673dee990ffe1312dbf5501b729bed8781ffe393bec97e57b3f23"
+    "tools/axiom/tests/test_hardening.py": "bc80363be532cf32fbce881f988ca9fe240072e38c43b66d67150045c1b9b9ec"
   },
   "results": {
     "tools/axiom/tests/test_hardening.py::ExportTests.test_a_profile_cannot_rename_the_exported_file": "pass"
@@ -27,8 +27,8 @@
   },
   "problems": [],
   "status": "pass",
-  "spec_sha256": "0912bac6c6dc0b895f6a305e772eae0f93d8fdbf29555c660498bedc042847cc",
-  "source_tree_sha256": "b4c8dc9187ad0bac904012e269b2b298fd0a8c1115b70813d57c553d556ec4ba",
-  "raw_output_sha256": "043463c8eea9458a685b9eddcf65d2cd6a37125039cb354eedc9e9f4aa7cbbdf",
-  "executed_at": "2026-11-10T13:56:57.228619+00:00"
+  "spec_sha256": "e1f434763f2d3e83cfe6f7ccd5678b2e24758e398167463e208cb214195c431c",
+  "source_tree_sha256": "692dcfe698d68cac84d9be72350005532dd6da280e16c0419b0efed845feab24",
+  "raw_output_sha256": "1b2e3ca69693cbebc51c69ae237a4143bc68edda93d0465455e53b222e7cd7c1",
+  "executed_at": "2026-11-10T14:07:33.745402+00:00"
 }

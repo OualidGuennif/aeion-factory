@@ -115,7 +115,7 @@ functional · must · risk high · verification executable · status active · r
 
 functional · must · risk medium · verification executable · status active · revision 1
 
-- Tests: [TEST-019](../verification/index.md#test-019), [TEST-036](../verification/index.md#test-036), [TEST-038](../verification/index.md#test-038), [TEST-040](../verification/index.md#test-040), [TEST-041](../verification/index.md#test-041), [TEST-042](../verification/index.md#test-042)
+- Tests: [TEST-019](../verification/index.md#test-019), [TEST-036](../verification/index.md#test-036), [TEST-038](../verification/index.md#test-038), [TEST-040](../verification/index.md#test-040), [TEST-041](../verification/index.md#test-041), [TEST-042](../verification/index.md#test-042), [TEST-046](../verification/index.md#test-046)
 - Components: [COMP-001](../system/components.md#comp-001)
 
 <a id="req-011"></a>

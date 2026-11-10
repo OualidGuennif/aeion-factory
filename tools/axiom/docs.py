@@ -11,8 +11,8 @@ import shutil
 from pathlib import Path
 
 import views
-from common import (COCKPIT, EVIDENCE_DIR, FEATURE_CATALOG, GENERATED, SPEC_PATH, TOOL_VERSION, VIEW_CATALOG,
-                    canonical_digest, pretty, sha256, write_atomic)
+from common import (COCKPIT, EVIDENCE_DIR, FEATURE_CATALOG, GENERATED, SPEC_PATH, TEMP_PREFIX, TOOL_VERSION,
+                    VIEW_CATALOG, canonical_digest, pretty, sha256, write_atomic)
 from schema import Validator
 from spec import DESIGN_GATES, GATE_TITLES, render_requirement
 from strict import InputError, load
@@ -415,7 +415,7 @@ def generate(root, spec, model, result, check=False):
     root = Path(root)
     generated = root / GENERATED
     existing = {p.relative_to(root).as_posix() for p in generated.rglob("*")
-                if p.is_file() and not p.name.startswith(".")} if generated.is_dir() else set()
+                if p.is_file() and not incidental(p)} if generated.is_dir() else set()
     cockpit_path = root / COCKPIT
     if check:
         problems = []
@@ -446,6 +446,12 @@ def generate(root, spec, model, result, check=False):
     return []
 
 
+def incidental(path):
+    """Finder metadata and the toolkit's own interrupted temporary files: never a project's content. Any other
+    file the generator did not write, dot-named or not, is the project's and is never deleted."""
+    return path.name == ".DS_Store" or path.name.startswith(TEMP_PREFIX)
+
+
 def foreign_outputs(root):
     """Problems for project files the generator would replace but did not write: a docs/README.md without the
     generator's notice, or a non-empty docs/generated/ without its manifest. Never overwritten, never deleted."""
@@ -458,7 +464,7 @@ def foreign_outputs(root):
     if generated.is_dir():
         listed = views.listed_outputs(root)
         foreign = sorted(rel for rel in (p.relative_to(root).as_posix() for p in generated.rglob("*")
-                                         if p.is_file() and not p.name.startswith("."))
+                                         if p.is_file() and not incidental(p))
                          if not views.generator_owns(root, rel, listed))
         if foreign:
             problems.append(f"docs: {GENERATED}/ holds files the generator did not write ({', '.join(foreign[:3])}"

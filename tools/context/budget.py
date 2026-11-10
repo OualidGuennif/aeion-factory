@@ -171,9 +171,17 @@ def tree_files(root):
     return files
 
 
+def head(root):
+    """The commit HEAD names; b"no-git" in a plain folder, b"no-commit" in a repository before its first commit."""
+    if not git_active(root):
+        return b"no-git"
+    found = subprocess.run(["git", "rev-parse", "--verify", "--quiet", "HEAD"], cwd=root, capture_output=True, check=False)
+    return found.stdout if found.returncode == 0 else b"no-commit"
+
+
 def fingerprint(root, files=None):
-    # A plain folder has no HEAD: its files alone make the fingerprint.
-    digest = hashlib.sha256(git(root, "rev-parse", "HEAD") if git_active(root) else b"no-git")
+    # Without a commit (a plain folder, or a repository not yet committed) the files alone make the fingerprint.
+    digest = hashlib.sha256(head(root))
     for rel, value in (tree_files(root) if files is None else files).items():
         digest.update(os.fsencode(rel) + b"\0" + value.encode())
     return digest.hexdigest()

@@ -78,6 +78,9 @@ def pretty(value):
     return json.dumps(value, ensure_ascii=False, indent=2, sort_keys=False) + "\n"
 
 
+# write_atomic's temporary files; a leftover from an interrupted write is the toolkit's own.
+TEMP_PREFIX = ".axiom-"
+
 def write_atomic(path, data):
     """Replace one file in a single rename, so a reader never sees half of it; refuses a symlink target."""
     path = Path(path)
@@ -85,10 +88,18 @@ def write_atomic(path, data):
         raise OSError(f"refusing to write through a symlink: {path}")
     path.parent.mkdir(parents=True, exist_ok=True)
     raw = data.encode("utf-8") if isinstance(data, str) else data
-    handle, name = tempfile.mkstemp(dir=path.parent, prefix=".axiom-")
+    # mkstemp creates 0600; the file keeps its old mode, or gets what the umask gives a new file.
+    try:
+        mode = path.stat().st_mode & 0o7777
+    except FileNotFoundError:
+        mask = os.umask(0)
+        os.umask(mask)
+        mode = 0o666 & ~mask
+    handle, name = tempfile.mkstemp(dir=path.parent, prefix=TEMP_PREFIX)
     try:
         with os.fdopen(handle, "wb") as stream:
             stream.write(raw)
+        os.chmod(name, mode)
         os.replace(name, path)
     finally:
         if os.path.exists(name):

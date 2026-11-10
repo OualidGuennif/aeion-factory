@@ -109,7 +109,7 @@ and says which capabilities it does not have.
 | `docs --check` and `views --check` fail when any generated file differs from what the inputs produce. | `test_docs.DocsTests` |
 | An exported feature carries `## Acceptance checks` with `- [ ] ` items and stays under the profile's byte limit, or the export fails. | `test_docs.ExportTests` |
 | A receipt with zero, duplicate, skipped or failed tests, or with inputs that changed since, cannot satisfy G10/G11. | `test_evidence.EvidenceTests` |
-| Malformed input gives a diagnostic or exit 4, never a traceback; gates that did not run are `unknown`; out of an effective window is not pass; a receipt counts for its own test only; `init` and exports never write over or outside what they own; bound tests run in an isolated interpreter. | `test_hardening` |
+| Malformed input gives a diagnostic or exit 4, never a traceback; gates that did not run are `unknown`; out of an effective window is not pass; a receipt counts for its own test only; `init`, `docs`, `views` and exports never write over, delete or write outside what the generator did not write (dot-files included: only `.DS_Store` and the toolkit's own `.axiom-*` temporary files are ignored), and written files keep their mode (a new one gets the umask's); bound tests cannot import a toolkit module. | `test_hardening` |
 
 ## Determinism
 **deterministic.** Pure functions of the inputs: no clock (except report `metadata` and receipt

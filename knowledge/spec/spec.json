@@ -36,6 +36,13 @@
       "locator": "knowledge/axiomspec/AxiomSpec/README.md",
       "capture_sha256": null,
       "review_state": "reviewed"
+    },
+    {
+      "id": "SRC-003",
+      "type": "document",
+      "locator": "independent review of 3.0.0, 2026-11-10: 15 findings",
+      "capture_sha256": null,
+      "review_state": "reviewed"
     }
   ],
   "environments": [],
@@ -1304,6 +1311,186 @@
         "enforcement_location": "tools/axiom/docs.py and tools/axiom/views.py",
         "verification": "TEST-020, TEST-021 and TEST-023"
       }
+    },
+    {
+      "id": "TEST-030",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Huge integer is an input error",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "unit",
+        "oracle": "An integer of 5000 digits raises InputError UNSAFE_INTEGER; nothing is parsed further.",
+        "state": "implemented",
+        "runner": "unittest",
+        "negative": true,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-031",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Gates after a G01 failure are not run",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "unit",
+        "oracle": "With a G01 error, every later gate is reported unknown (NOT_RUN) and the status stays error.",
+        "state": "implemented",
+        "runner": "unittest",
+        "negative": true,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-032",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Out of window is not pass",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "unit",
+        "oracle": "A constraint effective from 2030 evaluated in 2026 is unknown NOT_IN_EFFECT; an invalid time is unknown; in window it holds.",
+        "state": "implemented",
+        "runner": "unittest",
+        "negative": true,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-033",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Malformed environments are diagnostics",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "unit",
+        "oracle": "A non-object property schema or a bad pattern is a G03 error, never a traceback.",
+        "state": "implemented",
+        "runner": "unittest",
+        "negative": true,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-034",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "A receipt counts for its own test only",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "integration",
+        "oracle": "A receipt naming another test, or one that is not an object, is failed, not current.",
+        "state": "implemented",
+        "runner": "unittest",
+        "negative": true,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-035",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Project modules are not shadowed",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "integration",
+        "oracle": "A test importing its own common module passes through the isolated adapter.",
+        "state": "implemented",
+        "runner": "unittest",
+        "negative": false,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-036",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Init keeps a project's own docs",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "integration",
+        "oracle": "init in a project with its own docs/README.md and docs/generated/api.html exits 1 and leaves both unchanged.",
+        "state": "implemented",
+        "runner": "unittest",
+        "negative": true,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-037",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "A profile cannot rename the export",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "integration",
+        "oracle": "A profile setting file and id leaves the computed file name and id; nothing is written outside the output folder.",
+        "state": "implemented",
+        "runner": "unittest",
+        "negative": true,
+        "witness_scenario_ids": []
+      }
+    },
+    {
+      "id": "TEST-038",
+      "kind": "TestCase",
+      "revision": 1,
+      "status": "active",
+      "title": "Only knowledge and docs cite the spec",
+      "owner": "ACTOR-001",
+      "created_by": "ACTOR-002",
+      "source_ids": [
+        "SRC-001"
+      ],
+      "data": {
+        "level": "integration",
+        "oracle": "A ticket key in notes/ is ignored; an unknown ID in docs/ is reported.",
+        "state": "implemented",
+        "runner": "unittest",
+        "negative": false,
+        "witness_scenario_ids": []
+      }
     }
   ],
   "edges": [
@@ -1914,6 +2101,86 @@
       "to": "CTRL-001",
       "origin": "declared",
       "rationale": "Meeting the requirement puts the control in place."
+    },
+    {
+      "id": "EDGE-077",
+      "from": "TEST-030",
+      "relation": "verifies",
+      "to": "REQ-001",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-078",
+      "from": "TEST-031",
+      "relation": "verifies",
+      "to": "REQ-002",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-079",
+      "from": "TEST-032",
+      "relation": "verifies",
+      "to": "REQ-003",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-080",
+      "from": "TEST-033",
+      "relation": "verifies",
+      "to": "REQ-003",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-081",
+      "from": "TEST-034",
+      "relation": "verifies",
+      "to": "REQ-008",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-082",
+      "from": "TEST-034",
+      "relation": "verifies",
+      "to": "REQ-009",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-083",
+      "from": "TEST-035",
+      "relation": "verifies",
+      "to": "REQ-009",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-084",
+      "from": "TEST-036",
+      "relation": "verifies",
+      "to": "REQ-010",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-085",
+      "from": "TEST-037",
+      "relation": "verifies",
+      "to": "REQ-012",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
+    },
+    {
+      "id": "EDGE-086",
+      "from": "TEST-038",
+      "relation": "verifies",
+      "to": "REQ-010",
+      "origin": "declared",
+      "rationale": "The test observes this obligation."
     }
   ],
   "bindings": [
@@ -2292,6 +2559,87 @@
       "node_id": "COMP-003",
       "path": ".claude/hooks/project_files.py",
       "symbol": "export_ignored",
+      "language": "python",
+      "expected_resolution": "must_resolve"
+    },
+    {
+      "id": "BIND-043",
+      "kind": "test",
+      "node_id": "TEST-030",
+      "path": "tools/axiom/tests/test_hardening.py",
+      "symbol": "StrictTests.test_a_huge_integer_is_an_input_error",
+      "language": "python",
+      "expected_resolution": "must_resolve"
+    },
+    {
+      "id": "BIND-044",
+      "kind": "test",
+      "node_id": "TEST-031",
+      "path": "tools/axiom/tests/test_hardening.py",
+      "symbol": "ReportTests.test_gates_after_a_g01_failure_are_not_run",
+      "language": "python",
+      "expected_resolution": "must_resolve"
+    },
+    {
+      "id": "BIND-045",
+      "kind": "test",
+      "node_id": "TEST-032",
+      "path": "tools/axiom/tests/test_hardening.py",
+      "symbol": "WindowTests.test_out_of_window_is_not_pass",
+      "language": "python",
+      "expected_resolution": "must_resolve"
+    },
+    {
+      "id": "BIND-046",
+      "kind": "test",
+      "node_id": "TEST-033",
+      "path": "tools/axiom/tests/test_hardening.py",
+      "symbol": "EnvironmentTests.test_unwalkable_environment_schemas_are_diagnostics",
+      "language": "python",
+      "expected_resolution": "must_resolve"
+    },
+    {
+      "id": "BIND-047",
+      "kind": "test",
+      "node_id": "TEST-034",
+      "path": "tools/axiom/tests/test_hardening.py",
+      "symbol": "ReceiptTests.test_a_receipt_counts_only_for_its_own_test",
+      "language": "python",
+      "expected_resolution": "must_resolve"
+    },
+    {
+      "id": "BIND-048",
+      "kind": "test",
+      "node_id": "TEST-035",
+      "path": "tools/axiom/tests/test_hardening.py",
+      "symbol": "AdapterTests.test_a_project_module_named_like_a_toolkit_module_is_imported",
+      "language": "python",
+      "expected_resolution": "must_resolve"
+    },
+    {
+      "id": "BIND-049",
+      "kind": "test",
+      "node_id": "TEST-036",
+      "path": "tools/axiom/tests/test_hardening.py",
+      "symbol": "InitTests.test_init_keeps_a_projects_own_docs",
+      "language": "python",
+      "expected_resolution": "must_resolve"
+    },
+    {
+      "id": "BIND-050",
+      "kind": "test",
+      "node_id": "TEST-037",
+      "path": "tools/axiom/tests/test_hardening.py",
+      "symbol": "ExportTests.test_a_profile_cannot_rename_the_exported_file",
+      "language": "python",
+      "expected_resolution": "must_resolve"
+    },
+    {
+      "id": "BIND-051",
+      "kind": "test",
+      "node_id": "TEST-038",
+      "path": "tools/axiom/tests/test_hardening.py",
+      "symbol": "DanglingTests.test_only_knowledge_and_docs_cite_the_spec",
       "language": "python",
       "expected_resolution": "must_resolve"
     }

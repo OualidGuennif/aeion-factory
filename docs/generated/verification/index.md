@@ -49,6 +49,15 @@ Gate results are computed from `knowledge/spec/spec.json` by `tools/axiom/axiom 
 | <a id="test-027"></a>TEST-027 | Legitimate fields pass the guards | integration | normal | implemented | [REQ-013](../product/requirements.md#req-013) | Native read ranges and edit kinds pass the shared intake guards unchanged. |
 | <a id="test-028"></a>TEST-028 | Secret files are never read by the graph | unit | refusal | implemented | [REQ-013](../product/requirements.md#req-013) | A .env file in the project is absent from the graph's nodes. |
 | <a id="test-029"></a>TEST-029 | Unshipped folder is not counted | integration | normal | implemented | [REQ-015](../product/requirements.md#req-015) | Ten folders fail the cap; marking demo export-ignore makes it pass and lists demo as not shipped. |
+| <a id="test-030"></a>TEST-030 | Huge integer is an input error | unit | refusal | implemented | [REQ-001](../product/requirements.md#req-001) | An integer of 5000 digits raises InputError UNSAFE\_INTEGER; nothing is parsed further. |
+| <a id="test-031"></a>TEST-031 | Gates after a G01 failure are not run | unit | refusal | implemented | [REQ-002](../product/requirements.md#req-002) | With a G01 error, every later gate is reported unknown (NOT\_RUN) and the status stays error. |
+| <a id="test-032"></a>TEST-032 | Out of window is not pass | unit | refusal | implemented | [REQ-003](../product/requirements.md#req-003) | A constraint effective from 2030 evaluated in 2026 is unknown NOT\_IN\_EFFECT; an invalid time is unknown; in window it holds. |
+| <a id="test-033"></a>TEST-033 | Malformed environments are diagnostics | unit | refusal | implemented | [REQ-003](../product/requirements.md#req-003) | A non-object property schema or a bad pattern is a G03 error, never a traceback. |
+| <a id="test-034"></a>TEST-034 | A receipt counts for its own test only | integration | refusal | implemented | [REQ-008](../product/requirements.md#req-008), [REQ-009](../product/requirements.md#req-009) | A receipt naming another test, or one that is not an object, is failed, not current. |
+| <a id="test-035"></a>TEST-035 | Project modules are not shadowed | integration | normal | implemented | [REQ-009](../product/requirements.md#req-009) | A test importing its own common module passes through the isolated adapter. |
+| <a id="test-036"></a>TEST-036 | Init keeps a project's own docs | integration | refusal | implemented | [REQ-010](../product/requirements.md#req-010) | init in a project with its own docs/README.md and docs/generated/api.html exits 1 and leaves both unchanged. |
+| <a id="test-037"></a>TEST-037 | A profile cannot rename the export | integration | refusal | implemented | [REQ-012](../product/requirements.md#req-012) | A profile setting file and id leaves the computed file name and id; nothing is written outside the output folder. |
+| <a id="test-038"></a>TEST-038 | Only knowledge and docs cite the spec | integration | normal | implemented | [REQ-010](../product/requirements.md#req-010) | A ticket key in notes/ is ignored; an unknown ID in docs/ is reported. |
 
 ## Scenarios
 
@@ -59,34 +68,43 @@ Gate results are computed from `knowledge/spec/spec.json` by `tools/axiom/axiom 
 
 | Test | Result | Collected | Spec at execution | Matches current spec |
 | --- | --- | --- | --- | --- |
-| TEST-001 | pass | 1 | `cfdea120e46b` | yes |
-| TEST-002 | pass | 1 | `cfdea120e46b` | yes |
-| TEST-003 | pass | 1 | `cfdea120e46b` | yes |
-| TEST-004 | pass | 1 | `cfdea120e46b` | yes |
-| TEST-005 | pass | 1 | `cfdea120e46b` | yes |
-| TEST-006 | pass | 1 | `cfdea120e46b` | yes |
-| TEST-007 | pass | 1 | `cfdea120e46b` | yes |
-| TEST-008 | pass | 1 | `cfdea120e46b` | yes |
-| TEST-009 | pass | 1 | `cfdea120e46b` | yes |
-| TEST-010 | pass | 1 | `cfdea120e46b` | yes |
-| TEST-011 | pass | 1 | `cfdea120e46b` | yes |
-| TEST-012 | pass | 1 | `cfdea120e46b` | yes |
-| TEST-013 | pass | 1 | `cfdea120e46b` | yes |
-| TEST-014 | pass | 1 | `cfdea120e46b` | yes |
-| TEST-015 | pass | 1 | `cfdea120e46b` | yes |
-| TEST-016 | pass | 1 | `cfdea120e46b` | yes |
-| TEST-017 | pass | 1 | `cfdea120e46b` | yes |
-| TEST-018 | pass | 1 | `cfdea120e46b` | yes |
-| TEST-019 | pass | 1 | `cfdea120e46b` | yes |
-| TEST-020 | pass | 1 | `cfdea120e46b` | yes |
-| TEST-021 | pass | 1 | `cfdea120e46b` | yes |
-| TEST-022 | pass | 1 | `cfdea120e46b` | yes |
-| TEST-023 | pass | 1 | `cfdea120e46b` | yes |
-| TEST-024 | pass | 1 | `cfdea120e46b` | yes |
-| TEST-025 | pass | 1 | `cfdea120e46b` | yes |
-| TEST-026 | pass | 1 | `cfdea120e46b` | yes |
-| TEST-027 | pass | 1 | `cfdea120e46b` | yes |
-| TEST-028 | pass | 1 | `cfdea120e46b` | yes |
-| TEST-029 | pass | 1 | `cfdea120e46b` | yes |
+| TEST-001 | pass | 1 | `9f2bec0f944b` | yes |
+| TEST-002 | pass | 1 | `9f2bec0f944b` | yes |
+| TEST-003 | pass | 1 | `9f2bec0f944b` | yes |
+| TEST-004 | pass | 1 | `9f2bec0f944b` | yes |
+| TEST-005 | pass | 1 | `9f2bec0f944b` | yes |
+| TEST-006 | pass | 1 | `9f2bec0f944b` | yes |
+| TEST-007 | pass | 1 | `9f2bec0f944b` | yes |
+| TEST-008 | pass | 1 | `9f2bec0f944b` | yes |
+| TEST-009 | pass | 1 | `9f2bec0f944b` | yes |
+| TEST-010 | pass | 1 | `9f2bec0f944b` | yes |
+| TEST-011 | pass | 1 | `9f2bec0f944b` | yes |
+| TEST-012 | pass | 1 | `9f2bec0f944b` | yes |
+| TEST-013 | pass | 1 | `9f2bec0f944b` | yes |
+| TEST-014 | pass | 1 | `9f2bec0f944b` | yes |
+| TEST-015 | pass | 1 | `9f2bec0f944b` | yes |
+| TEST-016 | pass | 1 | `9f2bec0f944b` | yes |
+| TEST-017 | pass | 1 | `9f2bec0f944b` | yes |
+| TEST-018 | pass | 1 | `9f2bec0f944b` | yes |
+| TEST-019 | pass | 1 | `9f2bec0f944b` | yes |
+| TEST-020 | pass | 1 | `9f2bec0f944b` | yes |
+| TEST-021 | pass | 1 | `9f2bec0f944b` | yes |
+| TEST-022 | pass | 1 | `9f2bec0f944b` | yes |
+| TEST-023 | pass | 1 | `9f2bec0f944b` | yes |
+| TEST-024 | pass | 1 | `9f2bec0f944b` | yes |
+| TEST-025 | pass | 1 | `9f2bec0f944b` | yes |
+| TEST-026 | pass | 1 | `9f2bec0f944b` | yes |
+| TEST-027 | pass | 1 | `9f2bec0f944b` | yes |
+| TEST-028 | pass | 1 | `9f2bec0f944b` | yes |
+| TEST-029 | pass | 1 | `9f2bec0f944b` | yes |
+| TEST-030 | pass | 1 | `9f2bec0f944b` | yes |
+| TEST-031 | pass | 1 | `9f2bec0f944b` | yes |
+| TEST-032 | pass | 1 | `9f2bec0f944b` | yes |
+| TEST-033 | pass | 1 | `9f2bec0f944b` | yes |
+| TEST-034 | pass | 1 | `9f2bec0f944b` | yes |
+| TEST-035 | pass | 1 | `9f2bec0f944b` | yes |
+| TEST-036 | pass | 1 | `9f2bec0f944b` | yes |
+| TEST-037 | pass | 1 | `9f2bec0f944b` | yes |
+| TEST-038 | pass | 1 | `9f2bec0f944b` | yes |
 
 Source-tree freshness is checked live by `tools/axiom/axiom evidence check`, not here.

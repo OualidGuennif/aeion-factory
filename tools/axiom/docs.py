@@ -426,6 +426,10 @@ def generate(root, spec, model, result, check=False):
                 problems.append(f"docs: {rel} is stale or edited by hand (run tools/axiom/axiom docs)")
         problems += [f"docs: {rel} is not produced by the generator" for rel in sorted(existing - set(files))]
         return problems
+    # Publish only over what the generator owns: a cockpit with its notice, a generated tree with its manifest.
+    foreign = foreign_outputs(root)
+    if foreign:
+        return foreign
     # Publish: build the new tree beside the old one, then swap, so readers never see half of it.
     staging = generated.with_name(f".{generated.name}.new-{os.getpid()}")
     shutil.rmtree(staging, ignore_errors=True)
@@ -441,12 +445,33 @@ def generate(root, spec, model, result, check=False):
     return []
 
 
-def dangling_ids(root, model):
+def foreign_outputs(root):
+    """Problems for project files the generator would replace but did not write: a docs/README.md without the
+    generator's notice, or a non-empty docs/generated/ without its manifest. Never overwritten, never deleted."""
+    root, problems = Path(root), []
+    cockpit = root / COCKPIT
+    if cockpit.is_file() and not cockpit.read_text(encoding="utf-8", errors="replace").startswith(NOTICE):
+        problems.append(f"docs: {COCKPIT} exists and was not generated; move it (for example to docs/authored/) "
+                        "before the cockpit is written there")
+    generated = root / GENERATED
+    manifest = generated / "manifest.json"
+    if generated.is_dir() and any(generated.iterdir()):
+        try:
+            owned = json.loads(manifest.read_text(encoding="utf-8")).get("format") == "aeion-docs-manifest/0.1"
+        except (OSError, ValueError, AttributeError):
+            owned = False
+        if not owned:
+            problems.append(f"docs: {GENERATED}/ holds files the generator did not write (no manifest); move them "
+                            "before generating")
+    return problems
+
+
+def dangling_ids(root, model, spec_path=None):
     """Canonical IDs that knowledge/ and docs/ cite in prose or `spec_ids` but the spec does not hold."""
     if model is None:
         return []
     import graph
-    snapshot = graph.snapshot(root, Path(root) / SPEC_PATH)
+    snapshot = graph.snapshot(root, Path(spec_path) if spec_path else Path(root) / SPEC_PATH)
     dangling = snapshot["manifest"]["spec"].get("dangling_mentions", {})
     return [f"{rel}: cites {', '.join(ids)}, not in knowledge/spec/spec.json" for rel, ids in sorted(dangling.items())]
 
@@ -475,10 +500,15 @@ def init(root, spec_path, name, owner_role):
             continue
         write_atomic(path, text)
         print(f"wrote {Path(path).relative_to(root) if Path(path).is_relative_to(root) else path}")
-    # Generate the first cockpit now, so a fresh project passes `axiom check` from the start.
+    # Generate the first cockpit now, so a fresh project passes `axiom check` from the start; an existing
+    # project's own docs/README.md or docs/generated/ is reported, never replaced.
     import spec as specs
     result = specs.Result()
     loaded = specs.load_spec(spec_path, result)
+    foreign = foreign_outputs(root)
+    if foreign:
+        print("\n".join(foreign))
+        return 1
     if loaded is not None:
         model, _ = specs.validate(loaded, result=result)
         problems = generate(root, loaded, model, result)
@@ -526,6 +556,9 @@ DEFAULT_PROFILE = {"format": PROFILE_FORMAT, "name": "aeion-factory", "max_bytes
                                          "write_paths", "depends_on", "status", "spec_sha256", "generated_by"]}
 
 
+RESERVED_ROW = frozenset({"id", "goal", "file", "spec_sha256", "generated_by"})
+
+
 def export(root, model, goal_id, everything, profile_path, out):
     """Write one feature Markdown per goal (eight spec sections), fail on any size or content violation."""
     try:
@@ -564,6 +597,9 @@ def export(root, model, goal_id, everything, profile_path, out):
         broken = structure_problems(text)
         if broken:
             failures.append(f"{gid}: {broken[0]}")
+            continue
+        if Path(row["file"]).name != row["file"] or not row["file"].endswith(".md"):
+            failures.append(f"{gid}: file name {row['file']!r} is not a plain .md name")
             continue
         write_atomic(out / row["file"], text)
         rows.append(row)
@@ -637,7 +673,8 @@ def feature_markdown(model, goal_id, entry, entries, profile):
            "parallel": entry.get("parallel", False), "write_paths": entry.get("write_paths", []),
            "depends_on": depends, "status": "proposed", "spec_sha256": model.digest,
            "generated_by": GENERATOR, "file": f"{number}-{entry['slug']}.md"}
-    row.update(profile.get("frontmatter", {}))
+    # A profile adds catalog fields; it never changes the identity or the file name the export computed.
+    row.update({k: v for k, v in profile.get("frontmatter", {}).items() if k not in RESERVED_ROW})
     front = ["---"]
     for key in profile["frontmatter_order"]:
         if key in row:

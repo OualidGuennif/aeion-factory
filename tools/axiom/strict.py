@@ -82,6 +82,9 @@ def _constant(text):
 
 
 def _integer(text):
+    # 2**53 has 16 digits: anything longer is unsafe before int() (which refuses beyond 4300 digits) runs.
+    if len(text.lstrip("-")) > 16:
+        raise InputError("UNSAFE_INTEGER", f"{text[:20]}... is outside the safe integer range")
     number = int(text)
     if abs(number) > SAFE:
         raise InputError("UNSAFE_INTEGER", f"{text} is outside the safe integer range")

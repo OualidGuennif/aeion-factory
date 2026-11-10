@@ -27,7 +27,9 @@ sources:
   - resource: ../../tools/axiom/docs.py
     title: "Cockpit, generated pages and feature export"
   - resource: ../../tools/axiom/evidence.py
-    title: "unittest adapter and evidence receipts"
+    title: "Evidence receipts and implementation gates"
+  - resource: ../../tools/axiom/unittest_adapter.py
+    title: "Isolated unittest runner"
   - resource: ../../tools/axiom/common.py
     title: "Shared paths, digests and atomic writes"
   - resource: ../../tools/axiom/tests/
@@ -72,7 +74,7 @@ and says which capabilities it does not have.
 | `docs [--check]` | regenerates `docs/README.md` (the cockpit) and `docs/generated/` |
 | `export --goal ID \| --all [--profile FILE] [--out DIR]` | one feature Markdown per goal: frontmatter and the eight spec sections |
 | `evidence run [--ids TEST-...]` / `evidence check` | runs bound `unittest` tests, writes a receipt; checks receipts are current |
-| `check` | the commit/CI gate: no G01/G02 error, no dangling ID in `knowledge/`, generated docs current |
+| `check` | the commit/CI gate: no G01/G02 error, no dangling ID in `knowledge/` or `docs/`, generated docs current |
 
 ## Outputs
 - **Exit codes, `validate` and `check`:** 0 pass, 2 fail, 3 unknown, 4 input or processing error
@@ -107,11 +109,13 @@ and says which capabilities it does not have.
 | `docs --check` and `views --check` fail when any generated file differs from what the inputs produce. | `test_docs.DocsTests` |
 | An exported feature carries `## Acceptance checks` with `- [ ] ` items and stays under the profile's byte limit, or the export fails. | `test_docs.ExportTests` |
 | A receipt with zero, duplicate, skipped or failed tests, or with inputs that changed since, cannot satisfy G10/G11. | `test_evidence.EvidenceTests` |
+| Malformed input gives a diagnostic or exit 4, never a traceback; gates that did not run are `unknown`; out of an effective window is not pass; a receipt counts for its own test only; `init` and exports never write over or outside what they own; bound tests run in an isolated interpreter. | `test_hardening` |
 
 ## Determinism
 **deterministic.** Pure functions of the inputs: no clock (except report `metadata` and receipt
 `executed_at`), no network, no model. Sorting is by ID, then path, then line. The test runner is
-the only process the toolkit starts, and only on `evidence run`.
+the only process the toolkit starts, and only on `evidence run`: `unittest_adapter.py`, started with
+`python -I` so no toolkit module or `PYTHON*` variable can shadow what the project's tests import.
 
 ## Acceptance checks
 ```bash

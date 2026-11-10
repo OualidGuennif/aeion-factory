@@ -14,7 +14,7 @@ Rendered from structured fields (AX-M-006). The sentence is generated; change th
 data · must · risk high · verification executable · status active · revision 1
 
 - Terms: [TERM-001](terms.md#term-001)
-- Tests: [TEST-001](../verification/index.md#test-001), [TEST-002](../verification/index.md#test-002), [TEST-003](../verification/index.md#test-003)
+- Tests: [TEST-001](../verification/index.md#test-001), [TEST-002](../verification/index.md#test-002), [TEST-003](../verification/index.md#test-003), [TEST-030](../verification/index.md#test-030)
 - Components: [COMP-001](../system/components.md#comp-001)
 
 <a id="req-002"></a>
@@ -24,7 +24,7 @@ data · must · risk high · verification executable · status active · revisio
 
 functional · must · risk high · verification executable · status active · revision 1
 
-- Tests: [TEST-003](../verification/index.md#test-003), [TEST-004](../verification/index.md#test-004), [TEST-005](../verification/index.md#test-005)
+- Tests: [TEST-003](../verification/index.md#test-003), [TEST-004](../verification/index.md#test-004), [TEST-005](../verification/index.md#test-005), [TEST-031](../verification/index.md#test-031)
 - Components: [COMP-001](../system/components.md#comp-001)
 
 <a id="req-003"></a>
@@ -34,7 +34,7 @@ functional · must · risk high · verification executable · status active · r
 
 functional · must · risk high · verification executable · status active · revision 1
 
-- Tests: [TEST-006](../verification/index.md#test-006), [TEST-007](../verification/index.md#test-007), [TEST-008](../verification/index.md#test-008), [TEST-009](../verification/index.md#test-009)
+- Tests: [TEST-006](../verification/index.md#test-006), [TEST-007](../verification/index.md#test-007), [TEST-008](../verification/index.md#test-008), [TEST-009](../verification/index.md#test-009), [TEST-032](../verification/index.md#test-032), [TEST-033](../verification/index.md#test-033)
 - Components: [COMP-001](../system/components.md#comp-001)
 
 <a id="req-004"></a>
@@ -92,7 +92,7 @@ functional · must · risk medium · verification executable · status active ·
 functional · must · risk high · verification executable · status active · revision 1
 
 - Terms: [TERM-002](terms.md#term-002)
-- Tests: [TEST-016](../verification/index.md#test-016), [TEST-017](../verification/index.md#test-017)
+- Tests: [TEST-016](../verification/index.md#test-016), [TEST-017](../verification/index.md#test-017), [TEST-034](../verification/index.md#test-034)
 - Components: [COMP-001](../system/components.md#comp-001)
 
 <a id="req-009"></a>
@@ -103,7 +103,7 @@ functional · must · risk high · verification executable · status active · r
 functional · must · risk high · verification executable · status active · revision 1
 
 - Terms: [TERM-002](terms.md#term-002)
-- Tests: [TEST-017](../verification/index.md#test-017), [TEST-018](../verification/index.md#test-018)
+- Tests: [TEST-017](../verification/index.md#test-017), [TEST-018](../verification/index.md#test-018), [TEST-034](../verification/index.md#test-034), [TEST-035](../verification/index.md#test-035)
 - Components: [COMP-001](../system/components.md#comp-001)
 
 ## GOAL-004 Documentation is derived, current and safe
@@ -115,7 +115,7 @@ functional · must · risk high · verification executable · status active · r
 
 functional · must · risk medium · verification executable · status active · revision 1
 
-- Tests: [TEST-019](../verification/index.md#test-019)
+- Tests: [TEST-019](../verification/index.md#test-019), [TEST-036](../verification/index.md#test-036), [TEST-038](../verification/index.md#test-038)
 - Components: [COMP-001](../system/components.md#comp-001)
 
 <a id="req-011"></a>
@@ -136,7 +136,7 @@ security · must · risk high · verification executable · status active · rev
 
 security · must · risk high · verification executable · status active · revision 1
 
-- Tests: [TEST-023](../verification/index.md#test-023), [TEST-024](../verification/index.md#test-024), [TEST-025](../verification/index.md#test-025)
+- Tests: [TEST-023](../verification/index.md#test-023), [TEST-024](../verification/index.md#test-024), [TEST-025](../verification/index.md#test-025), [TEST-037](../verification/index.md#test-037)
 - Components: [COMP-001](../system/components.md#comp-001)
 
 ## GOAL-005 Secrets never reach an agent session

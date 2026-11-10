@@ -34,6 +34,7 @@ def main(argv):
     validate.add_argument("--report", type=Path, help="also write the axiomspec-report/0.2 here")
     evaluate = commands.add_parser("evaluate", help="BCIR constraints on observation cases")
     evaluate.add_argument("--observations", type=Path, required=True)
+    evaluate.add_argument("--evaluated-at", help="UTC instant for effective windows (ISO 8601)")
     evaluate.add_argument("--json", action="store_true")
     graph = commands.add_parser("graph", help="rebuild the knowledge graph snapshot when inputs changed")
     graph.add_argument("--json", action="store_true")
@@ -74,6 +75,25 @@ def now():
     return datetime.now(timezone.utc).isoformat()
 
 
+# The observation file: its shape is checked before any value is used.
+OBSERVATIONS = {"type": "object", "required": ["cases"], "properties": {"cases": {"type": "array", "maxItems": 10000, "items": {
+    "type": "object", "required": ["scenario_id", "environment_id", "environment", "expected"],
+    "properties": {"scenario_id": {"type": "string"}, "environment_id": {"type": "string"}, "environment": {"type": "object"},
+                   "expected": {"type": "object", "additionalProperties": {"type": "boolean"}}}}}}}
+
+
+def bad_instant(args):
+    """An input error message when --evaluated-at is given but is not a UTC instant, else None."""
+    value = getattr(args, "evaluated_at", None)
+    if value is None:
+        return None
+    try:
+        specs.utc_instant(value)
+    except ValueError:
+        return f"error EVALUATED_AT: {value!r} is not a UTC instant (for example 2026-11-10T00:00:00Z)"
+    return None
+
+
 def load(args, result):
     """The validated spec and its model, or None when G01 failed (diagnostics are in result)."""
     if not args.spec.is_file():
@@ -88,13 +108,16 @@ def load(args, result):
 
 
 def cmd_validate(args):
+    if bad_instant(args):
+        print(bad_instant(args), file=sys.stderr)
+        return 4
     result = specs.Result()
     spec, model = load(args, result)
     gates = list(specs.DESIGN_GATES)
     limits = []
     if args.phase == "implementation" and model is not None:
         import evidence
-        evidence.implementation_gates(args.root, model, result)
+        evidence.implementation_gates(args.root, model, result, args.spec)
         gates += ["G08", "G09", "G10", "G11", "G12"]
         limits.append("G08 and G12 need trusted principal, policy and authority adapters, which do not exist here.")
     phase = "design_ready" if args.phase == "design" else "implementation_accepted"
@@ -122,6 +145,10 @@ def cmd_validate(args):
 
 def cmd_evaluate(args):
     import bcir
+    from schema import Validator
+    if bad_instant(args):
+        print(bad_instant(args), file=sys.stderr)
+        return 4
     result = specs.Result()
     spec, model = load(args, result)
     if model is None:
@@ -132,10 +159,18 @@ def cmd_evaluate(args):
     except InputError as error:
         print(f"error {error.code}: {error.message}", file=sys.stderr)
         return 4
+    shape_errors = Validator(OBSERVATIONS).errors(fixtures)
+    if shape_errors:
+        print(f"error OBSERVATIONS: {shape_errors[0][0] or '/'}: {shape_errors[0][1]}", file=sys.stderr)
+        return 4
+    unknown_envs = sorted({c["environment_id"] for c in fixtures["cases"]} - set(model.envs))
+    if unknown_envs:
+        print(f"error OBSERVATIONS: unknown environment(s) {', '.join(unknown_envs)}", file=sys.stderr)
+        return 4
     rows, problems = [], []
     scenarios = {n["id"]: n for n in model.active("Scenario")}
     covered = []
-    for case in fixtures.get("cases", []):
+    for case in fixtures["cases"]:
         scenario = scenarios.get(case.get("scenario_id"))
         if scenario is None:
             problems.append(f"{case.get('scenario_id')}: no active scenario")
@@ -272,7 +307,7 @@ def cmd_check(args):
     blocking = [d for d in result.diagnostics if d["gate"] in ("G01", "G02", "G03") and d["status"] == "error"
                 or d["gate"] == "G02" and d["status"] == "fail" and d["code"] != "EMPTY_BASELINE"]
     problems += [f"{d['gate']} {d['code']} {d['subject_id'] or ''} {d['pointer']}: {d['message']}" for d in blocking]
-    problems += docs.dangling_ids(args.root, model)
+    problems += docs.dangling_ids(args.root, model, args.spec)
     # docs covers the diagrams too; without a spec only the views can be checked.
     if spec is not None:
         problems += docs.generate(args.root, spec, model, result, check=True)

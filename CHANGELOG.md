@@ -26,6 +26,14 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 - The factory specifies itself in `knowledge/spec/spec.json`; its architecture diagrams are in the cockpit.
 - New demo: the Holiday Planner, a 20-feature AxiomSpec product built in ten rounds, with `demo/check`
   replaying every AxiomSpec step on a fresh copy in seconds. The Idea Board runs stay readable at v2.1.1.
+- Hardened after an independent review (15 findings, each with a regression test in
+  `tools/axiom/tests/test_hardening.py`): `init` never replaces docs the generator did not write;
+  `template-update` carries the vendored AxiomSpec package with the toolkit and a missing schema is a G01
+  error; effective windows are applied to `--evaluated-at` (out of window is not pass); gates that did not
+  run are unknown; only `knowledge/` and `docs/` cite the spec; malformed environments, observation files,
+  sequence steps, huge integers and null binding symbols give diagnostics, never tracebacks; the unittest
+  adapter runs isolated so a project's modules are never shadowed; receipts count for their own test only;
+  `--spec` reaches every gate; an export profile cannot rename or relocate the exported file.
 - `template-update` never writes a project's spec, cockpit, views or catalogs; repo-health no longer
   counts a folder releases leave out (`export-ignore`); `factory-tests` reports the JavaScript adapter
   suites as not run when Node is absent.

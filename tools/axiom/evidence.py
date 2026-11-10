@@ -4,18 +4,17 @@ keep a receipt tied to the spec digest and the source tree; check receipts again
 
 The runner is fixed code (this file's adapter mode): no shell, no command text from the spec.
 Receipts are local and untrusted: consistency is checked, never the producer's honesty."""
-import io
 import json
 import os
 import subprocess
 import sys
-import unittest
 from datetime import datetime, timezone
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 
 from common import EVIDENCE_DIR, SPEC_PATH, TOOL_VERSION, canonical_digest, confined, pretty, sha256, write_atomic
 
 ADAPTER = f"unittest/{TOOL_VERSION}"
+ADAPTER_SCRIPT = Path(__file__).resolve().with_name("unittest_adapter.py")
 TIMEOUT = 900
 
 
@@ -62,7 +61,11 @@ def _execute(root, test, bindings, spec_digest, tree):
         if confined(root, path) is None or not (root / path).is_file():
             problems.append(f"{binding['id']}: {path} is missing or escapes the project")
             continue
-        command = [sys.executable, str(Path(__file__).resolve()), "--adapter", path, binding["symbol"]]
+        if not binding["symbol"]:
+            problems.append(f"{binding['id']}: a test binding names a test (Class.test_method); this one names none")
+            continue
+        # Isolated (-I): no toolkit module and no PYTHON* variable can shadow what the project's test imports.
+        command = [sys.executable, "-I", "-B", str(ADAPTER_SCRIPT), path, binding["symbol"]]
         try:
             done = subprocess.run(command, cwd=root, capture_output=True, text=True, timeout=TIMEOUT,
                                   env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1"))
@@ -113,7 +116,10 @@ def receipts_state(root, model):
         except ValueError:
             states[test["id"]] = ("failed", "receipt unreadable")
             continue
-        counts = receipt.get("counts", {})
+        if not isinstance(receipt, dict) or receipt.get("test_id") != test["id"]:
+            states[test["id"]] = ("failed", "the receipt is not this test's (test_id differs or is missing)")
+            continue
+        counts = receipt.get("counts") if isinstance(receipt.get("counts"), dict) else {}
         if receipt.get("spec_sha256") != model.digest:
             states[test["id"]] = ("stale", "spec changed since the run")
         elif receipt.get("source_tree_sha256") != tree:
@@ -136,10 +142,10 @@ def check(root, model):
     return code
 
 
-def implementation_gates(root, model, result):
+def implementation_gates(root, model, result, spec_path=None):
     """G08-G12 for the implementation phase; what needs trusted adapters stays unknown."""
     import graph
-    snapshot = graph.snapshot(root, Path(root) / SPEC_PATH)
+    snapshot = graph.snapshot(root, Path(spec_path) if spec_path else Path(root) / SPEC_PATH)
     nodes = {n["id"]: n for n in snapshot["nodes"]}
     result.add("G08", "unknown", "NO_CONTEXT_ADMISSION", "context rights and delivery need a trusted principal "
                "and policy adapter, which this toolkit does not provide")
@@ -158,62 +164,3 @@ def implementation_gates(root, model, result):
             result.add("G11", "fail", "STALE_EVIDENCE", detail, test_id)
     result.add("G12", "unknown", "NO_AUTHORITY_ADAPTER", "actors are asserted, not authenticated; acceptance "
                "authority needs a trusted adapter (AX-P-008)")
-
-
-class _Recorder(unittest.TestResult):
-    def __init__(self):
-        super().__init__()
-        self.outcomes = {}
-
-    def addSuccess(self, test):
-        self.outcomes[test.id()] = "pass"
-
-    def addFailure(self, test, err):
-        super().addFailure(test, err)
-        self.outcomes[test.id()] = "fail"
-
-    def addError(self, test, err):
-        super().addError(test, err)
-        self.outcomes[test.id()] = "error"
-
-    def addSkip(self, test, reason):
-        self.outcomes[test.id()] = "skip"
-
-    def addExpectedFailure(self, test, err):
-        self.outcomes[test.id()] = "fail"
-
-    def addUnexpectedSuccess(self, test):
-        self.outcomes[test.id()] = "fail"
-
-
-def _adapter(path, symbol):
-    """Adapter mode: import one test file as its own script would, run one name, print one JSON line."""
-    import importlib.util
-    folder = str(Path(path).resolve().parent)
-    sys.path.insert(0, folder)
-    name = "axiom_bound_" + PurePosixPath(path).stem
-    spec = importlib.util.spec_from_file_location(name, path)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[name] = module
-    output = io.StringIO()
-    try:
-        spec.loader.exec_module(module)
-        suite = unittest.defaultTestLoader.loadTestsFromName(symbol, module)
-    except Exception as error:  # an import or lookup failure is a reported error, not a crash
-        print(json.dumps({"results": {}, "error": f"{type(error).__name__}: {error}"}))
-        return
-    recorder = _Recorder()
-    stream, sys.stdout = sys.stdout, output
-    try:
-        suite.run(recorder)
-    finally:
-        sys.stdout = stream
-    results = {test_id.replace(name + ".", "", 1): outcome for test_id, outcome in recorder.outcomes.items()}
-    sys.stderr.write(output.getvalue())
-    for _, trace in recorder.failures + recorder.errors:
-        sys.stderr.write(trace)
-    print(json.dumps({"results": results}))
-
-
-if __name__ == "__main__" and len(sys.argv) == 4 and sys.argv[1] == "--adapter":
-    _adapter(sys.argv[2], sys.argv[3])

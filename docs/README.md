@@ -4,7 +4,7 @@
 
 Scope: A repository template that lets coding agents work under shared instructions, checked specifications and safety guards, with Python 3 and the agent only.
 
-Specification baseline: `cfdea120e46bf0a30c24e8124b1a74e88c6bc3842b6f4d1b6e33993345a84b80` (product, `axiomspec/0.1`, `AX-CORE-0.1`)  
+Specification baseline: `9f2bec0f944b022224dffea39975d9050b5d2e1b94aced28ff1a0ce4d065da66` (product, `axiomspec/0.1`, `AX-CORE-0.1`)  
 Documentation build: `aeion-docs/3.0.0`, regenerate with `tools/axiom/axiom docs`  
 Design readiness: **pass** (gates G01-G07; see [verification](generated/verification/index.md))
 
@@ -40,7 +40,7 @@ No open decision.
 | Artifact structure | pass (G01) |
 | Business decisions | 0 open |
 | Formal semantics | G03 pass, G06 pass on declared scenarios |
-| Product tests | 29 receipt(s); freshness: `tools/axiom/axiom evidence check` |
+| Product tests | 38 receipt(s); freshness: `tools/axiom/axiom evidence check` |
 | Operational behaviour | not observed (G13 unsupported) |
 
-Contents: 1 Assumption, 3 Component, 1 Control, 3 Decision, 6 Goal, 15 Requirement, 1 Risk, 3 Term, 29 TestCase.
+Contents: 1 Assumption, 3 Component, 1 Control, 3 Decision, 6 Goal, 15 Requirement, 1 Risk, 3 Term, 38 TestCase.

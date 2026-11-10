@@ -71,3 +71,10 @@ which illustrates only REQ-001). These are findings about the example, left unch
 
 The existing-project playbook links a research note (`../research/auto-ontology-comparison-2026-11-09.md`)
 that was not supplied with it. The link is kept as written.
+
+## The package's own QA script
+
+`AxiomSpec/qa/check_package.py` is the package author's release check; it imports `jsonschema` and
+`referencing`, pinned in `AxiomSpec/qa/requirements-qa.txt`. It is part of the verbatim copy and
+nothing in the template runs it: the toolkit and its tests use the standard library only, and
+`tools/axiom/tests/test_package.py` checks the copy's manifest digests and links instead.

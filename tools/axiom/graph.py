@@ -37,6 +37,8 @@ RESOURCE = re.compile(r'^\s*(?:-\s+)?resource:\s*"?([^"\n]+?)"?\s*$', re.MULTILI
 MAX_READ = 1048576
 # The vendored AxiomSpec package cites its own example's IDs, which are not this project's.
 VENDORED = ("knowledge/axiomspec/",)
+# The folders whose Markdown cites the canonical spec; a dangling ID there fails the check.
+CITING = ("knowledge/", "docs/")
 
 
 class GraphError(RuntimeError):
@@ -436,18 +438,22 @@ def _spec_layer(root, spec_path, nodes, edges, symbols, contents, mentions, limi
         for node_id in ids:
             if node_id in model.nodes:
                 edges.append(_edge("file:" + rel, "mentions", node_id, "declared"))
-            else:
+            elif rel.startswith(CITING):
+                # Only knowledge/ and docs/ cite the spec; elsewhere an ID-like word (a ticket key) is ordinary text.
                 dangling.setdefault(rel, []).append(node_id)
     return {"path": _rel(root, spec_path), "status": "loaded", "sha256": model.digest, "dangling_mentions": dangling}
 
 
 def resolve_binding(root, binding, symbols, contents):
-    """Locate a binding's selector in the snapshot (AX-M-014); file existence alone resolves nothing."""
+    """Locate a binding's selector in the snapshot (AX-M-014). A symbol resolves by its definition; a binding
+    without a symbol names the whole file, so it resolves to the file's first line when the file is present."""
     path, symbol = binding["path"], binding["symbol"]
     if confined(root, path) is None:
         return {"status": "unsafe", "detail": "path escapes the project or is not a safe relative path"}
     if path not in contents:
         return {"status": "missing", "detail": f"{path} is not in the snapshot"}
+    if symbol is None:
+        return {"status": "resolved", "line": 1, "extractor": "file-level/1"}
     extractor = EXTRACTORS.get(LANGUAGES.get(PurePosixPath(path).suffix.lower(), ""), EXTRACTORS["generic"])
     for item in symbols.get(path, []):
         if item["name"] == symbol:

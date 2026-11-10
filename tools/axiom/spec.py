@@ -8,7 +8,7 @@ from datetime import datetime
 
 import bcir
 from common import ROOT, SCHEMA_DIR, TOOL_VERSION, canonical_digest, relative_safe, sha256
-from schema import Validator
+from schema import SchemaError, Validator
 from strict import InputError, load
 
 RELATIONS = {
@@ -81,7 +81,13 @@ def load_spec(path, result):
     except InputError as error:
         result.add("G01", "error", error.code, error.message, pointer=error.pointer)
         return None
-    errors = schema_validator().errors(spec)
+    try:
+        errors = schema_validator().errors(spec)
+    except (InputError, SchemaError) as error:
+        # The toolkit's own schema is missing or unreadable: nothing can be validated, so nothing passes.
+        result.add("G01", "error", "SCHEMA_UNAVAILABLE", f"the AxiomSpec schema could not be loaded "
+                   f"({getattr(error, 'message', error)}); restore {SCHEMA_DIR}/ (template-update carries it)")
+        return None
     for pointer, message in errors[:50]:
         result.add("G01", "error", "SCHEMA", message, pointer=pointer)
     if len(errors) > 50:
@@ -277,10 +283,20 @@ def _check_asset(model, asset, pointer, result):
 def check_constraints(model, result):
     """G03: environments are restricted schemas; every BCIR constraint is well-typed and unit-consistent."""
     terms = {n["id"] for n in model.spec["nodes"] if n["kind"] == "Term"}
-    model.units = {}
+    model.units, model.broken_envs = {}, set()
     for index, env in enumerate(model.spec["environments"]):
-        problems = bcir.check_environment(env["schema"])
-        table, unit_problems = bcir.unit_table(env, terms)
+        try:
+            problems = bcir.check_environment(env["schema"])
+            table, unit_problems = bcir.unit_table(env, terms)
+        except (bcir.AnalysisError, AttributeError, TypeError, KeyError, RecursionError) as error:
+            # A schema the analyzer cannot even walk is an error of the environment, never a crash.
+            result.add("G03", "error", "ENVIRONMENT_SCHEMA", f"the environment schema cannot be analyzed: "
+                       f"{type(error).__name__}: {str(error)[:200]}", env["id"], f"/environments/{index}/schema")
+            model.broken_envs.add(env["id"])
+            model.units[env["id"]] = {}
+            continue
+        if problems or unit_problems:
+            model.broken_envs.add(env["id"])
         for pointer, message in problems:
             result.add("G03", "error", "ENVIRONMENT_SCHEMA", message, env["id"], f"/environments/{index}/schema{pointer}")
         for pointer, message in unit_problems:
@@ -311,10 +327,27 @@ def _check_constraint(model, node, result):
     env = model.envs.get(data["environment_id"])
     if data["representation"] != "bcir" or data["expression"] is None or env is None:
         return
+    if env["id"] in getattr(model, "broken_envs", ()):
+        result.add("G03", "unknown", "ENVIRONMENT_INVALID", f"{env['id']} failed G03, so {node_id} was not analyzed",
+                   node_id, f"{pointer}/data/expression")
+        return
     try:
         bcir.Analyzer(env, model.units.get(env["id"], {})).boolean_predicate(data["expression"])
     except bcir.AnalysisError as error:
         result.add("G03", "error", "BCIR_STATIC", str(error), node_id, f"{pointer}/data/expression{error.pointer}")
+    except (AttributeError, TypeError, KeyError, RecursionError) as error:
+        result.add("G03", "error", "BCIR_STATIC", f"cannot analyze against {env['id']}: {type(error).__name__}",
+                   node_id, f"{pointer}/data/expression")
+
+
+def utc_instant(value):
+    """The datetime of an ISO 8601 instant in UTC (Z or +00:00); ValueError for anything else."""
+    if not isinstance(value, str):
+        raise ValueError(f"{value!r} is not a UTC instant")
+    moment = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    if moment.utcoffset() is None or moment.utcoffset().total_seconds() != 0:
+        raise ValueError(f"{value!r} is not a UTC instant")
+    return moment
 
 
 def _check_window(data, node_id, pointer, result):
@@ -325,10 +358,7 @@ def _check_window(data, node_id, pointer, result):
             bounds.append(None)
             continue
         try:
-            moment = datetime.fromisoformat(value.replace("Z", "+00:00"))
-            if moment.utcoffset() is None or moment.utcoffset().total_seconds() != 0:
-                raise ValueError
-            bounds.append(moment)
+            bounds.append(utc_instant(value))
         except ValueError:
             result.add("G03", "error", "INVALID_WINDOW", f"{field} {value!r} is not a UTC instant", node_id,
                        f"{pointer}/data/{field}")
@@ -396,8 +426,20 @@ def check_scenarios(model, result, evaluated_at=None):
         env = model.envs.get(data["environment_id"])
         if env is None:
             continue
-        validator = validators.setdefault(env["id"], bcir.environment_validator(env))
-        problems = validator.errors(data["given"])
+        if env["id"] in getattr(model, "broken_envs", ()):
+            # G03 rejected the environment: its scenarios cannot be checked, so they are unknown, not pass.
+            result.add("G06", "unknown", "ENVIRONMENT_INVALID", f"{env['id']} failed G03; its scenarios were not "
+                       "evaluated", node["id"], pointer + "/data/given")
+            continue
+        try:
+            if env["id"] not in validators:
+                validators[env["id"]] = bcir.environment_validator(env)
+            validator = validators[env["id"]]
+            problems = validator.errors(data["given"])
+        except (bcir.AnalysisError, RecursionError, TypeError, AttributeError) as error:
+            result.add("G06", "error", "ENVIRONMENT_SCHEMA", f"the environment schema cannot validate data: "
+                       f"{type(error).__name__}: {str(error)[:200]}", node["id"], pointer + "/data/given")
+            continue
         if problems:
             result.add("G06", "error", "INVALID_GIVEN", f"given data invalid at {problems[0][0] or '/'}: "
                        f"{problems[0][1]}", node["id"], pointer + "/data/given")
@@ -420,8 +462,19 @@ def expectation_outcome(model, scenario, expectation, validator, evaluated_at=No
     hard_invariant = data["predicate_role"] == "invariant" and data["classification"]["strength"] == "hard"
     if scenario["data"]["intent"] == "witness" and hard_invariant and expectation["expected"] is False:
         return ("fail", "WITNESS_VIOLATES_INVARIANT", f"a witness cannot expect hard invariant {constraint['id']} false")
-    if (data["effective_from"] or data["effective_until"]) and evaluated_at is None:
-        return ("unknown", "APPLICABILITY_UNKNOWN", f"{constraint['id']} has an effective window and no evaluation time")
+    if data["effective_from"] or data["effective_until"]:
+        # AX-C-013: applies when effective_from <= evaluated_at < effective_until; out of window is not pass.
+        if evaluated_at is None:
+            return ("unknown", "APPLICABILITY_UNKNOWN", f"{constraint['id']} has an effective window and no evaluation time")
+        try:
+            moment = utc_instant(evaluated_at)
+            start = utc_instant(data["effective_from"]) if data["effective_from"] else None
+            end = utc_instant(data["effective_until"]) if data["effective_until"] else None
+        except ValueError:
+            return ("unknown", "APPLICABILITY_UNKNOWN", f"{constraint['id']}: the evaluation time or the window is not "
+                    "a UTC instant")
+        if (start and moment < start) or (end and moment >= end):
+            return ("unknown", "NOT_IN_EFFECT", f"{constraint['id']} is not in effect at {evaluated_at}")
     observed = bcir.evaluate(data["expression"], scenario["data"]["given"] if given is None else given, validator)
     if observed["result"] in ("unknown", "error"):
         return (observed["result"], "EVALUATION_" + observed["result"].upper(),
@@ -484,7 +537,12 @@ def toolchain_digest():
 
 
 def report(result, phase_name, gates, spec_digest, evaluated_at, extra_limits=(), scope="baseline"):
-    """The axiomspec-report/0.2 envelope: deterministic body, clock only in metadata."""
+    """The axiomspec-report/0.2 envelope: deterministic body, clock only in metadata. When G01 failed, the later
+    gates never ran: each is reported unknown (NOT_RUN), never pass."""
+    blocked = any(d["gate"] == "G01" and d["status"] == "error" for d in result.diagnostics)
+    for gate in gates:
+        if blocked and gate != "G01" and not any(d["gate"] == gate for d in result.diagnostics):
+            result.add(gate, "unknown", "NOT_RUN", "not run: G01 rejected the document")
     checks = []
     for gate in gates:
         listed = [d for d in result.diagnostics if d["gate"] == gate]

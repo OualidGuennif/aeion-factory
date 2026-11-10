@@ -39,6 +39,9 @@ MARKER = ".aeion-factory"
 # The AxiomSpec cockpit, views and catalogs under docs/ describe the project, like knowledge/spec/.
 OWNED_FILES = ("VERSION", "CHANGELOG.md", MARKER, "docs/README.md", "docs/view-catalog.json", "docs/feature-catalog.json")
 OWNED_FOLDERS = ("work/", "knowledge/", "demo/", "docs/generated/", "docs/views/", "docs/features/", "docs/authored/")
+# The vendored AxiomSpec package (contracts, schemas the toolkit loads, playbooks) belongs to the template:
+# tools/axiom/ cannot run without its schemas, so an update carries both or neither.
+TEMPLATE_FOLDERS = ("knowledge/axiomspec/",)
 LINK, GITLINK = "120000", "160000"
 NOTES_CAP = 80
 PROPOSALS = ".aeion/template-update"
@@ -66,6 +69,8 @@ def allowed(baseline, target):
 
 
 def owned(relative):
+    if relative.startswith(TEMPLATE_FOLDERS):
+        return False
     return relative in OWNED_FILES or relative.startswith(OWNED_FOLDERS)
 
 

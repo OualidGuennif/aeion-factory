@@ -509,22 +509,30 @@ def _sequence(source, title, question):
 def _sequence_rows(steps, ids, depth):
     rows = []
     for index, step in enumerate(steps):
+        if not isinstance(step, dict):
+            raise ViewError(f"step {index} must be an object")
         if "note" in step:
             over = step.get("over", [])
-            if not over or not set(over) <= ids:
+            if not isinstance(step["note"], str) or len(step["note"]) > 200:
+                raise ViewError(f"note {index} is a string of at most 200 characters")
+            if not isinstance(over, list) or not over or not all(isinstance(o, str) for o in over) or not set(over) <= ids:
                 raise ViewError(f"note {index} must name declared participants in 'over'")
             rows.append(("note", step["note"], over))
         elif "fragment" in step:
             if step["fragment"] not in ("alt", "opt", "loop", "par") or depth > 3:
                 raise ViewError(f"fragment {index}: alt, opt, loop or par, at most 4 deep")
-            branches = [(b.get("label", ""), _sequence_rows(b.get("steps", []), ids, depth + 1))
-                        for b in step.get("branches", [])]
+            listed = step.get("branches", [])
+            if not isinstance(listed, list) or not all(isinstance(b, dict) and isinstance(b.get("label", ""), str)
+                                                       and isinstance(b.get("steps", []), list) for b in listed):
+                raise ViewError(f"fragment {index}: branches are objects with a label and a list of steps")
+            branches = [(b.get("label", ""), _sequence_rows(b.get("steps", []), ids, depth + 1)) for b in listed]
             if not branches:
                 raise ViewError(f"fragment {index} needs branches")
             rows.append(("fragment", step["fragment"], branches))
         else:
             kind = step.get("kind", "sync")
-            if step.get("from") not in ids or step.get("to") not in ids or kind not in STEP_KINDS:
+            ends = (step.get("from"), step.get("to"))
+            if not all(isinstance(e, str) and e in ids for e in ends) or not isinstance(kind, str) or kind not in STEP_KINDS:
                 raise ViewError(f"step {index}: from/to must be declared participants and kind one of {sorted(STEP_KINDS)}")
             if not isinstance(step.get("label", ""), str) or len(step.get("label", "")) > 200:
                 raise ViewError(f"step {index}: label is a string of at most 200 characters")

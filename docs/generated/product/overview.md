@@ -75,3 +75,4 @@ Requirements: [REQ-014](requirements.md#req-014), [REQ-015](requirements.md#req-
 | --- | --- | --- | --- |
 | SRC-001 | user_input | owner request, 2026-11-09: factory 3.0.0 on Python 3 and an agent, AxiomSpec integrated | unreviewed |
 | SRC-002 | document | knowledge/axiomspec/AxiomSpec/README.md | reviewed |
+| SRC-003 | document | independent review of 3.0.0, 2026-11-10: 15 findings | reviewed |

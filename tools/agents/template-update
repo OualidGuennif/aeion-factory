@@ -384,28 +384,33 @@ def update(root, repo, ref, from_ref, check, force):
         decisions.append((label, relative, data, mode, proposal, None if since == base else since))
     # A write must not go through a link into a file the project does not own; a template symlink
     # (a skill link, added, replaced or removed) is itself the destination, so only its folders are checked.
-    writes = [(relative, relative) for relative in CONTRACT] + [
+    writes = [(MARKER, MARKER)] + [(relative, relative) for relative in CONTRACT] + [
         (str(Path(relative).parent) if label == "link" or (label == "removed" and (root / relative).is_symlink())
          else relative, relative)
         for label, relative, *_ in decisions if label in ("added", "updated", "merged", "removed", "link", "mode")]
+    proposals = Path(PROPOSALS) / re.sub(r"[^A-Za-z0-9._-]", "_", ref)
+    proposal_files = [relative for relative, _ in merges] + [
+        relative for label, relative, _, _, proposal, _ in decisions if label == "conflict" and proposal]
+    if proposal_files:
+        writes += [(str(proposals / relative), str(proposals / relative)) for relative in proposal_files]
+        writes.append((f"{PROPOSALS}/.gitignore", f"{PROPOSALS}/.gitignore"))
     for checked, relative in writes:
         link = linked(root, checked)
         kind = "connector destination" if relative in CONTRACT else "destination"
         if link:
             raise Refused(f"refusing linked {kind} {link} below {root}")
         found = root / relative
+        for parent in found.parents:
+            if parent == root:
+                break
+            if parent.exists() and not parent.is_dir():
+                raise Refused(f"refusing non-directory destination {parent.relative_to(root)} below {root}")
         if found.exists() and not found.is_symlink() and not found.is_file():
             raise Refused(f"refusing non-regular {kind} {relative}")
-    link = linked(root, PROPOSALS)
-    if link and (merges or any(label == "conflict" for label, *_ in decisions)):
-        raise Refused(f"refusing linked destination {link} below {root}")
-
-    proposals = root / PROPOSALS / re.sub(r"[^A-Za-z0-9._-]", "_", ref)
-
     def propose(relative, data):
         if check:
             return "on write"
-        target = proposals / relative
+        target = root / proposals / relative
         target.parent.mkdir(parents=True, exist_ok=True)
         # Proposals are merge material, never committed, even where the project does not ignore .aeion/.
         (root / PROPOSALS / ".gitignore").write_text("*\n", encoding="utf-8")

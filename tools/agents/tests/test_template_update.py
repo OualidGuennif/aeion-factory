@@ -225,6 +225,51 @@ class TemplateUpdateTests(unittest.TestCase):
         self.assertEqual(list(outside.iterdir()), [])
         self.assertEqual((self.project / HOOK).read_text(), HOOK_V1)
 
+    def test_linked_proposal_destinations_are_refused_before_any_write(self):
+        paths = ('.aeion/template-update/v2.0.0', '.aeion/template-update/v2.0.0/AGENTS.md',
+                 '.aeion/template-update/v2.0.0/README.md', '.aeion/template-update/.gitignore')
+        for relative in paths:
+            state = self.project / '.aeion'
+            if state.exists():
+                shutil.rmtree(state)
+            self.project_file('README.md', README_V1.replace('footer', 'our footer'))
+            self.project_file(PLUGIN, 'local drift\n')
+            self.project_file(HOOK, HOOK_V1)
+            outside = self.base / 'outside-proposals'
+            outside.mkdir(exist_ok=True)
+            sentinel = outside / ('AGENTS.md' if relative.endswith('v2.0.0') else 'sentinel.txt')
+            sentinel.write_text('PROJECT OWNED SENTINEL\n')
+            link = self.project / relative
+            link.parent.mkdir(parents=True, exist_ok=True)
+            link.symlink_to(outside if relative.endswith('v2.0.0') else sentinel,
+                            target_is_directory=relative.endswith('v2.0.0'))
+            for flags in (('--check',), ()):
+                with self.subTest(path=relative, flags=flags):
+                    code, output = self.run_tool('--from-ref', 'v1.0.0', '--ref', 'v2.0.0', *flags)
+                    self.assertEqual(code, 2, output)
+                    self.assertIn(f'refusing linked destination {relative}', output)
+                    self.assertEqual(sentinel.read_text(), 'PROJECT OWNED SENTINEL\n')
+                    self.assertEqual((self.project / PLUGIN).read_text(), 'local drift\n')
+                    self.assertEqual((self.project / HOOK).read_text(), HOOK_V1)
+                    self.assertIn('our footer', (self.project / 'README.md').read_text())
+                    self.assertFalse((self.project / update_tool.MARKER).exists())
+
+    def test_a_proposal_parent_that_is_a_file_is_refused_before_any_write(self):
+        for relative in ('.aeion/template-update', '.aeion/template-update/v2.0.0'):
+            state = self.project / '.aeion'
+            if state.exists():
+                shutil.rmtree(state)
+            self.project_file(relative, 'PROJECT OWNED SENTINEL\n')
+            self.project_file(PLUGIN, 'local drift\n')
+            for flags in (('--check',), ()):
+                with self.subTest(path=relative, flags=flags):
+                    code, output = self.run_tool('--from-ref', 'v1.0.0', '--ref', 'v2.0.0', *flags)
+                    self.assertEqual(code, 2, output)
+                    self.assertIn(f'refusing non-directory destination {relative}', output)
+                    self.assertEqual((self.project / relative).read_text(), 'PROJECT OWNED SENTINEL\n')
+                    self.assertEqual((self.project / PLUGIN).read_text(), 'local drift\n')
+                    self.assertFalse((self.project / update_tool.MARKER).exists())
+
     def test_a_file_the_project_deleted_stays_deleted(self):
         (self.project / HOOK).unlink()
         (self.project / 'efficiency').joinpath('old.md').unlink()
@@ -480,6 +525,29 @@ class TemplateUpdateTests(unittest.TestCase):
         self.assertEqual(outside.read_text(), 'PROJECT OWNED SENTINEL\n')
         # The earlier drifted connector was not written before the preflight refused the linked one.
         self.assertEqual(plugin.read_text(), 'local drift\n')
+
+    def test_a_linked_marker_is_refused_before_any_write(self):
+        marker = self.project / update_tool.MARKER
+        outside = self.base / 'outside-marker.txt'
+        plugin = self.project / PLUGIN
+        plugin.write_text('local drift\n')
+        for exists in (True, False):
+            if exists:
+                outside.write_text('PROJECT OWNED SENTINEL\n')
+            else:
+                outside.unlink(missing_ok=True)
+            marker.symlink_to(outside)
+            for flags in (('--check',), ()):
+                with self.subTest(exists=exists, flags=flags):
+                    code, output = self.run_tool('--from-ref', 'v1.0.0', '--ref', 'v2.0.0', *flags)
+                    self.assertEqual(code, 2, output)
+                    self.assertIn('refusing linked destination .aeion-template', output)
+                    self.assertTrue(marker.is_symlink())
+                    self.assertEqual(outside.exists(), exists)
+                    if exists:
+                        self.assertEqual(outside.read_text(), 'PROJECT OWNED SENTINEL\n')
+                    self.assertEqual(plugin.read_text(), 'local drift\n')
+            marker.unlink()
 
     def test_a_linked_parent_is_refused(self):
         hooks = self.project / '.claude/hooks'

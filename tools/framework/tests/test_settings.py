@@ -74,11 +74,30 @@ class SettingsTests(unittest.TestCase):
             self.assertIn("the gate enforces", problem)
 
     def test_an_address_is_an_http_url_without_secrets(self):
-        for url in ("http://127.0.0.1:8787", "https://axiom.example.invalid/base", " http://h:1/ "):
+        for url in ("http://127.0.0.1:8787", "http://[::1]:8787", "https://axiom.example.invalid/base", " http://h:1/ "):
             self.assertIsNone(settings.address_problem(url), url)
         for url in ("", " ", None, 7, "ftp://h", "h:8787", "http://", "http://u:p@h", "http://u@h", "http://h/?a=1",
                     "http://h/#x", "http://h/" + "a" * 2048, "file:///etc/hosts", "javascript:alert(1)"):
             self.assertIsNotNone(settings.address_problem(url), url)
+
+    def test_a_malformed_address_is_refused_without_a_traceback(self):
+        for address in ("http://[::1", "http://[invalid]/"):
+            with self.subTest(address=address):
+                result = self.cli("framework", address)
+                self.assertEqual(result.returncode, 1, result.stderr)
+                self.assertIn("refused", result.stderr)
+                self.assertNotIn("Traceback", result.stderr)
+                self.assertEqual(self.service.seen, [])
+                self.assertFalse((self.root / settings.SETTINGS).exists())
+                self.write(json.dumps({"framework": address}))
+                url, source, problem = settings.framework(self.root)
+                self.assertEqual((url, source), (None, "file"))
+                self.assertIsNotNone(problem)
+                (self.root / settings.SETTINGS).unlink()
+                result = self.cli(env={"AEION_FRAMEWORK_URL": address})
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn("framework: off (AEION_FRAMEWORK_URL:", result.stdout)
+                self.assertNotIn("Traceback", result.stderr)
 
     def test_the_address_is_the_switch(self):
         self.write(json.dumps({"framework": "http://127.0.0.1:8787/"}))

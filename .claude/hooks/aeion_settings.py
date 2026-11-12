@@ -92,7 +92,10 @@ def address_problem(url):
     """Why url cannot be a framework address, or None."""
     if not isinstance(url, str) or not url.strip() or len(url) > 2048:
         return "the address must be a nonempty string"
-    parts = urlsplit(url.strip())
+    try:
+        parts = urlsplit(url.strip())
+    except ValueError:
+        return "the address is not a valid http:// or https:// URL"
     if parts.scheme not in ("http", "https") or not parts.hostname:
         return "the address must be an http:// or https:// URL with a host"
     if parts.username or parts.password:

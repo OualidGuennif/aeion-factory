@@ -6,6 +6,22 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+## [4.0.1] - 2026-11-12
+
+- `template-update` checks the full destination of every merge/conflict proposal and its `.gitignore`
+  before the first project write. A linked release folder or proposal file, or a file occupying a
+  required directory, is refused, preserving both the project and any file outside it.
+
+- Framework briefs load after shell reads of annotated code (`sed`, `head`, `cat`, …), so Codex can
+  satisfy the doc gate. A multi-file read shares one eight-ID budget and deadline; further reads
+  load the remaining briefs, and an unserved requirement still keeps its file closed.
+
+- Framework addresses with a malformed IPv6 host are refused with a diagnostic instead of a
+  traceback, whether given to connect or read from the settings or environment.
+
+- `template-update` refuses a linked `.aeion-template` marker before writing any project file,
+  including a dangling link, so recording the update never overwrites a file outside the project.
+
 ## [4.0.0] - 2026-11-12
 
 - `tools/release/release --new-project` also refuses in a template clone whose origin still names

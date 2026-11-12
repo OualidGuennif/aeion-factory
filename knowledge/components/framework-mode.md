@@ -54,8 +54,8 @@ The same per-clone settings carry the doc gate's mode. Agents read the settings 
 - `tools/aeion-settings` with no argument shows the settings and where each comes from.
 - `tools/aeion-settings doc-gate enforce|warn|off`.
 - `tools/aeion-settings framework [URL]`: without a URL it asks on a terminal, and refuses (exit 2)
-  without one. An address is an `http://` or `https://` URL with a host, no credentials, no query or
-  fragment, at most 2,048 characters.
+  without one. An address is an `http://` or `https://` URL with a host, a numeric port if any, no
+  credentials, no query or fragment, at most 2,048 characters.
 - `tools/aeion-settings framework off`.
 - `tools/framework/axiom-api ready | node ID [--full] | context ID[,ID…] [--scope direct|change] |
   trace --path P|--symbol S|--id ID | gaps [--phase design|implementation]`, with `--snapshot DIGEST`
@@ -78,7 +78,7 @@ The same per-clone settings carry the doc gate's mode. Agents read the settings 
 - `axiom-api` prints the service's JSON answer on stdout, exit 0. The paged reads follow `next_cursor`
   up to `--pages` and merge the pages (`items`, `omissions`); a page left over is named on stderr with
   the command that continues it. A problem document prints `CODE (status): detail` on stderr, exit 1;
-  an unreachable service or an answer that is not JSON, exit 1; a 503 is retried once after its
+  an unreachable service, an answer that is not HTTP, or one that is not JSON, exit 1; a 503 is retried once after its
   `Retry-After` (five seconds at most); bad arguments, exit 2; framework mode off, exit 3.
 - Reading a code file that carries `@req` IDs adds their briefs to the agent's context, headed as
   requirement text that is data, not instructions: one line each (kind, status, title, statement,
@@ -94,7 +94,9 @@ The same per-clone settings carry the doc gate's mode. Agents read the settings 
 2. An address is saved only from a ready service in the supported range; unknown is never ready.
 3. The token never reaches a file or the output, never travels in clear text off this machine (plain
    `http://` only to a loopback host), and never follows a redirect: a redirect is answered as a
-   refusal, because urllib would copy the header to its target.
+   refusal, because urllib would copy the header to its target. This machine is reached directly,
+   never through a proxy from the environment, which would read the token and could answer for the
+   service. A port that answers something other than HTTP is unreachable, never a failed hook.
 4. Only the owner changes a setting; the agent's guards refuse every write path they recognize.
 5. CI never depends on framework mode.
 6. With framework mode off, `axiom-api` sends nothing and no brief is fetched.
@@ -107,7 +109,7 @@ The same per-clone settings carry the doc gate's mode. Agents read the settings 
 | --- | --- |
 | 1 | `tools/framework/tests/test_settings.py` (`test_an_unreadable_file_fails_closed`, `test_the_gate_takes_only_its_three_modes`); session-start cases in `.claude/hooks/test_hooks.py` |
 | 2 | `test_settings.py` (`test_connect_refuses_and_saves_nothing`, `test_a_service_that_is_not_ready_or_too_old_or_absent`) |
-| 3 | `test_settings.py` (`test_the_token_travels_only_in_the_header`, `test_a_redirect_is_never_followed`, `test_the_token_goes_only_over_https_or_to_this_machine`) |
+| 3 | `test_settings.py` (`test_the_token_travels_only_in_the_header`, `test_a_redirect_is_never_followed`, `test_the_token_goes_only_over_https_or_to_this_machine`, `test_this_machine_is_never_reached_through_a_proxy`, `test_an_address_that_http_cannot_use_is_unreachable_never_a_crash`) |
 | 4 | `.claude/hooks/test_hooks.py` (`bash deny settings write`, `path deny: … on .aeion/settings.json`) |
 | 5, 6 | `tools/framework/tests/test_axiom_api.py` (`test_framework_off_sends_nothing`); every test uses a local stand-in |
 | 7 | `test_axiom_api.py` (`test_pages_are_followed_up_to_the_cap`, `test_the_budget_is_bounded`) |

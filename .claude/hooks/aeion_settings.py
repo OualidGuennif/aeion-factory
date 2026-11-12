@@ -7,6 +7,7 @@
 AEION_FRAMEWORK_URL overrides the address for one process tree (CI, a container, a sandbox), and
 AEION_FRAMEWORK_TOKEN, never stored, is sent to a gateway in front of the service.
 A file that cannot be read fails closed: the gate enforces and framework mode is off."""
+import http.client
 import ipaddress
 import json
 import os
@@ -98,6 +99,10 @@ def address_problem(url):
         return "the address must not carry credentials; a gateway token goes in AEION_FRAMEWORK_TOKEN"
     if parts.query or parts.fragment:
         return "the address must not carry a query or a fragment"
+    try:
+        parts.port
+    except ValueError:
+        return "the address has a port that is not a number from 0 to 65535"
     return None
 
 
@@ -139,14 +144,14 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
 
 
 OPENER = urllib.request.build_opener(_NoRedirect)
+# This machine is reached directly: a proxy from the environment would get the token in clear text and
+# could answer as if it were the service.
+DIRECT = urllib.request.build_opener(urllib.request.ProxyHandler({}), _NoRedirect)
 
 
-def token_allowed(url):
-    """Whether a gateway token may go to url: over https, or to this machine."""
-    parts = urlsplit(url)
-    if parts.scheme == "https":
-        return True
-    host = parts.hostname or ""
+def loopback(url):
+    """Whether url names this machine."""
+    host = urlsplit(url).hostname or ""
     if host == "localhost":
         return True
     try:
@@ -155,9 +160,15 @@ def token_allowed(url):
         return False
 
 
+def token_allowed(url):
+    """Whether a gateway token may go to url: over https, or to this machine."""
+    return urlsplit(url).scheme == "https" or loopback(url)
+
+
 def request(url, timeout=REQUEST_SECONDS):
     """GET url as JSON: (status, body or None, Retry-After seconds or None). The gateway token, when
-    set, travels in a header, only over https or to this machine; a redirect is answered, not followed."""
+    set, travels in a header, only over https or to this machine, which is never reached through a
+    proxy; a redirect is answered, not followed. An answer that is not HTTP raises OSError."""
     headers = {"Accept": "application/json, application/problem+json"}
     token = os.environ.get("AEION_FRAMEWORK_TOKEN")
     if token:
@@ -165,14 +176,18 @@ def request(url, timeout=REQUEST_SECONDS):
             raise InsecureToken("AEION_FRAMEWORK_TOKEN is sent only over https or to this machine; "
                                 "give the gateway an https:// address")
         headers["Authorization"] = f"Bearer {token}"
+    opener = DIRECT if loopback(url) else OPENER
     try:
-        with OPENER.open(urllib.request.Request(url, headers=headers), timeout=timeout) as answer:
+        with opener.open(urllib.request.Request(url, headers=headers), timeout=timeout) as answer:
             status, raw, retry = answer.status, answer.read(1_048_576), None
     except urllib.error.HTTPError as error:
         try:
             status, raw, retry = error.code, error.read(65_536), error.headers.get("Retry-After")
         finally:
             error.close()
+    except http.client.HTTPException as error:
+        # Every caller treats OSError as unreachable; this one would end a hook instead.
+        raise OSError(f"not an HTTP answer ({type(error).__name__})") from None
     retry = int(retry) if isinstance(retry, str) and retry.strip().isdigit() else None
     try:
         return status, json.loads(raw.decode("utf-8")) if raw else None, retry

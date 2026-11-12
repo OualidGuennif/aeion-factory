@@ -5,10 +5,12 @@ import json
 import os
 from pathlib import Path
 import shutil
+import socket
 import stat
 import subprocess
 import sys
 import tempfile
+import threading
 import unittest
 from unittest.mock import patch
 
@@ -144,6 +146,43 @@ class SettingsTests(unittest.TestCase):
         for url in ("https://axiom.example", "http://localhost:8000", "http://[::1]:8000", self.service.url):
             self.assertTrue(settings.token_allowed(url), url)
         self.assertEqual(self.service.seen, [])
+
+    def test_this_machine_is_never_reached_through_a_proxy(self):
+        # A proxy would get the token in clear text and answer as if it were the service.
+        proxy = Service()
+        self.addCleanup(proxy.close)
+        # A fresh process, as a hook is: urllib reads the proxy variables when the opener is built.
+        env = {k: v for k, v in os.environ.items() if k.lower() != "no_proxy"}
+        env.update({"AEION_FRAMEWORK_TOKEN": "t0ken", "http_proxy": proxy.url, "HTTP_PROXY": proxy.url})
+        probe = ("import sys; sys.path.insert(0, sys.argv[1]); import aeion_settings as s; "
+                 "print(s.health(sys.argv[2])); print(s.health(sys.argv[3]))")
+        done = subprocess.run([sys.executable, "-c", probe, str(ROOT / ".claude/hooks"), "http://127.0.0.1:9",
+                               self.service.url], capture_output=True, text=True, env=env, timeout=60)
+        self.assertEqual(done.returncode, 0, done.stderr)
+        self.assertIn("unreachable", done.stdout.splitlines()[0])
+        self.assertEqual(done.stdout.splitlines()[1], repr((settings.TESTED, None)))
+        self.assertEqual(proxy.seen, [])
+        self.assertEqual(self.service.seen, [("/health/ready", "Bearer t0ken")])
+
+    def test_an_address_that_http_cannot_use_is_unreachable_never_a_crash(self):
+        self.assertIn("port", settings.address_problem("http://127.0.0.1:87a7"))
+        self.assertIn("port", settings.address_problem("http://127.0.0.1:99999"))
+        self.assertIn("unreachable", settings.health("http://127.0.0.1:87a7")[1])
+        # A port that answers something other than HTTP.
+        listener = socket.socket()
+        listener.bind(("127.0.0.1", 0))
+        listener.listen(1)
+        self.addCleanup(listener.close)
+
+        def answer():
+            connection, _ = listener.accept()
+            with connection:
+                connection.recv(1024)
+                connection.sendall(b"hello, not http\r\n\r\n")
+        threading.Thread(target=answer, daemon=True).start()
+        version, problem = settings.health(f"http://127.0.0.1:{listener.getsockname()[1]}")
+        self.assertIsNone(version)
+        self.assertIn("unreachable", problem)
 
     def test_the_probe_is_remembered_ten_minutes_per_address(self):
         self.assertEqual(settings.cached_health(self.root, self.service.url, now=1000), (settings.TESTED, None))

@@ -6,6 +6,11 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+- The README states the template's four principles (from the former `efficiency/`) and how the OKF
+  docs drive the doc gate; the README, `AGENTS.md`, `command.md` and getting-started name
+  `tools/aeion-settings`, framework mode and the doc gate. The technical watch now owns the framework
+  version range. Mentions of the architecture baseline the launchers no longer check are removed.
+
 - Framework mode reads the spec from aeion-framework 1.1.9. `tools/framework/axiom-api` (`ready`, `node`,
   `context`, `trace`, `gaps`) prints the service's answers, pages bounded at 16 KiB by default and four
   pages at most, problems as `CODE (status): detail`; it exits 3 when framework mode is off. Reading a

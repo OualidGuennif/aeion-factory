@@ -14,15 +14,13 @@ generated:
 [Back to the overview](../../README.md) · [Agent compatibility and limits](agent-compatibility.md)
 
 The launcher installs nothing. Install and connect your chosen agent separately, then trust the
-project and approve its hooks as required below. The optional Git hooks and architecture tools
-are described in [the overview](../../README.md#enable-optional-tools).
+project and approve its hooks as required below. The optional team git flow, framework mode, doc
+gate mode, plugins and loops are described in [the overview](../../README.md#enable-optional-tools).
 
 ## Prepare your agent
 
 Git and **Python 3.12+** for the checks and hooks. Shell tools support macOS, Linux and WSL.
-The recommended architecture baseline also needs **Node 18+** and **Chrome/Chromium** (Python
-3.14.1 excluded for its pins); it is installed only when you say yes. Install `gh` for the GitHub
-PR workflow and your chosen agent separately:
+Install `gh` for the GitHub PR workflow and your chosen agent separately:
 
 - [Claude Code](https://code.claude.com/docs/en/setup)
 - [Codex](https://learn.chatgpt.com/docs/cli)
@@ -130,9 +128,8 @@ Run these from the repository root. Additional arguments are native CLI argument
 | Google Antigravity | `tools/agents/run antigravity` | `.agents/hooks.json`, `AGENTS.md`, shared `.agents/skills` |
 | Grok | `tools/agents/run grok` | `.grok/hooks/template.json`, `AGENTS.md`, shared `.claude/skills` and `.agents/skills` |
 
-The launchers enter the project root and check the architecture baseline for the current commit;
-without one they recommend it and continue. The original Claude entry point, `tools/context/run`,
-also remains available.
+The launchers enter the project root and start the agent with its adapter; they install nothing.
+The original Claude entry point, `tools/context/run`, also remains available.
 
 ### DeepSeek Harness (dsh) in detail
 

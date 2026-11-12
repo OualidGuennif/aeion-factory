@@ -22,6 +22,7 @@ Everything you can run here, grouped by loop. Skills are invoked by name in a Cl
 | `retro` | weekly or after a long session: lessons into hooks, skills and preferences |
 | `loop-triage` | an outer-loop finding: turn it into an issue an inner loop can fix |
 | `adopt` | apply Æion Template to an existing repository, one phase at a time |
+| `framework` | framework mode is on, or the code carries `@req` IDs: read the requirement before changing it |
 
 ## Tools
 
@@ -47,6 +48,12 @@ tools/agents/run antigravity                        # Google Antigravity CLI (ag
 tools/agents/run grok                               # Grok Build: .grok/hooks/template.json
 git config aeion.mode team                          # team flow: develop, review before push, release PR
 git config --unset aeion.mode                       # back to local mode, the default
+tools/aeion-settings show                           # doc gate mode and framework mode (owner only to change)
+tools/aeion-settings doc-gate enforce|warn|off      # the doc gate: refuse, remind, or nothing
+tools/aeion-settings framework [URL|off]            # framework mode: probes the service, 1.1 up to 2.0
+tools/framework/axiom-api node REQ-001              # in framework mode: one requirement's brief
+tools/framework/axiom-api context REQ-001 --scope change   # what a change to it touches
+python3 tools/framework/tests/test_axiom_api.py     # the framework client against a local stand-in
 python3 tools/agents/tests/test_hooks.py
 node --test tools/agents/tests/test_opencode.mjs
 node --test tools/agents/tests/test_pi.mjs

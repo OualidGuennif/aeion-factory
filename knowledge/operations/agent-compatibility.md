@@ -228,8 +228,8 @@ with one line naming a missing agent binary and the setup link, exit 1.
   skips Antigravity's own approval prompt (a `run_command` with `SafeToAutoRun: false`); until
   then, assume it may. No compaction checkpoint or token stop.
 - Grok loads `AGENTS.md`, `CLAUDE.md` and the skill folders, and also `.claude/settings.json`. The Claude budget hook returns an empty object for a `hookEventName` envelope or a `chat_history.jsonl` or `updates.jsonl` transcript and does not latch STOPPED. Guards run from `.grok/hooks/template.json`: `run_terminal_command`, `read_file` (`target_file`), `search_replace`, `write`, `grep` and `list_dir` (`target_directory`) map onto the shared guards; an unknown tool with a `command` string is a shell call. `signals.json` beside `updates.jsonl` or `chat_history.jsonl` supplies the 340k/390k size as `contextTokensUsed` (it falls after compaction; missing is unmeasured, zero is a real reading). `usage.json` in that directory is the billed ledger and is not the context size. `SessionStart` uses `systemMessage`. `PreCompact` cannot be refused; `PostCompact` resumes in closure when the handover was not verified. Not live-qualified.
-- Managed CLI launchers enter the repository root and check the exact-HEAD architecture baseline;
-  its absence is a warning, because installing the integrations needs the user's yes.
+- Managed CLI launchers enter the repository root and start the agent with its adapter; they
+  install nothing, because installing needs the user's yes.
 - Raw command/MCP paths, host-managed/cloud orchestration and deliberate local modification are
   outside any complete isolation claim. Native project/hook trust and sandbox controls still apply.
 - The shared launcher also aligns `PWD`: OpenCode 2.1.4 uses it to select the run's location, so

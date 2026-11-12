@@ -31,7 +31,8 @@ work/         current.md, the state of open tasks only
 tech-watch/   the technical watch: method, and pending dated packages
 loops/        orchestrator.sh and its prompts, schedules, issue protocol, Decisions API client (off)
 skills/       versioned passive skills and agent profiles; no automatic agent launching
-tools/        knowledge/link/health checks, context budget, release, agent adapters, language servers
+tools/        knowledge/link/health checks, context budget, release, agent adapters, language servers,
+              aeion-settings (the owner's switch) and framework/ (the aeion-framework client)
 .claude/      original hooks, maintained skills, path-scoped rules, hookify examples
 .codex/       Codex native config/hooks; .agents/ holds skill links and Antigravity's hooks.json
 .opencode/    OpenCode native plugin; root opencode.json selects shared skills/compaction
@@ -60,7 +61,8 @@ A skill is `.agents/skills/<name>/SKILL.md`; open it when your agent does not of
 | Task guidance | `.agents/skills/skill-route/SKILL.md`: native first, optional passive pool; no automatic agents |
 | Any change | `knowledge/index.md`, then the doc of the area; `.agents/skills/plan/SKILL.md` |
 | A feature or component | `knowledge/policies/specs-first.md`; `.agents/skills/spec/SKILL.md`; the component doc |
-| Tracing code before changing it | its `Spec:` header; `tools/knowledge/doc-links --for FILE` names the docs that cover it |
+| Tracing code before changing it | its `Spec:` header; `tools/knowledge/doc-links --for FILE` names the docs the [doc gate](knowledge/components/doc-gate.md) asks you to read first |
+| Framework mode (optional; session start says on) | `.agents/skills/framework/SKILL.md`; [Framework mode](knowledge/components/framework-mode.md); `tools/framework/axiom-api` |
 | A bug or a failing check | `.agents/skills/debug/SKILL.md`, then `.agents/skills/test/SKILL.md` |
 | Finishing a task | `.agents/skills/sign-off/SKILL.md` (team flow) |
 | Security-sensitive code | `knowledge/policies/security.md`; `.agents/skills/security-scan/SKILL.md` |

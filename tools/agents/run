@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # Spec: knowledge/operations/agent-compatibility.md
-"""Launch one native agent from this project, recommending (never installing) its architecture baseline."""
+"""Launch one native agent from the project root with its adapter; installs nothing."""
 import os
 import re
 from pathlib import Path

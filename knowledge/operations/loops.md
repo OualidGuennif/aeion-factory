@@ -85,8 +85,7 @@ the label, but the issue text stays its author's, so the job also refuses an iss
 `author_association` is not `OWNER`, `MEMBER` or `COLLABORATOR`. A dry run never
 fetches issue metadata and therefore cannot resolve issue severity.
 
-Optional GitHub agent workflows prepare a real architecture baseline before invoking the agent,
-use an explicit turn cap and a job deadline, and check out without persisting the token
-(`persist-credentials: false`), so the agent's git holds no credential. The outer loop sets
+Optional GitHub agent workflows use an explicit turn cap and a job deadline, and check out without
+persisting the token (`persist-credentials: false`), so the agent's git holds no credential. The outer loop sets
 `AEION_LOOP: outer`. They remain disabled until the owner configures them;
 their live dispatch/account/plugin behavior is a separate qualification from local loop fixtures.

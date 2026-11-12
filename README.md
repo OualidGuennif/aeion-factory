@@ -6,7 +6,7 @@ A repository template that gives coding agents shared instructions, reusable ski
 documentation and automatic safety checks. Your project's rules and your
 decisions come first. It runs on **Python 3 and your coding agent, nothing else**.
 
-[New project](#start-a-new-project) · [Existing project](#existing-project) · [Optional tools](#enable-optional-tools) · [Skills](#skills) · [Hooks](#hooks) · [Docs](#documentation)
+[New project](#start-a-new-project) · [Existing project](#existing-project) · [Principles](#principles) · [Optional tools](#enable-optional-tools) · [Skills](#skills) · [Hooks](#hooks) · [Docs](#documentation)
 
 ## Start a new project
 
@@ -52,8 +52,8 @@ From an up-to-date clone of Æion Template (`git fetch --tags`), not the project
 tool, preview, then apply the latest release tag:
 
 ```bash
-tools/agents/template-update --ref v2.0.2 --root ../your-project --check
-tools/agents/template-update --ref v2.0.2 --root ../your-project
+tools/agents/template-update --ref v4.0.0 --root ../your-project --check
+tools/agents/template-update --ref v4.0.0 --root ../your-project
 ```
 
 It finds the release your project came from (`.aeion-template`, else the closest tag), shows the
@@ -61,14 +61,28 @@ release notes, updates every template file you left untouched, merges the ones y
 your instructions, settings, knowledge and changelog to you, with a proposal for each. The
 [template-update skill](.agents/skills/template-update/SKILL.md) walks your agent through it.
 
+## Principles
+
+1. **Harmless.** What your repository already has wins; on conflict the template keeps yours and notes it.
+2. **Plan first.** The agent inspects, proposes the smallest change that fits, and waits for your yes.
+3. **Evidence, not claims.** Done means a check passed; installed, configured, enabled and working
+   are four different states.
+4. **No over-engineering.** A file, tool or rule is added only when it removes a real, repeated cost.
+
+The spec is your `knowledge/` docs, in the OKF format: each component doc names the code it covers,
+and the code names its doc (`Spec: knowledge/…md`). Those links decide what the agent reads before it
+edits ([the doc gate](knowledge/components/doc-gate.md)).
+
 ## Enable optional tools
 
 Everything here is off until you turn it on. Run these commands yourself: the agent's guard refuses
-to switch the flow mode for you.
+to switch the flow mode or your settings for you.
 
 | Option | What you get | Turn on |
 | --- | --- | --- |
 | [Team git flow](#team-git-flow) | Work on `develop`, checks before each commit, a recorded review before each push, releases by pull request to `main` | 4 commands below |
+| [Framework mode](knowledge/components/framework-mode.md) | For projects specified with [aeion-framework](https://github.com/OualidGuennif/aeion-framework): the agent reads requirements from its service, and reading `@req`-annotated code loads them | `tools/aeion-settings framework <API address>` |
+| Doc gate mode | `enforce` (default) refuses an edit until the covering docs were read; `warn` only reminds; `off` | `tools/aeion-settings doc-gate warn` |
 | Claude Code plugins | Optional hook, skill, security and language-server tools | [Plugin commands](command.md#plugins-claude-code) |
 | Scheduled loops | Recurring checks, reviews and approved tasks | [Loop setup](knowledge/operations/loops.md) |
 
@@ -105,6 +119,7 @@ A skill is a reusable procedure your agent follows for one kind of task. Ask nat
 | Check a sensitive change | [security-scan](.claude/skills/security-scan/SKILL.md) |
 | Adopt the template, or update to a new release | [adopt](.claude/skills/adopt/SKILL.md) · [template-update](.agents/skills/template-update/SKILL.md) |
 | Triage findings, watch technical changes | [loop-triage](.claude/skills/loop-triage/SKILL.md) · [tech-watch](.claude/skills/tech-watch/SKILL.md) |
+| Work from an aeion-framework spec (framework mode) | [framework](.claude/skills/framework/SKILL.md) |
 | Keep feedback and improve the workflow | [pr-taste](.claude/skills/pr-taste/SKILL.md) · [retro](.claude/skills/retro/SKILL.md) |
 
 [Full command reference →](command.md)
@@ -117,9 +132,10 @@ reads `.claude/settings.json`; the other agents get the same guards through thei
 
 | Hook | Runs | What it does |
 | --- | --- | --- |
-| `session-start` | Session start, resume, compaction | Shows the mode, branch, git status, last commits, open tasks and repo health |
-| `guard-bash` | Before every shell command | **Refuses** secret reads (also through globs, links and recursive searches), force-push, skipping git hooks, switching the flow mode, writing `.git/config`, unbounded dumps |
-| `guard-path` | Before Read, Edit, Write, Grep | **Refuses** secret files (a link judged by its target), writing `.git/config`, oversized reads |
+| `session-start` | Session start, resume, compaction | Shows the mode, the doc gate and framework mode, branch, git status, last commits, open tasks and repo health |
+| `doc-gate` | Before each edit; after each read | **Refuses** editing a file until the docs that cover it were read in the session (again after a compaction); in framework mode, also the briefs of its `@req` requirements |
+| `guard-bash` | Before every shell command | **Refuses** secret reads (also through globs, links and recursive searches), force-push, skipping git hooks, switching the flow mode or your settings, writing `.git/config`, unbounded dumps |
+| `guard-path` | Before Read, Edit, Write, Grep | **Refuses** secret files (a link judged by its target), writing `.git/config` or `.aeion/settings.json`, oversized reads |
 | `after-edit` | After each edit | Runs the fast checks for the edited file and names the doc that covers it |
 | `context-budget` | Every event | At 340k tokens: a verified handover, then compaction; at 390k, both are forced |
 | `prompt-defense` | After web, MCP and network commands | Flags text that tries to steer the agent (advisory) |
@@ -149,6 +165,7 @@ it actually ran.
 | Agent configuration and known limits | [Agent compatibility](knowledge/operations/agent-compatibility.md) |
 | Tests and checks | [Build and test](knowledge/operations/build-and-test.md) |
 | Context limits and handovers | [Context safety](knowledge/operations/context-safety.md) |
+| The doc gate, framework mode | [Doc gate](knowledge/components/doc-gate.md) · [Framework mode](knowledge/components/framework-mode.md) · [ADR-002](knowledge/decisions/ADR-002-framework-optional.md) |
 
 Æion Template works on its own. Optional [Æion modules](https://github.com/OualidGuennif/aeion-spaceship/blob/main/docs/modules.md)
 cover security, audit, observability and integration.

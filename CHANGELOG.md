@@ -6,6 +6,11 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+## [4.0.2] - 2026-11-13
+
+- `tools/aeion-settings framework URL` clears the cached readiness probe, so the next session start no
+  longer reports a service that was down at the previous start as still unreachable.
+
 ## [4.0.1] - 2026-11-12
 
 - `template-update` checks the full destination of every merge/conflict proposal and its `.gitignore`

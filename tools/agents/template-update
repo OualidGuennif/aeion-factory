@@ -400,6 +400,11 @@ def update(root, repo, ref, from_ref, check, force):
         if link:
             raise Refused(f"refusing linked {kind} {link} below {root}")
         found = root / relative
+        for parent in found.parents:
+            if parent == root:
+                break
+            if parent.exists() and not parent.is_dir():
+                raise Refused(f"refusing non-directory destination {parent.relative_to(root)} below {root}")
         if found.exists() and not found.is_symlink() and not found.is_file():
             raise Refused(f"refusing non-regular {kind} {relative}")
     def propose(relative, data):

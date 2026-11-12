@@ -254,6 +254,22 @@ class TemplateUpdateTests(unittest.TestCase):
                     self.assertIn('our footer', (self.project / 'README.md').read_text())
                     self.assertFalse((self.project / update_tool.MARKER).exists())
 
+    def test_a_proposal_parent_that_is_a_file_is_refused_before_any_write(self):
+        for relative in ('.aeion/template-update', '.aeion/template-update/v2.0.0'):
+            state = self.project / '.aeion'
+            if state.exists():
+                shutil.rmtree(state)
+            self.project_file(relative, 'PROJECT OWNED SENTINEL\n')
+            self.project_file(PLUGIN, 'local drift\n')
+            for flags in (('--check',), ()):
+                with self.subTest(path=relative, flags=flags):
+                    code, output = self.run_tool('--from-ref', 'v1.0.0', '--ref', 'v2.0.0', *flags)
+                    self.assertEqual(code, 2, output)
+                    self.assertIn(f'refusing non-directory destination {relative}', output)
+                    self.assertEqual((self.project / relative).read_text(), 'PROJECT OWNED SENTINEL\n')
+                    self.assertEqual((self.project / PLUGIN).read_text(), 'local drift\n')
+                    self.assertFalse((self.project / update_tool.MARKER).exists())
+
     def test_a_file_the_project_deleted_stays_deleted(self):
         (self.project / HOOK).unlink()
         (self.project / 'efficiency').joinpath('old.md').unlink()

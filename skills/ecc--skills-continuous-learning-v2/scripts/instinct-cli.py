@@ -219,7 +219,7 @@ def _validate_import_url(source: str) -> str:
 
 
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
-    # Æion Factory security patch: a redirect would reach a host the address check above never saw.
+    # Æion Template security patch: a redirect would reach a host the address check above never saw.
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         raise ValueError(f"remote import redirects are refused: {newurl}")
 

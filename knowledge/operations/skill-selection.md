@@ -97,3 +97,6 @@ benchmark value its page writes (quotes included), and the
 continuous-learning-v2 instinct import refuses redirects. Each patch is bound to the exact
 upstream file hash and a unique needle, applies in order before the annotations, and its
 lines say "Æion Template security patch"; the [pool policy](../../skills/README.md) has the detail.
+A patch or annotation bound to a path that no source has stops the refresh, so a moved source
+folder can never ship an unpatched file. The paths name the workspace's source folders as they are
+on disk: claude-plugins-official still lives in `third-party/aeion-factory/`.

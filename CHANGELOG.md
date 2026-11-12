@@ -6,6 +6,12 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+- **Security fix in the skill pool refresh.** The rename had moved the paths of the reviewed security
+  patches to a source folder that does not exist, and a refresh would have shipped the eval viewer
+  and the instinct import unpatched without a word. The paths name the real folder again, and a patch
+  or annotation that matches no source file now stops the refresh. The published pool was never
+  affected; its patched lines now say "Æion Template security patch".
+
 - The README states the template's four principles (from the former `efficiency/`) and how the OKF
   docs drive the doc gate; the README, `AGENTS.md`, `command.md` and getting-started name
   `tools/aeion-settings`, framework mode and the doc gate. The technical watch now owns the framework

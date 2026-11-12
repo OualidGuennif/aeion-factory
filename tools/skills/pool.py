@@ -124,7 +124,7 @@ def source_pins():
 
 
 def source_catalog():
-    pins, entries = source_pins(), []
+    pins, entries, materialized = source_pins(), [], set()
     for source, (_, folder, skill_patterns, agent_patterns) in SOURCES.items():
         root = WORKSPACE / 'third-party' / folder
         for kind, patterns in (('skill', skill_patterns), ('agent', agent_patterns)):
@@ -146,6 +146,7 @@ def source_catalog():
                         inside(candidate, root)
                         if candidate.is_file() and candidate.name != '.DS_Store':
                             key = candidate.relative_to(path.parent).as_posix() if kind == 'skill' else path.name
+                            materialized.add(candidate.relative_to(WORKSPACE).as_posix())
                             files[key] = {'sha256': hashlib.sha256(materialized_bytes(candidate)).hexdigest(),
                                           'source_sha256': digest(candidate),
                                           'executable': bool(candidate.stat().st_mode & 0o111)}
@@ -158,6 +159,10 @@ def source_catalog():
                                 'portable_reference': portable, 'link': location, 'files': files})
     if source_pins() != pins:
         raise ValueError('Sources changed while indexing; retry after source sync')
+    # A patch bound to a path no source has would ship the unpatched file without a word.
+    for bound in registry('patches.json') + registry('annotations.json'):
+        if bound['file'] not in materialized:
+            raise ValueError(f"A security patch or annotation matches no source file: {bound['file']}")
     entries.sort(key=lambda e: (e['source'], e['kind'], e['id']))
     if len({e['id'] for e in entries}) != len(entries):
         raise ValueError('Catalog identifier collision')

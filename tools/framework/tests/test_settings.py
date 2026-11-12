@@ -125,6 +125,26 @@ class SettingsTests(unittest.TestCase):
             settings.health(self.service.url)
         self.assertEqual(self.service.seen[-1], ("/health/ready", "Bearer t0ken"))
 
+    def test_a_redirect_is_never_followed(self):
+        # A redirect would carry the token to wherever it points, another host or plain http included.
+        self.service.set("/health/ready", 302, "", {"Location": self.service.url + "/elsewhere"})
+        self.service.set("/elsewhere", 200, {"status": "ready", "version": settings.TESTED})
+        with patch.dict(os.environ, {"AEION_FRAMEWORK_TOKEN": "t0ken"}):
+            version, problem = settings.health(self.service.url)
+        self.assertIsNone(version)
+        self.assertIn("answered 302", problem)
+        self.assertEqual([path for path, _ in self.service.seen], ["/health/ready"])
+
+    def test_the_token_goes_only_over_https_or_to_this_machine(self):
+        with patch.dict(os.environ, {"AEION_FRAMEWORK_TOKEN": "t0ken"}):
+            for url in ("http://axiom.example:8000", "http://10.0.0.2"):
+                version, problem = settings.health(url)
+                self.assertIsNone(version)
+                self.assertIn("AEION_FRAMEWORK_TOKEN is sent only over https", problem)
+        for url in ("https://axiom.example", "http://localhost:8000", "http://[::1]:8000", self.service.url):
+            self.assertTrue(settings.token_allowed(url), url)
+        self.assertEqual(self.service.seen, [])
+
     def test_the_probe_is_remembered_ten_minutes_per_address(self):
         self.assertEqual(settings.cached_health(self.root, self.service.url, now=1000), (settings.TESTED, None))
         self.assertEqual(settings.cached_health(self.root, self.service.url, now=1000 + settings.HEALTH_SECONDS - 1),

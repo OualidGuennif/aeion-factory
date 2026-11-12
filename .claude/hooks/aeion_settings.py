@@ -7,6 +7,7 @@
 AEION_FRAMEWORK_URL overrides the address for one process tree (CI, a container, a sandbox), and
 AEION_FRAMEWORK_TOKEN, never stored, is sent to a gateway in front of the service.
 A file that cannot be read fails closed: the gate enforces and framework mode is off."""
+import ipaddress
 import json
 import os
 import re
@@ -30,7 +31,7 @@ TESTED = "1.1.9"
 HEALTH_SECONDS = 600
 # aeion-framework's code annotation: a comment holding "@req", then the IDs of the requirements the code
 # implements on the same line, separated by spaces or commas; "@req:" and "@req(" open it too.
-ID = re.compile(r"^[A-Z][A-Z0-9_]*-[0-9]{3,6}$")
+ID = re.compile(r"^[A-Z][A-Z0-9_]*-[0-9]{3,6}\Z")
 REQ_MARK = re.compile(r"@req\b[:(]?")
 REQ_NEXT = re.compile(r"[ \t]*,?[ \t]*([A-Z][A-Z0-9_]*-[0-9]{3,6})\b")
 REQ_GIT = r"@req[:(]?[[:space:]]*[A-Z][A-Z0-9_]*-[0-9]{3,6}"
@@ -127,15 +128,45 @@ def supported(version):
     return SUPPORTED[0] <= (major, minor) < SUPPORTED[1]
 
 
+class InsecureToken(ValueError):
+    """The gateway token would leave this machine in clear text."""
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    # urllib copies the Authorization header to a redirect's target, whatever its host or scheme.
+    def redirect_request(self, *args, **kwargs):
+        return None
+
+
+OPENER = urllib.request.build_opener(_NoRedirect)
+
+
+def token_allowed(url):
+    """Whether a gateway token may go to url: over https, or to this machine."""
+    parts = urlsplit(url)
+    if parts.scheme == "https":
+        return True
+    host = parts.hostname or ""
+    if host == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
+
+
 def request(url, timeout=REQUEST_SECONDS):
     """GET url as JSON: (status, body or None, Retry-After seconds or None). The gateway token, when
-    set, travels in a header."""
+    set, travels in a header, only over https or to this machine; a redirect is answered, not followed."""
     headers = {"Accept": "application/json, application/problem+json"}
     token = os.environ.get("AEION_FRAMEWORK_TOKEN")
     if token:
+        if not token_allowed(url):
+            raise InsecureToken("AEION_FRAMEWORK_TOKEN is sent only over https or to this machine; "
+                                "give the gateway an https:// address")
         headers["Authorization"] = f"Bearer {token}"
     try:
-        with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=timeout) as answer:
+        with OPENER.open(urllib.request.Request(url, headers=headers), timeout=timeout) as answer:
             status, raw, retry = answer.status, answer.read(1_048_576), None
     except urllib.error.HTTPError as error:
         try:
@@ -153,6 +184,8 @@ def health(url, timeout=REQUEST_SECONDS):
     """(version or None, problem or None) from the service's readiness probe; unknown is never ready."""
     try:
         status, body, _ = request(f"{url}/health/ready", timeout)
+    except InsecureToken as error:
+        return None, str(error)
     except (OSError, ValueError) as error:
         return None, f"{url} is unreachable ({type(error).__name__})"
     if status != 200 or not isinstance(body, dict):

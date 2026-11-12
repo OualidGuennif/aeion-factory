@@ -6,6 +6,10 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+- Framework mode keeps the gateway token on its path: a redirect from the service is reported, never
+  followed (urllib would have copied the token to its target), and `AEION_FRAMEWORK_TOKEN` goes only
+  over https or to this machine. The `@req` briefs are framed as data and stay one line each.
+
 - **Security fix in the skill pool refresh.** The rename had moved the paths of the reviewed security
   patches to a source folder that does not exist, and a refresh would have shipped the eval viewer
   and the instinct import unpatched without a word. The paths name the real folder again, and a patch

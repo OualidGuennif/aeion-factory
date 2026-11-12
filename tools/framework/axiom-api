@@ -43,6 +43,8 @@ def fetch(base, path, query=None):
     for attempt in (1, 2):
         try:
             status, body, retry = settings.request(url, TIMEOUT_SECONDS)
+        except settings.InsecureToken as error:
+            raise Refused(str(error)) from None
         except (OSError, ValueError) as error:
             raise Refused(f"the service at {base} is unreachable ({type(error).__name__})") from None
         if status != 503 or attempt == 2:

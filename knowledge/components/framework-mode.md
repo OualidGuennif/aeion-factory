@@ -44,7 +44,7 @@ The same per-clone settings carry the doc gate's mode. Agents read the settings 
 | --- | --- | --- | --- |
 | `.aeion/settings.json` (ignored local state, with or without git) | `doc_gate`, `framework` | the owner, through `tools/aeion-settings` | each read |
 | `AEION_FRAMEWORK_URL` | an address overriding the file for one process tree (CI, a container, a sandbox) | whoever starts the process | each read |
-| `AEION_FRAMEWORK_TOKEN` | a gateway token, sent as `Authorization: Bearer`; never stored, never printed | the owner's environment | each request |
+| `AEION_FRAMEWORK_TOKEN` | a gateway token, sent as `Authorization: Bearer` over https or to this machine only; never stored, never printed | the owner's environment | each request |
 | `{address}/health/ready` | `version` of the running aeion-framework service | the service | at connect; at session start, cached ten minutes in `.aeion/framework-health.json` |
 | `{address}/v1/snapshots/{current or digest}/…` | `nodes/{id}`, `context`, `trace`, `gaps` (aeion-framework 1.1.9) | the service | each request; `current` is the one release a sandbox service serves |
 | committed code | `@req` annotations: `@req A-001 B-002`, `@req: A-001`, `@req(A-001, B-002)`, every ID on the `@req` line | the project | each session start; each Read of the file |
@@ -80,8 +80,9 @@ The same per-clone settings carry the doc gate's mode. Agents read the settings 
   the command that continues it. A problem document prints `CODE (status): detail` on stderr, exit 1;
   an unreachable service or an answer that is not JSON, exit 1; a 503 is retried once after its
   `Retry-After` (five seconds at most); bad arguments, exit 2; framework mode off, exit 3.
-- Reading a code file that carries `@req` IDs adds their briefs to the agent's context: one line each
-  (kind, status, title, statement, linked IDs, the places that implement or test it), at most eight IDs
+- Reading a code file that carries `@req` IDs adds their briefs to the agent's context, headed as
+  requirement text that is data, not instructions: one line each (kind, status, title, statement,
+  linked IDs, the places that implement or test it; the service's line breaks folded), at most eight IDs
   per read, under a two-and-a-half-second deadline. A served brief, or a definite `NOT_FOUND`, is
   recorded in the doc gate's read set as `axiom:<ID>`; an ID the service did not answer is not, and the
   doc gate keeps the file closed in `enforce` until a later read serves it.
@@ -91,7 +92,9 @@ The same per-clone settings carry the doc gate's mode. Agents read the settings 
 1. A settings file that cannot be read, or holds an unknown gate, fails closed: the gate enforces,
    framework mode is off, and session start names the problem.
 2. An address is saved only from a ready service in the supported range; unknown is never ready.
-3. The token never reaches a file or the output.
+3. The token never reaches a file or the output, never travels in clear text off this machine (plain
+   `http://` only to a loopback host), and never follows a redirect: a redirect is answered as a
+   refusal, because urllib would copy the header to its target.
 4. Only the owner changes a setting; the agent's guards refuse every write path they recognize.
 5. CI never depends on framework mode.
 6. With framework mode off, `axiom-api` sends nothing and no brief is fetched.
@@ -104,11 +107,11 @@ The same per-clone settings carry the doc gate's mode. Agents read the settings 
 | --- | --- |
 | 1 | `tools/framework/tests/test_settings.py` (`test_an_unreadable_file_fails_closed`, `test_the_gate_takes_only_its_three_modes`); session-start cases in `.claude/hooks/test_hooks.py` |
 | 2 | `test_settings.py` (`test_connect_refuses_and_saves_nothing`, `test_a_service_that_is_not_ready_or_too_old_or_absent`) |
-| 3 | `test_settings.py` (`test_the_token_travels_only_in_the_header`) |
+| 3 | `test_settings.py` (`test_the_token_travels_only_in_the_header`, `test_a_redirect_is_never_followed`, `test_the_token_goes_only_over_https_or_to_this_machine`) |
 | 4 | `.claude/hooks/test_hooks.py` (`bash deny settings write`, `path deny: … on .aeion/settings.json`) |
 | 5, 6 | `tools/framework/tests/test_axiom_api.py` (`test_framework_off_sends_nothing`); every test uses a local stand-in |
 | 7 | `test_axiom_api.py` (`test_pages_are_followed_up_to_the_cap`, `test_the_budget_is_bounded`) |
-| 8 | `test_axiom_api.py` (`test_briefs_open_the_gate_only_when_served`) |
+| 8 | `test_axiom_api.py` (`test_briefs_open_the_gate_only_when_served`, `test_a_brief_is_one_line_of_data`) |
 
 ## Determinism
 

@@ -29,7 +29,7 @@ function toolEvent(event, name, usage, result) {
     tool_use_id: event.id,
     tool_name: tool,
     tool_input: event.input,
-    // The last step's tokens feed the shared 250k/300k rule; null until OpenCode reports a step.
+    // The last step's tokens feed the shared 340k/390k rule; null until OpenCode reports a step.
     observed_tokens: usage.get(event.sessionID) ?? null,
   };
   // Any result a local file tool did not produce is forwarded; the adapter decides what reads outside.
@@ -75,7 +75,7 @@ export default {
     await ctx.tool.hook('execute.after', async (event) => {
       if (event.status !== 'completed') return;
       const { reason, output } = invoke(toolEvent(event, 'PostToolUse', usage, event.result));
-      // A verified handover past 250k compacts now, not when the model window is nearly full.
+      // A verified handover past 340k compacts now, not when the model window is nearly full.
       if (output.aeion?.compact && !compacting.has(event.sessionID)) {
         compacting.add(event.sessionID);
         await ctx.session.compact({ sessionID: event.sessionID });

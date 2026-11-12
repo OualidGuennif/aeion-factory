@@ -144,7 +144,7 @@ dsh loads the factory only through a patch on its command line; `tools/agents/ru
   `tui` profile.
 - **Outside the root.** Put the patch right after the profile:
   `dsh web --patch <root>/.dsh/factory.patch.yml --port 0` (`--port 0` avoids a second server on 3080).
-- **Compaction.** Past 250k with a verified handover, dsh compacts and resumes from the handover. If it
+- **Compaction.** Past 340k with a verified handover, dsh compacts and resumes from the handover. If it
   does not, stop the session and start a new one from the handover. In `web`, the startup line
   `aeion-factory-compaction ... pending` is expected.
 - **Check it is loaded.** Ask the agent to run `cat .env`: the guard must refuse it.

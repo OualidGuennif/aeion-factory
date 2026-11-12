@@ -122,7 +122,7 @@ export function apply(ctx) {
     const event = {
       session_id: exec.agent.session.id, hook_event_name: name, tool_use_id: exec.callId,
       tool_name: tool, tool_input: exec.arguments,
-      // dsh's own replay-based measure feeds the shared 250k/300k rule.
+      // dsh's own replay-based measure feeds the shared 340k/390k rule.
       observed_tokens: tokens(exec.agent),
       // Only a profile that exposes no compaction service to this agent (neither the root's nor its
       // preset's) is told so; the shared rule then gates work the plugin cannot finish.
@@ -189,7 +189,7 @@ export function apply(ctx) {
     }
   });
 
-  // A verified handover past 250k compacts now, not at dsh's own threshold near the model window. Only the
+  // A verified handover past 340k compacts now, not at dsh's own threshold near the model window. Only the
   // root service (headless) compacts inside a step; the web profile's /compact needs an idle agent, so the
   // idle listener below owns it there and this step keeps its due.
   ctx.on('agent/pre-step', async ({ agent, signal }, next) => {
@@ -198,7 +198,7 @@ export function apply(ctx) {
     const session = agent.session.id;
     try {
       const root = rootOf(agent);
-      // The shared rule refuses the compaction unless the checkpoint is verified, and allows it at 300k with the
+      // The shared rule refuses the compaction unless the checkpoint is verified, and allows it at 390k with the
       // closure owed; its own words say which, so they reach the user instead of a fixed "verified" claim.
       const { output, reason } = invoke(root, { session_id: session, hook_event_name: 'PreCompact',
         compaction_unavailable: !canCompact(agent) });
@@ -230,7 +230,7 @@ export function apply(ctx) {
     try {
       const root = rootOf(agent);
       if (!root) return;
-      // The shared rule refuses the compaction unless the checkpoint is verified, and allows it at 300k with the
+      // The shared rule refuses the compaction unless the checkpoint is verified, and allows it at 390k with the
       // closure owed; its own words say which, so they reach the user instead of a fixed "verified" claim. A
       // refusal keeps the request pending: dropping it here is what left a latched session with no way to compact
       // after one edit made the receipt stale.
@@ -252,7 +252,7 @@ export function apply(ctx) {
       }
       if (settled?.result?.kind !== 'success') {
         due.delete(agent);
-        say(agent, 'Æion Factory: the /compact command did not run, so the 250k gate stays closed. Once the handover, work/current.md and checkpoint verify, stop this session and start a new one from the handover; compaction is not guaranteed here.');
+        say(agent, 'Æion Factory: the /compact command did not run, so the 340k gate stays closed. Once the handover, work/current.md and checkpoint verify, stop this session and start a new one from the handover; compaction is not guaranteed here.');
         return;
       }
       due.delete(agent);

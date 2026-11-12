@@ -29,8 +29,8 @@ architecture specification; this file records the integration choices rather tha
 [Inspected source](https://github.com/mksglu/context-mode/tree/8b74cbba68a79e45170dd5866dee949fd6ddd8e1).
 Retain bounded output, processing large results in code, file artifacts and handover restoration.
 No upstream code/MCP/memory store is installed. Its best-effort snapshot is not a deterministic
-250k/300k token guard. Æion Factory uses native compaction at 250k, explicit closure and a verified
-checkpoint; the 300k forced compaction is not qualified pre-request admission. Strict execution
+340k/390k token guard. Æion Factory uses native compaction at 340k, explicit closure and a verified
+checkpoint; the 390k forced compaction is not qualified pre-request admission. Strict execution
 refuses instead of claiming an unsupported guarantee.
 
 ## Superpowers

@@ -37,7 +37,7 @@ function toolEvent(event, ctx, name, result) {
   const payload = {
     session_id: ctx.sessionManager.getSessionId(), hook_event_name: name, tool_use_id: event.toolCallId,
     tool_name: tool, tool_input: event.input,
-    // Pi's own context measure feeds the shared 250k/300k rule; null right after a compaction.
+    // Pi's own context measure feeds the shared 340k/390k rule; null right after a compaction.
     observed_tokens: ctx.getContextUsage?.()?.tokens ?? null,
   };
   // Any result a local file tool did not produce is forwarded; the adapter decides what reads outside.
@@ -95,16 +95,16 @@ export default function (pi) {
     try {
       const { output, reason } = invoke({
         session_id: session, hook_event_name: 'Stop',
-        // Settlement is where the 250k decision is made now; without this measure Stop falls back to a stale count.
+        // Settlement is where the 340k decision is made now; without this measure Stop falls back to a stale count.
         observed_tokens: ctx.getContextUsage?.()?.tokens ?? null,
       });
-      // A verified checkpoint past 250k compacts at settlement instead of spinning on continuation.
+      // A verified checkpoint past 340k compacts at settlement instead of spinning on continuation.
       if (output.aeion?.compact) {
         settles.delete(session);
         // A one-shot print/json run ends at this settlement, so a compaction started here is disposed
         // before the summary is written. End cleanly and send the user to the verified handover instead.
         if (!ctx.hasUI) {
-          console.error('Æion Factory: the 250k gate is reached and the handover is verified. This one-shot run '
+          console.error('Æion Factory: the 340k gate is reached and the handover is verified. This one-shot run '
             + 'cannot finish a compaction; start a new session from work/handovers/ to continue.');
           return undefined;
         }
@@ -123,7 +123,7 @@ export default function (pi) {
       }
       // Only the closure alert repeats until the checkpoint, bounded; a sign-off finding is already shown once
       // per session. The closure alert is a terminal stop too, and it is the one that earns a few more requests.
-      if (!reason.includes('250k alert') && !reason.includes('300k')) {
+      if (!reason.includes('340k alert') && !reason.includes('390k')) {
         // Any other terminal stop ends the run here; continuing would ask for a request that settles the same way.
         if (output.continue === false) {
           settles.delete(session);

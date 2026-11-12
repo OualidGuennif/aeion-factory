@@ -103,13 +103,13 @@ test('Pi gives the factory context once per session, and again after a compactio
   assert.ok(await handlers.before_agent_start({ type: 'before_agent_start', messageType: 'user', prompt: 'after' }, ctx));
 });
 
-test('Pi past 250k is held to closure by its own context measure', async () => {
+test('Pi past 340k is held to closure by its own context measure', async () => {
   const { handlers, ctx } = load(root);
-  const measured = { ...ctx, sessionManager: { getSessionId: () => `${sessionID}-250k` }, getContextUsage: () => ({ tokens: 260000, contextWindow: 1000000, percent: 26 }) };
+  const measured = { ...ctx, sessionManager: { getSessionId: () => `${sessionID}-340k` }, getContextUsage: () => ({ tokens: 350000, contextWindow: 1000000, percent: 26 }) };
   const write = { type: 'tool_call', toolCallId: 'call-4', toolName: 'write', input: { path: `${root}/src.py`, content: 'x' } };
   const refused = await handlers.tool_call(write, measured);
   assert.equal(refused.block, true);
-  assert.match(refused.reason, /250k alert/);
+  assert.match(refused.reason, /340k alert/);
 });
 
 test('Pi never starts compaction from a tool result', async () => {
@@ -119,7 +119,7 @@ test('Pi never starts compaction from a tool result', async () => {
   const { handlers, ctx, sent } = load(folder);
   let compacted = 0;
   const result = { type: 'tool_result', toolCallId: 'call-5', toolName: 'bash', input: { command: 'true' }, content: [], isError: false };
-  await handlers.tool_result(result, { ...ctx, getContextUsage: () => ({ tokens: 260000 }), compact: () => { compacted += 1; } });
+  await handlers.tool_result(result, { ...ctx, getContextUsage: () => ({ tokens: 350000 }), compact: () => { compacted += 1; } });
   rmSync(folder, { recursive: true, force: true });
   assert.equal(compacted, 0);
   assert.equal(sent.length, 0);
@@ -134,18 +134,18 @@ test('Pi sends its context measure to the Stop hook at settlement', async () => 
   ].join('\n') + '\n');
   const { handlers, ctx } = load(folder);
   await handlers.agent_before_settle({ type: 'agent_before_settle', entries: [], continue: false },
-    { ...ctx, getContextUsage: () => ({ tokens: 260000 }) });
+    { ...ctx, getContextUsage: () => ({ tokens: 350000 }) });
   const event = JSON.parse(readFileSync(join(folder, 'events.jsonl'), 'utf8').trim());
   rmSync(folder, { recursive: true, force: true });
   assert.equal(event.hook_event_name, 'Stop');
-  assert.equal(event.observed_tokens, 260000);
+  assert.equal(event.observed_tokens, 350000);
 });
 
 test('Pi bounds a repeated closure refusal instead of looping one alert', async () => {
-  // Regression: a settlement that never verified its checkpoint re-injected the same 250k alert forever.
+  // Regression: a settlement that never verified its checkpoint re-injected the same 340k alert forever.
   // The closure refusal is a terminal stop too, and it is the one that still earns a few more requests.
   const folder = await standIn('pi-settle-loop-',
-    'import json\nprint(json.dumps({"continue": False, "stopReason": "Æion Factory 250k alert: fill the handover and verify the checkpoint"}))\n');
+    'import json\nprint(json.dumps({"continue": False, "stopReason": "Æion Factory 340k alert: fill the handover and verify the checkpoint"}))\n');
   const { handlers, notes, ctx } = load(folder);
   const outcomes = [];
   for (let attempt = 0; attempt < 4; attempt += 1) {

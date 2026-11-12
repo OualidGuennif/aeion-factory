@@ -76,12 +76,12 @@ with one line naming a missing agent binary and the setup link, exit 1.
 - Keep existing `.claude/skills` as the maintained skill source. Codex discovers symlinked folders
   under `.agents/skills`; OpenCode already discovers the Claude-compatible paths.
 - Codex local trusted projects enable `.codex/config.toml` and `.codex/hooks.json`. Its native
-  auto-compaction threshold is 250000. Codex has no compaction tool and ends its turn on a refused
+  auto-compaction threshold is 340000. Codex has no compaction tool and ends its turn on a refused
   compaction, so a compaction that comes before the verified handover runs, and closure is owed right
-  after it. That latch carries `resumed_in_closure` and survives a fall back under 250k; only a
+  after it. That latch carries `resumed_in_closure` and survives a fall back under 340k; only a
   verified handover releases it. Its rollout is not a stable token API.
 - OpenCode 2.1.4+ loads root `opencode.json` and `.opencode/plugins/factory/index.js`. The plugin reads each
-  step's tokens (`session.step.ended`) and compacts itself at 250k once the handover is verified. A live
+  step's tokens (`session.step.ended`) and compacts itself at 340k once the handover is verified. A live
   2.2.0 run on 2026-11-02 compacted a 272k step on a turn with two tool calls; a one-tool turn can miss the
   trigger because that event arrives after the tool hook, so the next tool or turn sees it. See
   [the OpenCode integration note](../../.opencode/README.md).
@@ -105,15 +105,15 @@ with one line naming a missing agent binary and the setup link, exit 1.
   the run waits through the settlement compaction and the resumed run, so headless Pi can compact and
   continue without a TUI; a Pi that exits before reading the prompt is one `pi-rpc:` line, exit 1.
   Print/JSON mode still does not compact (see the Pi note).
-  The extension sends `ctx.getContextUsage()` to the shared rule and calls `ctx.compact()` at 250k once
-  the handover is verified; the 250k alert names the checkpoint command, and closure admits a project's
+  The extension sends `ctx.getContextUsage()` to the shared rule and calls `ctx.compact()` at 340k once
+  the handover is verified; the 340k alert names the checkpoint command, and closure admits a project's
   Markdown docs. `agent_before_settle` sends Stop: a sign-off finding becomes a displayed
   `custom_message` entry with `continue: true` (one more request); the hook shows each finding once, so
   the next settlement passes. A terminal stop (`continue: false`: a stopped run, invalid or unavailable
   usage) settles at once and shows its reason in the UI, never as another request. A closure refusal
   repeats at most three times and then settles with the
   reason in the UI, so one alert cannot spin forever. The guards are qualified live headless (2026-11-01);
-  the 250k compaction is not (2026-11-02): the extension's `ctx.compact()` aborts the headless run and its
+  the compaction at the former 250k threshold is not (2026-11-02): the extension's `ctx.compact()` aborts the headless run and its
   error handler exits on a stale ctx, so no compaction entry is written, and `agent_before_settle` sends
   Stop without `observed_tokens`. See [the Pi note](../../.pi/README.md) and
   [Qualification and limits](#qualification-and-limits).
@@ -137,7 +137,7 @@ with one line naming a missing agent binary and the setup link, exit 1.
 - Both adapters enforce supported Bash/path refusals, edit feedback and a verified handover,
   and a Pi compaction the checkpoint did not verify still runs and owes that closure after it
   instead of trapping the session at its window; the first refused compaction creates the skeleton to fill.
-  Native token stops and strict pre-request 300k admission are unqualified.
+  Native token stops and strict pre-request 390k admission are unqualified.
 - dsh (DeepSeek Harness, `dsh` 0.2.1+) reads `AGENTS.md`/`CLAUDE.md` and `.agents/skills` natively. It
   loads project plugins only from a patch: `tools/agents/run dsh [web|headless]` passes
   `--patch .dsh/factory.patch.yml`, which loads `.dsh/plugins/factory/index.js` (the guards) and
@@ -160,7 +160,7 @@ with one line naming a missing agent binary and the setup link, exit 1.
     the handover. A profile with no compaction service gets the advisory gate, and a token measure that
     falls by over half marks dsh's own compaction as SessionStart `source: compact`. dsh's pressure
     compaction (about 55% of a 1M window) is not refused. If compaction does not run, the messages say to
-    stop and resume from the verified handover. Live 2026-11-02: headless compacted at 250k and resumed.
+    stop and resume from the verified handover. Live 2026-11-02 (former 250k threshold): headless compacted and resumed.
   - **Sandbox.** It writes only below the launch folder: started in `demo/`, it cannot write the root's
     `.git` or `work/`, so start it at the root. Move home-folder state into the workspace, e.g.
     `DOCKER_CONFIG=$PWD/.docker` for `docker compose`.
@@ -187,7 +187,7 @@ with one line naming a missing agent binary and the setup link, exit 1.
   names carrying a `command` string goes through the shell guard (and the path guard for a
   file). It refuses with `permissionDecision: deny`. As for Devin, each registration passes its
   event name and a payload without `session_id` uses one key per clone, so a missing field refuses
-  nothing by itself. Droid passes no token count, so it gets no 250k alert or 300k stop, but its
+  nothing by itself. Droid passes no token count, so it gets no 340k alert or 390k stop, but its
   PreCompact (documented with `trigger` manual or auto) reaches the adapter: a compaction before a
   verified handover runs, since Droid documents no way to refuse one, and its compact SessionStart
   then allows only closure (handover, `work/current.md`, docs, checkpoint) until the checkpoint passes.
@@ -221,7 +221,7 @@ with one line naming a missing agent binary and the setup link, exit 1.
   reads an empty answer as a refusal. Unverified until a live run: whether that `allow` also
   skips Antigravity's own approval prompt (a `run_command` with `SafeToAutoRun: false`); until
   then, assume it may. No compaction checkpoint or token stop.
-- Grok loads `AGENTS.md`, `CLAUDE.md` and the skill folders, and also `.claude/settings.json`. The Claude budget hook returns an empty object for a `hookEventName` envelope or a `chat_history.jsonl` or `updates.jsonl` transcript and does not latch STOPPED. Guards run from `.grok/hooks/factory.json`: `run_terminal_command`, `read_file` (`target_file`), `search_replace`, `write`, `grep` and `list_dir` (`target_directory`) map onto the shared guards; an unknown tool with a `command` string is a shell call. `signals.json` beside `updates.jsonl` or `chat_history.jsonl` supplies the 250k/300k size as `contextTokensUsed` (it falls after compaction; missing is unmeasured, zero is a real reading). `usage.json` in that directory is the billed ledger and is not the context size. `SessionStart` uses `systemMessage`. `PreCompact` cannot be refused; `PostCompact` resumes in closure when the handover was not verified. Not live-qualified.
+- Grok loads `AGENTS.md`, `CLAUDE.md` and the skill folders, and also `.claude/settings.json`. The Claude budget hook returns an empty object for a `hookEventName` envelope or a `chat_history.jsonl` or `updates.jsonl` transcript and does not latch STOPPED. Guards run from `.grok/hooks/factory.json`: `run_terminal_command`, `read_file` (`target_file`), `search_replace`, `write`, `grep` and `list_dir` (`target_directory`) map onto the shared guards; an unknown tool with a `command` string is a shell call. `signals.json` beside `updates.jsonl` or `chat_history.jsonl` supplies the 340k/390k size as `contextTokensUsed` (it falls after compaction; missing is unmeasured, zero is a real reading). `usage.json` in that directory is the billed ledger and is not the context size. `SessionStart` uses `systemMessage`. `PreCompact` cannot be refused; `PostCompact` resumes in closure when the handover was not verified. Not live-qualified.
 - Managed CLI launchers enter the repository root and check the exact-HEAD architecture baseline;
   its absence is a warning, because installing the integrations needs the user's yes.
 - Raw command/MCP paths, host-managed/cloud orchestration and deliberate local modification are
@@ -451,7 +451,7 @@ Real model-driven qualification is separate: it must show actual file changes an
 native guard denial in a disposable repository, not merely an agent's completion statement.
 The [dated OpenCode experiment](../references/opencode-context-qualification.md) covers a native
 278k-input call and refusal of an over-budget tool continuation in an isolated primary-HTTP profile.
-No full 250k handover/compaction cycle or absolute Æion Factory admission ceiling is claimed. Local hook failures
+No full 340k handover/compaction cycle or absolute Æion Factory admission ceiling is claimed. Local hook failures
 can be advisory in some native events; retain native sandbox/permissions and check actual dispatch.
 Hosted/cloud orchestration and optional scheduled native actions require separate qualification.
 
@@ -508,7 +508,7 @@ no completed-tool event. This qualifies bounded tool dispatch, not long-context 
 Run disposable repositories outside a configured ancestor project: OpenCode inherits parent
 configuration and can select that ancestor's plugin instead of the instrumented local copy.
 
-### Live 250k qualification, 2026-11-02
+### Live qualification at the former 250k threshold, 2026-11-02
 
 Method: clean v1.9.1 worktrees, real calls with `deepseek-v4.1-flash` (1M window), a 1.0–1.35 MB
 context fill, a completed handover and a receipt created with
@@ -517,7 +517,7 @@ turn. Versions: dsh 0.2.1-rc.5 headless, Pi 1.4.0, OpenCode 2.2.0, Python 3.15.2
 
 | Harness | Live result |
 | --- | --- |
-| dsh headless (patched) | 1 MB user turn; the plugin's meter crossed 250k; compacted, epoch 1, resumed from the handover. PASS. |
+| dsh headless (patched) | 1 MB user turn; the plugin's meter crossed the former 250k threshold; compacted, epoch 1, resumed from the handover. PASS. |
 | OpenCode 2.2.0 | 272k-token step; a two-tool turn compacted (epoch 1, RECOVERING). A one-tool turn missed it: `session.step.ended` arrived after `tool.execute.after`, so the next tool or turn triggers. |
 | Pi 1.4.0 headless | 264,275 measured (1.9.2 re-run). The gate latched `HANDOVER_REQUIRED`; Stop now carries `observed_tokens`; the run exits 0 with a stderr notice and no compaction entry, and the verified handover is the next session's start. The 1.9.1 crash (mid-turn `ctx.compact()`, stale ctx, exit 1) is fixed. Headless auto-compaction remains unavailable in print mode; TUI compaction at settlement is implemented but not live-tested. |
 | Pi via `tools/agents/pi-rpc` | `tools/agents/run pi rpc --provider opencode-go --model deepseek-v4.1-flash --prompt-file <1.35 MB prompt>`. A 1,350,333-character prompt reached the gate; the model filled the handover and its checkpoint verified; at settlement the extension compacted (`tokensBefore` 288,668; usage input 262,002, output 1,753; cost $0.0403521), the `onComplete` resume message started a new run in the same process, and that run read the handover and continued. The runner was stopped during the resumed work, so this run does not prove exit 0; the fake-RPC compaction test and a real short RPC call cover the exit path. The compaction entry's `fromHook: false` means Pi generated the summary (the extension supplied none), not that Pi started the compaction. PASS for headless RPC compaction and resume. |

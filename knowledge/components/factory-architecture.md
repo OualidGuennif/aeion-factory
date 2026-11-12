@@ -115,8 +115,8 @@ lexical scan. Secret paths (one list for the guards, the graph and the context f
 | Desktop install | Pin the dsh profile's plugin at a release instead of a working tree | `tools/agents/dsh-install`; `<profile>/aeion-factory` symlink |
 | Hook adapter | Read event JSON and call a bounded local check | stdin/stdout JSON; failure blocks where supported |
 | Headless Pi RPC | Keep one `pi --mode rpc` process alive through the settlement compaction and its resumed run, streaming the answer and failing closed on a failed compaction or the deadline | `tools/agents/pi-rpc`, reached through `tools/agents/run pi rpc`; the factory extension supplies the guards |
-| dsh connector | Guard every tool call and drive the 250k/300k handover-compact-resume cycle | `.dsh/plugins/factory/*.js`; the root compaction service (headless) or the `/compact` command on idle (web, whose service is isolated in an agent-preset group) |
-| Context budget | Usage, closure-only state, checkpoint receipt (with per-file digests, so a stale one names what changed), 300k forced compaction | `.aeion/context/<session>.json`; per-session file lock |
+| dsh connector | Guard every tool call and drive the 340k/390k handover-compact-resume cycle | `.dsh/plugins/factory/*.js`; the root compaction service (headless) or the `/compact` command on idle (web, whose service is isolated in an agent-preset group) |
+| Context budget | Usage, closure-only state, checkpoint receipt (with per-file digests, so a stale one names what changed), 390k forced compaction | `.aeion/context/<session>.json`; per-session file lock |
 | Handover | Recovery facts for the current session | Ignored `work/handovers/<session>.md`, created atomically only when closure needs it |
 | Knowledge/link/health checkers | Frontmatter, caps, traceability and diff coverage | Exit code + bounded diagnostics; no provider |
 | Optional loops | Select prompt/model/tools and run a managed headless task | Off unless enabled; outer loop reads production only through its configured read path; `AEION_LOOP` keeps file tools in the project, writing jobs get named git subcommands only, inner needs a maintainer-written issue |
@@ -132,15 +132,15 @@ Deployment remains the adopting project's own guarded procedure. Æion Factory l
 
 ### Context and recovery
 
-In the Claude profile, native auto-compaction is enabled at 250k. The state machine starts RUNNING; observing 250k
+In the Claude profile, native auto-compaction is enabled at 340k. The state machine starts RUNNING; observing 340k
 latches HANDOVER_REQUIRED and emits one alert to user and agent. Code/subtask tools are refused;
 closure docs and fixed check commands remain. A checkpoint validates handover sections, Knowledge,
 doc links, repository health and current task updates, then hashes source and handover bytes.
-Any later source or handover change invalidates readiness. An observed size back under 250k ends the
+Any later source or handover change invalidates readiness. An observed size back under 340k ends the
 latch, because a harness that compacts without the adapter seeing its compact SessionStart (dsh does)
 would otherwise stay gated at a fraction of the threshold; the closure it owed survives as
 `closure_owed`, which the settlement enforces. That debt never re-latches a later fall: a session that
-climbs over 250k again and compacts again is still under the threshold, so it is released again (Stop
+climbs over 340k again and compacts again is still under the threshold, so it is released again (Stop
 keeps the debt), never gated until the gate becomes permanent. A latch a harness set because its own
 compaction resumed it in closure (Codex, Droid) is marked `resumed_in_closure` and stays latched until
 the handover verifies. A verified receipt releases the gate: it owes
@@ -152,18 +152,18 @@ complete handover was verified and the tree moved since, it compacts and leaves 
 receipt. The native `PreCompact` in `tools/agents/hook.py` applies the same exception to dsh and
 OpenCode, with OpenCode starting its own epoch because it sends no compact SessionStart. Pi reaches that
 hook only for its own window compaction (`native`), which a refusal would cancel, so it compacts
-regardless and owes the handover and checkpoint in the new epoch, as Codex and Droid do. At 300k the
+regardless and owes the handover and checkpoint in the new epoch, as Codex and Droid do. At 390k the
 compaction runs too and leaves the closure owed, because code is already frozen
 there. A compact SessionStart begins RECOVERING
-and supplies the handover pointer; new positive native usage permits RUNNING. Resume alone does not clear STOPPED. The 250k and 300k alerts
+and supplies the handover pointer; new positive native usage permits RUNNING. Resume alone does not clear STOPPED. The 340k and 390k alerts
 name the checkpoint command; a settlement that still owes closure names the missing receipt; closure
 admits a project's own Markdown docs, never code. The suggested base is an existing ref
 (`origin/develop`, `origin/main`, else `HEAD`), and a refused checkpoint reports the failing check's
 bounded output. Because dsh compaction is not dependable in every profile, its start context and
 gate messages also name the recovery: after the handover, `work/current.md` and the checkpoint
-verify, stop the session and resume from the handover instead of working past 250k.
+verify, stop the session and resume from the handover instead of working past 340k.
 
-Observed usage at 300k or invalid complete usage latches STOPPED. Unavailable usage after bootstrap
+Observed usage at 390k or invalid complete usage latches STOPPED. Unavailable usage after bootstrap
 blocks the current action and can recover after a valid observation. A PreCompact refusal uses
 that event's blocking decision. No extra model turn
 is requested to finish missing docs. A partial task remains incomplete. The current harness is
@@ -219,7 +219,7 @@ No production migration, rollback command or availability/SLO is applicable to t
 
 1. Owner/repository instructions and canonical Knowledge remain authoritative (review and
    existing Knowledge/link checks).
-2. 249,999/250,000 and 299,999/300,000 observations have explicit boundaries; stopped state is
+2. 339,999/340,000 and 389,999/390,000 observations have explicit boundaries; stopped state is
    not reset by resume; unavailable usage is refused (`tools/context/tests/test_budget.py`).
 3. Compaction readiness binds the handover and exact source state; later edits invalidate it
    (`test_budget.py`, checkpoint/compaction tests). At the alert the checkpoint is admitted only when
@@ -235,7 +235,7 @@ No production migration, rollback command or availability/SLO is applicable to t
 Source enumeration, hashing, the graph, the gates, the views and the generated docs are
 deterministic: same inputs, same bytes. Spec/diagram meaning is reviewed engineering judgment. Neither tests
 nor schema checks prove complete semantic understanding. No throughput/latency/token-saving
-measurement or live 250k/300k guarantee is asserted. No extra agents are required for execution;
+measurement or live 340k/390k guarantee is asserted. No extra agents are required for execution;
 the existing fresh PR reviewer remains.
 
 ## Acceptance checks
@@ -256,7 +256,7 @@ Native adapters validate line endings and required path/command fields before gu
 OpenCode uses the V2 directory id/setup entrypoint and native prompt/tool/compaction callbacks;
 its pre-compaction receipt is consumed per attempt; a fresh receipt was live-confirmed at 272k on 2026-11-02. Pi's extension maps `tool_call`,
 `tool_result`, `before_agent_start` and `session_before_compact` to the same guards and cancels a
-compaction without a verified handover; its 250k compaction runs at settlement in interactive and
+compaction without a verified handover; its 340k compaction runs at settlement in interactive and
 RPC runs, and a one-shot headless run now stops cleanly with the verified handover (1.9.2; see
 agent-compatibility). Loop cancellation terminates the ordinary
 child process group as well as enforcing deadlines. No SDK dependency is bundled for the plugin.

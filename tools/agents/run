@@ -23,7 +23,7 @@ def launch(command):
 
 
 if '--strict' in arguments:
-    sys.exit('UNSUPPORTED: strict pre-request 300k admission is not qualified for any Æion Factory adapter.')
+    sys.exit('UNSUPPORTED: strict pre-request 390k admission is not qualified for any Æion Factory adapter.')
 os.chdir(root)
 os.environ['PWD'] = str(root)
 if provider == 'claude':
@@ -32,7 +32,7 @@ if provider == 'codex':
     for value in arguments:
         if any(key in value for key in ('model_auto_compact_token_limit', 'features.hooks', 'disableAllHooks')):
             sys.exit('Æion Factory owns native compaction/hook settings in managed launches.')
-    arguments = ['-C', str(root), '-c', 'model_auto_compact_token_limit=250000', '-c', 'features.hooks=true', *arguments]
+    arguments = ['-C', str(root), '-c', 'model_auto_compact_token_limit=340000', '-c', 'features.hooks=true', *arguments]
 if provider == 'opencode' and '--isolated' in arguments:
     arguments.remove('--isolated')
     for kind in ('DATA', 'CONFIG', 'STATE', 'CACHE'):
@@ -56,7 +56,7 @@ if provider == 'pi':
     version = re.search(r'\bv?(\d+)\.(\d+)\.(\d+)\b', result.stdout + result.stderr)
     if result.returncode or not version or tuple(map(int, version.groups())) < (1, 4, 0):
         sys.exit('Æion Factory requires Pi 1.4.0+ for its extension events.')
-    # `pi rpc` is the factory's headless runner: it owns the RPC framing and the extension, so a 250k
+    # `pi rpc` is the factory's headless runner: it owns the RPC framing and the extension, so a 340k
     # compaction can finish and the resumed run settles in the same process.
     if arguments[:1] == ['rpc']:
         launch([str(root / 'tools/agents/pi-rpc'), *arguments[1:]])

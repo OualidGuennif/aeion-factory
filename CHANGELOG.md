@@ -6,6 +6,11 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+- **Breaking: the context rule moves to 340k/390k** (was 250k/300k) in every harness: the handover and
+  compaction at 340k, both forced at 390k. Native compaction windows follow (`.claude/settings.json`,
+  `.codex/config.toml`, `tools/context/run`), and every message names the thresholds from
+  `tools/context/budget.py`'s two constants. A model window under about 400k keeps native compaction.
+
 ## [3.0.0] - 2026-11-10
 
 - **Breaking: Graphify and Archify are removed.** The factory now needs only Python 3 and a coding

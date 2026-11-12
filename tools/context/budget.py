@@ -19,8 +19,11 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / ".claude/hooks"))
 from secret_names import is_secret  # noqa: E402
 from project_files import git_active, project_files  # noqa: E402
-WARNING = 250_000
-LIMIT = 300_000
+WARNING = 340_000
+LIMIT = 390_000
+# Every message names the thresholds from these labels, so the text never drifts from the numbers.
+WARN_K = f"{WARNING // 1000}k"
+LIMIT_K = f"{LIMIT // 1000}k"
 MAX_TAIL = 4 * 1024 * 1024
 FIELDS = ("input_tokens", "cache_creation_input_tokens", "cache_read_input_tokens", "output_tokens")
 DOC_ROOTS = ("knowledge/", "work/", "efficiency/")
@@ -296,7 +299,7 @@ def checkpoint_call(root, event, words):
 
 
 def compact_tool(root, event):
-    """At 300k only what compaction needs remains: reading, the handover and its checkpoint."""
+    """At 390k only what compaction needs remains: reading, the handover and its checkpoint."""
     tool = event.get("tool_name")
     data = event.get("tool_input", {})
     if not isinstance(data, dict):
@@ -318,7 +321,7 @@ def compact_tool(root, event):
 
 
 def apply_usage(root, session, state, name, event, usage):
-    """The 250k/300k rule every harness shares, from the context usage that harness measured."""
+    """The 340k/390k rule every harness shares, from the context usage that harness measured."""
     handover = handover_path(root, session)
     state["observed_tokens"] = usage
     result = {}
@@ -333,10 +336,10 @@ def apply_usage(root, session, state, name, event, usage):
             result = stop(name, reason)
     else:
         state["bootstrapped"] = True
-        # A verified receipt settles the debt the 300k stopgap deferred; the state machine then continues as before.
+        # A verified receipt settles the debt the 390k stopgap deferred; the state machine then continues as before.
         if state.get("closure_owed") == "due" and ready(root, session, state):
             state.pop("closure_owed", None)
-        # 300k never stops the run: it narrows closure to the handover and forces compaction again.
+        # 390k never stops the run: it narrows closure to the handover and forces compaction again.
         if usage >= LIMIT and state["state"] != "COMPACT_REQUIRED":
             state["state"] = "COMPACT_REQUIRED"
             state["warning_pending"] = True
@@ -361,10 +364,10 @@ def apply_usage(root, session, state, name, event, usage):
             if not ready(root, session, state):
                 handover = ensure_handover(root, session)
                 if state["state"] == "COMPACT_REQUIRED":
-                    # 300k stopgap: code is already frozen here, so a check that failed before this session would
+                    # 390k stopgap: code is already frozen here, so a check that failed before this session would
                     # leave no way to verify and no way to repair. The compaction runs, the closure stays owed.
                     state["closure_owed"] = "due"
-                    result = {"systemMessage": f"Æion Factory 300k: compacting before a verified checkpoint; the "
+                    result = {"systemMessage": f"Æion Factory {LIMIT_K}: compacting before a verified checkpoint; the "
                                                f"closure stays owed until the failing check is fixed and "
                                                f"{handover.relative_to(root)} is verified: {checkpoint_command(root, session)}."}
                 elif state.get("checkpoint") and not handover_faults(handover):
@@ -373,7 +376,7 @@ def apply_usage(root, session, state, name, event, usage):
                     # the closure gate is blocking. Compact, keep the debt, and let Stop refuse until a fresh
                     # receipt settles it; an unverified handover still refuses below, so the rule keeps its teeth.
                     state["closure_owed"] = "due"
-                    result = {"systemMessage": f"Æion Factory 250k: {handover.relative_to(root)} was verified and the "
+                    result = {"systemMessage": f"Æion Factory {WARN_K}: {handover.relative_to(root)} was verified and the "
                                                f"tree moved since; compacting now, and the closure stays owed until a "
                                                f"fresh checkpoint: {checkpoint_command(root, session)}."}
                 else:
@@ -388,7 +391,7 @@ def apply_usage(root, session, state, name, event, usage):
                 # The harness reaches no compaction service from this plugin (dsh web keeps it inside each agent
                 # preset), so a hard gate would stall the run until a human typed /compact. Keep the alert and the
                 # handover so recovery survives the harness's own compaction, and never stop the work.
-                message = (f"Æion Factory: this harness compacts on its own, so the 250k/300k gate is advisory here. "
+                message = (f"Æion Factory: this harness compacts on its own, so the {WARN_K}/{LIMIT_K} gate is advisory here. "
                            f"Keep {handover.relative_to(root)} current so the session can recover, and continue; "
                            f"verify before it compacts: {checkpoint_command(root, session)}.")
                 if first or name in {"Stop", "SubagentStop"}:
@@ -398,11 +401,11 @@ def apply_usage(root, session, state, name, event, usage):
                 # only holds the session hostage until a compaction the plugin cannot guarantee actually lands.
                 verified = ready(root, session, state)
                 if state["state"] == "COMPACT_REQUIRED":
-                    message = (f"Æion Factory 300k: write {handover.relative_to(root)} and verify the checkpoint now "
+                    message = (f"Æion Factory {LIMIT_K}: write {handover.relative_to(root)} and verify the checkpoint now "
                                f"({checkpoint_command(root, session)}); compaction follows; {SHAPE}.")
                     allowed = verified or compact_tool(root, call)
                 else:
-                    message = (f"Æion Factory 250k alert: finish closure only, update {handover.relative_to(root)}, work/current.md and affected docs; "
+                    message = (f"Æion Factory {WARN_K} alert: finish closure only, update {handover.relative_to(root)}, work/current.md and affected docs; "
                                f"verify the checkpoint before compaction ({checkpoint_command(root, session)}); {SHAPE}.")
                     allowed = verified or closure_tool(root, call)
                 if name == "PreToolUse" and not allowed:
@@ -417,9 +420,9 @@ def apply_usage(root, session, state, name, event, usage):
                     result["systemMessage"] = message
         elif state["state"] == "RECOVERING":
             state["state"] = "RUNNING"
-        # A closure the 300k stopgap deferred is still owed: the run ends with its receipt, or not at all.
+        # A closure the 390k stopgap deferred is still owed: the run ends with its receipt, or not at all.
         if not result and name in {"Stop", "SubagentStop"} and state.get("closure_owed") == "due" and not ready(root, session, state):
-            result = stop(name, f"Æion Factory 300k: closure is still owed; fix the failing check and verify the "
+            result = stop(name, f"Æion Factory {LIMIT_K}: closure is still owed; fix the failing check and verify the "
                                 f"checkpoint: {checkpoint_command(root, session)}. Task has not been signed off.")
     return result
 
@@ -467,7 +470,7 @@ def handle(root, event):
         handover = handover_path(root, session)
         compact_verified = name == "SessionStart" and event.get("source") == "compact" and ready(root, session, state)
         if name == "SessionStart" and event.get("source") == "compact" and state.get("state") != "STOPPED":
-            # A compaction the 300k stopgap let through still owes its closure; the new epoch must not forget it.
+            # A compaction the 390k stopgap let through still owes its closure; the new epoch must not forget it.
             owed = state.get("closure_owed") == "due"
             state = {"epoch": state["epoch"] + 1, "state": "RECOVERING", "warning_pending": state.get("warning_pending", False)}
             if owed:
@@ -476,7 +479,7 @@ def handle(root, event):
         if state.get("state") == "STOPPED":
             result = stop(name, "Æion Factory context run is stopped; start a new validated session from its handover.")
         elif name == "SessionStart":
-            context = "Æion Factory checkpoint profile: 250k handover/compact, 300k forced handover and compaction; not a strict ceiling."
+            context = f"Æion Factory checkpoint profile: {WARN_K} handover/compact, {LIMIT_K} forced handover and compaction; not a strict ceiling."
             if handover.is_file():
                 context += f" Recovery: {handover.relative_to(root)}"
             if state.get("closure_owed") == "due":
@@ -484,8 +487,8 @@ def handle(root, event):
                             f"checkpoint: {checkpoint_command(root, session)}.")
             result = {"hookSpecificOutput": {"hookEventName": name, "additionalContext": context}}
             if state.pop("warning_pending", False):
-                message = ("Æion Factory 250k alert: a verified handover was retained before compaction." if compact_verified
-                           else "Æion Factory 250k alert: closure remains required; verify the handover/docs before compaction.")
+                message = (f"Æion Factory {WARN_K} alert: a verified handover was retained before compaction." if compact_verified
+                           else f"Æion Factory {WARN_K} alert: closure remains required; verify the handover/docs before compaction.")
                 result["systemMessage"] = message
                 result["hookSpecificOutput"]["additionalContext"] += "\n" + message
         else:

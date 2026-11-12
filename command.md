@@ -58,7 +58,7 @@ python3 tools/agents/tests/test_hooks.py
 node --test tools/agents/tests/test_opencode.mjs
 node --test tools/agents/tests/test_pi.mjs
 python3 tools/loops/tests/test_loops.py
-tools/context/run                                    # original Claude entry, native compact at 250k
+tools/context/run                                    # original Claude entry, native compact at 340k
 tools/context/run --strict                           # refuses: strict pre-request control unqualified
 python3 tools/context/budget.py checkpoint --session <id> --base origin/develop --verify
 ```

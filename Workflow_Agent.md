@@ -33,8 +33,8 @@ mode, the default, commit on the current branch and skip sections 3, 6 and 7, as
 
 Change a little, then let the feedback speak: language-server diagnostics and the edit hook after
 every edit, the tests after every slice. Commit each green slice. Never weaken a test to pass it.
-Claude context checkpoints run automatically: at observed 250k finish closure, update the active handover,
-current task and affected docs, then verify a checkpoint before compaction. Observed 300k or lost
+Claude context checkpoints run automatically: at observed 340k finish closure, update the active handover,
+current task and affected docs, then verify a checkpoint before compaction. Observed 390k or lost
 usage blocks work; transient usage can recover. This is not a strict pre-request ceiling.
 Codex/OpenCode have their own native pre-compaction checkpoint adapters; see
 `knowledge/operations/agent-compatibility.md` and `knowledge/operations/context-safety.md`.

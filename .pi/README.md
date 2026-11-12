@@ -11,10 +11,10 @@ project extensions from its start folder only: started elsewhere, pass it explic
 
 It blocks a tool call on any refusal or hook failure, appends edit feedback to the tool result, gives
 the factory context once per session and again after a compaction, and cancels a compaction without the
-verified handover. The 250k alert names the checkpoint command, and closure admits a project's own
+verified handover. The 340k alert names the checkpoint command, and closure admits a project's own
 Markdown docs. Use the shared sign-off skill at task completion. Pi controls its own compaction
-window (`compaction.reserveTokens`). At 250k, once the handover is verified, the extension compacts at
-the settlement boundary and resumes from the handover. At 300k only the handover and its checkpoint
+window (`compaction.reserveTokens`). At 340k, once the handover is verified, the extension compacts at
+the settlement boundary and resumes from the handover. At 390k only the handover and its checkpoint
 remain, and Pi compacts there whether or not the checkpoint verifies. A settlement that still owes
 closure is continued at most three times, then settles with the reason in the UI; any other terminal
 stop (`continue: false`) settles at once with its reason shown, never as another request.
@@ -22,7 +22,7 @@ stop (`continue: false`) settles at once with its reason shown, never as another
 ## Headless runs
 
 One-shot `pi -p` (and `--mode json`) disposes the process at settlement, so an asynchronous compaction
-started there is lost. The extension therefore never starts one in those modes: a `pi -p` run at 250k
+started there is lost. The extension therefore never starts one in those modes: a `pi -p` run at 340k
 with the verified handover and checkpoint exits 0, prints a notice on stderr, writes no compaction
 entry, and leaves the state at `HANDOVER_REQUIRED`. Start the next session from `work/handovers/` to
 continue. This is the 1.9.2 clean stop; the 1.9.1 crash (stale-ctx `onError`, exit 1) is fixed.

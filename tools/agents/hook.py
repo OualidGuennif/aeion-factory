@@ -316,12 +316,12 @@ def grok_usage(event):
     return used
 
 
-# Harnesses that report their context usage share Claude's 250k/300k rule (tools/context/budget.py).
+# Harnesses that report their context usage share Claude's 340k/390k rule (tools/context/budget.py).
 MEASURED = {'codex', 'opencode', 'pi', 'dsh', 'grok'}
 # dsh compaction is not dependable in every profile. A verified handover is enough to recover, so the user is
 # told to end the session instead of working past the gate waiting for a compaction that may never run.
 DSH_STOP = ('After the handover, work/current.md and the checkpoint verify, stop this dsh session and start a new '
-            'one from the handover if compaction does not start; do not keep working past 250k.')
+            f'one from the handover if compaction does not start; do not keep working past {budget.WARN_K}.')
 
 
 def dsh_advice(result):
@@ -434,7 +434,7 @@ def handle(root, provider, event):
             state['state'] = 'RECOVERING'
             # A compaction let through before its handover owes the closure first thing after it. Codex, Droid
             # and Grok resume in closure; every other provider resumes editable, because frozen code over a check
-            # that already failed is the deadlock the 300k stopgap exists to prevent.
+            # that already failed is the deadlock the 390k stopgap exists to prevent.
             if state.pop('closure_owed', None):
                 state['closure_owed'] = 'due'
                 if provider in {'codex', 'droid', 'grok'}:
@@ -461,7 +461,7 @@ def handle(root, provider, event):
             if not budget.ready(root, session, state):
                 budget.ensure_handover(root, session)
                 if state['state'] == 'COMPACT_REQUIRED':
-                    # 300k stopgap: code is frozen here, so a check that failed before this session could be neither
+                    # 390k stopgap: code is frozen here, so a check that failed before this session could be neither
                     # verified nor repaired. The compaction runs, the epoch stays editable, and the debt stays owed.
                     state['closure_owed'] = 'due'
                     # OpenCode sends no compact SessionStart, so this allowed compaction starts its own epoch.
@@ -471,7 +471,7 @@ def handle(root, provider, event):
                         state['epoch'] += 1
                         state['state'] = 'RECOVERING'
                     budget.atomic(file, json.dumps(state, sort_keys=True) + '\n')
-                    return {'systemMessage': f'Æion Factory 300k: compacting before a verified checkpoint; the closure '
+                    return {'systemMessage': f'Æion Factory {budget.LIMIT_K}: compacting before a verified checkpoint; the closure '
                                              f'stays owed until the failing check is fixed and '
                                              f'{handover.relative_to(root)} is verified: '
                                              + budget.checkpoint_command(root, session)}
@@ -488,7 +488,7 @@ def handle(root, provider, event):
                         state['epoch'] += 1
                         state['state'] = 'RECOVERING'
                     budget.atomic(file, json.dumps(state, sort_keys=True) + '\n')
-                    return {'systemMessage': f'Æion Factory 250k: {handover.relative_to(root)} was verified and the '
+                    return {'systemMessage': f'Æion Factory {budget.WARN_K}: {handover.relative_to(root)} was verified and the '
                                              f'tree moved since; compacting now, and the closure stays owed until a '
                                              f'fresh checkpoint: ' + budget.checkpoint_command(root, session)}
                 refusal = fail(provider, name, f'Fill {handover.relative_to(root)} and verify the docs before '
@@ -544,8 +544,8 @@ def handle(root, provider, event):
                 reason = None
             if reason:
                 return fail(provider, name, reason)
-            # Pi, OpenCode and dsh start compaction themselves: at 250k once the checkpoint is verified, and at
-            # 300k always, because that compaction is what the stopgap uses to release a frozen session. A profile
+            # Pi, OpenCode and dsh start compaction themselves: at 340k once the checkpoint is verified, and at
+            # 390k always, because that compaction is what the stopgap uses to release a frozen session. A profile
             # that gives the plugin no compaction service (dsh web) is not asked to start one it cannot reach.
             if not event.get('compaction_unavailable') and (state['state'] == 'COMPACT_REQUIRED' \
                     or (state['state'] == 'HANDOVER_REQUIRED' and budget.ready(root, session, state))):
@@ -554,11 +554,11 @@ def handle(root, provider, event):
         result = script(root, 'session-start.py', normalized)
         pointer = 'Handover' if handover.is_file() else 'Handover (created at the first refused compaction)'
         context = (f'Æion Factory {provider} checkpoint profile. {pointer}: {handover.relative_to(root)}. '
-                   f'Checkpoint key: {session}. 250k handover/compact, 300k forced handover and compaction; not a strict ceiling.')
+                   f'Checkpoint key: {session}. {budget.WARN_K} handover/compact, {budget.LIMIT_K} forced handover and compaction; not a strict ceiling.')
         if provider in {'devin', 'antigravity'}:
             context = f'Æion Factory {provider} profile: shared guards and edit feedback; no compaction checkpoint or token stop.'
         if provider == 'droid':
-            context = (f'Æion Factory droid profile: shared guards and edit feedback; no 250k alert. Before compacting, fill '
+            context = (f'Æion Factory droid profile: shared guards and edit feedback; no {budget.WARN_K} alert. Before compacting, fill '
                        f'{handover.relative_to(root)}, update work/current.md and verify: {budget.checkpoint_command(root, session)}. '
                        f'A compaction without it owes that closure right after.')
         if provider == 'grok':

@@ -128,10 +128,10 @@ test('dsh refuses a call that has no agent to account it to', () => {
   assert.match(guard({ name: 'bash', arguments: { command: 'true' } }), /unavailable/);
 });
 
-test('dsh past 250k is held to closure by its own token meter', () => {
-  const { guard, agent } = load(root, 260000);
-  agent.session.id = `${sessionID}-250k`;
-  assert.match(guard(call(agent, 'write', { file_path: `${root}/src.py`, content: 'x' })), /250k alert/);
+test('dsh past 340k is held to closure by its own token meter', () => {
+  const { guard, agent } = load(root, 350000);
+  agent.session.id = `${sessionID}-340k`;
+  assert.match(guard(call(agent, 'write', { file_path: `${root}/src.py`, content: 'x' })), /340k alert/);
 });
 
 test('dsh steers an advisory notice that a denial would otherwise carry', async () => {
@@ -146,9 +146,9 @@ test('dsh steers an advisory notice that a denial would otherwise carry', async 
 });
 
 test('dsh compacts before the next step once the hook reports a verified handover, then resumes', async () => {
-  // A stand-in adapter answers as the shared rule does after a verified checkpoint past 250k.
+  // A stand-in adapter answers as the shared rule does after a verified checkpoint past 340k.
   const folder = await standIn('dsh-compact-', 'import json\nprint(json.dumps({"aeion": {"compact": True}}))\n');
-  const { handlers, compactions, agent, steered } = load(folder, 260000);
+  const { handlers, compactions, agent, steered } = load(folder, 350000);
   const done = { kind: 'accept' };
   assert.equal(await handlers['tools/post-execute'](call(agent, 'bash', { command: 'true' }), {}, async () => done), done);
   let stepped = 0;
@@ -178,7 +178,7 @@ test('dsh web compacts through the /compact command on idle, then resumes', asyn
   // The web profile isolates its compaction service inside the agent preset, out of the plugin's reach, so
   // the plugin crosses that boundary with the /compact command once the turn has ended, then resumes.
   const { folder, events } = await recorder();
-  const { handlers, compactions, agent, steered } = load(folder, 260000, { root: false });
+  const { handlers, compactions, agent, steered } = load(folder, 350000, { root: false });
   agent.session.id = `${sessionID}-web-compact`;
   await handlers['tools/post-execute'](call(agent, 'bash', { command: 'true' }), {}, async () => ({}));
   let stepped = 0;
@@ -193,19 +193,19 @@ test('dsh web compacts through the /compact command on idle, then resumes', asyn
   // It runs the command itself; it never orders the user to type /compact.
   assert.ok(!steered.some((message) => /type \/compact|ask them to/i.test(message.content[0].text)));
   assert.match(steered[0].content[0].text, /handover/);
-  // The shared rule is told compaction is available, so the 250k/300k gate holds instead of staying advisory.
+  // The shared rule is told compaction is available, so the 340k/390k gate holds instead of staying advisory.
   assert.ok(recorded.filter((event) => event.hook_event_name !== 'SessionStart')
     .every((event) => event.compaction_unavailable === false));
 });
 
 test('dsh never tells the user to type /compact, verified or owed (dsh FB-004)', async () => {
-  // The 300k stopgap allows a compaction the checkpoint did not verify. The plugin runs /compact itself on
+  // The 390k stopgap allows a compaction the checkpoint did not verify. The plugin runs /compact itself on
   // idle and resumes; it never orders a human /compact command either way.
   const owed = await answering({
     PostToolUse: { aeion: { compact: true } },
-    PreCompact: { systemMessage: 'Æion Factory 300k: compacting before a verified checkpoint' },
+    PreCompact: { systemMessage: 'Æion Factory 390k: compacting before a verified checkpoint' },
   });
-  const first = load(owed, 300000, { root: false });
+  const first = load(owed, 390000, { root: false });
   await first.handlers['tools/post-execute'](call(first.agent, 'bash', { command: 'true' }), {}, async () => ({}));
   await first.handlers['agent/status']({ agent: first.agent, status: 'idle' });
   rmSync(owed, { recursive: true, force: true });
@@ -222,7 +222,7 @@ test('dsh tells the user to stop after verification when /compact does not run',
     PostToolUse: { aeion: { compact: true } },
     PreCompact: {},
   });
-  const { handlers, agent, steered } = load(folder, 260000, { root: false, failCompact: true });
+  const { handlers, agent, steered } = load(folder, 350000, { root: false, failCompact: true });
   agent.session.id = `${sessionID}-compact-failure`;
   await handlers['tools/post-execute'](call(agent, 'bash', { command: 'true' }), {}, async () => ({}));
   await handlers['agent/status']({ agent, status: 'idle' });
@@ -235,7 +235,7 @@ test('dsh tells the user to stop after verification when /compact does not run',
 
 test('dsh treats a token fall to under half as a compaction and restarts the session as compacted', async () => {
   const { folder, events } = await recorder();
-  const { guard, agent, meter } = load(folder, 260000, { root: false });
+  const { guard, agent, meter } = load(folder, 350000, { root: false });
   agent.session.id = `${sessionID}-fall`;
   guard(call(agent, 'bash', { command: 'true' }));
   meter.tokens = 40000;
@@ -284,7 +284,7 @@ test('dsh forwards a turn close to Stop and steers its sign-off finding (dsh FB-
 });
 
 test('dsh does not steer a terminal stop (dsh FB-003)', async () => {
-  const folder = await answering({ Stop: { continue: false, stopReason: '300k: write the handover' } });
+  const folder = await answering({ Stop: { continue: false, stopReason: '390k: write the handover' } });
   const { handlers, agent, steered } = load(folder);
   await handlers['agent/turn-stopping']({ agent, turn: 1, signal: new AbortController().signal });
   rmSync(folder, { recursive: true, force: true });

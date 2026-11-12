@@ -161,9 +161,9 @@
     ]
   },
   "autoCompactEnabled": true,
-  "autoCompactWindow": 250000,
+  "autoCompactWindow": 340000,
   "env": {
-    "CLAUDE_CODE_AUTO_COMPACT_WINDOW": "250000"
+    "CLAUDE_CODE_AUTO_COMPACT_WINDOW": "340000"
   },
   "permissions": {
     "deny": [

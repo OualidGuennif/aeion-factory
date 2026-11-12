@@ -143,7 +143,7 @@ reads `.claude/settings.json`; the other agents get the same guards through thei
 | `guard-bash` | Before every shell command | **Refuses** secret reads (also through globs, links and recursive searches), force-push, skipping git hooks, switching the flow mode, writing `.git/config`, unbounded dumps |
 | `guard-path` | Before Read, Edit, Write, Grep | **Refuses** secret files (a link judged by its target), writing `.git/config`, oversized reads |
 | `after-edit` | After each edit | Runs the fast checks for the edited file and names the doc that covers it |
-| `context-budget` | Every event | At 250k tokens: a verified handover, then compaction; at 300k, both are forced |
+| `context-budget` | Every event | At 340k tokens: a verified handover, then compaction; at 390k, both are forced |
 | `prompt-defense` | After web, MCP and network commands | Flags text that tries to steer the agent (advisory) |
 | `token-feedback` | After tools, at stop | Flags tokens spent for nothing (advisory) |
 | `sign-off` | When the agent stops (team flow) | Reminds once to update the covering docs and `work/current.md` |

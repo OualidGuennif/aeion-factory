@@ -73,14 +73,14 @@ test('OpenCode V2 compaction refuses a missing checkpoint', async () => {
   assert.deepEqual(event.system, []);
 });
 
-test('OpenCode V2 past 250k is held to closure by its step tokens', async () => {
+test('OpenCode V2 past 340k is held to closure by its step tokens', async () => {
   const measured = {};
   const record = (domain) => async (name, callback) => { measured[`${domain}.${name}`] = callback; };
-  const session = `${sessionID}-250k`;
+  const session = `${sessionID}-340k`;
   const compactions = [];
-  // A stand-in event stream with one finished step at 260k tokens, as OpenCode 2.2.0 reports it.
+  // A stand-in event stream with one finished step at 350k tokens, as OpenCode 2.2.0 reports it.
   async function* steps() {
-    yield { type: 'session.step.ended', data: { sessionID: session, tokens: { input: 10000, output: 2000, reasoning: 0, cache: { read: 248000, write: 0 } } } };
+    yield { type: 'session.step.ended', data: { sessionID: session, tokens: { input: 10000, output: 2000, reasoning: 0, cache: { read: 338000, write: 0 } } } };
   }
   await plugin.setup({
     location: { directory: root }, tool: { hook: record('tool') },
@@ -88,12 +88,12 @@ test('OpenCode V2 past 250k is held to closure by its step tokens', async () => 
     event: { subscribe: () => steps() },
   });
   await new Promise((done) => setImmediate(done));
-  await assert.rejects(measured['tool.execute.before']({ tool: 'write', sessionID: session, input: { filePath: `${root}/src.py` } }), /250k alert/);
+  await assert.rejects(measured['tool.execute.before']({ tool: 'write', sessionID: session, input: { filePath: `${root}/src.py` } }), /340k alert/);
   assert.deepEqual(compactions, []);
 });
 
 test('OpenCode V2 compacts itself once the hook reports a verified handover', async () => {
-  // A stand-in adapter answers as the shared rule does after a verified checkpoint past 250k.
+  // A stand-in adapter answers as the shared rule does after a verified checkpoint past 340k.
   const folder = await standIn('opencode-compact-', 'import json\nprint(json.dumps({"aeion": {"compact": True}}))\n');
   const stub = {};
   const record = (domain) => async (name, callback) => { stub[`${domain}.${name}`] = callback; };

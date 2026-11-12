@@ -83,7 +83,7 @@ A skill is `.agents/skills/<name>/SKILL.md`; open it when your agent does not of
 4. English in code, comments, docs and commits.
 
 Rule owners: read-only loops and what no loop may do, `knowledge/operations/loops.md`; the
-250k/300k handover and compaction rule, `knowledge/operations/context-safety.md`; installs only on
+340k/390k handover and compaction rule, `knowledge/operations/context-safety.md`; installs only on
 the owner's yes, `knowledge/policies/owner-preferences.md`.
 
 ## How code is written here

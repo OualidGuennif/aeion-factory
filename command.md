@@ -8,10 +8,9 @@ Everything you can run here, grouped by loop. Skills are invoked by name in a Cl
 | Skill | When |
 | --- | --- |
 | `plan` | start any non-trivial task: inspect, propose, wait for a yes |
-| `spec` | a feature or component changes: its requirement and test case in `knowledge/spec/spec.json`, then its spec sections |
+| `spec` | a feature or component changes: its doc's eight spec sections, before the code |
 | `build` | implement in thin, tested slices |
 | `test` | add or fix tests; never weaken an assertion |
-| `axiom` | before changing or tracing code: the requirement and context packet, then `tools/axiom/axiom query`, then the language server |
 | `debug` | reproduce a failure, test one hypothesis, fix its root cause and prove the regression |
 | `sign-off` | end a task: tests, docs and links, task state, security on sensitive diffs |
 | `pr-review` | a pull request is open: fresh reviewer, verified findings, one verdict comment |
@@ -22,7 +21,8 @@ Everything you can run here, grouped by loop. Skills are invoked by name in a Cl
 | `pr-taste` | the owner commented on a PR: keep the durable preferences |
 | `retro` | weekly or after a long session: lessons into hooks, skills and preferences |
 | `loop-triage` | an outer-loop finding: turn it into an issue an inner loop can fix |
-| `adopt` | apply Æion Factory to an existing repository, one phase at a time |
+| `adopt` | apply Æion Template to an existing repository, one phase at a time |
+| `framework` | framework mode is on, or the code carries `@req` IDs: read the requirement before changing it |
 
 ## Tools
 
@@ -32,17 +32,11 @@ tools/knowledge/doc-links                             # docs <-> code links reso
 tools/knowledge/doc-links --diff origin/develop --worktree   # also: code changed without its doc (L3)
 tools/knowledge/doc-links --for path/to/file          # the docs covering a file
 tools/repo-health/repo-health [--json]                # comment blocks, file sizes, AGENTS.md and work caps
-tools/factory-tests                                   # every factory test suite below, as CI runs them
+tools/template-tests                                   # every template test suite below, as CI runs them
 python3 tools/knowledge/tests/test_doc_links.py       # tool tests
 python3 .claude/hooks/test_hooks.py                   # hook tests
 python3 tools/context/tests/test_budget.py            # context boundary/recovery regressions
-python3 -m unittest discover -s tools/axiom/tests -t tools/axiom/tests   # the axiom toolkit's tests
-tools/axiom/axiom check                               # the commit gate: spec structure, dangling IDs, docs current
-tools/axiom/axiom validate [--phase implementation]   # design gates G01-G07 (G08-G12 for implementation)
-tools/axiom/axiom query spec|tests|rdeps|path|impact|gaps|requirement|node ...   # bounded graph answers
-tools/axiom/axiom packet --files a.py,b.py            # the mandatory context of a change
-tools/axiom/axiom docs | views | export --all | evidence run   # cockpit, diagrams, feature export, receipts
-tools/axiom/axiom init                                # a new project's spec skeleton, catalogs and brief
+tools/knowledge/doc-links --for src/a.py             # the docs that cover a file: read them before editing it
 tools/agents/run claude                             # existing Claude integration
 tools/agents/run codex                              # trust project/hooks first
 tools/agents/run opencode                           # native plugin, shared skills
@@ -51,14 +45,20 @@ tools/agents/run pi                                 # Pi 1.4.0+, project extensi
 tools/agents/run devin                              # Devin CLI: .devin/ hooks, shared skills
 tools/agents/run droid                              # Droid (factory.ai): .factory/ hooks, shared skills
 tools/agents/run antigravity                        # Google Antigravity CLI (agy): .agents/hooks.json
-tools/agents/run grok                               # Grok Build: .grok/hooks/factory.json
+tools/agents/run grok                               # Grok Build: .grok/hooks/template.json
 git config aeion.mode team                          # team flow: develop, review before push, release PR
 git config --unset aeion.mode                       # back to local mode, the default
+tools/aeion-settings show                           # doc gate mode and framework mode (owner only to change)
+tools/aeion-settings doc-gate enforce|warn|off      # the doc gate: refuse, remind, or nothing
+tools/aeion-settings framework [URL|off]            # framework mode: probes the service, 1.1 up to 2.0
+tools/framework/axiom-api node REQ-001              # in framework mode: one requirement's brief
+tools/framework/axiom-api context REQ-001 --scope change   # what a change to it touches
+python3 tools/framework/tests/test_axiom_api.py     # the framework client against a local stand-in
 python3 tools/agents/tests/test_hooks.py
 node --test tools/agents/tests/test_opencode.mjs
 node --test tools/agents/tests/test_pi.mjs
 python3 tools/loops/tests/test_loops.py
-tools/context/run                                    # original Claude entry, native compact at 250k
+tools/context/run                                    # original Claude entry, native compact at 340k
 tools/context/run --strict                           # refuses: strict pre-request control unqualified
 python3 tools/context/budget.py checkpoint --session <id> --base origin/develop --verify
 ```

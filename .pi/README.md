@@ -2,19 +2,19 @@
 
 Read the [setup runbook](../knowledge/operations/agent-compatibility.md).
 Pi 1.4.0+ reads the root `AGENTS.md`/`CLAUDE.md` and the shared `.agents/skills` links from any folder
-below the root; bodies are maintained once. The project extension in `extensions/factory/` reuses the
+below the root; bodies are maintained once. The project extension in `extensions/template/` reuses the
 existing Python guards, edit checks and handover checkpoints through `tools/agents/hook.py pi`.
 
 Launch with `tools/agents/run pi` and trust the project when Pi asks, so `.pi/extensions/` loads. Pi loads
 project extensions from its start folder only: started elsewhere, pass it explicitly
-(`pi -e ../.pi/extensions/factory/index.js` from `demo/`). The extension uses Node built-ins only.
+(`pi -e ../.pi/extensions/template/index.js` from a subfolder). The extension uses Node built-ins only.
 
 It blocks a tool call on any refusal or hook failure, appends edit feedback to the tool result, gives
-the factory context once per session and again after a compaction, and cancels a compaction without the
-verified handover. The 250k alert names the checkpoint command, and closure admits a project's own
+the template context once per session and again after a compaction, and cancels a compaction without the
+verified handover. The 340k alert names the checkpoint command, and closure admits a project's own
 Markdown docs. Use the shared sign-off skill at task completion. Pi controls its own compaction
-window (`compaction.reserveTokens`). At 250k, once the handover is verified, the extension compacts at
-the settlement boundary and resumes from the handover. At 300k only the handover and its checkpoint
+window (`compaction.reserveTokens`). At 340k, once the handover is verified, the extension compacts at
+the settlement boundary and resumes from the handover. At 390k only the handover and its checkpoint
 remain, and Pi compacts there whether or not the checkpoint verifies. A settlement that still owes
 closure is continued at most three times, then settles with the reason in the UI; any other terminal
 stop (`continue: false`) settles at once with its reason shown, never as another request.
@@ -22,12 +22,12 @@ stop (`continue: false`) settles at once with its reason shown, never as another
 ## Headless runs
 
 One-shot `pi -p` (and `--mode json`) disposes the process at settlement, so an asynchronous compaction
-started there is lost. The extension therefore never starts one in those modes: a `pi -p` run at 250k
+started there is lost. The extension therefore never starts one in those modes: a `pi -p` run at 340k
 with the verified handover and checkpoint exits 0, prints a notice on stderr, writes no compaction
 entry, and leaves the state at `HANDOVER_REQUIRED`. Start the next session from `work/handovers/` to
 continue. This is the 1.9.2 clean stop; the 1.9.1 crash (stale-ctx `onError`, exit 1) is fixed.
 
-For a headless run that compacts and resumes in one process, use the factory RPC runner:
+For a headless run that compacts and resumes in one process, use the template RPC runner:
 
 ```bash
 tools/agents/run pi rpc --provider opencode-go --model deepseek-v4.1-flash -- "the task"
@@ -45,7 +45,7 @@ prompt after it. The runner owns `--mode rpc` (a conflicting or repeated one is 
 extension path. Exit codes: 0 settled, 1 refused prompt, early exit, no settlement or a failed
 compaction, 2 usage error.
 
-The fake-RPC tests (`tools/agents/tests/test_pi_rpc.py`, part of `tools/factory-tests`) prove the
+The fake-RPC tests (`tools/agents/tests/test_pi_rpc.py`, part of `tools/template-tests`) prove the
 framing, the compaction wait and the resume without model calls. A live 288,668-token run on
 2026-11-02 then reached the gate, verified its handover, and the extension's settlement compaction
 wrote a compaction entry and resumed the task in the same process. That run was stopped while the

@@ -363,6 +363,27 @@ for path in ["/repo/.git//config", "/repo/.git/./config", "/repo/.GIT/Config"]:
 expect("bash allow: find prunes .git", run_hook("guard-bash.py", {"command": "find . -path ./.git -prune -o -name '*.md' -print",
                                                                  "workdir": str(glob_dir)}), 0)
 expect("path allow: Read of .git/config", run_hook("guard-path.py", {"file_path": "/repo/.git/config"}, tool_name="Read"), 0)
+# The doc gate and the framework address are the owner's: the agent reads them, never writes them.
+for command in ["tools/aeion-settings doc-gate off", "./tools/aeion-settings doc-gate warn",
+                "python3 tools/aeion-settings framework http://127.0.0.1:8787", "tools/aeion-settings framework off",
+                "tools/aeion-settings --root . framework", "sh -c 'tools/aeion-settings doc-gate off'",
+                "echo '{\"doc_gate\": \"off\"}' > .aeion/settings.json", "printf x >> ./.aeion/settings.json",
+                "tee .aeion/settings.json < f", "cp f .aeion/settings.json", "sed -i '' s/enforce/off/ .aeion/settings.json",
+                "python3 -c \"open('.aeion/settings.json','w').write('{}')\"", "mv f sub/.aeion/settings.json",
+                "rm .aeion/settings.json", "printf x > .aeion/setting?.json", "cp f .aei?n/settings.json",
+                "echo x > .AEION/Settings.json"]:
+    expect(f"bash deny settings write: {command}", run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 2,
+           stderr_has="tools/aeion-settings")
+for command in ["tools/aeion-settings", "cat .aeion/settings.json", "grep -n doc_gate .aeion/settings.json",
+                "tools/aeion-settings --help", "git grep -n framework tools/aeion-settings",
+                'git commit -m "tools/aeion-settings doc-gate off is the owner\'s"', "ls .aeion"]:
+    expect(f"bash allow settings read: {command}", run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 0)
+for tool in ["Edit", "Write", "MultiEdit"]:
+    expect(f"path deny: {tool} on .aeion/settings.json",
+           run_hook("guard-path.py", {"file_path": "/repo/.aeion/settings.json"}, tool_name=tool), 2, stderr_has="tools/aeion-settings")
+expect("path allow: Read of .aeion/settings.json",
+       run_hook("guard-path.py", {"file_path": "/repo/.aeion/settings.json"}, tool_name="Read"), 0)
+expect("path allow: Write beside the settings", run_hook("guard-path.py", {"file_path": "/repo/.aeion/notes.json"}, tool_name="Write"), 0)
 expect("bash allow: a cd with a plain glob", run_hook("guard-bash.py", {"command": "cd sub && ls *.md", "workdir": str(glob_dir)}), 0)
 # A search pattern is text: a secret's name there opens nothing. Files, pattern files and globs still count.
 for command in ["grep -rn id_rsa plain", "grep -rn 'env.local' plain", "rg -n env.local", "git grep -n .env",
@@ -685,17 +706,26 @@ shutil.rmtree(parent)
 
 # session-start: at most 25 lines, and it names the flow mode.
 # The mode is read from the repository's local config, so each run gets a throwaway repository.
-def session_start(mode, global_mode=None, git=True, tasks=1, hooks_path=None):
+def session_start(mode, global_mode=None, git=True, tasks=1, hooks_path=None, files=None, env=None):
     repo = Path(tempfile.mkdtemp())
-    for rel in (".claude/hooks/session-start.py", ".claude/hooks/project_files.py", "tools/repo-health/repo-health"):
+    for rel in (".claude/hooks/session-start.py", ".claude/hooks/project_files.py", ".claude/hooks/aeion_settings.py",
+                "tools/repo-health/repo-health"):
         (repo / rel).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy(ROOT / rel, repo / rel)
     (repo / "work").mkdir()
     (repo / "work/current.md").write_text("# Current work\n" + "".join(
         f"\n## Probe task{'' if n == 0 else f' {n + 1}'} — ACTIVE\n- State: x\n" for n in range(tasks)))
-    git_env = {**os.environ, "GIT_CONFIG_GLOBAL": str(repo / "global.cfg"), "GIT_CONFIG_NOSYSTEM": "1"}
+    for rel, text in (files or {}).items():
+        (repo / rel).parent.mkdir(parents=True, exist_ok=True)
+        (repo / rel).write_text(text)
+    git_env = {**os.environ, "GIT_CONFIG_GLOBAL": str(repo / "global.cfg"), "GIT_CONFIG_NOSYSTEM": "1", **(env or {})}
+    for name in ("AEION_FRAMEWORK_URL", "AEION_FRAMEWORK_TOKEN"):
+        if name not in (env or {}):
+            git_env.pop(name, None)
     (repo / "global.cfg").write_text(f"[aeion]\n\tmode = {global_mode}\n" if global_mode else "")
-    for args in (["init", "-q", "-b", "main"], ["add", "work"], ["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "Probe commit"]) if git else ():
+    tracked = ["work"] + [rel for rel in (files or {}) if not rel.startswith(".aeion/")]
+    for args in (["init", "-q", "-b", "main"], ["add", "--", *tracked],
+                 ["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "Probe commit"]) if git else ():
         subprocess.run(["git"] + args, cwd=repo, capture_output=True, check=True, env=git_env)
     if mode:
         subprocess.run(["git", "config", "aeion.mode", mode], cwd=repo, capture_output=True, check=True, env=git_env)
@@ -712,14 +742,14 @@ expect("session-start names a plain folder", result, 0, "git: inactive (plain fo
 expect("session-start in a plain folder still lists tasks", result, 0, "Probe task")
 result = session_start("team")
 expect("session-start runs", result, 0, "git status")
-expect("session-start names the team flow", result, 0, "Æion Factory mode: team")
+expect("session-start names the team flow", result, 0, "Æion Template mode: team")
 expect("session-start lists the last commit", result, 0, "Probe commit")
 expect("session-start lists the open task", result, 0, "Probe task — ACTIVE")
 if len(result.stdout.strip().split("\n")) > 25:
     failures.append("session-start printed more than 25 lines")
-expect("session-start names local mode", session_start("local"), 0, "Æion Factory mode: local")
+expect("session-start names local mode", session_start("local"), 0, "Æion Template mode: local")
 result = session_start(None)
-expect("session-start defaults to local mode", result, 0, "Æion Factory mode: local (git lifecycle off")
+expect("session-start defaults to local mode", result, 0, "Æion Template mode: local (git lifecycle off")
 if "git hooks: off" in result.stdout or "branch: main" in result.stdout:
     failures.append("session-start gave team-flow advice in local mode")
 expect("session-start points team work on main to develop", session_start("team"), 0,
@@ -734,7 +764,114 @@ expect("session-start names git hooks that are off", session_start("team"), 0,
 if "git hooks: off" in session_start("team", hooks_path="tools/git-hooks").stdout:
     failures.append("session-start called the repository's own git hooks off")
 # The global config cannot switch the mode: only the repository's own config does.
-expect("session-start ignores a global aeion.mode", session_start(None, "team"), 0, "Æion Factory mode: local")
+expect("session-start ignores a global aeion.mode", session_start(None, "team"), 0, "Æion Template mode: local")
+# The owner's settings line: the gate enforces by default, framework mode is off without an address.
+expect("session-start names the default settings", session_start(None), 0, "doc gate: enforce; framework: off\n")
+expect("session-start names the owner's gate", session_start(None, files={".aeion/settings.json": '{"doc_gate": "warn"}'}),
+       0, "doc gate: warn; framework: off")
+expect("session-start fails closed on an unreadable settings file",
+       session_start(None, files={".aeion/settings.json": "{"}), 0, "doc gate: enforce (.aeion/settings.json is unreadable")
+# Built by concatenation so this file is never an annotation itself.
+annotation = "# " + "@req" + " CORE-001\n"
+for git in (True, False):
+    expect(f"session-start names @req code without an address (git {git})",
+           session_start(None, git=git, files={"src/app.py": annotation}), 0, "this code carries @req IDs")
+    if "@req IDs" in session_start(None, git=git, files={"notes.md": annotation, "src/app.py": "x = 1\n"}).stdout:
+        failures.append(f"session-start took a Markdown mention for an annotation (git {git})")
+expect("session-start names an unreachable framework address",
+       session_start(None, env={"AEION_FRAMEWORK_URL": "http://127.0.0.1:9"}), 0, "framework: on → http://127.0.0.1:9, but")
+expect("session-start refuses a bad framework address", session_start(None, env={"AEION_FRAMEWORK_URL": "ftp://x"}), 0,
+       "framework: off (AEION_FRAMEWORK_URL: the address must be an http")
+
+# doc gate: in a throwaway project, so the owner's own settings never decide a case.
+project = Path(tempfile.mkdtemp())
+for rel in (".claude/hooks/doc-gate.py", ".claude/hooks/aeion_settings.py", ".claude/hooks/project_files.py",
+            ".claude/hooks/secret_names.py", "tools/knowledge/doc-links"):
+    (project / rel).parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy(ROOT / rel, project / rel)
+DOC = "knowledge/components/a.md"
+(project / "knowledge/components").mkdir(parents=True)
+(project / DOC).write_text("---\ntitle: a\nsources:\n  - resource: ../../src/a.py\n---\n# A\n")
+(project / "src").mkdir()
+(project / "src/a.py").write_text("a = 1\n")
+(project / "src/b.py").write_text("b = 1\n")
+gate_session = f"doc-gate-{os.getpid()}"
+
+
+def gate(event, tool, data, session=gate_session):
+    return run_hook("doc-gate.py", data, cwd=project, hook_event_name=event, tool_name=tool, session_id=session)
+
+
+def gate_settings(text):
+    (project / ".aeion").mkdir(exist_ok=True)
+    (project / ".aeion/settings.json").write_text(text)
+
+
+def forget():
+    gate("SessionStart", None, {})
+
+
+edit_a = {"file_path": str(project / "src/a.py"), "old_string": "a = 1", "new_string": "a = 2"}
+forget()
+expect("doc gate refuses a covered file before its doc", gate("PreToolUse", "Edit", edit_a), 2,
+       stderr_has=f"before editing src/a.py, read {DOC} (it covers this file")
+expect("doc gate names the owner's switch", gate("PreToolUse", "MultiEdit", edit_a), 2, stderr_has="tools/aeion-settings doc-gate")
+for tool, data in (("Edit", {"file_path": str(project / "src/b.py")}), ("Write", {"file_path": str(project / DOC)}),
+                   ("Write", {"file_path": str(project / "work/current.md")}), ("Write", {"file_path": str(project / "notes.md")}),
+                   ("Edit", {"file_path": "/elsewhere/src/a.py"}), ("Write", {"file_path": str(project / "src/new.py"), "content": "x\n"})):
+    expect(f"doc gate never gates {tool} {data['file_path']}", gate("PreToolUse", tool, data), 0)
+# A grep or a read of another doc is not reading this one.
+gate("PostToolUse", "Bash", {"command": f"grep -n A {DOC}"})
+gate("PostToolUse", "Read", {"file_path": str(project / "knowledge/components/other.md")})
+expect("doc gate is not satisfied by a grep", gate("PreToolUse", "Edit", edit_a), 2)
+gate("PostToolUse", "Read", {"file_path": str(project / DOC), "offset": 1, "limit": 3})
+expect("doc gate opens after the Read of the doc", gate("PreToolUse", "Edit", edit_a), 0)
+run_hook("doc-gate.py", {}, cwd=project, hook_event_name="SessionStart", source="startup", session_id=gate_session)
+expect("doc gate keeps the reads at a startup", gate("PreToolUse", "Edit", edit_a), 0)
+run_hook("doc-gate.py", {}, cwd=project, hook_event_name="SessionStart", source="compact", session_id=gate_session)
+expect("doc gate forgets at a compaction", gate("PreToolUse", "Edit", edit_a), 2)
+gate("PostToolUse", "Read", {"file_path": str(project / DOC)})
+expect("doc gate forgets at session start", (forget(), gate("PreToolUse", "Edit", edit_a))[1], 2)
+for command in (f"sed -n 1,20p {DOC}", f"cat {DOC} | head -5", f"head -n 40 './{DOC}'", f"tail -n 5 {project / DOC}"):
+    forget()
+    gate("PostToolUse", "Bash", {"command": command})
+    expect(f"doc gate counts a shell read: {command}", gate("PreToolUse", "Edit", edit_a), 0)
+forget()
+gate("PostToolUse", "Bash", {"command": "sed -n 1,9p ../a.md", "workdir": str(project / "src")})
+gate("PostToolUse", "Bash", {"command": f"cd src && sed -n 1,9p ../{DOC}"})
+# A shell's own folder counts; a cd inside the command is not followed, so that read is not recorded.
+expect("doc gate does not follow a cd", gate("PreToolUse", "Edit", edit_a), 2)
+forget()
+gate("PostToolUse", "Edit", {"file_path": str(project / DOC)})
+expect("doc gate counts a doc the agent edited", gate("PreToolUse", "Edit", edit_a), 0)
+# A new file names its spec in its header: the gate reads it from the content, built here so this file names none.
+forget()
+header = "# " + "Spec" + f": {DOC}\nx = 1\n"
+expect("doc gate reads a new file's Spec header", gate("PreToolUse", "Write", {"file_path": str(project / "src/new.py"),
+                                                                               "content": header}), 2, stderr_has=DOC)
+expect("doc gate refuses an event without a valid session", gate("PreToolUse", "Edit", edit_a, session="../x"), 2)
+# warn: the edit goes through, and after it one line per file names the doc; off: silent.
+gate_settings('{"doc_gate": "warn"}')
+expect("doc gate warn allows the edit", gate("PreToolUse", "Edit", edit_a), 0)
+expect("doc gate warn names the doc after the edit", gate("PostToolUse", "Edit", edit_a), 0, stdout_has=f"Doc gate (warn): src/a.py")
+expect("doc gate warn says it once per file", gate("PostToolUse", "Edit", edit_a), 0)
+if gate("PostToolUse", "Edit", edit_a).stdout.strip():
+    failures.append("doc gate warn repeated its note for the same file")
+gate_settings('{"doc_gate": "off"}')
+forget()
+result = gate("PostToolUse", "Edit", edit_a)
+expect("doc gate off allows the edit", gate("PreToolUse", "Edit", edit_a), 0)
+if result.stdout.strip():
+    failures.append("doc gate off still printed a note")
+gate_settings('{"doc_gate": "of"}')
+expect("doc gate enforces on an unknown mode", gate("PreToolUse", "Edit", edit_a), 2)
+(project / ".aeion/settings.json").unlink()
+# The coverage cannot be listed: enforce refuses, as uncertain is no.
+(project / "tools/knowledge/doc-links").write_text("import sys\nsys.exit(1)\n")
+expect("doc gate refuses when the coverage cannot be listed", gate("PreToolUse", "Edit", edit_a), 2, stderr_has="could not be listed")
+for kind in ("read", "warned"):
+    (Path(tempfile.gettempdir()) / f"claude-doc-{kind}-{gate_session}").unlink(missing_ok=True)
+shutil.rmtree(project)
 
 print(f"hook tests: {passes} passed, {len(failures)} failed")
 for f in failures:

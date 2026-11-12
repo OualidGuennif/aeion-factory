@@ -4,7 +4,7 @@ title: "Bounded tool intake"
 description: "Refuse obvious large dumps before execution; use targeted reads and summary commands."
 status: stable
 generated:
-  by: aeion-factory/1.6.2
+  by: aeion-template/1.6.2
   at: 2026-10-29
 sources:
   - resource: ../../.claude/hooks/guard-path.py
@@ -86,11 +86,13 @@ thresholds, long lines, explicit ranges, real native fields and misleading limit
 Local regular-file metadata and bounded reads establish the decision; no model or new package
 is involved. Owner tuning changes the checked-in constants and tests, not an ambient override.
 Durable facts belong in Knowledge; session noise stays out of AGENTS.md and handovers.
+The session start shows these intake limits first, then the flow mode, the doc gate's mode and
+framework mode; the owner's settings never change an intake limit.
 
 ## Acceptance
 
 Run `python3 .claude/hooks/test_hooks.py` and `python3 tools/agents/tests/test_hooks.py`, then the
-existing Knowledge, context, axiom and native-plugin checks. Check real workflow friction
+existing Knowledge, context and native-plugin checks. Check real workflow friction
 before extending the recognized command patterns.
 
 ## Out of scope

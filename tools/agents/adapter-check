@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 # Spec: knowledge/operations/agent-compatibility.md
-"""Compare a repository's harness connectors with the factory copy this script ships in.
+"""Compare a repository's harness connectors with the template copy this script ships in.
 
-A project vendors the factory's adapters by copying them, so a hand edit to one copy is
+A project vendors the template's adapters by copying them, so a hand edit to one copy is
 invisible until the day that harness silently stops loading it. This check names every
 copy that differs, and every native config that points at a file which is not there.
 
     tools/agents/adapter-check                 # the repository this script lives in
-    tools/agents/adapter-check --root ../app   # a project that adopted the factory
+    tools/agents/adapter-check --root ../app   # a project that adopted the template
 """
 import argparse
 import json
@@ -15,13 +15,13 @@ import re
 import sys
 from pathlib import Path
 
-FACTORY = Path(__file__).resolve().parents[2]
+TEMPLATE = Path(__file__).resolve().parents[2]
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from connectors import CONTRACT as VENDORED, WIRING, executable, linked  # noqa: E402
 from refs import Refused, ref_bytes, ref_exists, ref_mode, require_repository  # noqa: E402
 
-# Every harness-facing file the factory ships: a copy must stay byte-identical, because an
+# Every harness-facing file the template ships: a copy must stay byte-identical, because an
 # adapter's failure is silent and its body is not something a project edits.
 # Native configs a project may merge with its own settings, so they are not compared, but a
 # command in them still has to name a file that exists.
@@ -33,7 +33,7 @@ SCRIPT = re.compile(r"((?:tools|\.claude|\.dsh|\.pi|\.opencode|\.codex|\.devin|\
 MODULE = re.compile(r"(?<![\w./-])(\./[\w./-]+\.js)")
 
 
-def factory_version(repo, ref=None):
+def template_version(repo, ref=None):
     """The version of the side this run treats as canonical: the working tree, or one reference."""
     try:
         if ref is not None:
@@ -45,8 +45,8 @@ def factory_version(repo, ref=None):
 
 def compare(root, read=None, expected_mode=None):
     """(drifted, missing, clean, linked, modes) over every vendored file, by exact bytes and mode."""
-    read = read or (lambda relative: (FACTORY / relative).read_bytes())
-    expected_mode = expected_mode or (lambda relative: (FACTORY / relative).stat().st_mode)
+    read = read or (lambda relative: (TEMPLATE / relative).read_bytes())
+    expected_mode = expected_mode or (lambda relative: (TEMPLATE / relative).stat().st_mode)
     drifted, missing, clean, links, modes = [], [], [], [], []
     for relative in VENDORED:
         link = linked(root, relative)
@@ -80,7 +80,7 @@ def compare(root, read=None, expected_mode=None):
 
 def references(text, relative):
     """The script paths a config names, as written."""
-    pattern = MODULE if relative == ".dsh/factory.patch.yml" else SCRIPT
+    pattern = MODULE if relative == ".dsh/template.patch.yml" else SCRIPT
     return sorted(set(pattern.findall(text)))
 
 
@@ -152,7 +152,7 @@ def wiring(root):
                 broken.append((relative, str(error)))
                 continue
         # The dsh patch sits in .dsh and names its modules from there; every other path starts at the root.
-        base = root / ".dsh" if relative == ".dsh/factory.patch.yml" else root
+        base = root / ".dsh" if relative == ".dsh/template.patch.yml" else root
         for reference in references(text, relative):
             target = base / (reference[2:] if reference.startswith("./") else reference)
             if not target.is_file():
@@ -163,13 +163,13 @@ def wiring(root):
 def main():
     parser = argparse.ArgumentParser(
         prog="adapter-check",
-        description="Compare a repository's harness connectors with the factory copy this script ships in.",
+        description="Compare a repository's harness connectors with the template copy this script ships in.",
     )
-    parser.add_argument("--root", default=str(FACTORY), help="the repository to check (default: this one)")
+    parser.add_argument("--root", default=str(TEMPLATE), help="the repository to check (default: this one)")
     parser.add_argument("--ref", help="compare against this git reference (tag, main, develop, sha), not the working tree")
-    parser.add_argument("--repo", default=str(FACTORY), help="the repository holding the reference (default: this checkout)")
+    parser.add_argument("--repo", default=str(TEMPLATE), help="the repository holding the reference (default: this checkout)")
     parser.add_argument("--strict", action="store_true", help="also fail when a connector is not vendored")
-    parser.add_argument("--self", action="store_true", help="allow the factory to compare with itself")
+    parser.add_argument("--self", action="store_true", help="allow the template to compare with itself")
     parser.add_argument("--verbose", action="store_true", help="list the connectors that are absent")
     arguments = parser.parse_args()
 
@@ -179,10 +179,10 @@ def main():
         print(f"adapter-check: {root} is not a directory", file=sys.stderr)
         return 2
     # A project that copied this script compares its copies with themselves and always passes: refuse it,
-    # so the project's CI runs this script from a pinned factory checkout with --root instead.
-    if root == FACTORY and not arguments.self and not arguments.ref:
+    # so the project's CI runs this script from a pinned template checkout with --root instead.
+    if root == TEMPLATE and not arguments.self and not arguments.ref:
         print(f"adapter-check: {root} is the copy this script lives in, so every connector would match "
-              f"itself; run the factory's copy with --root {root}, or pass --self to check the factory",
+              f"itself; run the template's copy with --root {root}, or pass --self to check the template",
               file=sys.stderr)
         return 2
 
@@ -211,14 +211,14 @@ def main():
         for line in unroled(text):
             unroled_calls.append((relative, line))
 
-    print(f"adapter-check: factory {factory_version(repo, reference)} at {repo}")
+    print(f"adapter-check: template {template_version(repo, reference)} at {repo}")
     print(f"               against {root}")
     if reference:
         print(f"               reference {reference}")
     for relative in clean:
         print(f"ok        {relative}")
     for relative, expected, actual in drifted:
-        print(f"DRIFT     {relative} — {actual} bytes, factory has {expected}")
+        print(f"DRIFT     {relative} — {actual} bytes, template has {expected}")
     for relative, link in linked_paths:
         print(f"LINKED    {relative} — {link} is a symlink; a connector must be a regular file")
     for relative in mode_issues:
@@ -243,9 +243,9 @@ def main():
         for relative, _, _ in drifted:
             print(f"  git show {reference}:{relative} > {root / relative}")
     elif drifted:
-        print("\nRepair each drifted copy from the factory, then run the project's tests:")
+        print("\nRepair each drifted copy from the template, then run the project's tests:")
         for relative, _, _ in drifted:
-            print(f"  cp {FACTORY / relative} {root / relative}")
+            print(f"  cp {TEMPLATE / relative} {root / relative}")
     if mode_issues:
         print("\nRestore the executable bit on each launcher:")
         for relative in mode_issues:

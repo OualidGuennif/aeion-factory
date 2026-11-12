@@ -20,7 +20,3 @@ __pycache__/
 .DS_Store
 node_modules/
 .venv/
-# demo/: everything is tracked except a harness run's working copy and its live session log, which
-# grows during a run and would stale every checkpoint receipt.
-/demo/runs/*/workspace/
-/demo/runs/*/*.jsonl

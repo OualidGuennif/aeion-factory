@@ -5,7 +5,7 @@ description: "Required pull requests and real CI checks on main, including admin
 status: stable
 review_after: 2027-01-29
 generated:
-  by: aeion-factory/1.2
+  by: aeion-template/1.2
   at: 2026-10-25
 ---
 
@@ -21,13 +21,13 @@ pull request `develop → main` merges with a merge commit so `develop` stays an
 force-push and branch deletion. Preserve stronger existing rules. Pin required checks to their
 actual GitHub App where available; do not invent check names or require disabled optional jobs.
 
-Æion Factory requires Knowledge/links/health (which includes `axiom check`), secret-scan,
+Æion Template requires Knowledge/links/health, secret-scan,
 dependency-scan and sast-scan. The fresh `Review: OK` comment remains required by the delivery workflow; it is not
 an approving forge review. The solo-owner workflow uses zero required human approvals, rather
 than making the author approve their own PR. This distinction is explicit: CI/PR requirements
 are server-enforced; the comment verdict is a reviewed procedure.
 
-On 2026-10-25, main protection was applied and re-read for OualidGuennif's aeion-factory,
+On 2026-10-25, main protection was applied and re-read for OualidGuennif's aeion-template,
 aeion-spaceship, aeion-playground, aeion-croa, aeion-ops, aeion-observability and aeion-website.
 Each uses its own observed CI names. Playground's existing restrictions were preserved and its
 additional product/telemetry jobs added. No production deployment setting was changed.

@@ -1,10 +1,10 @@
 ---
 type: Policy
 title: "Specs first, and links to code"
-description: "The canonical knowledge/spec/spec.json (AxiomSpec), the eight sections a component doc carries, the determinism slider, and the links between spec, docs and code that the checks enforce."
+description: "The OKF format: the eight sections a component doc carries as its spec, the determinism slider, decisions, the optional framework mode, and the two-way links between docs and code that the checks enforce."
 status: stable
 generated:
-  by: aeion-factory/1.0
+  by: aeion-template/1.0
   at: 2026-10-20T00:00:00Z
 sources:
   - id: tool
@@ -12,8 +12,6 @@ sources:
     title: "The link checker"
   - resource: ../../tools/knowledge/knowledge-check
     title: "knowledge-check, which names this doc as its spec"
-  - resource: ../axiomspec/index.md
-    title: "The AxiomSpec method"
 ---
 
 # Specs first
@@ -38,29 +36,22 @@ before its code is written, has these sections in this order:
 | bounded | a model, under a fixed output contract | a strict parser; unreadable output is a refusal |
 | adaptive | a model, free text | never an authority: advice or a report |
 
-# The canonical specification
+# Where the spec lives
 
-Product obligations live in **one** `knowledge/spec/spec.json` ([AxiomSpec](../axiomspec/index.md),
-`axiomspec/0.1`): goals, terms, structured requirements, decisions, assumptions, constraints, state
-models, scenarios, test cases, components and bindings, each with a stable ID and typed links.
+The component doc is the spec: its eight sections are the contract the code implements, and
+`tools/knowledge/knowledge-check` refuses a component doc without them. This is the OKF format the
+whole knowledge base follows: frontmatter that `knowledge-check` caps, the eight sections, and links
+that run both ways between docs and code (below).
 
-- **Order of work.** A behaviour change starts there: the requirement (pattern, trigger, subject,
-  response), the test case with its oracle, a decision when a choice has more than one defensible
-  answer, then the component doc, then the code. An internal change that alters no obligation needs
-  no new node.
-- **Docs to spec.** A component doc keeps its eight sections and names the IDs it covers in
-  frontmatter, `spec_ids: [REQ-001, COMP-002]`. An ID written in prose or `spec_ids` is a reference
-  and must exist; an ID inside backticks or a code block is an example. `tools/axiom/axiom check`
-  fails on a dangling reference.
-- **Spec to code.** A binding in `spec.json` names a path and a symbol (`Pantry.take`); the graph
-  resolves it to `file:line` in the current files. File existence alone resolves nothing.
-- **Readiness.** `tools/axiom/axiom validate` runs gates G01-G07; `design_ready` needs all of them
-  and every blocking decision answered. Unknown is never pass.
-- **Derived documents.** `docs/README.md` (the cockpit) and `docs/generated/` come from
-  `tools/axiom/axiom docs`; diagrams come from `docs/views/*.json`, declared in
-  `docs/view-catalog.json` with their claim (proposed, intended, observed). Never edit them by hand.
-- **Hand-off to a build factory.** `tools/axiom/axiom export` writes one Markdown per goal with these
-  eight sections and checkable `- [ ]` acceptance items; it fails rather than truncate.
+- **Order of work.** A behaviour change starts in the doc (intent, outputs and refusals, invariants
+  with the test that proves each), then the test, then the code. An internal change that alters no
+  documented fact needs no doc change, and says so with a `Docs-Checked` trailer.
+- **Decisions.** A choice with more than one defensible answer gets a record in `knowledge/decisions/`
+  before the code that depends on it.
+- **Framework mode (optional, off by default).** A project specified with aeion-framework keeps its
+  requirements in the AxiomSpec the framework serves. Docs here explain how the code meets them; code
+  names the requirements it implements with `@req REQ-001`; the agent reads requirements through the
+  framework API and never edits them: a disagreement goes to `axiom-proposals.md` for the owner.
 
 # Links between docs and code
 
@@ -76,13 +67,15 @@ models, scenarios, test cases, components and bindings, each with a stable ID an
   `--diff origin/develop` (or `origin/main` without develop) when a file changed while a doc covering it did not. Updating the doc, or a
   commit trailer `Docs-Checked: knowledge/<doc>.md -- <why no documented fact changed>`, passes.
 - A link is a pointer, never copied content.
+- The same links decide what an agent reads first: the [doc gate](../components/doc-gate.md) refuses
+  an edit of a covered file until each covering doc was read in the session (the owner can set it to
+  `warn` or `off`).
 - Git enumeration, history and diff failures return nonzero with a short diagnostic. An unreadable
   repository (a `.git` git cannot read) or missing comparison base is not an empty change set and
   never produces PASS. A plain folder without git is walked from disk (L1, L2 and L4; `--diff` needs git).
-- A project nested in this one (a folder with its own `AGENTS.md` and `knowledge/index.md`, such as a
-  demo copy) owns its `Spec:` pointers: they name its own `knowledge/`, so this root skips its files
+- A project nested in this one (a folder with its own `AGENTS.md` and `knowledge/index.md`) owns its `Spec:` pointers: they name its own `knowledge/`, so this root skips its files
   in L1 and L3, and the nested project's own `doc-links` checks them. A folder release archives leave
-  out (`/name export-ignore`, as the factory's `demo/`) is treated the same way.
+  out (`/name export-ignore`) is treated the same way.
 - Paths are read from Git (or the disk walk) verbatim, including spaces and Unicode. Explicit relative `sources`
   work for any file format; only a path beginning with `./` or `../` may contain whitespace.
 - Header discovery reads at most 8 KiB of leading comments/docstrings in tracked regular UTF-8

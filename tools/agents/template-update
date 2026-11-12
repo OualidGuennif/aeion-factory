@@ -1,24 +1,23 @@
 #!/usr/bin/env python3
 # Spec: knowledge/operations/template-update.md
-"""Move an adopted project from one factory release to another, keeping the project's own content.
+"""Move an adopted project from one template release to another, keeping the project's own content.
 
-Every file the factory changed between the project's baseline and the target is decided on its own:
+Every file the template changed between the project's baseline and the target is decided on its own:
 - contract connectors (connectors.CONTRACT) are copied byte for byte, as a harness loads them;
-- the project's own files (VERSION, CHANGELOG.md, work/, knowledge/spec/, demo/, the marker, and the
-  AxiomSpec cockpit, views and catalogs in docs/) are never written;
-- a factory knowledge/ doc follows the factory only while the project has not edited it: an untouched
+- the project's own files (VERSION, CHANGELOG.md, work/, the marker, and what 3.0.0 generated for a
+  project: knowledge/spec/ and the cockpit, views and catalogs in docs/) are never written;
+- a template knowledge/ doc follows the template only while the project has not edited it: an untouched
   copy is updated or removed, a new doc is added, and an edited one is listed for review, never merged;
-  the vendored AxiomSpec package (knowledge/axiomspec/) updates like any factory file, since
-  tools/axiom/ cannot run without its schemas;
+  the AxiomSpec package 3.0.0 vendored (knowledge/axiomspec/) goes like any template file;
 - AGENTS.md and the merged settings (connectors.MERGE) are never written; a merge proposal is;
 - every other file is a three-way update: untouched since the baseline takes the target, an edited
   one is merged with git merge-file, and a conflict leaves the project's file as it is;
-- a factory file the project still holds as an older release's untouched copy (an update before 2.0.1
+- a template file the project still holds as an older release's untouched copy (an update before 2.0.1
   moved only the connectors) diffs from that release, so it takes the target too;
 - a new file in a folder the project lacks is skipped when the baseline had that folder (the project
-  left it out), and added when the folder is new in the factory (3.0.0's tools/axiom/, for example).
+  left it out), and added when the folder is new in the template (tools/framework/, for example).
 
-The baseline is --from-ref, else the tracked marker .aeion-factory a previous update or
+The baseline is --from-ref, else the tracked marker .aeion-template a previous update or
 `release --new-project` wrote, else the release tag whose files the project matches best. The
 project's VERSION belongs to the application and is never read as the baseline.
 
@@ -33,21 +32,21 @@ import sys
 import tempfile
 from pathlib import Path
 
-FACTORY = Path(__file__).resolve().parents[2]
+TEMPLATE = Path(__file__).resolve().parents[2]
 
-sys.path.insert(0, str(FACTORY / "tools/agents"))
+sys.path.insert(0, str(TEMPLATE / "tools/agents"))
 from connectors import CONTRACT, MERGE, executable, linked  # noqa: E402
 from refs import Refused, git, ref_bytes, ref_diff, ref_exists, ref_files, ref_mode, require_repository  # noqa: E402
 
 SEMVER = re.compile(r"(\d+)\.(\d+)\.(\d+)")
-MARKER = ".aeion-factory"
-# The AxiomSpec cockpit, views and catalogs under docs/ describe the project, like knowledge/spec/.
+MARKER = ".aeion-template"
+# What 3.0.0 generated for a project (its spec, cockpit, views and catalogs) describes the project.
 OWNED_FILES = ("VERSION", "CHANGELOG.md", MARKER, "docs/README.md", "docs/view-catalog.json", "docs/feature-catalog.json")
 OWNED_FOLDERS = ("work/", "knowledge/spec/", "demo/", "docs/generated/", "docs/views/", "docs/features/", "docs/authored/")
-# The project's knowledge: a doc it edited is its own words, so a factory change there is only listed.
+# The project's knowledge: a doc it edited is its own words, so a template change there is only listed.
 REVIEWED_FOLDERS = ("knowledge/",)
-# The vendored AxiomSpec package (contracts, schemas the toolkit loads, playbooks) belongs to the template:
-# tools/axiom/ cannot run without its schemas, so an update carries both or neither.
+# The AxiomSpec package 3.0.0 vendored belongs to the template, not to the project's knowledge: an update
+# removes it like any template file, never listing it as the project's doc to review.
 TEMPLATE_FOLDERS = ("knowledge/axiomspec/",)
 LINK, GITLINK = "120000", "160000"
 NOTES_CAP = 80
@@ -116,7 +115,7 @@ def project_blobs(repo, root, paths):
 def infer(repo, root, trees):
     """The release tag the project matches best (newest on ties), its file score and its connector score."""
     if not trees:
-        raise Refused("no release tag in the factory repository to infer the baseline from; "
+        raise Refused("no release tag in the template repository to infer the baseline from; "
                       "pass --from-ref, or git fetch --tags")
     paths = {path for entries in trees.values() for path, (mode, _) in entries.items()
              if not owned(path) and mode not in (LINK, GITLINK)}
@@ -149,7 +148,7 @@ def read_marker(repo, root):
 
 
 def baseline(repo, root, from_ref, check, trees):
-    """The reference the project's factory files came from, and how it was established."""
+    """The reference the project's template files came from, and how it was established."""
     if from_ref:
         if not ref_exists(repo, from_ref):
             raise Refused(f"no such reference: {from_ref}; git fetch --tags, or check the name")
@@ -158,7 +157,7 @@ def baseline(repo, root, from_ref, check, trees):
     if marked:
         return marked[0], marked[1], MARKER, True
     tag, matching, files, connectors = infer(repo, root, trees)
-    how = f"inferred: {matching}/{files} factory files and {connectors}/{len(CONTRACT)} connectors match"
+    how = f"inferred: {matching}/{files} template files and {connectors}/{len(CONTRACT)} connectors match"
     exact = connectors == len(CONTRACT)
     # A partial match is a guess about which release the project's edits started from: report, never write.
     if not exact and not check:
@@ -198,9 +197,9 @@ def develop_without_team_mode(root):
     return has_develop and local_git(root, "config", "--local", "--get", "aeion.mode") != "team"
 
 
-def without_a_spec(root):
-    """3.0.0's knowledge docs and checks cite a project's AxiomSpec spec, catalogs and cockpit."""
-    return not (root / "knowledge/spec/spec.json").is_file()
+def with_a_spec(root):
+    """4.0.0 leaves AxiomSpec to aeion-framework; a project 3.0.0 specified keeps its spec as it is."""
+    return (root / "knowledge/spec/spec.json").is_file()
 
 
 # (release, applies to this project, what the owner runs): the tool never runs these itself.
@@ -208,9 +207,10 @@ MIGRATIONS = (
     ("2.0.0", develop_without_team_mode,
      "the git lifecycle is now off unless aeion.mode is team; this project has a develop branch, so the "
      "owner runs `git config aeion.mode team` in each clone to keep the team flow"),
-    ("3.0.0", without_a_spec,
-     "AxiomSpec replaces Graphify and Archify; the owner runs `tools/axiom/axiom init` once, which starts "
-     "this project's spec, catalogs and cockpit (the factory's knowledge docs cite them)"),
+    ("4.0.0", with_a_spec,
+     "AxiomSpec left the template for aeion-framework; knowledge/spec/ and the docs/ cockpit stay as they "
+     "are. To keep using the spec, migrate it with aeion-framework's qa/migrate_0_1.py then "
+     "qa/migrate_0_2.py, serve it, and the owner runs `tools/aeion-settings framework <url>`"),
 )
 
 
@@ -225,11 +225,11 @@ def three_way(ours, base, theirs):
     """git merge-file's result and whether it is clean; a binary file never merges."""
     with tempfile.TemporaryDirectory() as folder:
         files = []
-        for name, data in (("project", ours), ("baseline", base), ("factory", theirs)):
+        for name, data in (("project", ours), ("baseline", base), ("template", theirs)):
             path = Path(folder) / name
             path.write_bytes(data)
             files.append(str(path))
-        done = subprocess.run(["git", "merge-file", "-p", "-L", "project", "-L", "baseline", "-L", "factory",
+        done = subprocess.run(["git", "merge-file", "-p", "-L", "project", "-L", "baseline", "-L", "template",
                                *files], capture_output=True)
     if done.returncode < 0 or done.returncode > 127:
         return theirs, False
@@ -263,11 +263,11 @@ def missing_folder(root, relative):
 
 
 def plan_file(repo, root, base, ref, relative):
-    """One factory file's decision: (label, data to write or None, mode, proposal or None)."""
+    """One template file's decision: (label, data to write or None, mode, proposal or None)."""
     base_mode, base_data = ref_entry(repo, base, relative)
     mode, data = ref_entry(repo, ref, relative)
     kind, ours = project_entry(root, relative)
-    # Symlinks (skill links, CLAUDE.md) are replaced only where the project still has the factory's link.
+    # Symlinks (skill links, CLAUDE.md) are replaced only where the project still has the template's link.
     if LINK in (base_mode, mode) or kind == "link":
         if kind == "link" and mode == LINK and ours == data:
             return "current", None, mode, None
@@ -280,7 +280,7 @@ def plan_file(repo, root, base, ref, relative):
         if mode is None:
             return "current", None, mode, None
         # A partial adoption leaves whole folders out; a new file follows its folder in. A folder the
-        # baseline did not have is new in the factory, so the project cannot have left it out.
+        # baseline did not have is new in the template, so the project cannot have left it out.
         folder = missing_folder(root, relative)
         if folder and ref_files(repo, base, folder):
             return "skipped", None, mode, None
@@ -304,13 +304,13 @@ def update(root, repo, ref, from_ref, check, force):
     if root == repo or (repo / MARKER).is_file():
         target = root if root.is_dir() else "<project>"
         raise Refused(f"refusing to update a project from its own repository {repo}; run template-update from the "
-                      f"Æion Factory clone: <factory>/tools/agents/template-update --ref <tag> --root {target}")
+                      f"Æion Template clone: <template>/tools/agents/template-update --ref <tag> --root {target}")
     if not root.is_dir():
         raise Refused(f"no such project: {root}")
     if not ref_exists(repo, ref):
         raise Refused(f"no such reference: {ref}; git fetch --tags, or check the name")
     if not any((root / relative).is_symlink() or (root / relative).exists() for relative in CONTRACT):
-        raise Refused(f"not an adopted project: no factory connector in {root}")
+        raise Refused(f"not an adopted project: no template connector in {root}")
     trees = release_trees(repo)
     name, base, how, exact = baseline(repo, root, from_ref, check, trees)
     baseline_version = version(repo, base)
@@ -354,9 +354,9 @@ def update(root, repo, ref, from_ref, check, force):
         contract.append(("written", relative, expected, mode))
     diff = set(ref_diff(repo, base, ref))
     target_tree, base_tree = tree(repo, ref), tree(repo, base)
-    factory_files = {relative for relative in diff | set(target_tree)
+    template_files = {relative for relative in diff | set(target_tree)
                      if relative not in CONTRACT and not owned(relative)}
-    blobs = project_blobs(repo, root, factory_files)
+    blobs = project_blobs(repo, root, template_files)
 
     def origin(relative):
         """The baseline, unless the project's copy is byte for byte an older release's: then that release."""
@@ -366,15 +366,15 @@ def update(root, repo, ref, from_ref, check, force):
         return next((tag for tag in reversed(trees) if trees[tag].get(relative, (None, None))[1] == mine), base)
 
     # Before 2.0.1 an update moved only the connectors, so an untouched older copy lags behind the
-    # baseline even where the factory has not changed it since.
-    stale = {relative for relative in factory_files - diff
+    # baseline even where the template has not changed it since.
+    stale = {relative for relative in template_files - diff
              if blobs.get(relative) not in (None, target_tree[relative][1]) and origin(relative) != base}
     decisions, merges = [], []
-    for relative in sorted((factory_files & diff) | stale):
+    for relative in sorted((template_files & diff) | stale):
         since = origin(relative)
         label, data, mode, proposal = plan_file(repo, root, since, ref, relative)
         if relative in MERGE:
-            # The project's instructions and settings win; the factory's change becomes a proposal.
+            # The project's instructions and settings win; the template's change becomes a proposal.
             ours = project_entry(root, relative)[1] or b""
             if label not in ("current", "kept-deleted"):
                 merged, _ = three_way(ours, ref_entry(repo, since, relative)[1] or b"",
@@ -382,7 +382,7 @@ def update(root, repo, ref, from_ref, check, force):
                 merges.append((relative, merged))
             continue
         decisions.append((label, relative, data, mode, proposal, None if since == base else since))
-    # A write must not go through a link into a file the project does not own; a factory symlink
+    # A write must not go through a link into a file the project does not own; a template symlink
     # (a skill link, added, replaced or removed) is itself the destination, so only its folders are checked.
     writes = [(relative, relative) for relative in CONTRACT] + [
         (str(Path(relative).parent) if label == "link" or (label == "removed" and (root / relative).is_symlink())
@@ -430,7 +430,7 @@ def update(root, repo, ref, from_ref, check, force):
         counts[label] = counts.get(label, 0) + 1
         if label in ("current", "kept-deleted", "skipped"):
             continue
-        note = {"review": " — the factory changed it and so did the project; compare by hand",
+        note = {"review": " — the template changed it and so did the project; compare by hand",
                 "conflict": f" — kept yours; proposal: {propose(relative, proposal) if proposal else 'none'}",
                 "merged": " — your edits kept"}.get(label, f" — untouched since {since}" if since else "")
         print(f"{label.upper() if check else label:<9} {relative}{note}")
@@ -440,7 +440,7 @@ def update(root, repo, ref, from_ref, check, force):
         if label == "removed" or (label == "link" and found.is_symlink()):
             found.unlink(missing_ok=True)
         if label == "removed":
-            # A folder the factory emptied goes too; one holding anything of the project's stays.
+            # A folder the template emptied goes too; one holding anything of the project's stays.
             for folder in found.parents:
                 if folder == root or not folder.is_dir() or any(folder.iterdir()):
                     break
@@ -454,7 +454,7 @@ def update(root, repo, ref, from_ref, check, force):
         if label != "removed" and label != "link" and executable(mode or "0"):
             found.chmod(0o755)
     for relative, merged in merges:
-        print(f"merge     {relative} — the factory changed it; proposal: {propose(relative, merged)}")
+        print(f"merge     {relative} — the template changed it; proposal: {propose(relative, merged)}")
     if any(label == "review" and relative.startswith(REVIEWED_FOLDERS) for label, relative, *_ in decisions):
         print(f"          your knowledge/ edits stay; compare: git -C {repo} diff {base} {ref} -- knowledge/")
     hints = [message for release, applies, message in MIGRATIONS
@@ -480,20 +480,20 @@ def update(root, repo, ref, from_ref, check, force):
     (root / MARKER).write_text(f"{ref} {commit}\n", encoding="utf-8")
     print(f"marker    {MARKER} → {ref} {commit[:12]}")
     print(f"next      tools/agents/adapter-check --root {root} --ref {ref}; the project's tests; "
-          f"then one commit: chore: update Æion Factory to {ref}")
+          f"then one commit: chore: update Æion Template to {ref}")
     return 1 if pending else 0
 
 
 def main():
     parser = argparse.ArgumentParser(
         prog="template-update",
-        description="Move an adopted project's factory files to a release, keeping the project's own content.",
+        description="Move an adopted project's template files to a release, keeping the project's own content.",
     )
     parser.add_argument("--from-ref",
-                        help="the factory reference the project adopted; default: .aeion-factory, else inferred")
+                        help="the template reference the project adopted; default: .aeion-template, else inferred")
     parser.add_argument("--ref", required=True, help="the target release tag, or main/develop for a branch")
-    parser.add_argument("--root", required=True, help="the project that adopted the factory")
-    parser.add_argument("--repo", default=str(FACTORY), help="the repository holding the reference")
+    parser.add_argument("--root", required=True, help="the project that adopted the template")
+    parser.add_argument("--repo", default=str(TEMPLATE), help="the repository holding the reference")
     parser.add_argument("--check", action="store_true", help="report what would change, write nothing")
     parser.add_argument("--force", action="store_true", help="allow moving to an older release")
     arguments = parser.parse_args()

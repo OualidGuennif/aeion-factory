@@ -4,7 +4,7 @@ title: "Knowledge index"
 description: "The entry point: to do X, open Y."
 status: stable
 generated:
-  by: aeion-factory/1.0
+  by: aeion-template/1.0
   at: 2026-10-20T00:00:00Z
 ---
 
@@ -14,7 +14,6 @@ Open only what the task needs. Each folder has its own `index.md`.
 
 | To | Open |
 | --- | --- |
-| Specify a product: one canonical `knowledge/spec/spec.json`, its gates, graph and cockpit | [axiomspec/index.md](axiomspec/index.md) (the AxiomSpec method) |
 | Follow a durable rule (engineering, security, specs, layout, UI, the owner's taste) | [policies/index.md](policies/index.md) |
 | Change a component | [components/index.md](components/index.md) (one spec per unit) |
 | Understand why a choice exists | [decisions/index.md](decisions/index.md) |

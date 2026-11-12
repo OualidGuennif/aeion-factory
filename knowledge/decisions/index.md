@@ -4,7 +4,7 @@ title: "Decisions index"
 description: "One ADR per durable decision."
 status: stable
 generated:
-  by: aeion-factory/1.0
+  by: aeion-template/1.0
   at: 2026-10-20T00:00:00Z
 ---
 
@@ -15,4 +15,5 @@ is superseded by a newer ADR, never edited away.
 
 | ADR | Status | Notes |
 | --- | --- | --- |
-| [ADR-001 Start from Æion Factory](ADR-001-start-from-aeion-factory.md) | stable | the structure, the loops, what is off by default |
+| [ADR-001 Start from Æion Template](ADR-001-start-from-aeion-template.md) | stable | the structure, the loops, what is off by default |
+| [ADR-002 AxiomSpec comes from aeion-framework](ADR-002-framework-optional.md) | stable | no embedded engine; framework mode on only while the owner sets an API address |

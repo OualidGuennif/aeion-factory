@@ -1,7 +1,7 @@
 ---
 type: Runbook
 title: "Claude Code, Codex, OpenCode, Pi, dsh, Devin, Droid, Antigravity and Grok"
-description: "One Æion Factory instruction/skill source, runtime-specific adapters, setup and explicitly bounded guarantees."
+description: "One Æion Template instruction/skill source, runtime-specific adapters, setup and explicitly bounded guarantees."
 status: stable
 review_after: 2027-01-29
 sources:
@@ -29,13 +29,13 @@ sources:
     title: "Codex hook registrations"
   - resource: ../../opencode.json
     title: "OpenCode native config"
-  - resource: ../../.opencode/plugins/factory/index.js
+  - resource: ../../.opencode/plugins/template/index.js
     title: "OpenCode plugin callbacks"
-  - resource: ../../.pi/extensions/factory/index.js
+  - resource: ../../.pi/extensions/template/index.js
     title: "Pi extension events"
-  - resource: ../../.dsh/factory.patch.yml
+  - resource: ../../.dsh/template.patch.yml
     title: "dsh patch overlay"
-  - resource: ../../.dsh/plugins/factory/index.js
+  - resource: ../../.dsh/plugins/template/index.js
     title: "dsh plugin guard and compaction"
   - resource: ../../.devin/config.json
     title: "Devin import settings"
@@ -45,18 +45,18 @@ sources:
     title: "Droid hook registrations"
   - resource: ../../.agents/hooks.json
     title: "Antigravity hook registrations"
-  - resource: ../../.grok/hooks/factory.json
+  - resource: ../../.grok/hooks/template.json
     title: "Grok hook registrations"
-  - resource: ../../.dsh/plugins/factory/compaction.js
+  - resource: ../../.dsh/plugins/template/compaction.js
     title: "compaction.js, which names this doc as its spec"
-  - resource: ../../.dsh/plugins/factory/seam.js
+  - resource: ../../.dsh/plugins/template/seam.js
     title: "seam.js, which names this doc as its spec"
   - resource: ../../.pi/README.md
     title: "Pi integration and its headless limitation"
   - resource: ../../.opencode/README.md
     title: "OpenCode integration and its live note"
 generated:
-  by: aeion-factory/1.6
+  by: aeion-template/1.6
   at: 2026-11-06
 verified:
   - at: 2026-11-06
@@ -76,22 +76,22 @@ with one line naming a missing agent binary and the setup link, exit 1.
 - Keep existing `.claude/skills` as the maintained skill source. Codex discovers symlinked folders
   under `.agents/skills`; OpenCode already discovers the Claude-compatible paths.
 - Codex local trusted projects enable `.codex/config.toml` and `.codex/hooks.json`. Its native
-  auto-compaction threshold is 250000. Codex has no compaction tool and ends its turn on a refused
+  auto-compaction threshold is 340000. Codex has no compaction tool and ends its turn on a refused
   compaction, so a compaction that comes before the verified handover runs, and closure is owed right
-  after it. That latch carries `resumed_in_closure` and survives a fall back under 250k; only a
+  after it. That latch carries `resumed_in_closure` and survives a fall back under 340k; only a
   verified handover releases it. Its rollout is not a stable token API.
-- OpenCode 2.1.4+ loads root `opencode.json` and `.opencode/plugins/factory/index.js`. The plugin reads each
-  step's tokens (`session.step.ended`) and compacts itself at 250k once the handover is verified. A live
+- OpenCode 2.1.4+ loads root `opencode.json` and `.opencode/plugins/template/index.js`. The plugin reads each
+  step's tokens (`session.step.ended`) and compacts itself at 340k once the handover is verified. A live
   2.2.0 run on 2026-11-02 compacted a 272k step on a turn with two tool calls; a one-tool turn can miss the
   trigger because that event arrives after the tool hook, so the next tool or turn sees it. See
   [the OpenCode integration note](../../.opencode/README.md).
 - Pi 1.4.0+ reads `AGENTS.md`/`CLAUDE.md` from its folder and every parent, and project
   `.agents/skills` from its folder or a parent, so the shared rules and skills need no copy. It loads
-  `.pi/extensions/factory/index.js` from **its start folder only**, once the project is trusted; started
-  elsewhere (`demo/`), pass it explicitly: `pi -e ../.pi/extensions/factory/index.js`. A headless run
+  `.pi/extensions/template/index.js` from **its start folder only**, once the project is trusted; started
+  elsewhere (`demo/`), pass it explicitly: `pi -e ../.pi/extensions/template/index.js`. A headless run
   (`pi -p`) is never a trusted project, so discovery loads nothing there: pass the extension explicitly,
-  `tools/agents/run pi -p -e .pi/extensions/factory/index.js "task"`, and add `--mode json` when a caller
-  needs the event stream. Without `-e`, a headless Pi session runs with no Æion Factory hook at all and
+  `tools/agents/run pi -p -e .pi/extensions/template/index.js "task"`, and add `--mode json` when a caller
+  needs the event stream. Without `-e`, a headless Pi session runs with no Æion Template hook at all and
   nothing in the transcript says so. The extension sends
   `before_agent_start` (once per session, and again after a compaction) as SessionStart, `tool_call` as
   PreToolUse (`{block: true, reason}`, also on any hook failure), `tool_result` as PostToolUse (feedback
@@ -100,20 +100,20 @@ with one line naming a missing agent binary and the setup link, exit 1.
   Bash, `read`/`edit`/`write`/`grep` name their file in `path`, `find` and `ls` are Glob and LS, and an
   unknown tool carrying a `command` string is a shell call. `tools/agents/run pi` requires 1.4.0+.
   Its compaction aborts the running turn, so once it is done the extension sends a message that resumes
-  the task from the handover. `tools/agents/run pi rpc` starts the factory's headless RPC runner instead
+  the task from the handover. `tools/agents/run pi rpc` starts the template's headless RPC runner instead
   (`tools/agents/pi-rpc`): one `pi --mode rpc` process with the extension, one prompt over JSONL, and
   the run waits through the settlement compaction and the resumed run, so headless Pi can compact and
   continue without a TUI; a Pi that exits before reading the prompt is one `pi-rpc:` line, exit 1.
   Print/JSON mode still does not compact (see the Pi note).
-  The extension sends `ctx.getContextUsage()` to the shared rule and calls `ctx.compact()` at 250k once
-  the handover is verified; the 250k alert names the checkpoint command, and closure admits a project's
+  The extension sends `ctx.getContextUsage()` to the shared rule and calls `ctx.compact()` at 340k once
+  the handover is verified; the 340k alert names the checkpoint command, and closure admits a project's
   Markdown docs. `agent_before_settle` sends Stop: a sign-off finding becomes a displayed
   `custom_message` entry with `continue: true` (one more request); the hook shows each finding once, so
   the next settlement passes. A terminal stop (`continue: false`: a stopped run, invalid or unavailable
   usage) settles at once and shows its reason in the UI, never as another request. A closure refusal
   repeats at most three times and then settles with the
   reason in the UI, so one alert cannot spin forever. The guards are qualified live headless (2026-11-01);
-  the 250k compaction is not (2026-11-02): the extension's `ctx.compact()` aborts the headless run and its
+  the compaction at the former 250k threshold is not (2026-11-02): the extension's `ctx.compact()` aborts the headless run and its
   error handler exits on a stale ctx, so no compaction entry is written, and `agent_before_settle` sends
   Stop without `observed_tokens`. See [the Pi note](../../.pi/README.md) and
   [Qualification and limits](#qualification-and-limits).
@@ -121,6 +121,12 @@ with one line naming a missing agent binary and the setup link, exit 1.
   Claude Code natively and Codex through its rollout transcript. Devin, Droid and Antigravity pass
   no transcript the hook can read and the OpenCode and Pi extensions pass no assistant text, so they get the
   written rule in `AGENTS.md` only; the adapter stays silent for them and keeps working.
+- The [doc gate](../components/doc-gate.md) runs in every harness through the adapter: each file an
+  edit, a write or a patch names meets it before the tool runs, and a doc counts as read through the
+  harness's read tool (as mapped above) or a shell reader (`cat`, `head`, `tail`, `sed`, …) on its path.
+  Codex reads only through its shell, and that is enough. A compact or resume SessionStart empties the
+  read set. OpenCode sends no compact SessionStart (only a startup before each prompt) and Antigravity
+  sends none, so there a doc read before a compaction still counts.
 - In a plain folder without git, every hook command falls back from `git rev-parse --show-toplevel`
   to the current folder, so the adapters run where the agent starts. Limit: a plain folder started
   from a subfolder, or nested in another repository, does not find `tools/agents/hook.py`; Codex and
@@ -137,18 +143,18 @@ with one line naming a missing agent binary and the setup link, exit 1.
 - Both adapters enforce supported Bash/path refusals, edit feedback and a verified handover,
   and a Pi compaction the checkpoint did not verify still runs and owes that closure after it
   instead of trapping the session at its window; the first refused compaction creates the skeleton to fill.
-  Native token stops and strict pre-request 300k admission are unqualified.
+  Native token stops and strict pre-request 390k admission are unqualified.
 - dsh (DeepSeek Harness, `dsh` 0.2.1+) reads `AGENTS.md`/`CLAUDE.md` and `.agents/skills` natively. It
   loads project plugins only from a patch: `tools/agents/run dsh [web|headless]` passes
-  `--patch .dsh/factory.patch.yml`, which loads `.dsh/plugins/factory/index.js` (the guards) and
+  `--patch .dsh/template.patch.yml`, which loads `.dsh/plugins/template/index.js` (the guards) and
   `compaction.js` (compaction, shared through `seam.js`); a dsh started without it is unguarded.
   - **Guards.** Each tool call goes to `tools/agents/hook.py dsh` as PreToolUse (a call without an agent
     is refused), with `ctx.tokenMeter.measure(session).totalTokens` as usage; `tools/post-execute` sends
     PostToolUse and `agent/turn-stopping` sends Stop. The plugin finds the hook above each session's own
-    directory, so one web server guards every factory project and leaves other folders alone. It runs
+    directory, so one web server guards every template project and leaves other folders alone. It runs
     that project's hooks only if it is the project the plugin ships in (the `tools/agents/run dsh`
     overlay) or one the profile trusts: `tools/agents/dsh-install --trust PROJECT` lists it in
-    `aeion-factory.trusted` beside the profile's link, read on each call. Any other project's calls are
+    `aeion-template.trusted` beside the profile's link, read on each call. Any other project's calls are
     refused with that command, so a planted `tools/agents/hook.py` never runs. `bash` is
     Bash, `read`/`write`/`edit` name `file_path`, `str_replace_editor` is Edit (Read for `view`), and
     `glob`/`grep` are Glob/Grep.
@@ -160,7 +166,7 @@ with one line naming a missing agent binary and the setup link, exit 1.
     the handover. A profile with no compaction service gets the advisory gate, and a token measure that
     falls by over half marks dsh's own compaction as SessionStart `source: compact`. dsh's pressure
     compaction (about 55% of a 1M window) is not refused. If compaction does not run, the messages say to
-    stop and resume from the verified handover. Live 2026-11-02: headless compacted at 250k and resumed.
+    stop and resume from the verified handover. Live 2026-11-02 (former 250k threshold): headless compacted and resumed.
   - **Sandbox.** It writes only below the launch folder: started in `demo/`, it cannot write the root's
     `.git` or `work/`, so start it at the root. Move home-folder state into the workspace, e.g.
     `DOCKER_CONFIG=$PWD/.docker` for `docker compose`.
@@ -177,9 +183,9 @@ with one line naming a missing agent binary and the setup link, exit 1.
   A payload without `session_id` uses one key per clone, so sign-off reminders are shared across
   that clone's Devin sessions. Each registration also passes its event name (`hook.py devin
   PreToolUse`), used when a payload names none, so such a payload is judged as that event instead
-  of stopping the session. Devin has no Æion Factory compaction checkpoint or token stop.
-- Droid, the CLI of Factory (factory.ai, a product separate from Æion Factory), reads `AGENTS.md`,
-  `.agents/skills` and `.factory/settings.json`. That is why Æion Factory's local state lives in
+  of stopping the session. Devin has no Æion Template compaction checkpoint or token stop.
+- Droid, the CLI of Factory (factory.ai, a product separate from Æion Template), reads `AGENTS.md`,
+  `.agents/skills` and `.factory/settings.json`. That is why Æion Template's local state lives in
   `.aeion/` and only Droid's config is tracked in `.factory/`. Its hooks send SessionStart,
   PreToolUse, PostToolUse and Stop to `tools/agents/hook.py droid`. Droid payloads and decisions
   are Claude-shaped; the adapter maps `Execute`, `Create` and `ApplyPatch` (patch text in
@@ -187,12 +193,12 @@ with one line naming a missing agent binary and the setup link, exit 1.
   names carrying a `command` string goes through the shell guard (and the path guard for a
   file). It refuses with `permissionDecision: deny`. As for Devin, each registration passes its
   event name and a payload without `session_id` uses one key per clone, so a missing field refuses
-  nothing by itself. Droid passes no token count, so it gets no 250k alert or 300k stop, but its
+  nothing by itself. Droid passes no token count, so it gets no 340k alert or 390k stop, but its
   PreCompact (documented with `trigger` manual or auto) reaches the adapter: a compaction before a
   verified handover runs, since Droid documents no way to refuse one, and its compact SessionStart
   then allows only closure (handover, `work/current.md`, docs, checkpoint) until the checkpoint passes.
 - Google Antigravity (the `agy` CLI and the IDE) reads `AGENTS.md` and `.agents/skills`, and
-  workspace hooks from `.agents/hooks.json` once the folder is trusted. One `aeion-factory` group
+  workspace hooks from `.agents/hooks.json` once the folder is trusted. One `aeion-template` group
   sends PreToolUse and PostToolUse (matcher `.*`) and Stop to `tools/agents/hook.py antigravity
   <event>`: the payload names no hook event or session, so the event is an argument and the
   session key is per clone, as for Devin. The adapter reads `toolCall {name, args}`, maps
@@ -221,9 +227,9 @@ with one line naming a missing agent binary and the setup link, exit 1.
   reads an empty answer as a refusal. Unverified until a live run: whether that `allow` also
   skips Antigravity's own approval prompt (a `run_command` with `SafeToAutoRun: false`); until
   then, assume it may. No compaction checkpoint or token stop.
-- Grok loads `AGENTS.md`, `CLAUDE.md` and the skill folders, and also `.claude/settings.json`. The Claude budget hook returns an empty object for a `hookEventName` envelope or a `chat_history.jsonl` or `updates.jsonl` transcript and does not latch STOPPED. Guards run from `.grok/hooks/factory.json`: `run_terminal_command`, `read_file` (`target_file`), `search_replace`, `write`, `grep` and `list_dir` (`target_directory`) map onto the shared guards; an unknown tool with a `command` string is a shell call. `signals.json` beside `updates.jsonl` or `chat_history.jsonl` supplies the 250k/300k size as `contextTokensUsed` (it falls after compaction; missing is unmeasured, zero is a real reading). `usage.json` in that directory is the billed ledger and is not the context size. `SessionStart` uses `systemMessage`. `PreCompact` cannot be refused; `PostCompact` resumes in closure when the handover was not verified. Not live-qualified.
-- Managed CLI launchers enter the repository root and check the exact-HEAD architecture baseline;
-  its absence is a warning, because installing the integrations needs the user's yes.
+- Grok loads `AGENTS.md`, `CLAUDE.md` and the skill folders, and also `.claude/settings.json`. The Claude budget hook returns an empty object for a `hookEventName` envelope or a `chat_history.jsonl` or `updates.jsonl` transcript and does not latch STOPPED. Guards run from `.grok/hooks/template.json`: `run_terminal_command`, `read_file` (`target_file`), `search_replace`, `write`, `grep` and `list_dir` (`target_directory`) map onto the shared guards; an unknown tool with a `command` string is a shell call. `signals.json` beside `updates.jsonl` or `chat_history.jsonl` supplies the 340k/390k size as `contextTokensUsed` (it falls after compaction; missing is unmeasured, zero is a real reading). `usage.json` in that directory is the billed ledger and is not the context size. `SessionStart` uses `systemMessage`. `PreCompact` cannot be refused; `PostCompact` resumes in closure when the handover was not verified. Not live-qualified.
+- Managed CLI launchers enter the repository root and start the agent with its adapter; they
+  install nothing, because installing needs the user's yes.
 - Raw command/MCP paths, host-managed/cloud orchestration and deliberate local modification are
   outside any complete isolation claim. Native project/hook trust and sandbox controls still apply.
 - The shared launcher also aligns `PWD`: OpenCode 2.1.4 uses it to select the run's location, so
@@ -258,7 +264,7 @@ qualification and setup commands are recorded below.
 ## Setup
 
 1. Follow the [getting-started checks](getting-started.md). Nothing beyond Python 3 is needed for the
-   factory's checks, graph and docs. Install the chosen native CLI separately; preserve user
+   template's checks, graph and docs. Install the chosen native CLI separately; preserve user
    account/provider settings.
 2. Claude: trust the workspace, then `tools/agents/run claude`.
 3. Codex: trust the project in native settings, review/enable the local hooks in `/hooks`, restart,
@@ -268,13 +274,13 @@ qualification and setup commands are recorded below.
    the native loader loads the local plugin directory. A database schema conflict can use
    `--isolated`, a separate ignored XDG profile; connect that profile's provider natively.
 5. Pi: `tools/agents/run pi` (1.4.0+). Trust the project when Pi asks, so `.pi/extensions/` loads;
-   the startup list names `factory`. Connect the provider in Pi's own settings.
+   the startup list names `template`. Connect the provider in Pi's own settings.
 6. Devin CLI: `devin` or `tools/agents/run devin` from the repository root. Approve the project
    hooks if Devin asks. Keep the model/provider choice in Devin's own user settings.
 7. Droid: `droid` or `tools/agents/run droid` from the repository root. Approve the project hooks
    if Droid asks; account and model stay in Droid's user settings (`~/.factory/`).
 8. Antigravity: `agy` or `tools/agents/run antigravity` from the repository root, or open the
-   folder in the IDE. Trust the folder so `.agents/hooks.json` loads; `/hooks` lists it. Grok: `grok` or `tools/agents/run grok` from the repository root. Trust the folder so `.grok/hooks/factory.json` loads; leave Claude hook compatibility on.
+   folder in the IDE. Trust the folder so `.agents/hooks.json` loads; `/hooks` lists it. Grok: `grok` or `tools/agents/run grok` from the repository root. Trust the folder so `.grok/hooks/template.json` loads; leave Claude hook compatibility on.
 
 The shared guards are basename/command-pattern safeguards. Codex native Bash and apply_patch
 payloads are normalized explicitly, including deleted/moved patch paths. OpenCode maps native
@@ -289,20 +295,20 @@ Edit semantics, so checking a patch never becomes an accidental full-file Read r
 
 ## Keeping a copy in step
 
-A project that adopts the factory carries its own copy of every connector: the shared adapter
+A project that adopts the template carries its own copy of every connector: the shared adapter
 (`tools/agents/hook.py`), the context rule (`tools/context/budget.py`), the launcher and the headless
 Pi RPC runner it dispatches to (`tools/agents/run` and `tools/agents/pi-rpc`), the Claude hooks, the dsh
 plugin, the Pi extension, the OpenCode plugin and the native registrations. A copy that drifts from
-the factory does not fail loudly. The harness keeps loading whatever is there, or silently drops a
+the template does not fail loudly. The harness keeps loading whatever is there, or silently drops a
 module that no longer parses, and nothing in the session says so: that is how a desktop dsh profile
-ran for hours with no factory hooks at all while the factory's own copy was green.
+ran for hours with no template hooks at all while the template's own copy was green.
 
-`tools/agents/adapter-check` compares a repository's copies with the factory copy the script ships
+`tools/agents/adapter-check` compares a repository's copies with the template copy the script ships
 in, by exact bytes:
 
 ```bash
 tools/agents/adapter-check                  # this repository
-tools/agents/adapter-check --root ../app    # a project that adopted the factory
+tools/agents/adapter-check --root ../app    # a project that adopted the template
 tools/agents/adapter-check --root ../app --strict --verbose
 tools/agents/adapter-check --root ../app --ref v1.8.4   # against a release, not this working tree
 tools/agents/adapter-check --root ../app --ref main     # or a branch somebody works from
@@ -327,17 +333,17 @@ release tree, and a copy that reads `0644` fails `MODE` even when every byte mat
 
 Configs a project merges with its own settings are not compared byte for byte —
 `.claude/settings.json`, `.codex/config.toml`, `.devin/config.json` — but their commands are: every
-script they name must exist. Run the check after adopting, after every factory upgrade, and in the
-project's own CI — from a pinned factory checkout with `--root`, never from the copy inside the
-project, which would compare the project with itself and pass; the factory's own run passes
-`--self`. The factory runs it on itself in `tools/factory-tests`, which catches a
+script they name must exist. Run the check after adopting, after every template upgrade, and in the
+project's own CI — from a pinned template checkout with `--root`, never from the copy inside the
+project, which would compare the project with itself and pass; the template's own run passes
+`--self`. The template runs it on itself in `tools/template-tests`, which catches a
 registration that points at a renamed or deleted module.
 
 The same check refuses a connector that steers a message without an identity or a role. dsh persists a
 steered message and its loader then rejects the whole session for holding one it cannot name, or a
 user/message without `role: "user"`, so a
 connector that omits the `id` or the `role` turns every session it touched into history that will not reopen.
-Every `steer({...})` the factory ships carries an `id` and `role: "user"`; a call without one is reported as
+Every `steer({...})` the template ships carries an `id` and `role: "user"`; a call without one is reported as
 `UNIDENTIFIED <file> — steer() without an id at line N` or `UNROLED <file> — steer()/inject()/followup() without a role at line N` and fails the check.
 
 ## Updating a project to a new release
@@ -347,8 +353,8 @@ specification is [Updating a project to a new release](template-update.md).
 
 ## Installing the desktop plugin at a tag
 
-The desktop profile composes the factory plugin as `./aeion-factory/index.js` and
-`./aeion-factory/compaction.js`, resolved inside the profile folder. A symlink from there into a
+The desktop profile composes the template plugin as `./aeion-template/index.js` and
+`./aeion-template/compaction.js`, resolved inside the profile folder. A symlink from there into a
 working tree makes the running app follow that tree: an uncommitted or broken edit reaches the app,
 and no review can say which version ran. This installs from a release tag instead.
 
@@ -361,8 +367,8 @@ cannot reach it, and make the loaded tag checkable.
 
 | Source | What is read | Owner | Freshness |
 | --- | --- | --- | --- |
-| git object store | every file of `.dsh/plugins/factory` at one tag | the release that made the tag | read at each install and check |
-| `<profile>/aeion-factory` | the link that decides the loaded plugin | this tool | at install |
+| git object store | every file of `.dsh/plugins/template` at one tag | the release that made the tag | read at each install and check |
+| `<profile>/aeion-template` | the link that decides the loaded plugin | this tool | at install |
 | `<profile>/cordis.patch.yml` | the module names the app loads | the dsh profile | never written here |
 
 ### Inputs
@@ -374,24 +380,24 @@ tools/agents/dsh-install --check   [--profile desktop] [--profile-dir PATH] [--r
 
 - `--tag`: an existing tag in the repository, the whole name (`v1.8.4`); annotated or lightweight.
 - `--trust`: a project whose hooks the plugin may run (repeatable); its root must hold
-  `tools/agents/hook.py`. It is recorded once, resolved, in `<profile>/aeion-factory.trusted`.
+  `tools/agents/hook.py`. It is recorded once, resolved, in `<profile>/aeion-template.trusted`.
 - `--profile`: a folder under the profile directory, default `desktop`.
 - `--profile-dir`: default `~/.dsh/profiles`; a test passes its own temporary one.
 - `--repo`: the repository the tag is read from, default this checkout.
-- `--force`: replace an `aeion-factory` entry that is not a symlink, after moving it aside.
+- `--force`: replace an `aeion-template` entry that is not a symlink, after moving it aside.
 
 ### Outputs
 
-- Install writes `<profile>/vendor/aeion-factory-<tag>/` with the tag's files, then makes
-  `<profile>/aeion-factory` a relative symlink to that folder. Prints `installed <tag> → <path>`.
+- Install writes `<profile>/vendor/aeion-template-<tag>/` with the tag's files, then makes
+  `<profile>/aeion-template` a relative symlink to that folder. Prints `installed <tag> → <path>`.
 - `--trust` prints `trusted <project>`, or refuses `<project> has no tools/agents/hook.py; …`.
 - `--check` prints `ok <tag>` when every file matches the tag, otherwise one `DRIFT <file>` or
   `MISSING <file>` line per difference.
 - Exit codes: 0 clean, 1 drift or an incomplete copy, 2 a refusal. Refusals name the condition:
-  `no such tag: <tag>`, `tag <tag> has no .dsh/plugins/factory`, `no profile directory: <path>`,
+  `no such tag: <tag>`, `tag <tag> has no .dsh/plugins/template`, `no profile directory: <path>`,
   `not a git repository: <path>`, `<entry> is not a link; move it aside or pass --force`
-  (with `--force`, a `aeion-factory.replaced` that already exists is itself refused), and from
-  `--check`, `no aeion-factory link in <path>` and `link does not name a vendored tag: <target>`.
+  (with `--force`, a `aeion-template.replaced` that already exists is itself refused), and from
+  `--check`, `no aeion-template link in <path>` and `link does not name a vendored tag: <target>`.
 
 ### Invariants
 
@@ -406,7 +412,7 @@ tools/agents/dsh-install --check   [--profile desktop] [--profile-dir PATH] [--r
 7. `--check` fails on a link that does not name a vendored tag —
    `test_check_refuses_a_foreign_link`.
 9. `--trust` records a project once, refuses one without hooks, and the plugin runs only trusted ones —
-   `test_trust_records_a_project_once_beside_the_link`, `test_trust_refuses_a_folder_without_the_factory_hooks`, `test_dsh.mjs`.
+   `test_trust_records_a_project_once_beside_the_link`, `test_trust_refuses_a_folder_without_the_template_hooks`, `test_dsh.mjs`.
 8. `adapter-check` reports a `steer` call without an id —
    `test_steer_without_id_is_unidentified`, without a role — `test_steer_without_role_is_unroled`,
    fails a copy that steers unidentified —
@@ -417,7 +423,7 @@ tools/agents/dsh-install --check   [--profile desktop] [--profile-dir PATH] [--r
 ### Determinism
 
 deterministic: bytes come from git objects, the file list is sorted, and nothing is stamped with a
-clock. `--force` renames to the fixed name `aeion-factory.replaced` rather than to a timestamp.
+clock. `--force` renames to the fixed name `aeion-template.replaced` rather than to a timestamp.
 
 ### Acceptance checks
 
@@ -425,7 +431,7 @@ clock. `--force` renames to the fixed name `aeion-factory.replaced` rather than 
 python3 tools/agents/tests/test_dsh_install.py
 python3 tools/agents/tests/test_adapter_check.py
 tools/agents/adapter-check --self
-tools/factory-tests
+tools/template-tests
 ```
 
 ### Out of scope
@@ -451,7 +457,7 @@ Real model-driven qualification is separate: it must show actual file changes an
 native guard denial in a disposable repository, not merely an agent's completion statement.
 The [dated OpenCode experiment](../references/opencode-context-qualification.md) covers a native
 278k-input call and refusal of an over-budget tool continuation in an isolated primary-HTTP profile.
-No full 250k handover/compaction cycle or absolute Æion Factory admission ceiling is claimed. Local hook failures
+No full 340k handover/compaction cycle or absolute Æion Template admission ceiling is claimed. Local hook failures
 can be advisory in some native events; retain native sandbox/permissions and check actual dispatch.
 Hosted/cloud orchestration and optional scheduled native actions require separate qualification.
 
@@ -462,7 +468,7 @@ and to edit a file: the first must be refused with the guard's reason, the secon
 covering doc. Devin cloud sessions do not read `.devin/` and are not covered.
 
 Pi is qualified live headless only through an explicit extension: `tools/agents/run pi -p --mode json
--e .pi/extensions/factory/index.js` injected the checkpoint profile (`Æion Factory pi checkpoint
+-e .pi/extensions/template/index.js` injected the checkpoint profile (`Æion Template pi checkpoint
 profile`) into the session, which only the extension writes, and the bash guard then refused an
 environment dump; without `-e`, discovery loads no extension in a headless run and the same session
 was unguarded. Trust-based discovery and the interactive path remain unqualified. The events, results and
@@ -508,7 +514,7 @@ no completed-tool event. This qualifies bounded tool dispatch, not long-context 
 Run disposable repositories outside a configured ancestor project: OpenCode inherits parent
 configuration and can select that ancestor's plugin instead of the instrumented local copy.
 
-### Live 250k qualification, 2026-11-02
+### Live qualification at the former 250k threshold, 2026-11-02
 
 Method: clean v1.9.1 worktrees, real calls with `deepseek-v4.1-flash` (1M window), a 1.0–1.35 MB
 context fill, a completed handover and a receipt created with
@@ -517,7 +523,7 @@ turn. Versions: dsh 0.2.1-rc.5 headless, Pi 1.4.0, OpenCode 2.2.0, Python 3.15.2
 
 | Harness | Live result |
 | --- | --- |
-| dsh headless (patched) | 1 MB user turn; the plugin's meter crossed 250k; compacted, epoch 1, resumed from the handover. PASS. |
+| dsh headless (patched) | 1 MB user turn; the plugin's meter crossed the former 250k threshold; compacted, epoch 1, resumed from the handover. PASS. |
 | OpenCode 2.2.0 | 272k-token step; a two-tool turn compacted (epoch 1, RECOVERING). A one-tool turn missed it: `session.step.ended` arrived after `tool.execute.after`, so the next tool or turn triggers. |
 | Pi 1.4.0 headless | 264,275 measured (1.9.2 re-run). The gate latched `HANDOVER_REQUIRED`; Stop now carries `observed_tokens`; the run exits 0 with a stderr notice and no compaction entry, and the verified handover is the next session's start. The 1.9.1 crash (mid-turn `ctx.compact()`, stale ctx, exit 1) is fixed. Headless auto-compaction remains unavailable in print mode; TUI compaction at settlement is implemented but not live-tested. |
 | Pi via `tools/agents/pi-rpc` | `tools/agents/run pi rpc --provider opencode-go --model deepseek-v4.1-flash --prompt-file <1.35 MB prompt>`. A 1,350,333-character prompt reached the gate; the model filled the handover and its checkpoint verified; at settlement the extension compacted (`tokensBefore` 288,668; usage input 262,002, output 1,753; cost $0.0403521), the `onComplete` resume message started a new run in the same process, and that run read the handover and continued. The runner was stopped during the resumed work, so this run does not prove exit 0; the fake-RPC compaction test and a real short RPC call cover the exit path. The compaction entry's `fromHook: false` means Pi generated the summary (the extension supplied none), not that Pi started the compaction. PASS for headless RPC compaction and resume. |

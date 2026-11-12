@@ -6,6 +6,82 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+## [4.0.0] - 2026-11-12
+
+- `tools/release/release --new-project` also refuses in a template clone whose origin still names
+  `aeion-factory`, so a clone made before the rename is never reset as a new project.
+
+- Framework mode keeps the gateway token on its path: a redirect from the service is reported, never
+  followed (urllib would have copied the token to its target), and `AEION_FRAMEWORK_TOKEN` goes only
+  over https or to this machine, which is reached directly, never through a proxy from the
+  environment. An address with a port that is not a number is refused, and a port that answers
+  something other than HTTP, or breaks the body of an error, no longer ends the hook. The `@req` briefs are
+  framed as data and stay one line each.
+
+- **Security fix in the skill pool refresh.** The rename had moved the paths of the reviewed security
+  patches to a source folder that does not exist, and a refresh would have shipped the eval viewer
+  and the instinct import unpatched without a word. The paths name the real folder again, and a patch
+  or annotation that matches no source file now stops the refresh. The published pool was never
+  affected; its patched lines now say "Æion Template security patch".
+
+- The README states the template's four principles (from the former `efficiency/`) and how the OKF
+  docs drive the doc gate; the README, `AGENTS.md`, `command.md` and getting-started name
+  `tools/aeion-settings`, framework mode and the doc gate. The technical watch now owns the framework
+  version range. Mentions of the architecture baseline the launchers no longer check are removed.
+
+- Framework mode reads the spec from aeion-framework 1.1.9. `tools/framework/axiom-api` (`ready`, `node`,
+  `context`, `trace`, `gaps`) prints the service's answers, pages bounded at 16 KiB by default and four
+  pages at most, problems as `CODE (status): detail`; it exits 3 when framework mode is off. Reading a
+  file annotated with `@req` loads the briefs of its requirements, and the doc gate waits for them as it
+  waits for a doc: an unreachable service keeps the file closed in `enforce`, an unknown ID never does.
+  New skill `framework` (the agent protocol: context before a change, `@req` kept true, disagreements to
+  `axiom-proposals.md`); `plan`, `spec`, `build` and `sign-off` point to it. ADR-002 records the decision.
+
+- **Breaking: the doc gate.** An edit of a file a doc covers (its `Spec:` header, or a doc listing it in
+  `sources`) is refused until each covering doc was read in the session, through the read tool or a
+  shell reader (`cat`, `head`, `tail`, `sed -n`, …). A compaction or a resume asks for the reading again;
+  docs, `knowledge/` and `work/` are never gated. Every harness gets it through the shared adapter. The
+  owner chooses `enforce` (default), `warn` or `off` with `tools/aeion-settings doc-gate`
+  (`knowledge/components/doc-gate.md`).
+
+- The owner's per-clone settings: `tools/aeion-settings` shows and sets the doc gate's mode
+  (`enforce`, the default, `warn`, `off`) and framework mode, which is on only while an aeion-framework
+  API address is set (`.aeion/settings.json`, never committed, or `AEION_FRAMEWORK_URL`). Connecting
+  probes `/health/ready` and accepts aeion-framework 1.1 up to 2.0 (tested 1.1.9). The guards refuse an
+  agent's write of the settings; session start names both, and hints when the code carries `@req` IDs
+  but no address is set.
+
+- **Breaking: Æion Factory is now Æion Template (`aeion-template`), with no compatibility for the old
+  names.** The repository is `OualidGuennif/aeion-template`; the release marker is `.aeion-template`;
+  the test runner is `tools/template-tests`; the harness folders are `.dsh/plugins/template/`,
+  `.dsh/template.patch.yml`, `.opencode/plugins/template/`, `.pi/extensions/template/` and
+  `.grok/hooks/template.json`; the launchd label is `com.aeion.template.outer`; the evals field is
+  `template`. Droid's `.factory/` is unchanged (it belongs to factory.ai). After updating an existing
+  project, by hand: rename `.aeion-factory` to `.aeion-template` (without it, template-update falls
+  back to the closest tag); run `tools/agents/dsh-install --tag <tag> --trust <project>` again and
+  restart the desktop; reinstall a loaded launchd schedule under its new label; start headless Pi with
+  `-e .pi/extensions/template/index.js`.
+
+- **Breaking: the embedded AxiomSpec engine is removed.** `tools/axiom/`, `knowledge/axiomspec/`, the
+  template's own `knowledge/spec/`, the generated cockpit (`docs/README.md`, `docs/generated/`,
+  `docs/views/`, the catalogs) and the `axiom` skill are gone, and nothing runs `axiom check` any more
+  (pre-commit, CI, the loops). AxiomSpec lives in aeion-framework; the engine here read format
+  `axiomspec/0.1`, which the framework no longer serves. Component docs in the OKF format are the spec
+  again (`knowledge/policies/specs-first.md`); the architecture diagrams are hand-written Mermaid.
+- `template-update` from 3.0.0 removes the engine and the vendored package a project never edited,
+  keeps the project's `knowledge/spec/` and `docs/` cockpit byte for byte, and names the
+  aeion-framework migration when the project has a spec.
+- **Breaking: `demo/` and `efficiency/` are removed.** The Holiday Planner stays readable at tag
+  v3.0.0. The adopt skill now carries the four promises and the seven adoption phases with their
+  checks; `tools/efficiency/bundle` and its CI step are gone, and so is the `architecture-answer` eval
+  task, which needed the engine.
+
+- **Breaking: the context rule moves to 340k/390k** (was 250k/300k) in every harness: the handover and
+  compaction at 340k, both forced at 390k. Native compaction windows follow (`.claude/settings.json`,
+  `.codex/config.toml`, `tools/context/run`); the Python hooks' messages name the thresholds from
+  `tools/context/budget.py`'s two constants, and the Pi and dsh plugins state the same values. A model
+  window under about 400k keeps native compaction.
+
 ## [3.0.0] - 2026-11-10
 
 - **Breaking: Graphify and Archify are removed.** The factory now needs only Python 3 and a coding

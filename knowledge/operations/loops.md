@@ -5,7 +5,7 @@ description: "Inner, middle and outer loops: the orchestrator's jobs, their mode
 status: stable
 review_after: 2027-01-29
 generated:
-  by: aeion-factory/1.0
+  by: aeion-template/1.0
   at: 2026-10-20T00:00:00Z
 sources:
   - resource: ../../tools/loops/process.py
@@ -29,8 +29,8 @@ sources:
 (`loops/prompts/`), model and thinking level (`loops/model-routing.md`), tool allowlist and
 permission mode. It reads only the loop settings of `env.local` (never the Decisions API secret)
 and runs nothing while `LOOPS_ENABLED` is not `true`; `--dry-run` prints the settings.
-Enabled jobs launch through `tools/context/run`: native compaction is fixed at 250k and the
-checkpoint profile applies. Strict pre-request 300k admission remains unqualified. See
+Enabled jobs launch through `tools/context/run`: native compaction is fixed at 340k and the
+checkpoint profile applies. Strict pre-request 390k admission remains unqualified. See
 [context safety](context-safety.md). Dry-run still launches nothing.
 
 | Job | Schedule | Writes |
@@ -85,8 +85,7 @@ the label, but the issue text stays its author's, so the job also refuses an iss
 `author_association` is not `OWNER`, `MEMBER` or `COLLABORATOR`. A dry run never
 fetches issue metadata and therefore cannot resolve issue severity.
 
-Optional GitHub agent workflows prepare a real architecture baseline before invoking the agent,
-use an explicit turn cap and a job deadline, and check out without persisting the token
-(`persist-credentials: false`), so the agent's git holds no credential. The outer loop sets
+Optional GitHub agent workflows use an explicit turn cap and a job deadline, and check out without
+persisting the token (`persist-credentials: false`), so the agent's git holds no credential. The outer loop sets
 `AEION_LOOP: outer`. They remain disabled until the owner configures them;
 their live dispatch/account/plugin behavior is a separate qualification from local loop fixtures.

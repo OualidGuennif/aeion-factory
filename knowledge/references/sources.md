@@ -1,11 +1,11 @@
 ---
 type: Reference
-title: "Sources behind Æion Factory"
+title: "Sources behind Æion Template"
 description: "The research, docs and tools the guide's recommendations rest on, with links."
 status: stable
 review_after: 2027-01-29
 generated:
-  by: aeion-factory/1.0
+  by: aeion-template/1.0
   at: 2026-10-20T00:00:00Z
 sources:
   - id: credits
@@ -13,7 +13,7 @@ sources:
     title: "Credits"
 ---
 
-Æion Factory is an orchestration layer over other people's ideas and tools. Thank you.
+Æion Template is an orchestration layer over other people's ideas and tools. Thank you.
 
 ## Tools and plugins
 
@@ -23,7 +23,7 @@ sources:
   https://github.com/anthropics/claude-plugins-official · https://code.claude.com/docs
 - **Addy Osmani, `agent-skills`** (MIT) — the skill anatomy (overview, when to use, process,
   rationalizations, red flags, verification) and the DEFINE → PLAN → BUILD → VERIFY → REVIEW → SHIP
-  lifecycle that Æion Factory's skills follow. https://github.com/addyosmani/agent-skills ·
+  lifecycle that Æion Template's skills follow. https://github.com/addyosmani/agent-skills ·
   "Own the Outer Loop" (2026).
 - **Vectorize, Hindsight** (MIT) — agent memory with retain, recall and reflect.
   https://github.com/vectorize-io/hindsight
@@ -31,8 +31,11 @@ sources:
   Eclipse JDT Language Server.
 - **Superpowers** informs the focused debugging, planning, test, verification and review updates;
   **context-mode** informs bounded output and recovery without bundling its runtime.
-- **AxiomSpec** (edition 0.3.0, vendored in [knowledge/axiomspec](../axiomspec/index.md)) supplies
-  the canonical specification format, gates, graph and query contracts that `tools/axiom` implements.
+- **aeion-framework** (AxiomSpec 1.1.9, MIT) owns the specification method, its engine and the
+  service the optional framework mode reads: [service interface](https://github.com/OualidGuennif/aeion-framework/blob/main/AxiomSpec/docs/19_SERVICE_INTERFACE.md),
+  [agent coding contract](https://github.com/OualidGuennif/aeion-framework/blob/main/AxiomSpec/docs/08_AGENT_CODING_CONTRACT.md),
+  [canonical model](https://github.com/OualidGuennif/aeion-framework/blob/main/AxiomSpec/docs/03_CANONICAL_MODEL.md),
+  [agent in a sandbox](https://github.com/OualidGuennif/aeion-framework/blob/main/playbooks/03_AGENT_IN_A_SANDBOX.md).
 
 ## Research and practice
 
@@ -65,6 +68,6 @@ the catalog retains original and materialized hashes. Other findings and changed
 files are not suppressed, and the complete pool remains in SAST scope.
 
 Two resources change behavior through reviewed security patches in tools/skills/patches.json,
-each bound to the exact original file hash and marked "Æion Factory security patch" in the code:
+each bound to the exact original file hash and marked "Æion Template security patch" in the code:
 the skill-creator eval viewer, its server and its page (Apache-2.0), and the continuous-learning-v2
 instinct import (MIT).

@@ -110,12 +110,22 @@ def script(root, name, event):
     result = subprocess.run([sys.executable, str(root / '.claude/hooks' / name)], cwd=root,
                             input=json.dumps(event), capture_output=True, text=True, timeout=4)
     if result.returncode == 2:
-        raise GuardRefusal((result.stderr or 'Æion Factory check refused this action')[:1500])
+        raise GuardRefusal((result.stderr or 'Æion Template check refused this action')[:1500])
     if result.returncode:
-        raise ValueError('Æion Factory checker failed')
+        raise ValueError('Æion Template checker failed')
     if name == 'session-start.py':
         return {'hookSpecificOutput': {'hookEventName': 'SessionStart', 'additionalContext': result.stdout.strip()}}
     return json.loads(result.stdout) if result.stdout.lstrip().startswith('{') else {}
+
+
+# The tools whose files the doc gate checks before an edit; apply_patch once per file it names.
+GATED_TOOLS = {'Edit', 'MultiEdit', 'Write', 'NotebookEdit', 'apply_patch'}
+
+
+def absolute(root, raw):
+    """A harness path as the hooks see it: relative paths are the project's."""
+    path = Path(raw)
+    return path if path.is_absolute() else root / path
 
 
 def edit_paths(event, provider=None):
@@ -316,12 +326,12 @@ def grok_usage(event):
     return used
 
 
-# Harnesses that report their context usage share Claude's 250k/300k rule (tools/context/budget.py).
+# Harnesses that report their context usage share Claude's 340k/390k rule (tools/context/budget.py).
 MEASURED = {'codex', 'opencode', 'pi', 'dsh', 'grok'}
 # dsh compaction is not dependable in every profile. A verified handover is enough to recover, so the user is
 # told to end the session instead of working past the gate waiting for a compaction that may never run.
 DSH_STOP = ('After the handover, work/current.md and the checkpoint verify, stop this dsh session and start a new '
-            'one from the handover if compaction does not start; do not keep working past 250k.')
+            f'one from the handover if compaction does not start; do not keep working past {budget.WARN_K}.')
 
 
 def dsh_advice(result):
@@ -426,7 +436,7 @@ def handle(root, provider, event):
         state = json.loads(file.read_text()) if file.exists() else {'epoch': 0, 'state': 'RUNNING', 'profile': provider}
         handover = budget.handover_path(root, session)
         if state.get('state') == 'STOPPED':
-            return fail(provider, name, 'Æion Factory session is stopped; use its handover in a new session.')
+            return fail(provider, name, 'Æion Template session is stopped; use its handover in a new session.')
         if name == 'SessionStart' and event.get('source') == 'compact':
             state.pop('checkpoint', None)
             state.pop('observed_tokens', None)
@@ -434,7 +444,7 @@ def handle(root, provider, event):
             state['state'] = 'RECOVERING'
             # A compaction let through before its handover owes the closure first thing after it. Codex, Droid
             # and Grok resume in closure; every other provider resumes editable, because frozen code over a check
-            # that already failed is the deadlock the 300k stopgap exists to prevent.
+            # that already failed is the deadlock the 390k stopgap exists to prevent.
             if state.pop('closure_owed', None):
                 state['closure_owed'] = 'due'
                 if provider in {'codex', 'droid', 'grok'}:
@@ -456,12 +466,12 @@ def handle(root, provider, event):
                 budget.ensure_handover(root, session)
                 state['closure_owed'] = 'pending'
                 budget.atomic(file, json.dumps(state, sort_keys=True) + '\n')
-                return {'systemMessage': f'Æion Factory: compaction before a verified handover; after it, write '
+                return {'systemMessage': f'Æion Template: compaction before a verified handover; after it, write '
                                          f'{handover.relative_to(root)} and verify the checkpoint before any other work.'}
             if not budget.ready(root, session, state):
                 budget.ensure_handover(root, session)
                 if state['state'] == 'COMPACT_REQUIRED':
-                    # 300k stopgap: code is frozen here, so a check that failed before this session could be neither
+                    # 390k stopgap: code is frozen here, so a check that failed before this session could be neither
                     # verified nor repaired. The compaction runs, the epoch stays editable, and the debt stays owed.
                     state['closure_owed'] = 'due'
                     # OpenCode sends no compact SessionStart, so this allowed compaction starts its own epoch.
@@ -471,7 +481,7 @@ def handle(root, provider, event):
                         state['epoch'] += 1
                         state['state'] = 'RECOVERING'
                     budget.atomic(file, json.dumps(state, sort_keys=True) + '\n')
-                    return {'systemMessage': f'Æion Factory 300k: compacting before a verified checkpoint; the closure '
+                    return {'systemMessage': f'Æion Template {budget.LIMIT_K}: compacting before a verified checkpoint; the closure '
                                              f'stays owed until the failing check is fixed and '
                                              f'{handover.relative_to(root)} is verified: '
                                              + budget.checkpoint_command(root, session)}
@@ -488,7 +498,7 @@ def handle(root, provider, event):
                         state['epoch'] += 1
                         state['state'] = 'RECOVERING'
                     budget.atomic(file, json.dumps(state, sort_keys=True) + '\n')
-                    return {'systemMessage': f'Æion Factory 250k: {handover.relative_to(root)} was verified and the '
+                    return {'systemMessage': f'Æion Template {budget.WARN_K}: {handover.relative_to(root)} was verified and the '
                                              f'tree moved since; compacting now, and the closure stays owed until a '
                                              f'fresh checkpoint: ' + budget.checkpoint_command(root, session)}
                 refusal = fail(provider, name, f'Fill {handover.relative_to(root)} and verify the docs before '
@@ -506,7 +516,7 @@ def handle(root, provider, event):
                 state['epoch'] += 1
                 state['state'] = 'RECOVERING'
                 budget.atomic(file, json.dumps(state, sort_keys=True) + '\n')
-            return {'systemMessage': f'Æion Factory verified handover: {handover.relative_to(root)}'}
+            return {'systemMessage': f'Æion Template verified handover: {handover.relative_to(root)}'}
         measured = {}
         # Droid measures nothing, so only the closure owed after its compaction applies the shared rule.
         owed = provider == 'droid' and state.get('closure_owed') == 'due'
@@ -544,21 +554,23 @@ def handle(root, provider, event):
                 reason = None
             if reason:
                 return fail(provider, name, reason)
-            # Pi, OpenCode and dsh start compaction themselves: at 250k once the checkpoint is verified, and at
-            # 300k always, because that compaction is what the stopgap uses to release a frozen session. A profile
+            # Pi, OpenCode and dsh start compaction themselves: at 340k once the checkpoint is verified, and at
+            # 390k always, because that compaction is what the stopgap uses to release a frozen session. A profile
             # that gives the plugin no compaction service (dsh web) is not asked to start one it cannot reach.
             if not event.get('compaction_unavailable') and (state['state'] == 'COMPACT_REQUIRED' \
                     or (state['state'] == 'HANDOVER_REQUIRED' and budget.ready(root, session, state))):
                 measured['aeion'] = {'compact': True}
     if name == 'SessionStart':
+        # The doc gate forgets what was read: a compacted or resumed context no longer holds it.
+        script(root, 'doc-gate.py', normalized)
         result = script(root, 'session-start.py', normalized)
         pointer = 'Handover' if handover.is_file() else 'Handover (created at the first refused compaction)'
-        context = (f'Æion Factory {provider} checkpoint profile. {pointer}: {handover.relative_to(root)}. '
-                   f'Checkpoint key: {session}. 250k handover/compact, 300k forced handover and compaction; not a strict ceiling.')
+        context = (f'Æion Template {provider} checkpoint profile. {pointer}: {handover.relative_to(root)}. '
+                   f'Checkpoint key: {session}. {budget.WARN_K} handover/compact, {budget.LIMIT_K} forced handover and compaction; not a strict ceiling.')
         if provider in {'devin', 'antigravity'}:
-            context = f'Æion Factory {provider} profile: shared guards and edit feedback; no compaction checkpoint or token stop.'
+            context = f'Æion Template {provider} profile: shared guards and edit feedback; no compaction checkpoint or token stop.'
         if provider == 'droid':
-            context = (f'Æion Factory droid profile: shared guards and edit feedback; no 250k alert. Before compacting, fill '
+            context = (f'Æion Template droid profile: shared guards and edit feedback; no {budget.WARN_K} alert. Before compacting, fill '
                        f'{handover.relative_to(root)}, update work/current.md and verify: {budget.checkpoint_command(root, session)}. '
                        f'A compaction without it owes that closure right after.')
         if provider == 'grok':
@@ -595,6 +607,10 @@ def handle(root, provider, event):
             tool = 'Edit' if event.get('tool_name') == 'apply_patch' else event.get('tool_name')
             data = {**event['tool_input'], 'file_path': path}
             script(root, 'guard-path.py', {'tool_name': tool, 'tool_input': data})
+            # Each file a patch or an edit touches meets the doc gate, as a native Edit does.
+            if tool in GATED_TOOLS:
+                script(root, 'doc-gate.py', {**normalized, 'tool_name': tool,
+                                             'tool_input': {**data, 'file_path': str(absolute(root, path))}})
         return alert({}, measured)
     if name == 'PostToolUse':
         messages = [measured['systemMessage']] if measured.get('systemMessage') else []
@@ -608,6 +624,26 @@ def handle(root, provider, event):
                 stream.write(path.relative_to(root).as_posix() + '\n')
             result = script(root, 'after-edit.py', {**normalized, 'tool_input': {'file_path': str(path)}})
             context = result.get('hookSpecificOutput', {}).get('additionalContext')
+            if context:
+                messages.append(context)
+        # The doc gate remembers the docs read through the read tool or the shell, and the docs written.
+        tool = event.get('tool_name')
+        if tool == 'Bash':
+            # A shell result may come without its input (Pi's tool_result); then nothing is recorded.
+            data = event.get('tool_input')
+            records = [{'tool_name': 'Bash', 'tool_input': data}] if isinstance(data, dict) and isinstance(data.get('command'), str) else []
+        elif tool == 'Read' or tool in GATED_TOOLS:
+            try:
+                raws = edited if tool in {'apply_patch', 'Edit', 'Write'} else edit_paths(event, provider)
+            except ValueError:
+                # A result without a path records nothing; the gate then asks for the read again.
+                raws = []
+            records = [{'tool_name': 'Edit' if tool == 'apply_patch' else tool,
+                        'tool_input': {'file_path': str(absolute(root, raw))}} for raw in raws]
+        else:
+            records = []
+        for record in records:
+            context = script(root, 'doc-gate.py', {**normalized, **record}).get('hookSpecificOutput', {}).get('additionalContext')
             if context:
                 messages.append(context)
         context = advisory(root, normalized).get('hookSpecificOutput', {}).get('additionalContext')
@@ -633,7 +669,7 @@ def main():
         if not isinstance(event, dict):
             raise ValueError('hook payload must be an object')
     except (ValueError, OSError, RecursionError):
-        print('Æion Factory hook payload invalid or oversized; action refused.', file=sys.stderr)
+        print('Æion Template hook payload invalid or oversized; action refused.', file=sys.stderr)
         return 2
     provider = sys.argv[1] if len(sys.argv) > 1 else None
     # Antigravity's payload names no hook event, so its registration passes the event as an argument; Devin and Droid
@@ -651,7 +687,7 @@ def main():
         result = fail(provider, event.get('hook_event_name'), str(error))
     except (ValueError, KeyError, IndexError, TypeError, OSError, RecursionError, subprocess.SubprocessError):
         name = event.get('hook_event_name') if isinstance(event, dict) else None
-        result = fail(provider, name, 'Æion Factory adapter verification unavailable; resolve the hook/check error before continuing.')
+        result = fail(provider, name, 'Æion Template adapter verification unavailable; resolve the hook/check error before continuing.')
     print(json.dumps(result))
     return 0
 

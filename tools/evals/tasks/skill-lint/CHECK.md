@@ -6,8 +6,8 @@
 - Expected: `PASS: 17 skills` then `exit=0`
 - Command: `python3 tools/skills/tests/test_lint.py`
 - Expected: exits 0 and reports a test that builds a bad fixture and sees exit 1
-- Command: `tools/factory-tests`
-- Expected: `factory-tests: PASS`, with `tools/skills/tests/test_lint.py` listed
+- Command: `tools/template-tests`
+- Expected: `template-tests: PASS`, with `tools/skills/tests/test_lint.py` listed
 - Human judgment: the failure message names the folder, not just the rule.
 
 ## Failure

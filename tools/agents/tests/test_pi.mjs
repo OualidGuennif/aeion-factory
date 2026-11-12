@@ -4,19 +4,19 @@ import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, write
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import extension from '../../../.pi/extensions/factory/index.js';
+import extension from '../../../.pi/extensions/template/index.js';
 
 const root = fileURLToPath(new URL('../../../', import.meta.url));
-const sessionID = `factory-pi-extension-test-${process.pid}`;
+const sessionID = `template-pi-extension-test-${process.pid}`;
 
 // The extension runs only the hook.py shipped beside it, so a stand-in project gets its own copy of it.
 const copies = new Map();
 async function standIn(prefix, hook) {
   const folder = mkdtempSync(join(tmpdir(), prefix));
-  cpSync(join(root, '.pi/extensions/factory'), join(folder, '.pi/extensions/factory'), { recursive: true });
+  cpSync(join(root, '.pi/extensions/template'), join(folder, '.pi/extensions/template'), { recursive: true });
   mkdirSync(join(folder, 'tools/agents'), { recursive: true });
   writeFileSync(join(folder, 'tools/agents/hook.py'), hook);
-  copies.set(folder, (await import(pathToFileURL(join(folder, '.pi/extensions/factory/index.js')).href)).default);
+  copies.set(folder, (await import(pathToFileURL(join(folder, '.pi/extensions/template/index.js')).href)).default);
   return folder;
 }
 
@@ -83,7 +83,7 @@ test('Pi marks its own compaction as native so the shared rule lets it through',
     'import json, sys',
     'event = json.load(sys.stdin)',
     "open('events.jsonl', 'a').write(json.dumps(event) + '\\n')",
-    "print(json.dumps({'systemMessage': 'Æion Factory: compaction before a verified handover; the closure is owed after it.'}))",
+    "print(json.dumps({'systemMessage': 'Æion Template: compaction before a verified handover; the closure is owed after it.'}))",
   ].join('\n') + '\n');
   const { handlers, ctx } = load(folder);
   const native = { ...ctx, sessionManager: { getSessionId: () => `${sessionID}-native` } };
@@ -94,22 +94,22 @@ test('Pi marks its own compaction as native so the shared rule lets it through',
   assert.equal(event.hook_event_name, 'PreCompact');
 });
 
-test('Pi gives the factory context once per session, and again after a compaction', async () => {
+test('Pi gives the template context once per session, and again after a compaction', async () => {
   const { handlers, ctx } = load(root);
   const first = await handlers.before_agent_start({ type: 'before_agent_start', messageType: 'user', prompt: 'hi' }, ctx);
-  assert.match(first.message.content, /Æion Factory pi checkpoint profile/);
+  assert.match(first.message.content, /Æion Template pi checkpoint profile/);
   assert.equal(await handlers.before_agent_start({ type: 'before_agent_start', messageType: 'user', prompt: 'again' }, ctx), undefined);
   await handlers.session_compact({ type: 'session_compact', reason: 'manual' }, ctx);
   assert.ok(await handlers.before_agent_start({ type: 'before_agent_start', messageType: 'user', prompt: 'after' }, ctx));
 });
 
-test('Pi past 250k is held to closure by its own context measure', async () => {
+test('Pi past 340k is held to closure by its own context measure', async () => {
   const { handlers, ctx } = load(root);
-  const measured = { ...ctx, sessionManager: { getSessionId: () => `${sessionID}-250k` }, getContextUsage: () => ({ tokens: 260000, contextWindow: 1000000, percent: 26 }) };
+  const measured = { ...ctx, sessionManager: { getSessionId: () => `${sessionID}-340k` }, getContextUsage: () => ({ tokens: 350000, contextWindow: 1000000, percent: 26 }) };
   const write = { type: 'tool_call', toolCallId: 'call-4', toolName: 'write', input: { path: `${root}/src.py`, content: 'x' } };
   const refused = await handlers.tool_call(write, measured);
   assert.equal(refused.block, true);
-  assert.match(refused.reason, /250k alert/);
+  assert.match(refused.reason, /340k alert/);
 });
 
 test('Pi never starts compaction from a tool result', async () => {
@@ -119,7 +119,7 @@ test('Pi never starts compaction from a tool result', async () => {
   const { handlers, ctx, sent } = load(folder);
   let compacted = 0;
   const result = { type: 'tool_result', toolCallId: 'call-5', toolName: 'bash', input: { command: 'true' }, content: [], isError: false };
-  await handlers.tool_result(result, { ...ctx, getContextUsage: () => ({ tokens: 260000 }), compact: () => { compacted += 1; } });
+  await handlers.tool_result(result, { ...ctx, getContextUsage: () => ({ tokens: 350000 }), compact: () => { compacted += 1; } });
   rmSync(folder, { recursive: true, force: true });
   assert.equal(compacted, 0);
   assert.equal(sent.length, 0);
@@ -134,18 +134,18 @@ test('Pi sends its context measure to the Stop hook at settlement', async () => 
   ].join('\n') + '\n');
   const { handlers, ctx } = load(folder);
   await handlers.agent_before_settle({ type: 'agent_before_settle', entries: [], continue: false },
-    { ...ctx, getContextUsage: () => ({ tokens: 260000 }) });
+    { ...ctx, getContextUsage: () => ({ tokens: 350000 }) });
   const event = JSON.parse(readFileSync(join(folder, 'events.jsonl'), 'utf8').trim());
   rmSync(folder, { recursive: true, force: true });
   assert.equal(event.hook_event_name, 'Stop');
-  assert.equal(event.observed_tokens, 260000);
+  assert.equal(event.observed_tokens, 350000);
 });
 
 test('Pi bounds a repeated closure refusal instead of looping one alert', async () => {
-  // Regression: a settlement that never verified its checkpoint re-injected the same 250k alert forever.
+  // Regression: a settlement that never verified its checkpoint re-injected the same 340k alert forever.
   // The closure refusal is a terminal stop too, and it is the one that still earns a few more requests.
   const folder = await standIn('pi-settle-loop-',
-    'import json\nprint(json.dumps({"continue": False, "stopReason": "Æion Factory 250k alert: fill the handover and verify the checkpoint"}))\n');
+    'import json\nprint(json.dumps({"continue": False, "stopReason": "Æion Template 340k alert: fill the handover and verify the checkpoint"}))\n');
   const { handlers, notes, ctx } = load(folder);
   const outcomes = [];
   for (let attempt = 0; attempt < 4; attempt += 1) {
@@ -249,7 +249,7 @@ test('Pi settles a terminal stop instead of turning it into another request (Pi 
   const folder = await standIn('pi-stop-terminal-', [
     'import json, sys',
     'event = json.load(sys.stdin)',
-    "print(json.dumps({'continue': False, 'stopReason': 'Æion Factory context run is stopped'} if event['hook_event_name'] == 'Stop' else {}))",
+    "print(json.dumps({'continue': False, 'stopReason': 'Æion Template context run is stopped'} if event['hook_event_name'] == 'Stop' else {}))",
   ].join('\n') + '\n');
   const { handlers, notes, ctx } = load(folder);
   const outcomes = [];
@@ -259,7 +259,7 @@ test('Pi settles a terminal stop instead of turning it into another request (Pi 
   rmSync(folder, { recursive: true, force: true });
   // Settling twice, never a new request, and the user is told why the run ended.
   assert.deepEqual(outcomes, [undefined, undefined]);
-  assert.deepEqual(notes.map((note) => note[1]), ['Æion Factory context run is stopped', 'Æion Factory context run is stopped']);
+  assert.deepEqual(notes.map((note) => note[1]), ['Æion Template context run is stopped', 'Æion Template context run is stopped']);
 });
 
 test('Pi forwards a fetched result and appends the prompt-defense warning', async () => {

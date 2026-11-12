@@ -25,7 +25,7 @@ def validate(record):
     """Reject unusable records before they can alter the reported statistics."""
     if not isinstance(record, dict):
         raise ValueError("record must be an object")
-    for key in ("task", "harness", "factory", "recorded_at"):
+    for key in ("task", "harness", "template", "recorded_at"):
         if not isinstance(record.get(key), str):
             raise ValueError(f"{key} must be a string")
     for key in ("task", "harness"):

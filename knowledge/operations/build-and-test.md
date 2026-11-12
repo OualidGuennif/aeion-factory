@@ -5,7 +5,7 @@ description: "Every gate of this repository, where to run it, and the language s
 status: stable
 review_after: 2027-01-29
 generated:
-  by: aeion-factory/1.0
+  by: aeion-template/1.0
   at: 2026-10-20T00:00:00Z
 sources:
   - id: ci
@@ -28,10 +28,8 @@ sources:
     title: "jdtls-launch, which names this doc as its spec"
   - resource: ../../tools/claude-plugins/native-lsp/scripts/tsc-lsp
     title: "tsc-lsp, which names this doc as its spec"
-  - resource: ../../tools/efficiency/bundle
-    title: "bundle, which names this doc as its spec"
-  - resource: ../../tools/factory-tests
-    title: "factory-tests, which names this doc as its spec"
+  - resource: ../../tools/template-tests
+    title: "template-tests, which names this doc as its spec"
   - resource: ../../tools/git-hooks/pre-commit
     title: "pre-commit, which names this doc as its spec"
   - resource: ../../tools/knowledge/orphans
@@ -44,10 +42,6 @@ sources:
 
 CI action revisions are pinned to upstream commit SHAs; review upstream changes before updating them.
 
-The standalone efficiency bundle includes the CRAFTED principles as well as the seven chapters.
-Rebuild it with `tools/efficiency/bundle` after editing those sources or `CREDITS.md`; CI rebuilds
-it and fails when the committed bundle differs.
-
 | Layer | Gate | From |
 | --- | --- | --- |
 | Knowledge | `tools/knowledge/knowledge-check` | the root |
@@ -55,10 +49,8 @@ it and fails when the committed bundle differs.
 | Knowledge reachability | `tools/knowledge/orphans`: a document nothing links | the root |
 | Docs and code links | `tools/knowledge/doc-links` (`--diff origin/develop` before a push) | the root |
 | Comments, file size, caps | `tools/repo-health/repo-health` | the root |
-| The factory's own test suites (hooks, tools, evals, push gate, release, context, the axiom toolkit, adapters including the OpenCode, Pi and dsh plugins and the Pi RPC bridge, connector drift, the tag-pinned desktop install, loops) | `tools/factory-tests` (each suite also runs alone; the script lists them) | root; Node 18+ for the three JavaScript adapter suites, reported NOT RUN without it |
-| Connector copies | `tools/agents/adapter-check` (`--root` for a project that adopted the factory) | the root |
-| Efficiency bundle | `tools/efficiency/bundle`, then `git diff --exit-code efficiency/efficiency-bundle.md` | the root |
-| Spec, graph and cockpit | `tools/axiom/axiom check` (structure, references, dangling IDs, generated docs current); `tools/axiom/axiom validate` for design readiness | the root; Python 3 only |
+| The template's own test suites (hooks, tools, evals, push gate, release, context, the owner's settings, adapters including the OpenCode, Pi and dsh plugins and the Pi RPC bridge, connector drift, the tag-pinned desktop install, loops) | `tools/template-tests` (each suite also runs alone; the script lists them) | root; Node 18+ for the three JavaScript adapter suites, reported NOT RUN without it |
+| Connector copies | `tools/agents/adapter-check` (`--root` for a project that adopted the template) | the root |
 | Your code | add your build, lint and test commands here, copied from CI | |
 
 `stale` and `orphans` reject a missing root or `knowledge/` directory with a nonzero exit;
@@ -66,14 +58,17 @@ it and fails when the committed bundle differs.
 A valid knowledge directory with no dated documents still passes `stale`.
 
 The pre-commit (`git config core.hooksPath tools/git-hooks`) runs `knowledge-check`, `doc-links`,
-`repo-health` and `axiom check`. The pre-push refuses a push of `develop` without a recorded `Review: OK`
-and any direct push to `main`. CI runs those four checks, `factory-tests`, the efficiency-bundle
-check and security scans on pushes to `main` or `develop` and pull requests targeting either; the
+and `repo-health`. The pre-push refuses a push of `develop` without a recorded `Review: OK`
+and any direct push to `main`. CI runs those three checks, `template-tests` and security scans on pushes to `main` or `develop` and pull requests targeting either; the
 Semgrep container is pinned by digest like the actions.
-`stale` and `orphans` remain manual checks; CI exercises their fixtures through `factory-tests`.
+`stale` and `orphans` remain manual checks; CI exercises their fixtures through `template-tests`.
 
-Many people run Æion Factory in a plain folder, without git. The link and health checks, the context
-fingerprint, the knowledge graph (`tools/axiom/axiom`) and the session-start summary then walk the files on disk (skipping `.git`, `.aeion`,
+The session start also names the doc gate's mode and framework mode, and, when the code carries
+`@req` IDs but no framework address is set, how the owner connects it
+([framework mode](../components/framework-mode.md)).
+
+Many people run Æion Template in a plain folder, without git. The link and health checks, the context
+fingerprint, the session-start summary and its `@req` search then walk the files on disk (skipping `.git`, `.aeion`,
 dependencies, caches, the root's build output such as `dist/` or `target/`, and desktop files such as
 `.DS_Store`; `.claude/hooks/project_files.py`). Each folder's `.gitignore` applies to it and below for
 its simple rules (a name or glob, optionally ending in `/`); negations and paths with a slash are not
@@ -93,7 +88,7 @@ path has nothing recorded and passes. The path guard and after-edit also cover M
 NotebookEdit (`notebook_path`). `repo-health --json` exposes its source suffix
 set and selected file count; its caps are not language-aware lint or security coverage.
 
-Policy hooks require Claude Code 2.1.295+ for `onFailure: block`; the Bash/path guard command timeout is three
+Policy hooks require Claude Code 2.1.295+ for `onFailure: block`; the Bash/path guard and the [doc gate](../components/doc-gate.md) command timeout is three
 seconds (context hooks use five; native adapter hooks use fifteen). Independently, the after-edit hook limits each checker to two seconds for fast feedback.
 Nonzero exits, missing executables and timeouts produce exit 2 and at most 15 lines
 of diagnostics. Direct script tests do not qualify live harness dispatch or runtime isolation.
@@ -130,16 +125,15 @@ type error reported then cleared, and the same after a fresh session. Roll back 
 `claude plugin uninstall native-lsp@aeion-local --scope project`.
 
 Agent-specific setup and qualification: [compatibility](agent-compatibility.md). Integration pins
-require Python 3.12+ excluding 3.14.1. `knowledge-check` also validates public root/setup docs and
-the portable efficiency bundle; its bundled Superpowers notice is self-contained.
+require Python 3.12+ excluding 3.14.1. `knowledge-check` also validates public root/setup docs.
 
 ## Passive pool checks
 
-The seventeen native skills are checked by `tools/skills/lint`: `name` against its folder, a
+The eighteen native skills are checked by `tools/skills/lint`: `name` against its folder, a
 description of at most 1024 characters that names its trigger, a body of at most 150 lines and no
-duplicate name; `tools/skills/tests/test_lint.py` is in `tools/factory-tests`.
+duplicate name; `tools/skills/tests/test_lint.py` is in `tools/template-tests`.
 
-`tools/factory-tests` runs `tools/skills/tests/test_pool.py` and the real offline pool check
+`tools/template-tests` runs `tools/skills/tests/test_pool.py` and the real offline pool check
 `python3 tools/skills/pool.py check`. They verify materialized files, support resources, license
 restrictions, local-edit preservation and operation without third-party/lifecycle folders.
 The root `skills/` data preserves upstream formatting; authored-source size/comment heuristics

@@ -1097,7 +1097,7 @@
     }
 
     function escapeHtml(text) {
-      // Æion Factory security patch: quotes are escaped too, so the result is safe inside an attribute.
+      // Æion Template security patch: quotes are escaped too, so the result is safe inside an attribute.
       return String(text === null || text === undefined ? "" : text).replace(/&/g, "&amp;").replace(/</g, "&lt;")
         .replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
     }
@@ -1129,11 +1129,11 @@
       html += "<h2 style='font-family: Poppins, sans-serif; margin-bottom: 0.5rem;'>Benchmark Results</h2>";
       html += "<p style='color: var(--text-muted); font-size: 0.875rem; margin-bottom: 1.25rem;'>";
       if (metadata.skill_name) html += "<strong>" + escapeHtml(metadata.skill_name) + "</strong> &mdash; ";
-      // Æion Factory security patch: escaped.
+      // Æion Template security patch: escaped.
       if (metadata.timestamp) html += escapeHtml(metadata.timestamp) + " &mdash; ";
-      // Æion Factory security patch: escaped.
+      // Æion Template security patch: escaped.
       if (metadata.evals_run) html += "Evals: " + escapeHtml([].concat(metadata.evals_run).join(", ")) + " &mdash; ";
-      // Æion Factory security patch: escaped.
+      // Æion Template security patch: escaped.
       html += escapeHtml(metadata.runs_per_configuration || "?") + " runs per configuration";
       html += "</p>";
 
@@ -1172,7 +1172,7 @@
       html += "<tr><td><strong>Pass Rate</strong></td>";
       html += "<td>" + fmtStat(a.pass_rate, true) + "</td>";
       html += "<td>" + fmtStat(b.pass_rate, true) + "</td>";
-      // Æion Factory security patch: escaped.
+      // Æion Template security patch: escaped.
       html += '<td class="' + deltaClass(delta.pass_rate) + '">' + escapeHtml(delta.pass_rate || "—") + "</td></tr>";
 
       // Time (only show row if data exists)
@@ -1180,7 +1180,7 @@
         html += "<tr><td><strong>Time (s)</strong></td>";
         html += "<td>" + fmtStat(a.time_seconds, false) + "</td>";
         html += "<td>" + fmtStat(b.time_seconds, false) + "</td>";
-        // Æion Factory security patch: escaped.
+        // Æion Template security patch: escaped.
         html += '<td class="' + deltaClass(delta.time_seconds) + '">' + escapeHtml(delta.time_seconds ? delta.time_seconds + "s" : "—") + "</td></tr>";
       }
 
@@ -1189,7 +1189,7 @@
         html += "<tr><td><strong>Tokens</strong></td>";
         html += "<td>" + fmtStat(a.tokens, false) + "</td>";
         html += "<td>" + fmtStat(b.tokens, false) + "</td>";
-        // Æion Factory security patch: escaped.
+        // Æion Template security patch: escaped.
         html += '<td class="' + deltaClass(delta.tokens) + '">' + escapeHtml(delta.tokens || "—") + "</td></tr>";
       }
 
@@ -1225,7 +1225,7 @@
             if (configRuns.length === 0) continue;
 
             const rowClass = ci === 0 ? "benchmark-row-with" : "benchmark-row-without";
-            // Æion Factory security patch: escaped once, used twice.
+            // Æion Template security patch: escaped once, used twice.
             const configLabel = escapeHtml(config.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()));
 
             for (const run of configRuns) {
@@ -1233,12 +1233,12 @@
               const prClass = r.pass_rate >= 0.8 ? "benchmark-delta-positive" : r.pass_rate < 0.5 ? "benchmark-delta-negative" : "";
               html += '<tr class="' + rowClass + '">';
               html += "<td>" + configLabel + "</td>";
-              // Æion Factory security patch: escaped.
+              // Æion Template security patch: escaped.
               html += "<td>" + escapeHtml(run.run_number) + "</td>";
-              // Æion Factory security patch: escaped.
+              // Æion Template security patch: escaped.
               html += '<td class="' + prClass + '">' + ((r.pass_rate || 0) * 100).toFixed(0) + "% (" + escapeHtml(r.passed || 0) + "/" + escapeHtml(r.total || 0) + ")</td>";
               if (hasTime) html += "<td>" + (r.time_seconds != null ? r.time_seconds.toFixed(1) : "—") + "</td>";
-              // Æion Factory security patch: escaped.
+              // Æion Template security patch: escaped.
               if (hasErrors) html += "<td>" + escapeHtml(r.errors || 0) + "</td>";
               html += "</tr>";
             }
@@ -1299,7 +1299,7 @@
                   if (exp) {
                     const cls = exp.passed ? "benchmark-delta-positive" : "benchmark-delta-negative";
                     const icon = exp.passed ? "\u2713" : "\u2717";
-                    // Æion Factory security patch: escaped for the attribute.
+                    // Æion Template security patch: escaped for the attribute.
                     html += '<span class="' + cls + '" title="Run ' + escapeHtml(run.run_number) + ': ' + escapeHtml(exp.evidence || "") + '">' + icon + "</span> ";
                   } else {
                     html += "— ";

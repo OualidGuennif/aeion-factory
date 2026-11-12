@@ -114,6 +114,10 @@ for candidate in paths:
     if event.get("tool_name") not in {"Read", "Grep", "Glob"} and re.search(
             r"(^|/)\.git/(config|config\.worktree|worktrees/[^/]+/config\.worktree)$", posixpath.normpath(candidate).lower()):
         deny("the git config file is changed with git config, never edited directly")
+    # The doc gate and the framework address are the owner's, like aeion.mode: an agent never sets them.
+    if event.get("tool_name") not in {"Read", "Grep", "Glob"} and re.search(
+            r"(^|/)\.aeion/settings\.json$", posixpath.normpath(candidate).lower()):
+        deny("the doc gate and the framework address are the owner's settings; the owner runs tools/aeion-settings")
 target = Path(paths[-1]) if path else Path(cwd).resolve()
 # A loop reads and writes its own project only; the retro also reads this project's session transcripts.
 loop = os.environ.get("AEION_LOOP")

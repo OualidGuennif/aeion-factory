@@ -276,7 +276,7 @@ def generate_html(
     if benchmark:
         embedded["benchmark"] = benchmark
 
-    # Æion Factory security patch: escaped so an eval output holding "</script>" cannot close the script element and run its own.
+    # Æion Template security patch: escaped so an eval output holding "</script>" cannot close the script element and run its own.
     data_json = json.dumps(embedded).replace("&", "\\u0026").replace("<", "\\u003c").replace(">", "\\u003e")
 
     return template.replace("/*__EMBEDDED_DATA__*/", f"const EMBEDDED_DATA = {data_json};")
@@ -331,7 +331,7 @@ class ReviewHandler(BaseHTTPRequestHandler):
         super().__init__(*args, **kwargs)
 
     def _same_origin(self) -> bool:
-        # Æion Factory security patch: a page from another site, or a hostname rebound to 127.0.0.1, must not read or write feedback.
+        # Æion Template security patch: a page from another site, or a hostname rebound to 127.0.0.1, must not read or write feedback.
         port = self.server.server_address[1]
         hosts = {f"localhost:{port}", f"127.0.0.1:{port}"}
         origin = self.headers.get("Origin")
@@ -369,7 +369,7 @@ class ReviewHandler(BaseHTTPRequestHandler):
             self.send_error(404)
 
     def do_POST(self) -> None:
-        # Æion Factory security patch: a JSON body cannot come cross-site without a preflight, which this server never answers.
+        # Æion Template security patch: a JSON body cannot come cross-site without a preflight, which this server never answers.
         if not self._same_origin() or self.headers.get_content_type() != "application/json":
             self.send_error(403)
         elif self.path == "/api/feedback":

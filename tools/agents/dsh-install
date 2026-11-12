@@ -2,7 +2,7 @@
 # Spec: knowledge/operations/agent-compatibility.md
 """Install the desktop dsh plugin from a release tag, and check the tag that is loaded.
 
-The desktop profile composes ./aeion-factory/index.js and ./aeion-factory/compaction.js from inside
+The desktop profile composes ./aeion-template/index.js and ./aeion-template/compaction.js from inside
 its own folder. Pointed at a working tree, the running app follows every edit made there, so a
 broken develop reaches the app and no review can name the version that ran. This copies one tag's
 plugin into the profile and links the entry at that copy.
@@ -21,9 +21,9 @@ import sys
 import tempfile
 from pathlib import Path
 
-FACTORY = Path(__file__).resolve().parents[2]
-PLUGIN = ".dsh/plugins/factory"
-ENTRY = "aeion-factory"
+TEMPLATE = Path(__file__).resolve().parents[2]
+PLUGIN = ".dsh/plugins/template"
+ENTRY = "aeion-template"
 VENDOR = "vendor"
 PREFIX = ENTRY + "-"
 DISPLACED = ENTRY + ".replaced"
@@ -105,7 +105,7 @@ def trust(profiles, profile, project):
         raise Refused(f"no profile directory: {folder}")
     project = project.resolve()
     if not (project / "tools/agents/hook.py").is_file():
-        raise Refused(f"{project} has no tools/agents/hook.py; trust the root of an Æion Factory project")
+        raise Refused(f"{project} has no tools/agents/hook.py; trust the root of an Æion Template project")
     listed = folder / TRUSTED
     lines = listed.read_text().splitlines() if listed.is_file() else []
     if str(project) not in lines:
@@ -166,7 +166,7 @@ def main():
     parser.add_argument("--profile", default="desktop", help="the profile folder (default: desktop)")
     parser.add_argument("--profile-dir", default=str(Path.home() / ".dsh" / "profiles"),
                         help="the profiles folder (default: ~/.dsh/profiles)")
-    parser.add_argument("--repo", default=str(FACTORY), help="the repository holding the tag")
+    parser.add_argument("--repo", default=str(TEMPLATE), help="the repository holding the tag")
     parser.add_argument("--force", action="store_true", help="replace an entry that is not a link")
     arguments = parser.parse_args()
     try:

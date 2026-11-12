@@ -7,7 +7,7 @@ knowledge base.
 
 - Read `AGENTS.md` (it is short). The session starts with a summary from the `SessionStart` hook:
   git status, recent commits, open tasks.
-- Instructions that existed before Æion Factory, and the owner's words, win.
+- Instructions that existed before Æion Template, and the owner's words, win.
 - Nothing needs installing beyond Python 3 and the agent. Start through `tools/agents/run <claude|codex|opencode|pi|devin|droid|antigravity|grok>`; Claude also retains `tools/context/run`.
 
 ## 1. Plan (skill `plan`)
@@ -18,10 +18,10 @@ change that fits; list what you will not do. Wait for a yes.
 
 ## 2. Spec (skill `spec`)
 
-For a feature or a component, change `knowledge/spec/spec.json` first (the requirement, its test case and
-oracle, an open decision for any choice that is not yours), run `tools/axiom/axiom validate`, then
-update the component doc's spec sections. Before editing code, read the change's context packet:
-`tools/axiom/axiom packet --files <files>` (skill `axiom`). The spec is the source of truth.
+For a feature or a component, update the component doc's spec sections first: intent, outputs and
+refusals, invariants with the test that proves each; a choice that is not yours goes to a decision
+record for the owner. Before editing code, read the doc that covers each file
+(`tools/knowledge/doc-links --for <file>`). The spec is the source of truth.
 
 ## 3. Branch
 
@@ -33,8 +33,8 @@ mode, the default, commit on the current branch and skip sections 3, 6 and 7, as
 
 Change a little, then let the feedback speak: language-server diagnostics and the edit hook after
 every edit, the tests after every slice. Commit each green slice. Never weaken a test to pass it.
-Claude context checkpoints run automatically: at observed 250k finish closure, update the active handover,
-current task and affected docs, then verify a checkpoint before compaction. Observed 300k or lost
+Claude context checkpoints run automatically: at observed 340k finish closure, update the active handover,
+current task and affected docs, then verify a checkpoint before compaction. Observed 390k or lost
 usage blocks work; transient usage can recover. This is not a strict pre-request ceiling.
 Codex/OpenCode have their own native pre-compaction checkpoint adapters; see
 `knowledge/operations/agent-compatibility.md` and `knowledge/operations/context-safety.md`.
@@ -55,7 +55,7 @@ until OK, then push: `tools/git-hooks/pre-push` refuses `develop` without it.
 
 A pull request `develop → main`, reviewed again, merged with a merge commit after a green CI, then
 tagged `vX.Y.Z`. Anything that needs a deploy or a human decision waits for that human.
-Keep the complete architecture spec and the generated cockpit current (`tools/axiom/axiom check` in CI).
+Keep the complete architecture spec current.
 
 ## 8. Learn (skills `pr-taste`, `retro`)
 

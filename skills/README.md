@@ -63,9 +63,9 @@ License labels are inventory aids, not a blanket legal or compatibility audit.
 From the workspace root:
 
 ```sh
-python3 -B aeion-factory/tools/skills/pool.py search 'code review' --source ecc --kind agent --limit 3
-python3 -B aeion-factory/tools/skills/pool.py search 'security' --source claude-plugins-official
-python3 -B aeion-factory/tools/skills/pool.py check
+python3 -B aeion-template/tools/skills/pool.py search 'code review' --source ecc --kind agent --limit 3
+python3 -B aeion-template/tools/skills/pool.py search 'security' --source claude-plugins-official
+python3 -B aeion-template/tools/skills/pool.py check
 ```
 
 Search prints a small result list with exact local paths. Skill directories are
@@ -97,7 +97,7 @@ there is no folder-wide exclusion, rule disable or executable behavior change.
 ## Security-patched resources
 
 Claude Security found three pooled files unsafe to run as shipped, so the materializer patches
-them; each patched line says "Æion Factory security patch". The skill-creator eval viewer
+them; each patched line says "Æion Template security patch". The skill-creator eval viewer
 answers only its own origin on `localhost` or `127.0.0.1` (Host and Origin checked, feedback
 saved only as JSON) and escapes `&`, `<` and `>` in the data it embeds, so an eval output
 cannot close its script element; its page (`viewer.html`) escapes quotes too and escapes every

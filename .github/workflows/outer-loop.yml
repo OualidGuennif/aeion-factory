@@ -21,8 +21,6 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: Build the knowledge graph (Python only, no model)
-        run: tools/axiom/axiom graph
       - uses: anthropics/claude-code-action@a5a423f75c251dcbff8a74e99f83b2cb03c72bfa # v1
         env:
           AEION_LOOP_READ_ONLY: '1'

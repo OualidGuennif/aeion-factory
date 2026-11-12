@@ -38,7 +38,7 @@ def target(value):
     return path if path.is_absolute() else ROOT / path
 
 
-def factory_version():
+def template_version():
     try:
         return (ROOT / "VERSION").read_text(encoding="utf-8").strip()
     except OSError as error:
@@ -53,7 +53,7 @@ def build(args):
         "success": args.success == "yes",
         "minutes": args.minutes,
         "model": args.model,
-        "factory": args.factory,
+        "template": args.template,
         "tokens": args.tokens,
         "cost_usd": args.cost_usd,
         "human_interventions": args.human_interventions,
@@ -74,7 +74,7 @@ def main(argv):
     parser.add_argument("--success", required=True, choices=("yes", "no"), help="did CHECK.md pass")
     parser.add_argument("--minutes", required=True, type=float, help="wall-clock minutes")
     parser.add_argument("--model")
-    parser.add_argument("--factory", help="factory version; defaults to VERSION")
+    parser.add_argument("--template", help="template version; defaults to VERSION")
     parser.add_argument("--tokens", type=int)
     parser.add_argument("--cost-usd", type=float)
     parser.add_argument("--human-interventions", type=int)
@@ -92,8 +92,8 @@ def main(argv):
         finite(parser, name.replace("_", "-"), getattr(args, name))
     for name in ("minutes", "tokens", "cost_usd", "human_interventions", "rework_commits", "defects_after_done"):
         non_negative(parser, name.replace("_", "-"), getattr(args, name))
-    if args.factory is None:
-        args.factory = factory_version()
+    if args.template is None:
+        args.template = template_version()
 
     record = build(args)
     line = json.dumps(record, separators=(",", ":"))

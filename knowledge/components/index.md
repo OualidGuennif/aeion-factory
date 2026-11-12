@@ -4,7 +4,7 @@ title: "Components index"
 description: "One spec per unit."
 status: stable
 generated:
-  by: aeion-factory/1.0
+  by: aeion-template/1.0
   at: 2026-10-20T00:00:00Z
 ---
 
@@ -16,5 +16,6 @@ Start from [the template](_template.md).
 | Component | Status | Notes |
 | --- | --- | --- |
 | [Integration choices](context-and-architecture.md) | stable | scoped upstream adoption and runtime qualification boundaries |
-| [Æion Factory architecture](factory-architecture.md) | stable | complete spec; its diagrams are in the [cockpit](../../docs/README.md) |
-| [Axiom toolkit](axiom-toolkit.md) | stable | `tools/axiom/axiom`: AxiomSpec gates, knowledge graph, queries, packets, views, cockpit, export, evidence |
+| [Æion Template architecture](template-architecture.md) | stable | complete spec, with its diagrams |
+| [Framework mode and the owner's settings](framework-mode.md) | draft | the doc gate's mode and the aeion-framework address; off by default |
+| [Doc gate](doc-gate.md) | draft | the docs covering a file are read before it is edited; enforce, warn or off |

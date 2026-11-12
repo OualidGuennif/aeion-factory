@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Exercise the connector drift check against real copies of the factory's own adapters."""
+"""Exercise the connector drift check against real copies of the template's own adapters."""
 import contextlib
 import importlib.machinery
 import importlib.util
@@ -13,8 +13,8 @@ from pathlib import Path
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[3]
-loader = importlib.machinery.SourceFileLoader('factory_adapter_check', str(ROOT / 'tools/agents/adapter-check'))
-spec = importlib.util.spec_from_loader('factory_adapter_check', loader)
+loader = importlib.machinery.SourceFileLoader('aeion_adapter_check', str(ROOT / 'tools/agents/adapter-check'))
+spec = importlib.util.spec_from_loader('aeion_adapter_check', loader)
 check = importlib.util.module_from_spec(spec)
 loader.exec_module(check)
 
@@ -46,12 +46,12 @@ class AdapterCheckTests(unittest.TestCase):
 
     def test_a_linked_connector_fails_even_when_its_bytes_match(self):
         # Reading through a symlink would compare bytes the project does not own and call it a match.
-        target = self.project / '.pi/extensions/factory/index.js'
+        target = self.project / '.pi/extensions/template/index.js'
         target.unlink()
-        target.symlink_to(ROOT / '.pi/extensions/factory/index.js')
+        target.symlink_to(ROOT / '.pi/extensions/template/index.js')
         code, output = self.run_check()
         self.assertEqual(code, 1, output)
-        self.assertIn('LINKED    .pi/extensions/factory/index.js', output)
+        self.assertIn('LINKED    .pi/extensions/template/index.js', output)
         self.assertIn('adapter-check: FAIL', output)
 
     def test_a_linked_parent_fails(self):
@@ -62,7 +62,7 @@ class AdapterCheckTests(unittest.TestCase):
         folder.symlink_to(outside, target_is_directory=True)
         code, output = self.run_check()
         self.assertEqual(code, 1, output)
-        self.assertIn('LINKED    .pi/extensions/factory/index.js', output)
+        self.assertIn('LINKED    .pi/extensions/template/index.js', output)
         self.assertIn('adapter-check: FAIL', output)
 
     def test_a_launcher_without_its_executable_bit_fails(self):
@@ -78,19 +78,19 @@ class AdapterCheckTests(unittest.TestCase):
         self.assertEqual(code, 0, output)
 
     def test_a_reference_mode_is_checked(self):
-        factory = self.tagged_factory()
+        template = self.tagged_template()
         (self.project / 'tools/agents/run').chmod(0o644)
-        code, output = self.run_check('--ref', 'v1.0.0', '--repo', str(factory))
+        code, output = self.run_check('--ref', 'v1.0.0', '--repo', str(template))
         self.assertEqual(code, 1, output)
         self.assertIn('MODE      tools/agents/run', output)
 
     def test_a_hand_edited_copy_fails_and_names_its_repair(self):
-        edited = self.project / '.dsh/plugins/factory/index.js'
+        edited = self.project / '.dsh/plugins/template/index.js'
         edited.write_text(edited.read_text() + '\n// a local hand edit\n')
         code, output = self.run_check()
         self.assertEqual(code, 1, output)
-        self.assertIn('DRIFT     .dsh/plugins/factory/index.js', output)
-        self.assertIn(f'cp {ROOT / ".dsh/plugins/factory/index.js"} {edited}', output)
+        self.assertIn('DRIFT     .dsh/plugins/template/index.js', output)
+        self.assertIn(f'cp {ROOT / ".dsh/plugins/template/index.js"} {edited}', output)
         self.assertIn('adapter-check: FAIL', output)
 
     def test_an_absent_connector_is_a_note_unless_strict(self):
@@ -98,11 +98,11 @@ class AdapterCheckTests(unittest.TestCase):
         code, output = self.run_check()
         self.assertEqual(code, 0, output)
         self.assertIn('1 absent', output)
-        self.assertNotIn('.pi/extensions/factory/index.js', output)
+        self.assertNotIn('.pi/extensions/template/index.js', output)
         strict, strict_output = self.run_check('--strict')
         self.assertEqual(strict, 1, strict_output)
         verbose, verbose_output = self.run_check('--verbose')
-        self.assertIn('missing   .pi/extensions/factory/index.js', verbose_output)
+        self.assertIn('missing   .pi/extensions/template/index.js', verbose_output)
 
     def test_a_config_that_names_a_deleted_script_fails(self):
         (self.project / '.claude/hooks/guard-bash.py').unlink()
@@ -126,10 +126,10 @@ class AdapterCheckTests(unittest.TestCase):
 
     def test_a_copy_that_compares_with_itself_is_refused(self):
         # A project that copied this script would compare its connectors with themselves and always pass.
-        with patch.object(check, 'FACTORY', self.project):
+        with patch.object(check, 'TEMPLATE', self.project):
             code, output = self.run_check()
         self.assertEqual(code, 2, output)
-        with patch.object(check, 'FACTORY', self.project):
+        with patch.object(check, 'TEMPLATE', self.project):
             code, output = self.run_check('--self')
         self.assertEqual(code, 0, output)
 
@@ -162,66 +162,66 @@ class AdapterCheckTests(unittest.TestCase):
 
     def test_a_steering_copy_fails_the_check(self):
         # A steered message with no id is persisted as history dsh cannot reopen.
-        target = self.project / '.dsh/plugins/factory/index.js'
+        target = self.project / '.dsh/plugins/template/index.js'
         target.write_text(target.read_text().replace(
             "agent.steer({ id: globalThis.crypto.randomUUID(), role:",
             'agent.steer({ role:'))
         code, output = self.run_check()
         self.assertEqual(code, 1, output)
-        self.assertIn('UNIDENTIFIED .dsh/plugins/factory/index.js — steer() without an id at line', output)
+        self.assertIn('UNIDENTIFIED .dsh/plugins/template/index.js — steer() without an id at line', output)
         self.assertIn('adapter-check: FAIL', output)
 
     def test_a_roled_steering_copy_fails_the_check(self):
         # A steered message without a role is persisted as history dsh cannot reopen either.
-        target = self.project / '.dsh/plugins/factory/index.js'
+        target = self.project / '.dsh/plugins/template/index.js'
         target.write_text(target.read_text().replace(
             "role: 'user', content:",
             'content:'))
         code, output = self.run_check()
         self.assertEqual(code, 1, output)
-        self.assertIn('UNROLED .dsh/plugins/factory/index.js — steer()/inject()/followup() without a role at line', output)
+        self.assertIn('UNROLED .dsh/plugins/template/index.js — steer()/inject()/followup() without a role at line', output)
         self.assertIn('adapter-check: FAIL', output)
 
-    def tagged_factory(self):
+    def tagged_template(self):
         """A repository holding the connectors at v1.0.0, with a dirty working tree on top."""
-        factory = Path(self.tmp.name) / 'factory'
+        template = Path(self.tmp.name) / 'template'
         for relative in check.VENDORED:
-            target = factory / relative
+            target = template / relative
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(ROOT / relative, target)
-        shutil.copy2(ROOT / 'VERSION', factory / 'VERSION')
+        shutil.copy2(ROOT / 'VERSION', template / 'VERSION')
 
         def git(*arguments):
             subprocess.run(['git', '-c', 'user.name=Test', '-c', 'user.email=test@example.com', *arguments],
-                           cwd=factory, check=True, capture_output=True, text=True)
+                           cwd=template, check=True, capture_output=True, text=True)
 
         git('init', '-q')
         git('add', '-A')
         git('commit', '-q', '-m', 'release')
         git('tag', 'v1.0.0')
-        (factory / '.dsh/plugins/factory/index.js').write_text('a dirty working tree\n')
-        return factory
+        (template / '.dsh/plugins/template/index.js').write_text('a dirty working tree\n')
+        return template
 
     def test_a_reference_wins_over_a_dirty_working_tree(self):
-        factory = self.tagged_factory()
-        code, output = self.run_check('--ref', 'v1.0.0', '--repo', str(factory))
+        template = self.tagged_template()
+        code, output = self.run_check('--ref', 'v1.0.0', '--repo', str(template))
         self.assertEqual(code, 0, output)
         self.assertIn('reference v1.0.0', output)
         self.assertIn(f'{len(check.VENDORED)} connectors: {len(check.VENDORED)} matching', output)
 
     def test_a_copy_that_differs_from_the_reference_fails(self):
-        factory = self.tagged_factory()
-        (self.project / '.pi/extensions/factory/index.js').write_text('a hand edit\n')
-        code, output = self.run_check('--ref', 'v1.0.0', '--repo', str(factory))
+        template = self.tagged_template()
+        (self.project / '.pi/extensions/template/index.js').write_text('a hand edit\n')
+        code, output = self.run_check('--ref', 'v1.0.0', '--repo', str(template))
         self.assertEqual(code, 1, output)
-        self.assertIn('DRIFT     .pi/extensions/factory/index.js', output)
-        self.assertIn('git show v1.0.0:.pi/extensions/factory/index.js', output)
+        self.assertIn('DRIFT     .pi/extensions/template/index.js', output)
+        self.assertIn('git show v1.0.0:.pi/extensions/template/index.js', output)
 
     def test_an_unknown_reference_is_refused(self):
-        factory = self.tagged_factory()
+        template = self.tagged_template()
         output_text = io.StringIO()
         with patch.object(sys, 'argv', ['adapter-check', '--root', str(self.project),
-                                        '--ref', 'v9.9.9', '--repo', str(factory)]):
+                                        '--ref', 'v9.9.9', '--repo', str(template)]):
             with contextlib.redirect_stdout(output_text), contextlib.redirect_stderr(output_text):
                 code = check.main()
         self.assertEqual(code, 2)

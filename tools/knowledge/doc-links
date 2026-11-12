@@ -77,7 +77,7 @@ def tracked_headers():
     except (OSError, subprocess.SubprocessError) as error:
         print(f"FAIL Git file listing failed: {error}", file=sys.stderr)
         sys.exit(1)
-    # A nested project, or a folder releases leave out (the demo), keeps its own Spec pointers.
+    # A nested project, or a folder releases leave out (export-ignore), keeps its own Spec pointers.
     nested = nested_projects(files) | export_ignored(ROOT)
     for rel in files:
         path = ROOT / rel

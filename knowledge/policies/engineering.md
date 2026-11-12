@@ -4,12 +4,9 @@ title: "How code is written here"
 description: "Steps that read top to bottom, comments that say why, no needless abstraction, and the branch, pull request and review flow."
 status: stable
 generated:
-  by: aeion-factory/1.0
+  by: aeion-template/1.0
   at: 2026-10-20T00:00:00Z
 sources:
-  - id: guide
-    resource: ../../efficiency/1-quarks.md
-    title: "Phase 1 of the guide"
   - resource: ../../tools/git-hooks/pre-push
     title: "pre-push, which names this doc as its spec"
   - resource: ../../tools/release/release
@@ -83,7 +80,7 @@ Never in a comment: dates, ticket numbers, the story of a bug, or a list of what
 story goes in the commit message.
 
 `repo-health` caps the top-level folders at nine, not counting a folder release archives leave out
-(`/name export-ignore` in `.gitattributes`, as the factory's `demo/`). It applies source-size/comment
+(`/name export-ignore` in `.gitattributes`). It applies source-size/comment
 heuristics to its documented suffix set and to
 extensionless files that start with a shebang (`#!`), excluding `test_*` files. Its JSON scorecard reports that set and how many files were checked. This is a
 structural scorecard; each project's build, linter and tests provide language-specific validation.
@@ -109,13 +106,12 @@ tests for what changed still run.
   green CI; the merged commit is tagged `vX.Y.Z` with its changelog section as release notes. The GitHub
   release is named exactly `vX.Y.Z` — never a sentence, never a summary — and its body is that section,
   unedited: the same simple bullet list as the first releases.
-- A new project or a demo copy starts with `tools/release/release --new-project`: `VERSION` 0.1.0, an
-  empty `Unreleased`, and `work/current.md` holding only the "Adapt Æion Factory to this project" entry,
-  dated today; the factory's `demo/` is removed; the factory's own `knowledge/spec/` and AxiomSpec cockpit
-  in `docs/` are replaced once by `tools/axiom/axiom init` (a project's own spec is never touched);
-  `.aeion-factory` records the factory release copied
+- A new project starts with `tools/release/release --new-project`: `VERSION` 0.1.0, an
+  empty `Unreleased`, and `work/current.md` holding only the "Adapt Æion Template to this project" entry,
+  dated today; `.aeion-template` records the template release copied
   (`v<VERSION>`), which `tools/agents/template-update` reads as the update baseline. It refuses in
-  Æion Factory's own clone (origin `OualidGuennif/aeion-factory`), and running it twice changes nothing.
+  Æion Template's own clone (origin `OualidGuennif/aeion-template`, or the former `aeion-factory` a clone
+  made before the rename may still carry), and running it twice changes nothing.
 - Independent review requires an authorized independent pass. Reading a pool agent profile does
   not authorize creating an agent; local self-assessment cannot issue the independent push-gate receipt.
 - A deploy or a human decision waits for that human. The owner's comments become preferences
@@ -133,4 +129,4 @@ existing contracts unless the task requires changing them. No abstraction is cre
 The root `skills/` pool preserves source skill/agent/resource files as data with their original
 licenses and fingerprints. Repository source-size/comment heuristics apply to authored code,
 including `tools/skills/`, while the identified passive pool has its own mandatory integrity
-check in `tools/factory-tests`. No upstream executable is run by indexing/search/validation.
+check in `tools/template-tests`. No upstream executable is run by indexing/search/validation.

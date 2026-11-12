@@ -1,6 +1,6 @@
 ---
 name: spec
-description: Writes or updates the canonical spec (knowledge/spec/spec.json - requirements, decisions, tests, bindings) and the eight sections of a component doc before its code changes - intent, data sources, inputs, outputs and refusals, invariants with their tests, determinism, acceptance checks, out of scope. Use when a feature is added or a component's behaviour changes.
+description: Writes or updates the eight sections of a component doc, the spec, before its code changes - intent, data sources, inputs, outputs and refusals, invariants with their tests, determinism, acceptance checks, out of scope. Use when a feature is added or a component's behaviour changes.
 ---
 
 # Spec
@@ -12,19 +12,16 @@ The spec is the source of truth; the code implements it. Format: `knowledge/poli
 A new feature, a changed contract, a new refusal or error. Not for a refactor that keeps behaviour.
 
 ## Process
-1. **The obligation in `knowledge/spec/spec.json`** (AxiomSpec, `knowledge/axiomspec/index.md`): a Requirement
-   with its pattern, trigger, subject and response, `satisfies` its Goal; a TestCase with an explicit
-   oracle that `verifies` it (high or critical risk: a normal and a refusal case, one integration);
-   a Decision with `answer: null` for every choice you may not make. Never invent the answer.
-2. `tools/axiom/axiom validate`: fix every G01-G03 error; report what blocks `design_ready`.
-3. Find the component doc (`knowledge/components/`), or start one from `_template.md`. Write Intent
-   and Outputs first (every refusal and error code), then Inputs, Invariants (each naming its test),
-   Determinism, Acceptance checks (commands), Out of scope. Name the IDs it covers in frontmatter
-   `spec_ids: [REQ-..., COMP-...]`.
-4. Add the code files to `sources`, a `Spec: knowledge/components/<doc>.md` line to each file, and a
-   binding (path, symbol) in `spec.json` for the code and for each test.
-5. Write the acceptance checks as tests that fail today.
-6. `tools/knowledge/knowledge-check`, `tools/knowledge/doc-links`, `tools/axiom/axiom docs` and `tools/axiom/axiom check`.
+1. Find the component doc (`knowledge/components/`), or start one from `_template.md`. Write Intent
+   and Outputs first (every refusal and error code), then Inputs, Invariants (each naming its test;
+   high or critical risk: a normal and a refusal case, one integration), Determinism, Acceptance
+   checks (commands), Out of scope.
+2. A choice you may not make goes to `knowledge/decisions/` as an open question for the owner.
+   Never invent the answer. Framework mode on: the requirements are the service's; the doc explains
+   how the code meets them and names their IDs, and a disagreement goes to `axiom-proposals.md` (skill `framework`).
+3. Add the code files to `sources`, and a `Spec: knowledge/components/<doc>.md` line to each file.
+4. Write the acceptance checks as tests that fail today.
+5. `tools/knowledge/knowledge-check` and `tools/knowledge/doc-links`.
 
 ## Rationalizations
 | Excuse | Rebuttal |
@@ -35,7 +32,7 @@ A new feature, a changed contract, a new refusal or error. Not for a refactor th
 An invariant with no test; an output section without its errors.
 
 ## Verification
-- [ ] The requirement, its test case and any open decision are in `knowledge/spec/spec.json`; `validate` ran.
+- [ ] Every open choice is a decision record waiting for the owner, not an invented answer.
 - [ ] The eight sections exist; each invariant names a test.
 - [ ] The new acceptance tests fail before the change.
 

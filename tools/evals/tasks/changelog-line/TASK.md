@@ -3,7 +3,7 @@
 ## Starting point
 
 - Commit: `26f19e0` (develop head when this set was written; record the real one in `BASELINE.md`)
-- Factory: `1.7.0`
+- Template: `1.7.0`
 - Branch: `task/changelog-line` from that commit
 
 ## Prompt (send this text unchanged)

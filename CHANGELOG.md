@@ -6,6 +6,8 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+## [4.0.0] - 2026-11-12
+
 - `tools/release/release --new-project` also refuses in a template clone whose origin still names
   `aeion-factory`, so a clone made before the rename is never reset as a new project.
 

@@ -5,12 +5,12 @@ Finished tasks are deleted: the commit message and knowledge/ keep what matters.
 Status: ACTIVE, WAITING-OWNER, MEASURING, BLOCKED, BACKLOG. An entry is `## <title> — <STATUS>`, then the
 lines `- Owner decision:`, `- State:`, `- Next:` (with who), `- Blocker:`, `- Evidence:`.
 
-## Æion Template 4.0.0: back to the essence, framework optional — ACTIVE
-- Owner decision: 2026-11-12, rename to aeion-template (no compatibility), remove the embedded AxiomSpec engine, demo/ and efficiency/, framework mode optional and off by default (the API address is the switch), a blocking doc gate, context rule 340k/390k. 2026-11-12 (later): the GitHub repository is renamed; --new-project also refuses the former aeion-factory origin; independent review, push, release PR and v4.0.0 approved.
-- State: committed on develop: 340k/390k (1ec5a2b), removals (03d16d2), rename (860ffe8), owner's settings (6fba16b), doc gate (4751e82; live in Claude Code: refused an unread-doc edit, allowed it after the reads), framework client, @req briefs, skill framework, ADR-002 (b918c1b; offline stand-in only; the live 1.1.9 service run waits for the owner's yes), docs around the essence (3552532), the skill pool's patch paths and a fail-closed refresh (aba0b56), the gateway token never redirected nor sent in clear text (9f7bc46). template-tests PASS; a scratch --new-project gives doc gate enforce, framework off, no leftovers; --new-project also refuses the former origin.
-- Next: independent review of origin/develop..HEAD, push develop, release PR develop → main, merge after green CI, tag v4.0.0 (who: agent).
-- Blocker: none.
-- Evidence: CHANGELOG.md Unreleased; knowledge/components/framework-mode.md; knowledge/components/doc-gate.md; /Users/wallseven/.claude/plans/kind-wobbling-star.md
+## Live aeion-framework 1.1.9 qualification of framework mode — WAITING-OWNER
+- Owner decision: 2026-11-12, framework mode is a thin client of aeion-framework 1.1.9; installs only on the owner's yes.
+- State: released in 4.0.0, qualified against a local stand-in only (tools/framework/tests/).
+- Next: on the owner's yes, serve a release with aeion-framework 1.1.9 (Docker, or Python 3.14), then `tools/aeion-settings framework <url>`, `axiom-api node` and `context`, read an @req file (briefs), stop the service (edit refused) (who: owner, then agent).
+- Blocker: needs Docker or Python 3.14 and the owner's yes.
+- Evidence: knowledge/components/framework-mode.md (acceptance checks)
 
 ## Grok adapter — ACTIVE
 - Owner decision: 2026-11-06, release the Grok adapter as 2.1.1. This replaces the same-day decision to keep it on a local `grok` branch.

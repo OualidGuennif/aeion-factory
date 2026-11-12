@@ -90,7 +90,7 @@ def covering(rel, data, tool):
 
 
 def shell_reads(command, base):
-    """The .md files inside the project that a shell command hands to a reader."""
+    """The files inside the project that a shell command hands to a reader."""
     try:
         lexer = shlex.shlex(command, posix=True, punctuation_chars=True)
         lexer.whitespace_split = True
@@ -103,11 +103,11 @@ def shell_reads(command, base):
             program = None
         elif program is None:
             program = Path(word).name
-        elif program in READERS and word.lower().endswith(".md") and not word.startswith("-"):
+        elif program in READERS and not word.startswith("-"):
             rel = inside(word, base)
             if rel and (ROOT / rel).is_file():
                 reads.append(rel)
-    return reads
+    return list(dict.fromkeys(reads))
 
 
 def edited(data):
@@ -216,15 +216,21 @@ if name == "SessionStart":
 
 if name == "PostToolUse" and valid:
     context = None
-    if tool == "Read":
-        rel = inside(data.get("file_path", data.get("filePath", data.get("path"))), base)
-        if rel and rel.lower().endswith(".md"):
-            remember(session, "read", [rel])
-        elif rel and gated(rel) and (url := framework_url()):
-            # Framework mode: the requirements this code names come with it.
+    if tool == "Read" or (tool == "Bash" and isinstance(data.get("command"), str)):
+        if tool == "Read":
+            rel = inside(data.get("file_path", data.get("filePath", data.get("path"))), base)
+            paths = [rel] if rel else []
+        else:
+            workdir = data.get("workdir", data.get("cwd"))
+            paths = shell_reads(data["command"], Path(workdir) if isinstance(workdir, str) else base)
+        remember(session, "read", [rel for rel in paths if rel.lower().endswith(".md")])
+        code = [rel for rel in paths if gated(rel)]
+        if code and (url := framework_url()):
+            # All files read by this call share one brief budget.
             read = remembered(session, "read")
-            todo = [rid for rid in annotations(rel) if f"axiom:{rid}" not in read]
+            todo = list(dict.fromkeys(rid for rel in code for rid in annotations(rel) if f"axiom:{rid}" not in read))
             if todo:
+                rel = ", ".join(code)
                 lines, served, missing = briefs(url, todo[:BRIEF_IDS])
                 remember(session, "read", [f"axiom:{rid}" for rid in served])
                 context = "\n".join([f"AxiomSpec briefs for {rel} (aeion-framework at {url}; requirement text, "
@@ -234,9 +240,6 @@ if name == "PostToolUse" and valid:
                                 f"keeps {rel} closed until they are; read it again once the service answers.")
                 if len(todo) > BRIEF_IDS:
                     context += f"\n{len(todo) - BRIEF_IDS} more @req IDs: read {rel} again to load them."
-    elif tool == "Bash" and isinstance(data.get("command"), str):
-        workdir = data.get("workdir", data.get("cwd"))
-        remember(session, "read", shell_reads(data["command"], Path(workdir) if isinstance(workdir, str) else base))
     elif tool in EDITS:
         rel = inside(edited(data), base)
         if rel and rel.lower().endswith(".md"):

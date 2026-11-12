@@ -6,6 +6,9 @@ status: draft
 generated:
   by: aeion-template/4.0
   at: 2026-11-12
+verified:
+  - at: 2026-11-12
+    what: "tools/framework/tests/test_axiom_api.py: 16 passed; shell reads load briefs, retain unserved refusals and share the eight-ID cap"
 sources:
   - id: gate
     resource: ../../.claude/hooks/doc-gate.py
@@ -35,7 +38,7 @@ asks for the reading before it, when the doc can still shape the change.
 | a Write's `content` | `Spec: knowledge/<doc>.md` in its first 30 lines, for a file that does not exist yet | the agent | each Write |
 | `<tmp>/claude-doc-read-<session>` | the docs this session read or wrote | this hook | each event |
 | `.aeion/settings.json` `doc_gate` | `enforce` (default), `warn` or `off` ([framework mode](framework-mode.md)) | the owner | each event |
-| the file's `@req` IDs, framework mode only | the requirements whose briefs must have loaded (`axiom:<ID>` in the read set) | the code; the aeion-framework service | each gated edit; each Read of the file loads them |
+| the file's `@req` IDs, framework mode only | the requirements whose briefs must have loaded (`axiom:<ID>` in the read set) | the code; the aeion-framework service | each gated edit; each native or shell read of the file loads them |
 
 ## Inputs
 
@@ -45,6 +48,9 @@ asks for the reading before it, when the doc can still shape the change.
 - **PostToolUse Read** of a `.md` file inside the project: recorded as read, whatever the range.
 - **PostToolUse Bash**: a `.md` path given to `cat`, `head`, `tail`, `sed`, `less`, `more`, `bat` or `nl`
   is recorded, so a harness that reads through its shell (Codex) passes the gate the same way.
+  In framework mode, code paths given to those readers load their `@req` briefs as a native Read does,
+  using the tool's declared working directory. A multi-file command shares the eight-ID cap and
+  two-and-a-half-second deadline; another read loads any remaining IDs.
 - **PostToolUse Edit, MultiEdit, Write, NotebookEdit** of a `.md` file: recorded, the agent wrote it.
 - **PreToolUse Edit, MultiEdit, Write, NotebookEdit** (`apply_patch` through the adapter, once per path).
 
@@ -75,6 +81,7 @@ asks for the reading before it, when the doc can still shape the change.
 | 1, 3, 4 | `.claude/hooks/test_hooks.py` (`doc gate` cases) |
 | 2 | `.claude/hooks/test_hooks.py` (`doc gate forgets at session start`) |
 | 5 | `tools/agents/tests/test_hooks.py` (the gate through the adapter: Read, shell read, apply_patch) |
+| 5, framework mode | `tools/framework/tests/test_axiom_api.py` (`test_shell_reads_load_briefs_before_an_edit`, `test_shell_reads_keep_unserved_requirements_closed`, `test_a_shell_read_shares_the_brief_budget_across_files`) |
 
 ## Determinism
 
@@ -95,3 +102,5 @@ about a tenth of a second on this repository, inside the hook's three seconds; n
 - Folder sources: `doc-links` gives coverage only for exact files, so a new file in a documented
   folder is gated only by the `Spec:` header it carries.
 - Whether the doc was understood, or read whole: a range read counts, as bounded intake asks for ranges.
+- Shell expansion or a `cd` inside a command: only literal paths and the tool's declared working
+  directory are used.

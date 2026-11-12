@@ -6,6 +6,10 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+- Framework briefs load after shell reads of annotated code (`sed`, `head`, `cat`, …), so Codex can
+  satisfy the doc gate. A multi-file read shares one eight-ID budget and deadline; further reads
+  load the remaining briefs, and an unserved requirement still keeps its file closed.
+
 - Framework addresses with a malformed IPv6 host are refused with a diagnostic instead of a
   traceback, whether given to connect or read from the settings or environment.
 

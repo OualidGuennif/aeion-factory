@@ -23,6 +23,7 @@ run python3 tools/repo-health/tests/test_repo_health.py
 run python3 tools/git-hooks/tests/test_pre_push.py
 run python3 tools/release/tests/test_release.py
 run python3 tools/context/tests/test_budget.py
+run python3 tools/framework/tests/test_settings.py
 run python3 tools/agents/tests/test_hooks.py
 run python3 tools/agents/tests/test_prompt_defense.py
 run python3 tools/agents/tests/test_adapter_check.py

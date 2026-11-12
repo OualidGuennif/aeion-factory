@@ -6,6 +6,13 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+- The owner's per-clone settings: `tools/aeion-settings` shows and sets the doc gate's mode
+  (`enforce`, the default, `warn`, `off`) and framework mode, which is on only while an aeion-framework
+  API address is set (`.aeion/settings.json`, never committed, or `AEION_FRAMEWORK_URL`). Connecting
+  probes `/health/ready` and accepts aeion-framework 1.1 up to 2.0 (tested 1.1.9). The guards refuse an
+  agent's write of the settings; session start names both, and hints when the code carries `@req` IDs
+  but no address is set.
+
 - **Breaking: Æion Factory is now Æion Template (`aeion-template`), with no compatibility for the old
   names.** The repository is `OualidGuennif/aeion-template`; the release marker is `.aeion-template`;
   the test runner is `tools/template-tests`; the harness folders are `.dsh/plugins/template/`,

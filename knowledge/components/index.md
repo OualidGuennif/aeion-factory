@@ -17,3 +17,4 @@ Start from [the template](_template.md).
 | --- | --- | --- |
 | [Integration choices](context-and-architecture.md) | stable | scoped upstream adoption and runtime qualification boundaries |
 | [Æion Template architecture](template-architecture.md) | stable | complete spec, with its diagrams |
+| [Framework mode and the owner's settings](framework-mode.md) | draft | the doc gate's mode and the aeion-framework address; off by default |

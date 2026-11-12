@@ -363,6 +363,27 @@ for path in ["/repo/.git//config", "/repo/.git/./config", "/repo/.GIT/Config"]:
 expect("bash allow: find prunes .git", run_hook("guard-bash.py", {"command": "find . -path ./.git -prune -o -name '*.md' -print",
                                                                  "workdir": str(glob_dir)}), 0)
 expect("path allow: Read of .git/config", run_hook("guard-path.py", {"file_path": "/repo/.git/config"}, tool_name="Read"), 0)
+# The doc gate and the framework address are the owner's: the agent reads them, never writes them.
+for command in ["tools/aeion-settings doc-gate off", "./tools/aeion-settings doc-gate warn",
+                "python3 tools/aeion-settings framework http://127.0.0.1:8787", "tools/aeion-settings framework off",
+                "tools/aeion-settings --root . framework", "sh -c 'tools/aeion-settings doc-gate off'",
+                "echo '{\"doc_gate\": \"off\"}' > .aeion/settings.json", "printf x >> ./.aeion/settings.json",
+                "tee .aeion/settings.json < f", "cp f .aeion/settings.json", "sed -i '' s/enforce/off/ .aeion/settings.json",
+                "python3 -c \"open('.aeion/settings.json','w').write('{}')\"", "mv f sub/.aeion/settings.json",
+                "rm .aeion/settings.json", "printf x > .aeion/setting?.json", "cp f .aei?n/settings.json",
+                "echo x > .AEION/Settings.json"]:
+    expect(f"bash deny settings write: {command}", run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 2,
+           stderr_has="tools/aeion-settings")
+for command in ["tools/aeion-settings", "cat .aeion/settings.json", "grep -n doc_gate .aeion/settings.json",
+                "tools/aeion-settings --help", "git grep -n framework tools/aeion-settings",
+                'git commit -m "tools/aeion-settings doc-gate off is the owner\'s"', "ls .aeion"]:
+    expect(f"bash allow settings read: {command}", run_hook("guard-bash.py", {"command": command, "workdir": str(glob_dir)}), 0)
+for tool in ["Edit", "Write", "MultiEdit"]:
+    expect(f"path deny: {tool} on .aeion/settings.json",
+           run_hook("guard-path.py", {"file_path": "/repo/.aeion/settings.json"}, tool_name=tool), 2, stderr_has="tools/aeion-settings")
+expect("path allow: Read of .aeion/settings.json",
+       run_hook("guard-path.py", {"file_path": "/repo/.aeion/settings.json"}, tool_name="Read"), 0)
+expect("path allow: Write beside the settings", run_hook("guard-path.py", {"file_path": "/repo/.aeion/notes.json"}, tool_name="Write"), 0)
 expect("bash allow: a cd with a plain glob", run_hook("guard-bash.py", {"command": "cd sub && ls *.md", "workdir": str(glob_dir)}), 0)
 # A search pattern is text: a secret's name there opens nothing. Files, pattern files and globs still count.
 for command in ["grep -rn id_rsa plain", "grep -rn 'env.local' plain", "rg -n env.local", "git grep -n .env",
@@ -685,17 +706,26 @@ shutil.rmtree(parent)
 
 # session-start: at most 25 lines, and it names the flow mode.
 # The mode is read from the repository's local config, so each run gets a throwaway repository.
-def session_start(mode, global_mode=None, git=True, tasks=1, hooks_path=None):
+def session_start(mode, global_mode=None, git=True, tasks=1, hooks_path=None, files=None, env=None):
     repo = Path(tempfile.mkdtemp())
-    for rel in (".claude/hooks/session-start.py", ".claude/hooks/project_files.py", "tools/repo-health/repo-health"):
+    for rel in (".claude/hooks/session-start.py", ".claude/hooks/project_files.py", ".claude/hooks/aeion_settings.py",
+                "tools/repo-health/repo-health"):
         (repo / rel).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy(ROOT / rel, repo / rel)
     (repo / "work").mkdir()
     (repo / "work/current.md").write_text("# Current work\n" + "".join(
         f"\n## Probe task{'' if n == 0 else f' {n + 1}'} — ACTIVE\n- State: x\n" for n in range(tasks)))
-    git_env = {**os.environ, "GIT_CONFIG_GLOBAL": str(repo / "global.cfg"), "GIT_CONFIG_NOSYSTEM": "1"}
+    for rel, text in (files or {}).items():
+        (repo / rel).parent.mkdir(parents=True, exist_ok=True)
+        (repo / rel).write_text(text)
+    git_env = {**os.environ, "GIT_CONFIG_GLOBAL": str(repo / "global.cfg"), "GIT_CONFIG_NOSYSTEM": "1", **(env or {})}
+    for name in ("AEION_FRAMEWORK_URL", "AEION_FRAMEWORK_TOKEN"):
+        if name not in (env or {}):
+            git_env.pop(name, None)
     (repo / "global.cfg").write_text(f"[aeion]\n\tmode = {global_mode}\n" if global_mode else "")
-    for args in (["init", "-q", "-b", "main"], ["add", "work"], ["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "Probe commit"]) if git else ():
+    tracked = ["work"] + [rel for rel in (files or {}) if not rel.startswith(".aeion/")]
+    for args in (["init", "-q", "-b", "main"], ["add", "--", *tracked],
+                 ["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "Probe commit"]) if git else ():
         subprocess.run(["git"] + args, cwd=repo, capture_output=True, check=True, env=git_env)
     if mode:
         subprocess.run(["git", "config", "aeion.mode", mode], cwd=repo, capture_output=True, check=True, env=git_env)
@@ -735,6 +765,23 @@ if "git hooks: off" in session_start("team", hooks_path="tools/git-hooks").stdou
     failures.append("session-start called the repository's own git hooks off")
 # The global config cannot switch the mode: only the repository's own config does.
 expect("session-start ignores a global aeion.mode", session_start(None, "team"), 0, "Æion Template mode: local")
+# The owner's settings line: the gate enforces by default, framework mode is off without an address.
+expect("session-start names the default settings", session_start(None), 0, "doc gate: enforce; framework: off\n")
+expect("session-start names the owner's gate", session_start(None, files={".aeion/settings.json": '{"doc_gate": "warn"}'}),
+       0, "doc gate: warn; framework: off")
+expect("session-start fails closed on an unreadable settings file",
+       session_start(None, files={".aeion/settings.json": "{"}), 0, "doc gate: enforce (.aeion/settings.json is unreadable")
+# Built by concatenation so this file is never an annotation itself.
+annotation = "# " + "@req" + " CORE-001\n"
+for git in (True, False):
+    expect(f"session-start names @req code without an address (git {git})",
+           session_start(None, git=git, files={"src/app.py": annotation}), 0, "this code carries @req IDs")
+    if "@req IDs" in session_start(None, git=git, files={"notes.md": annotation, "src/app.py": "x = 1\n"}).stdout:
+        failures.append(f"session-start took a Markdown mention for an annotation (git {git})")
+expect("session-start names an unreachable framework address",
+       session_start(None, env={"AEION_FRAMEWORK_URL": "http://127.0.0.1:9"}), 0, "framework: on → http://127.0.0.1:9, but")
+expect("session-start refuses a bad framework address", session_start(None, env={"AEION_FRAMEWORK_URL": "ftp://x"}), 0,
+       "framework: off (AEION_FRAMEWORK_URL: the address must be an http")
 
 print(f"hook tests: {passes} passed, {len(failures)} failed")
 for f in failures:

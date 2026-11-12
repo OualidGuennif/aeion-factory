@@ -49,7 +49,7 @@ CI action revisions are pinned to upstream commit SHAs; review upstream changes 
 | Knowledge reachability | `tools/knowledge/orphans`: a document nothing links | the root |
 | Docs and code links | `tools/knowledge/doc-links` (`--diff origin/develop` before a push) | the root |
 | Comments, file size, caps | `tools/repo-health/repo-health` | the root |
-| The template's own test suites (hooks, tools, evals, push gate, release, context, adapters including the OpenCode, Pi and dsh plugins and the Pi RPC bridge, connector drift, the tag-pinned desktop install, loops) | `tools/template-tests` (each suite also runs alone; the script lists them) | root; Node 18+ for the three JavaScript adapter suites, reported NOT RUN without it |
+| The template's own test suites (hooks, tools, evals, push gate, release, context, the owner's settings, adapters including the OpenCode, Pi and dsh plugins and the Pi RPC bridge, connector drift, the tag-pinned desktop install, loops) | `tools/template-tests` (each suite also runs alone; the script lists them) | root; Node 18+ for the three JavaScript adapter suites, reported NOT RUN without it |
 | Connector copies | `tools/agents/adapter-check` (`--root` for a project that adopted the template) | the root |
 | Your code | add your build, lint and test commands here, copied from CI | |
 
@@ -63,8 +63,12 @@ and any direct push to `main`. CI runs those three checks, `template-tests` and 
 Semgrep container is pinned by digest like the actions.
 `stale` and `orphans` remain manual checks; CI exercises their fixtures through `template-tests`.
 
+The session start also names the doc gate's mode and framework mode, and, when the code carries
+`@req` IDs but no framework address is set, how the owner connects it
+([framework mode](../components/framework-mode.md)).
+
 Many people run Æion Template in a plain folder, without git. The link and health checks, the context
-fingerprint and the session-start summary then walk the files on disk (skipping `.git`, `.aeion`,
+fingerprint, the session-start summary and its `@req` search then walk the files on disk (skipping `.git`, `.aeion`,
 dependencies, caches, the root's build output such as `dist/` or `target/`, and desktop files such as
 `.DS_Store`; `.claude/hooks/project_files.py`). Each folder's `.gitignore` applies to it and below for
 its simple rules (a name or glob, optionally ending in `/`); negations and paths with a slash are not

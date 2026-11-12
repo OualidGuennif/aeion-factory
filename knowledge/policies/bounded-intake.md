@@ -86,6 +86,8 @@ thresholds, long lines, explicit ranges, real native fields and misleading limit
 Local regular-file metadata and bounded reads establish the decision; no model or new package
 is involved. Owner tuning changes the checked-in constants and tests, not an ambient override.
 Durable facts belong in Knowledge; session noise stays out of AGENTS.md and handovers.
+The session start shows these intake limits first, then the flow mode, the doc gate's mode and
+framework mode; the owner's settings never change an intake limit.
 
 ## Acceptance
 

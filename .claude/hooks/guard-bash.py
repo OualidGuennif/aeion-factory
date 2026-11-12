@@ -611,21 +611,67 @@ def names_git_directory(word, anywhere=False):
     return False
 
 
+GIT_CONFIG_REASON = "writing .git/config directly skips the git config checks; use git config."
+SETTINGS_REASON = ("the doc gate and the framework address are the owner's settings in .aeion/settings.json; "
+                   "the owner runs tools/aeion-settings.")
+# The settings tool's subcommands that write; showing the settings stays allowed.
+SETTINGS_WRITES = {"doc-gate", "framework"}
+
+
+SETTINGS_FILE = re.compile(r"(^|[^\w.-])\.aeion/settings\.json(?![\w.-])")
+
+
+def names_settings(word):
+    """Whether a word names the settings file: as a path, inside code (open('.aeion/settings.json')) or as a glob."""
+    for form in path_forms(word):
+        parts = PurePosixPath(form).parts
+        if SETTINGS_FILE.search(form) or len(parts) >= 2 and (parts[-2] == ".aeion" or globs_to(".aeion", parts[-2])) and (
+                parts[-1] == "settings.json" or any(char in parts[-1] for char in "*?[")
+                and fnmatch.fnmatchcase("settings.json", shell_pattern(parts[-1]))):
+            return True
+    return False
+
+
+def names_settings_directory(word, anywhere=False):
+    """Moving into .aeion/ or copying a file named settings.json there is not singled out: nothing
+    but the settings file there is the owner's, and a copy into .aeion/ under another name is inert."""
+    return False
+
+
 def config_write(command):
     """The reason a command writes the repository's git config file directly, or None: an editor
     or redirection there sets aeion.mode or core.hooksPath without git config's checks."""
-    reason = "writing .git/config directly skips the git config checks; use git config."
+    return protected_write(command, names_git_config, names_git_directory, GIT_CONFIG_REASON)
+
+
+def settings_write(command):
+    """The reason a command writes the owner's settings, or None: the doc gate the agent must pass
+    and the framework address it reads are the owner's to change, like aeion.mode."""
+    for words in simple_commands(command):
+        words = program(words)
+        if words and words[0] == "<script>":
+            if settings_write(words[1]):
+                return SETTINGS_REASON
+            continue
+        names = [PurePosixPath(w).name for w in words[:2]]
+        if "aeion-settings" in names and SETTINGS_WRITES & set(words):
+            return SETTINGS_REASON
+    return protected_write(command, names_settings, names_settings_directory, SETTINGS_REASON)
+
+
+def protected_write(command, names, directory, reason):
+    """The reason a command writes a file the names test matches, or None."""
     # >, >>, >|, zsh >! and >& all write their target. A quoted span with spaces is prose (a commit
     # message) and a heredoc fed to a program is text; sh -c scripts are judged below on their own.
     shell_text = re.sub(r"'[^']*'|\"[^\"]*\"", lambda m: " " if re.search(r"\s", m.group(0)) else m.group(0),
                         without_inert_heredocs(command))
-    if any(names_git_config(as_shell_sees(t)) for t in re.findall(r">[|!]?&?\s*([^\s;&|<>]+)", shell_text)):
+    if any(names(as_shell_sees(t)) for t in re.findall(r">[|!]?&?\s*([^\s;&|<>]+)", shell_text)):
         return reason
     quoted = {a or b for a, b in re.findall(r"'([^']*)'|\"([^\"]*)\"", command)}
     for words in simple_commands(command):
         words = program(words)
         if words and words[0] == "<script>":
-            if config_write(words[1]):
+            if protected_write(words[1], names, directory, reason):
                 return reason
             continue
         if not words:
@@ -634,13 +680,13 @@ def config_write(command):
         # A word with spaces is prose (a title, a message) unless an interpreter runs it as code.
         code = re.match(r"(python|perl|ruby|node|php)", name)
         args = [as_shell_sees(w, quoted) for w in words[1:] if code or not re.search(r"\s", w)]
-        if name not in CONFIG_READERS and any(names_git_config(w) for w in args):
+        if name not in CONFIG_READERS and any(names(w) for w in args):
             return reason
         # git log --output writes any text it formats.
         outputs = [i for i, w in enumerate(words) if w.startswith("--output")]
-        if name == "git" and any(names_git_config(as_shell_sees(" ".join(words[i:i + 2]), quoted)) for i in outputs):
+        if name == "git" and any(names(as_shell_sees(" ".join(words[i:i + 2]), quoted)) for i in outputs):
             return reason
-        if name in {"cd", "pushd"} and any(names_git_directory(w, anywhere=True) for w in args):
+        if name in {"cd", "pushd"} and any(directory(w, anywhere=True) for w in args):
             return reason
         targets = args[-1:] if name in INTO_DIRECTORY else []
         # A directory option names the destination too: cp -t .git, tar -C.git, unzip -d .git.
@@ -648,7 +694,7 @@ def config_write(command):
         targets += [args[i + 1] for i, w in enumerate(args[:-1]) if w in options]
         targets += [w.split("=", 1)[1] for w in args if w.split("=", 1)[0] in options and "=" in w]
         targets += [w[2:] for w in args if len(w) > 2 and w[:2] in options]
-        if any(names_git_directory(w) for w in targets):
+        if any(directory(w) for w in targets):
             return reason
     return None
 
@@ -993,6 +1039,9 @@ if bypass:
 written = refuses(config_write, command)
 if written:
     deny(written if isinstance(written, str) else "the command is nested too deeply to verify.")
+owned = refuses(settings_write, command)
+if owned:
+    deny(owned if isinstance(owned, str) else "the command is nested too deeply to verify.")
 try:
     base = event["tool_input"].get("workdir", event["tool_input"].get("cwd", event.get("cwd", ".")))
     reason = intake_dump(command, Path(base))

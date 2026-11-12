@@ -4,7 +4,7 @@ title: "How code is written here"
 description: "Steps that read top to bottom, comments that say why, no needless abstraction, and the branch, pull request and review flow."
 status: stable
 generated:
-  by: aeion-factory/1.0
+  by: aeion-template/1.0
   at: 2026-10-20T00:00:00Z
 sources:
   - resource: ../../tools/git-hooks/pre-push
@@ -107,10 +107,10 @@ tests for what changed still run.
   release is named exactly `vX.Y.Z` — never a sentence, never a summary — and its body is that section,
   unedited: the same simple bullet list as the first releases.
 - A new project starts with `tools/release/release --new-project`: `VERSION` 0.1.0, an
-  empty `Unreleased`, and `work/current.md` holding only the "Adapt Æion Factory to this project" entry,
-  dated today; `.aeion-factory` records the factory release copied
+  empty `Unreleased`, and `work/current.md` holding only the "Adapt Æion Template to this project" entry,
+  dated today; `.aeion-template` records the template release copied
   (`v<VERSION>`), which `tools/agents/template-update` reads as the update baseline. It refuses in
-  Æion Factory's own clone (origin `OualidGuennif/aeion-factory`), and running it twice changes nothing.
+  Æion Template's own clone (origin `OualidGuennif/aeion-template`), and running it twice changes nothing.
 - Independent review requires an authorized independent pass. Reading a pool agent profile does
   not authorize creating an agent; local self-assessment cannot issue the independent push-gate receipt.
 - A deploy or a human decision waits for that human. The owner's comments become preferences
@@ -128,4 +128,4 @@ existing contracts unless the task requires changing them. No abstraction is cre
 The root `skills/` pool preserves source skill/agent/resource files as data with their original
 licenses and fingerprints. Repository source-size/comment heuristics apply to authored code,
 including `tools/skills/`, while the identified passive pool has its own mandatory integrity
-check in `tools/factory-tests`. No upstream executable is run by indexing/search/validation.
+check in `tools/template-tests`. No upstream executable is run by indexing/search/validation.

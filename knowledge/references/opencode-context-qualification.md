@@ -1,11 +1,11 @@
 ---
 type: Reference
 title: "OpenCode 300k admission experiment — 2026-10-26"
-description: "Real paid DeepSeek V4.1 Flash transport, accounting and tool-continuation tests; narrow evidence, not an enabled Æion Factory strict profile."
+description: "Real paid DeepSeek V4.1 Flash transport, accounting and tool-continuation tests; narrow evidence, not an enabled Æion Template strict profile."
 status: stable
 review_after: 2027-01-29
 generated:
-  by: aeion-factory/1.1
+  by: aeion-template/1.1
   at: 2026-10-26
 sources:
   - id: evidence
@@ -25,14 +25,14 @@ sources:
 # OpenCode 300k admission experiment
 
 **Result: the tested primary HTTP path can refuse before transport, including after a real tool
-result. An absolute Æion Factory-wide ceiling remains unqualified.** These tests used an isolated
-experimental plugin, not the shipped Æion Factory plugin. `tools/agents/run --strict` still refuses.
+result. An absolute Æion Template-wide ceiling remains unqualified.** These tests used an isolated
+experimental plugin, not the shipped Æion Template plugin. `tools/agents/run --strict` still refuses.
 
 ## Scope and method
 
-Æion Factory source was `a2edecdf48a25e1451912ca91d959fad62e2c1f7`. All model requests selected paid
+Æion Template source was `a2edecdf48a25e1451912ca91d959fad62e2c1f7`. All model requests selected paid
 `opencode-go/deepseek-v4.1-flash` through native OpenCode **2.1.4**, in a disposable repository
-outside the configured Æion Factory ancestor. Each case used a fresh isolated native profile and the
+outside the configured Æion Template ancestor. Each case used a fresh isolated native profile and the
 managed launcher. Each experimental source snapshot had its own passing structural baseline.
 No free auxiliary model was used: the title hook supplied a fixed title, retries were disabled,
 and experimental WebSocket handshakes were refused. The runs used public synthetic text, not a
@@ -45,7 +45,7 @@ cases counted a clone of the final serialized JSON request in that same hook. Un
 shapes and unavailable counters refused admission.
 
 The counter reused an already installed, digest-pinned Observability image. Docker ran offline,
-read-only and resource-limited; Æion Factory acquired no dependency or runtime configuration. The
+read-only and resource-limited; Æion Template acquired no dependency or runtime configuration. The
 image's official tokenizer/template hashes matched the pinned DeepSeek revision. Local rendering
 counts messages and tool definitions, with the generation prefix. The experimental admission rule
 was:
@@ -109,7 +109,7 @@ counter timeouts and recovery have no qualification from these cases.
 This experiment did not exercise the 250k alert, durable handover verification or a real
 compaction/resume cycle. Four accounting comparisons cannot prove arbitrary provider framing or
 future tokenizer compatibility. The reused image is an experiment dependency, not a portable
-Æion Factory counter installation. A production strict profile still needs a maintained counter and
+Æion Template counter installation. A production strict profile still needs a maintained counter and
 fail-closed lifecycle/auxiliary-call tests before enabling a strict launch.
 
 The private metadata-only results and plugin/driver snapshots are retained under ignored

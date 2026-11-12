@@ -43,20 +43,20 @@ CONTRACT = (
     ".claude/hooks/session-start.py",
     ".claude/hooks/sign-off.py",
     ".claude/hooks/token-feedback.py",
-    ".dsh/factory.patch.yml",
+    ".dsh/template.patch.yml",
     "tools/agents/connectors.py",
     "tools/agents/refs.py",
-    ".dsh/plugins/factory/index.js",
-    ".dsh/plugins/factory/seam.js",
-    ".dsh/plugins/factory/compaction.js",
-    ".pi/extensions/factory/index.js",
-    ".opencode/plugins/factory/index.js",
-    ".opencode/plugins/factory/package.json",
+    ".dsh/plugins/template/index.js",
+    ".dsh/plugins/template/seam.js",
+    ".dsh/plugins/template/compaction.js",
+    ".pi/extensions/template/index.js",
+    ".opencode/plugins/template/index.js",
+    ".opencode/plugins/template/package.json",
     ".codex/hooks.json",
     ".devin/hooks.v1.json",
     ".factory/settings.json",
     ".agents/hooks.json",
-    ".grok/hooks/factory.json",
+    ".grok/hooks/template.json",
 )
 
 WIRING = (
@@ -67,11 +67,11 @@ WIRING = (
     ".devin/config.json",
     ".factory/settings.json",
     ".agents/hooks.json",
-    ".grok/hooks/factory.json",
-    ".dsh/factory.patch.yml",
+    ".grok/hooks/template.json",
+    ".dsh/template.patch.yml",
 )
 
-# A project owns these: its instructions and its merged settings win over the factory's.
+# A project owns these: its instructions and its merged settings win over the template's.
 MERGE = (
     "AGENTS.md",
     ".claude/settings.json",

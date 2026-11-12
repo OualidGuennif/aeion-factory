@@ -110,9 +110,9 @@ def script(root, name, event):
     result = subprocess.run([sys.executable, str(root / '.claude/hooks' / name)], cwd=root,
                             input=json.dumps(event), capture_output=True, text=True, timeout=4)
     if result.returncode == 2:
-        raise GuardRefusal((result.stderr or 'Æion Factory check refused this action')[:1500])
+        raise GuardRefusal((result.stderr or 'Æion Template check refused this action')[:1500])
     if result.returncode:
-        raise ValueError('Æion Factory checker failed')
+        raise ValueError('Æion Template checker failed')
     if name == 'session-start.py':
         return {'hookSpecificOutput': {'hookEventName': 'SessionStart', 'additionalContext': result.stdout.strip()}}
     return json.loads(result.stdout) if result.stdout.lstrip().startswith('{') else {}
@@ -426,7 +426,7 @@ def handle(root, provider, event):
         state = json.loads(file.read_text()) if file.exists() else {'epoch': 0, 'state': 'RUNNING', 'profile': provider}
         handover = budget.handover_path(root, session)
         if state.get('state') == 'STOPPED':
-            return fail(provider, name, 'Æion Factory session is stopped; use its handover in a new session.')
+            return fail(provider, name, 'Æion Template session is stopped; use its handover in a new session.')
         if name == 'SessionStart' and event.get('source') == 'compact':
             state.pop('checkpoint', None)
             state.pop('observed_tokens', None)
@@ -456,7 +456,7 @@ def handle(root, provider, event):
                 budget.ensure_handover(root, session)
                 state['closure_owed'] = 'pending'
                 budget.atomic(file, json.dumps(state, sort_keys=True) + '\n')
-                return {'systemMessage': f'Æion Factory: compaction before a verified handover; after it, write '
+                return {'systemMessage': f'Æion Template: compaction before a verified handover; after it, write '
                                          f'{handover.relative_to(root)} and verify the checkpoint before any other work.'}
             if not budget.ready(root, session, state):
                 budget.ensure_handover(root, session)
@@ -471,7 +471,7 @@ def handle(root, provider, event):
                         state['epoch'] += 1
                         state['state'] = 'RECOVERING'
                     budget.atomic(file, json.dumps(state, sort_keys=True) + '\n')
-                    return {'systemMessage': f'Æion Factory {budget.LIMIT_K}: compacting before a verified checkpoint; the closure '
+                    return {'systemMessage': f'Æion Template {budget.LIMIT_K}: compacting before a verified checkpoint; the closure '
                                              f'stays owed until the failing check is fixed and '
                                              f'{handover.relative_to(root)} is verified: '
                                              + budget.checkpoint_command(root, session)}
@@ -488,7 +488,7 @@ def handle(root, provider, event):
                         state['epoch'] += 1
                         state['state'] = 'RECOVERING'
                     budget.atomic(file, json.dumps(state, sort_keys=True) + '\n')
-                    return {'systemMessage': f'Æion Factory {budget.WARN_K}: {handover.relative_to(root)} was verified and the '
+                    return {'systemMessage': f'Æion Template {budget.WARN_K}: {handover.relative_to(root)} was verified and the '
                                              f'tree moved since; compacting now, and the closure stays owed until a '
                                              f'fresh checkpoint: ' + budget.checkpoint_command(root, session)}
                 refusal = fail(provider, name, f'Fill {handover.relative_to(root)} and verify the docs before '
@@ -506,7 +506,7 @@ def handle(root, provider, event):
                 state['epoch'] += 1
                 state['state'] = 'RECOVERING'
                 budget.atomic(file, json.dumps(state, sort_keys=True) + '\n')
-            return {'systemMessage': f'Æion Factory verified handover: {handover.relative_to(root)}'}
+            return {'systemMessage': f'Æion Template verified handover: {handover.relative_to(root)}'}
         measured = {}
         # Droid measures nothing, so only the closure owed after its compaction applies the shared rule.
         owed = provider == 'droid' and state.get('closure_owed') == 'due'
@@ -553,12 +553,12 @@ def handle(root, provider, event):
     if name == 'SessionStart':
         result = script(root, 'session-start.py', normalized)
         pointer = 'Handover' if handover.is_file() else 'Handover (created at the first refused compaction)'
-        context = (f'Æion Factory {provider} checkpoint profile. {pointer}: {handover.relative_to(root)}. '
+        context = (f'Æion Template {provider} checkpoint profile. {pointer}: {handover.relative_to(root)}. '
                    f'Checkpoint key: {session}. {budget.WARN_K} handover/compact, {budget.LIMIT_K} forced handover and compaction; not a strict ceiling.')
         if provider in {'devin', 'antigravity'}:
-            context = f'Æion Factory {provider} profile: shared guards and edit feedback; no compaction checkpoint or token stop.'
+            context = f'Æion Template {provider} profile: shared guards and edit feedback; no compaction checkpoint or token stop.'
         if provider == 'droid':
-            context = (f'Æion Factory droid profile: shared guards and edit feedback; no {budget.WARN_K} alert. Before compacting, fill '
+            context = (f'Æion Template droid profile: shared guards and edit feedback; no {budget.WARN_K} alert. Before compacting, fill '
                        f'{handover.relative_to(root)}, update work/current.md and verify: {budget.checkpoint_command(root, session)}. '
                        f'A compaction without it owes that closure right after.')
         if provider == 'grok':
@@ -633,7 +633,7 @@ def main():
         if not isinstance(event, dict):
             raise ValueError('hook payload must be an object')
     except (ValueError, OSError, RecursionError):
-        print('Æion Factory hook payload invalid or oversized; action refused.', file=sys.stderr)
+        print('Æion Template hook payload invalid or oversized; action refused.', file=sys.stderr)
         return 2
     provider = sys.argv[1] if len(sys.argv) > 1 else None
     # Antigravity's payload names no hook event, so its registration passes the event as an argument; Devin and Droid
@@ -651,7 +651,7 @@ def main():
         result = fail(provider, event.get('hook_event_name'), str(error))
     except (ValueError, KeyError, IndexError, TypeError, OSError, RecursionError, subprocess.SubprocessError):
         name = event.get('hook_event_name') if isinstance(event, dict) else None
-        result = fail(provider, name, 'Æion Factory adapter verification unavailable; resolve the hook/check error before continuing.')
+        result = fail(provider, name, 'Æion Template adapter verification unavailable; resolve the hook/check error before continuing.')
     print(json.dumps(result))
     return 0
 

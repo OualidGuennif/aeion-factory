@@ -1,23 +1,23 @@
 ---
 type: Reference
-title: "Æion Factory integration choices"
+title: "Æion Template integration choices"
 description: "The narrow upstream practices retained for context safety and skills, and why the template embeds no spec engine: AxiomSpec belongs to aeion-framework."
 status: stable
 generated:
-  by: aeion-factory/3.0
+  by: aeion-template/3.0
   at: 2026-11-10
 sources:
   - id: context
     resource: ../operations/context-safety.md
     title: "Actual context contract"
   - id: architecture
-    resource: factory-architecture.md
+    resource: template-architecture.md
     title: "Complete architecture specification"
 ---
 
 # Integration choices
 
-The approved plan preserves Doc / OKF / Knowledge, frontmatter/tags, Æion Factory skill entry points,
+The approved plan preserves Doc / OKF / Knowledge, frontmatter/tags, Æion Template skill entry points,
 existing hooks and the reviewed task flow. Current behavior belongs to the linked runbooks and
 architecture specification; this file records the integration choices rather than a second policy.
 
@@ -26,7 +26,7 @@ architecture specification; this file records the integration choices rather tha
 [Inspected source](https://github.com/mksglu/context-mode/tree/8b74cbba68a79e45170dd5866dee949fd6ddd8e1).
 Retain bounded output, processing large results in code, file artifacts and handover restoration.
 No upstream code/MCP/memory store is installed. Its best-effort snapshot is not a deterministic
-340k/390k token guard. Æion Factory uses native compaction at 340k, explicit closure and a verified
+340k/390k token guard. Æion Template uses native compaction at 340k, explicit closure and a verified
 checkpoint; the 390k forced compaction is not qualified pre-request admission. Strict execution
 refuses instead of claiming an unsupported guarantee.
 

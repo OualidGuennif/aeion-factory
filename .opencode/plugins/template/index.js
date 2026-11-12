@@ -15,7 +15,7 @@ function invoke(event) {
   const result = spawnSync('python3', [resolve(ROOT, 'tools/agents/hook.py'), 'opencode'], {
     cwd: ROOT, input: JSON.stringify(event), encoding: 'utf8', timeout: 15000, maxBuffer: 128 * 1024,
   });
-  if (result.error || result.status !== 0) throw new Error('Æion Factory hook unavailable; action refused.');
+  if (result.error || result.status !== 0) throw new Error('Æion Template hook unavailable; action refused.');
   const output = JSON.parse(result.stdout);
   const reason = output.stopReason || (output.decision === 'block' && output.reason)
     || (output.hookSpecificOutput?.permissionDecision === 'deny' && output.hookSpecificOutput.permissionDecisionReason);
@@ -59,7 +59,7 @@ async function measure(ctx, usage) {
 }
 
 export default {
-  id: 'aeion.factory',
+  id: 'aeion.template',
   async setup(ctx) {
     const usage = new Map();
     const compacting = new Set();
@@ -84,7 +84,7 @@ export default {
       if (!message) return;
       const content = event.result.content;
       const parts = typeof content === 'string' ? [{ type: 'text', text: content }] : [...(content || [])];
-      event.result = { ...event.result, content: [...parts, { type: 'text', text: `Æion Factory feedback: ${message}` }] };
+      event.result = { ...event.result, content: [...parts, { type: 'text', text: `Æion Template feedback: ${message}` }] };
     });
     await ctx.session.hook('compaction', async (event) => {
       const { reason, output } = invoke({ session_id: event.sessionID, hook_event_name: 'PreCompact' });

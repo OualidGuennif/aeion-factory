@@ -4,7 +4,7 @@ title: "Specs first, and links to code"
 description: "The OKF format: the eight sections a component doc carries as its spec, the determinism slider, decisions, the optional framework mode, and the two-way links between docs and code that the checks enforce."
 status: stable
 generated:
-  by: aeion-factory/1.0
+  by: aeion-template/1.0
   at: 2026-10-20T00:00:00Z
 sources:
   - id: tool

@@ -4,7 +4,7 @@ title: "Security"
 description: "Secrets, untrusted input, SQL and commands, access boundaries, leaked secrets, production reads, scans and reviews."
 status: stable
 generated:
-  by: aeion-factory/1.0
+  by: aeion-template/1.0
   at: 2026-10-20T00:00:00Z
 sources:
   - id: owasp

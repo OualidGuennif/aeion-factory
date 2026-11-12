@@ -21,7 +21,7 @@ class PoolTests(unittest.TestCase):
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
         self.workspace = Path(self.temporary.name)
-        lifecycle = self.workspace / "aeion-factory"
+        lifecycle = self.workspace / "aeion-template"
         lifecycle.mkdir()
         for name, value in (("WORKSPACE", self.workspace), ("ROOT", lifecycle), ("POOL", lifecycle / "skills")):
             replace = patch.object(pool, name, value)

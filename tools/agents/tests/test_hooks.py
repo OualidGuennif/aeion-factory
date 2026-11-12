@@ -13,8 +13,8 @@ import unittest
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[3]
-loader = importlib.machinery.SourceFileLoader('factory_agent_hook', str(ROOT / 'tools/agents/hook.py'))
-spec = importlib.util.spec_from_loader('factory_agent_hook', loader)
+loader = importlib.machinery.SourceFileLoader('aeion_agent_hook', str(ROOT / 'tools/agents/hook.py'))
+spec = importlib.util.spec_from_loader('aeion_agent_hook', loader)
 hook = importlib.util.module_from_spec(spec)
 loader.exec_module(hook)
 
@@ -63,7 +63,7 @@ class HookTests(unittest.TestCase):
             event = {**self.event, 'session_id': f'feedback-{provider}', 'hook_event_name': 'PostToolUse'}
             self.assertEqual(hook.handle(self.root, provider, event), {}, provider)
             stopped = hook.handle(self.root, provider, {**event, 'hook_event_name': 'Stop'})
-            self.assertNotIn('Æion Factory adapter verification unavailable', json.dumps(stopped), provider)
+            self.assertNotIn('Æion Template adapter verification unavailable', json.dumps(stopped), provider)
 
     def test_a_failing_token_feedback_never_stops_the_harness(self):
         (self.root / '.claude/hooks/token-feedback.py').write_text('import time\ntime.sleep(10)\n')
@@ -115,7 +115,7 @@ class HookTests(unittest.TestCase):
                 for item in value:
                     collect(item)
 
-        for config in ('.codex/hooks.json', '.devin/hooks.v1.json', '.factory/settings.json', '.agents/hooks.json', '.grok/hooks/factory.json'):
+        for config in ('.codex/hooks.json', '.devin/hooks.v1.json', '.factory/settings.json', '.agents/hooks.json', '.grok/hooks/template.json'):
             collect(json.loads((ROOT / config).read_text()))
         self.assertGreaterEqual(len(commands), 16)
         environment = {key: value for key, value in os.environ.items()
@@ -886,8 +886,8 @@ class HookTests(unittest.TestCase):
 
     def test_antigravity_hooks_route_every_event_to_the_adapter(self):
         groups=json.loads((ROOT/'.agents/hooks.json').read_text())
-        self.assertEqual(list(groups),['aeion-factory'])
-        hooks=groups['aeion-factory']
+        self.assertEqual(list(groups),['aeion-template'])
+        hooks=groups['aeion-template']
         self.assertEqual(set(hooks),{'PreToolUse','PostToolUse','Stop'})
         for event,entries in hooks.items():
             for entry in entries:
@@ -998,7 +998,7 @@ class HookTests(unittest.TestCase):
         self.assertEqual(set(log.read_text().splitlines()), {'a.py'})
 
     def test_grok_hooks_route_every_event_to_the_adapter(self):
-        hooks = json.loads((ROOT / '.grok/hooks/factory.json').read_text())['hooks']
+        hooks = json.loads((ROOT / '.grok/hooks/template.json').read_text())['hooks']
         self.assertEqual(set(hooks), {'SessionStart', 'PreToolUse', 'PostToolUse', 'PreCompact', 'PostCompact', 'Stop'})
         for event, entries in hooks.items():
             self.assertTrue(all(h['command'].endswith(f'tools/agents/hook.py" grok {event}') for e in entries for h in e['hooks']))

@@ -5,7 +5,7 @@ description: "Inner, middle and outer loops: the orchestrator's jobs, their mode
 status: stable
 review_after: 2027-01-29
 generated:
-  by: aeion-factory/1.0
+  by: aeion-template/1.0
   at: 2026-10-20T00:00:00Z
 sources:
   - resource: ../../tools/loops/process.py

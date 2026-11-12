@@ -21,7 +21,7 @@ Everything you can run here, grouped by loop. Skills are invoked by name in a Cl
 | `pr-taste` | the owner commented on a PR: keep the durable preferences |
 | `retro` | weekly or after a long session: lessons into hooks, skills and preferences |
 | `loop-triage` | an outer-loop finding: turn it into an issue an inner loop can fix |
-| `adopt` | apply Æion Factory to an existing repository, one phase at a time |
+| `adopt` | apply Æion Template to an existing repository, one phase at a time |
 
 ## Tools
 
@@ -31,7 +31,7 @@ tools/knowledge/doc-links                             # docs <-> code links reso
 tools/knowledge/doc-links --diff origin/develop --worktree   # also: code changed without its doc (L3)
 tools/knowledge/doc-links --for path/to/file          # the docs covering a file
 tools/repo-health/repo-health [--json]                # comment blocks, file sizes, AGENTS.md and work caps
-tools/factory-tests                                   # every factory test suite below, as CI runs them
+tools/template-tests                                   # every template test suite below, as CI runs them
 python3 tools/knowledge/tests/test_doc_links.py       # tool tests
 python3 .claude/hooks/test_hooks.py                   # hook tests
 python3 tools/context/tests/test_budget.py            # context boundary/recovery regressions
@@ -44,7 +44,7 @@ tools/agents/run pi                                 # Pi 1.4.0+, project extensi
 tools/agents/run devin                              # Devin CLI: .devin/ hooks, shared skills
 tools/agents/run droid                              # Droid (factory.ai): .factory/ hooks, shared skills
 tools/agents/run antigravity                        # Google Antigravity CLI (agy): .agents/hooks.json
-tools/agents/run grok                               # Grok Build: .grok/hooks/factory.json
+tools/agents/run grok                               # Grok Build: .grok/hooks/template.json
 git config aeion.mode team                          # team flow: develop, review before push, release PR
 git config --unset aeion.mode                       # back to local mode, the default
 python3 tools/agents/tests/test_hooks.py

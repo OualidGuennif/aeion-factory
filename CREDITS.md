@@ -1,6 +1,6 @@
 # Credits
 
-Æion Factory is an orchestration layer over other people's ideas and tools. Thank you.
+Æion Template is an orchestration layer over other people's ideas and tools. Thank you.
 
 ## Tools and plugins
 
@@ -10,7 +10,7 @@
   https://github.com/anthropics/claude-plugins-official · https://code.claude.com/docs
 - **Addy Osmani, `agent-skills`** (MIT) — the skill anatomy (overview, when to use, process,
   rationalizations, red flags, verification) and the DEFINE → PLAN → BUILD → VERIFY → REVIEW → SHIP
-  lifecycle that Æion Factory's skills follow. https://github.com/addyosmani/agent-skills ·
+  lifecycle that Æion Template's skills follow. https://github.com/addyosmani/agent-skills ·
   "Own the Outer Loop" (2026).
 - **Vectorize, Hindsight** (MIT) — agent memory with retain, recall and reflect.
   https://github.com/vectorize-io/hindsight
@@ -20,7 +20,7 @@
 ## Research and practice
 
 - **Jesse Vincent / obra, Superpowers** (MIT) — investigation, evidence before completion,
-  precise plans and verified review feedback inspired the focused Æion Factory skill updates.
+  precise plans and verified review feedback inspired the focused Æion Template skill updates.
   https://github.com/obra/superpowers · [license notice](docs/licenses/superpowers-MIT.txt).
 - **Mert Koseoğlu, context-mode** (Elastic-2.0) — bounded output and pre-compaction recovery
   informed the context design. No context-mode code or MCP runtime is bundled.
@@ -56,10 +56,10 @@ Mistakes in how these ideas are combined here are ours, not theirs.
   specialist workflow references. https://github.com/anthropics/knowledge-work-plugins
 
 The versioned skills/catalog.json records exact source commits, entrypoint fingerprints and license
-files. Native Factory text is selectively adapted, not a wholesale copy of upstream prompts. The separate passive pool contains upstream skill/agent files and supporting resources,
+files. Native Template text is selectively adapted, not a wholesale copy of upstream prompts. The separate passive pool contains upstream skill/agent files and supporting resources,
 with three source-hash-bound scanner annotation comments recorded in tools/skills/annotations.json, with license texts under skills/licenses/.
 Three of those files are modified by source-hash-bound security patches recorded in tools/skills/patches.json: the
 skill-creator eval-viewer/generate_review.py and eval-viewer/viewer.html (Apache-2.0) and the continuous-learning-v2
 scripts/instinct-cli.py (MIT);
-each changed line is marked "Æion Factory security patch".
+each changed line is marked "Æion Template security patch".
 No upstream agent-launch mandate, model setting or generic threshold is adopted.

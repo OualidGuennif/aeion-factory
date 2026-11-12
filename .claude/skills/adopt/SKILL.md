@@ -1,9 +1,9 @@
 ---
 name: adopt
-description: Brings Æion Factory to an existing repository one phase at a time, in plan mode, merging into what the repository already has and never overwriting it. Use when bringing an existing repository to this setup.
+description: Brings Æion Template to an existing repository one phase at a time, in plan mode, merging into what the repository already has and never overwriting it. Use when bringing an existing repository to this setup.
 ---
 
-# Adopt the gu# Adopt Æion Factory in an existing repository
+# Adopt the gu# Adopt Æion Template in an existing repository
 
 The four promises come first:
 
@@ -28,10 +28,10 @@ The four promises come first:
 2. Inventory the repository's own instructions, docs, hooks, CI and conventions: they win.
 3. Pick the next phase; plan the smallest change that fits; list what you keep as is and why.
 4. Wait for a yes; implement on a branch; run the phase's check. Before the first managed task,
-   adapt `knowledge/components/factory-architecture.md` to the actual project.
+   adapt `knowledge/components/template-architecture.md` to the actual project.
 5. Open a PR (skill `sign-off`, then `pr-review`). One phase per PR.
-6. When the connectors land, record the factory release they came from in `.aeion-factory`
-   (`v<factory VERSION> <factory commit>`), so skill `template-update` knows the baseline later.
+6. When the connectors land, record the template release they came from in `.aeion-template`
+   (`v<template VERSION> <template commit>`), so skill `template-update` knows the baseline later.
 
 E runtime matrix before setup. Preserve the original Claude integration; load
 Codex project/hook trust and shared skills through .agents, the local OpenCode plugin/config, or the Pi extension in .pi/.

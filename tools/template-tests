@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Spec: knowledge/operations/build-and-test.md
-# The factory's own test suites, in the order CI runs them; the first failure stops the run.
+# The template's own test suites, in the order CI runs them; the first failure stops the run.
 # One command keeps AGENTS.md short enough for a project to add its own build lines.
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -43,7 +43,7 @@ fi
 run python3 tools/evals/tests/test_evals.py
 run python3 tools/loops/tests/test_loops.py
 if [[ ${not_run:-0} -eq 1 ]]; then
-    echo "factory-tests: PASS (Python suites); JavaScript adapter suites NOT RUN"
+    echo "template-tests: PASS (Python suites); JavaScript adapter suites NOT RUN"
 else
-    echo "factory-tests: PASS"
+    echo "template-tests: PASS"
 fi

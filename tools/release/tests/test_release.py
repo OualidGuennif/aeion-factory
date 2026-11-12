@@ -63,8 +63,8 @@ class ReleaseTests(unittest.TestCase):
     def test_new_project_keeps_only_the_adapt_task(self):
         self.write("1.4.0\n", "# Changelog\n\nIntro.\n\n## [Unreleased]\n\n## [1.4.0] - 2026-10-28\n\n- Old.\n")
         (self.root / "work").mkdir()
-        tasks = ("# Current work\n\nHeader.\n\n## Factory task — ACTIVE\n- State: factory.\n\n"
-                 "## Adapt Æion Factory to this project — ACTIVE\n- Owner decision: <date>, started.\n- Next: adapt.\n")
+        tasks = ("# Current work\n\nHeader.\n\n## Template task — ACTIVE\n- State: template.\n\n"
+                 "## Adapt Æion Template to this project — ACTIVE\n- Owner decision: <date>, started.\n- Next: adapt.\n")
         (self.root / "work/current.md").write_text(tasks)
         # A project's own spec and docs are never the reset's to touch.
         (self.root / "knowledge/spec").mkdir(parents=True)
@@ -72,30 +72,30 @@ class ReleaseTests(unittest.TestCase):
         first = self.release("--new-project")
         self.assertEqual(first.returncode, 0)
         self.assertEqual((self.root / "knowledge/spec/spec.json").read_text(), '{"kept": true}')
-        expected = ("# Current work\n\nHeader.\n\n## Adapt Æion Factory to this project — ACTIVE\n"
+        expected = ("# Current work\n\nHeader.\n\n## Adapt Æion Template to this project — ACTIVE\n"
                     "- Owner decision: 2026-10-28, started.\n- Next: adapt.\n")
         self.assertEqual((self.root / "work/current.md").read_text(), expected)
         self.assertEqual((self.root / "CHANGELOG.md").read_text(), "# Changelog\n\nIntro.\n\n## [Unreleased]\n")
         self.assertEqual((self.root / "VERSION").read_text(), "0.1.0\n")
-        # template-update reads the factory release from the marker, never from the application's VERSION.
-        self.assertEqual((self.root / ".aeion-factory").read_text(), "v1.4.0\n")
+        # template-update reads the template release from the marker, never from the application's VERSION.
+        self.assertEqual((self.root / ".aeion-template").read_text(), "v1.4.0\n")
         # A second run changes nothing.
         self.assertEqual(self.release("--new-project").returncode, 0)
         self.assertEqual((self.root / "work/current.md").read_text(), expected)
-        self.assertEqual((self.root / ".aeion-factory").read_text(), "v1.4.0\n")
+        self.assertEqual((self.root / ".aeion-template").read_text(), "v1.4.0\n")
 
-    def test_new_project_refuses_in_the_factory_clone(self):
+    def test_new_project_refuses_in_the_template_clone(self):
         self.write("1.4.0\n", HEAD)
         (self.root / "work").mkdir()
-        (self.root / "work/current.md").write_text("# Current work\n\n## Adapt Æion Factory to this project — ACTIVE\n- x\n")
+        (self.root / "work/current.md").write_text("# Current work\n\n## Adapt Æion Template to this project — ACTIVE\n- x\n")
         subprocess.run(["git", "init", "-q", str(self.root)], check=True)
         subprocess.run(["git", "-C", str(self.root), "remote", "add", "origin",
-                        "https://github.com/OualidGuennif/aeion-factory.git"], check=True)
+                        "https://github.com/OualidGuennif/aeion-template.git"], check=True)
         result = self.release("--new-project")
         self.assertEqual(result.returncode, 1)
         self.assertIn("own clone", result.stderr)
         self.assertEqual((self.root / "VERSION").read_text(), "1.4.0\n")
-        self.assertFalse((self.root / ".aeion-factory").exists())
+        self.assertFalse((self.root / ".aeion-template").exists())
 
 
 if __name__ == "__main__":

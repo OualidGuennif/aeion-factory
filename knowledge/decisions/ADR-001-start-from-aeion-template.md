@@ -1,10 +1,10 @@
 ---
 type: Decision
-title: "ADR-001 Start from Æion Factory"
-description: "The repository starts from Æion Factory: a router AGENTS.md, an OKF knowledge base linked to code, skills, hooks, three loops; optional services off by default."
+title: "ADR-001 Start from Æion Template"
+description: "The repository starts from Æion Template: a router AGENTS.md, an OKF knowledge base linked to code, skills, hooks, three loops; optional services off by default."
 status: stable
 generated:
-  by: aeion-factory/1.0
+  by: aeion-template/1.0
   at: 2026-10-20T00:00:00Z
 sources:
   - id: guide
@@ -12,14 +12,14 @@ sources:
     title: "The template and its principles"
 ---
 
-# ADR-001 — Start from Æion Factory
+# ADR-001 — Start from Æion Template
 
 ## Context
 Agents work best with short, routed instructions, docs bound to code, and fast feedback; humans
 should not have to review every change by hand.
 
 ## Decision
-The repository uses Æion Factory's structure: `AGENTS.md` as a router, `knowledge/` in the OKF
+The repository uses Æion Template's structure: `AGENTS.md` as a router, `knowledge/` in the OKF
 format with links to code checked by `doc-links`, skills and hooks in `.claude/`, the branch + PR +
 review flow, and the scheduled read-only outer loop. The Decisions API and the memory service are
 off until a human turns them on.

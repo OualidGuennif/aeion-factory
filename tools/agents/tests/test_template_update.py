@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Exercise the template update against a throwaway factory and a project that adopted it."""
+"""Exercise the template update against a throwaway template and a project that adopted it."""
 import contextlib
 import importlib.machinery
 import importlib.util
@@ -13,12 +13,12 @@ from pathlib import Path
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[3]
-loader = importlib.machinery.SourceFileLoader('factory_template_update', str(ROOT / 'tools/agents/template-update'))
-spec = importlib.util.spec_from_loader('factory_template_update', loader)
+loader = importlib.machinery.SourceFileLoader('aeion_template_update', str(ROOT / 'tools/agents/template-update'))
+spec = importlib.util.spec_from_loader('aeion_template_update', loader)
 update_tool = importlib.util.module_from_spec(spec)
 loader.exec_module(update_tool)
 
-PLUGIN = '.dsh/plugins/factory/index.js'
+PLUGIN = '.dsh/plugins/template/index.js'
 LAUNCHER = 'tools/agents/run'
 HOOK = 'tools/git-hooks/pre-push'
 HOOK_V1 = '#!/bin/sh\n# gate\nif mode != "local"; then check; fi\nexit 0\n'
@@ -30,16 +30,16 @@ class TemplateUpdateTests(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.base = Path(self.tmp.name).resolve()
-        self.repo = self.base / 'factory'
+        self.repo = self.base / 'template'
         self.repo.mkdir()
         self.git('init', '-q', '-b', 'main')
-        # A release carries the whole contract set; a thin fixture would test a factory that cannot exist.
+        # A release carries the whole contract set; a thin fixture would test a template that cannot exist.
         for relative in update_tool.CONTRACT:
             self.write_bytes(relative, (ROOT / relative).read_bytes())
         (self.repo / LAUNCHER).chmod(0o755)
         self.write('VERSION', '1.0.0\n')
-        self.write('AGENTS.md', 'the factory instructions of 1.0.0\n')
-        # Factory files outside the contract: the three-way update owns them.
+        self.write('AGENTS.md', 'the template instructions of 1.0.0\n')
+        # Template files outside the contract: the three-way update owns them.
         self.write(HOOK, HOOK_V1)
         (self.repo / HOOK).chmod(0o755)
         self.write('README.md', README_V1)
@@ -50,7 +50,7 @@ class TemplateUpdateTests(unittest.TestCase):
         self.git('tag', 'v1.0.0')
         self.write('VERSION', '2.0.0\n')
         self.write(PLUGIN, 'export const version = 2;\n')
-        self.write('AGENTS.md', 'the factory instructions of 2.0.0\n')
+        self.write('AGENTS.md', 'the template instructions of 2.0.0\n')
         self.write(HOOK, HOOK_V1.replace('mode != "local"', 'mode != "team"'))
         self.write('README.md', README_V1.replace('footer', 'footer of 2.0.0'))
         (self.repo / 'efficiency/old.md').unlink()
@@ -117,15 +117,15 @@ class TemplateUpdateTests(unittest.TestCase):
         code, output = self.run_tool('--from-ref', 'v1.0.0', '--ref', 'v2.0.0')
         self.assertEqual(code, 1, output)  # AGENTS.md needs a human merge
         self.assertEqual((self.project / PLUGIN).read_text(), 'export const version = 2;\n')
-        # VERSION belongs to the application; the update must not rewrite it as factory provenance.
+        # VERSION belongs to the application; the update must not rewrite it as template provenance.
         self.assertEqual((self.project / 'VERSION').read_text().strip(), '1.0.0')
         self.assertEqual((self.project / 'AGENTS.md').read_text(), 'the project owns this file\n')
         self.assertEqual((self.project / 'knowledge/note.md').read_text(), 'project knowledge\n')
         self.assertIn('merge     AGENTS.md', output)
 
     def test_the_project_cockpit_and_spec_are_never_written(self):
-        # 3.0.0 ships the factory's own AxiomSpec cockpit beside docs every project should receive.
-        for name, text in (('docs/README.md', 'factory cockpit\n'), ('docs/views/factory.json', '{}\n'),
+        # 3.0.0 ships the template's own AxiomSpec cockpit beside docs every project should receive.
+        for name, text in (('docs/README.md', 'template cockpit\n'), ('docs/views/template.json', '{}\n'),
                            ('docs/view-catalog.json', '{"views": []}\n'), ('knowledge/spec/spec.json', '{}\n'),
                            ('docs/slides/deck.html', 'deck 3\n')):
             self.write(name, text)
@@ -134,7 +134,7 @@ class TemplateUpdateTests(unittest.TestCase):
         self.project_file('docs/README.md', 'the project cockpit\n')
         code, output = self.run_tool('--from-ref', 'v1.0.0', '--ref', 'v3.0.0')
         self.assertEqual((self.project / 'docs/README.md').read_text(), 'the project cockpit\n')
-        for name in ('docs/views/factory.json', 'docs/view-catalog.json', 'knowledge/spec/spec.json'):
+        for name in ('docs/views/template.json', 'docs/view-catalog.json', 'knowledge/spec/spec.json'):
             self.assertFalse((self.project / name).exists(), name)
             self.assertNotIn(f'added     {name}', output)
         self.assertNotIn('docs/README.md', [line.split()[-1] for line in output.splitlines() if line.startswith(('written', 'updated'))])
@@ -153,7 +153,7 @@ class TemplateUpdateTests(unittest.TestCase):
         self.assertEqual((self.project / PLUGIN).read_text(), 'export const version = 2;\n')
 
     def test_the_application_version_is_never_written(self):
-        # The public new-project flow starts an application at 0.1.0, which is not a factory release.
+        # The public new-project flow starts an application at 0.1.0, which is not a template release.
         self.project_file('VERSION', '0.7.0\n')
         code, output = self.run_tool('--from-ref', 'v1.0.0', '--ref', 'v2.0.0')
         self.assertEqual(code, 1, output)
@@ -181,7 +181,7 @@ class TemplateUpdateTests(unittest.TestCase):
         self.project_git('add', '-A')
         self.project_git('commit', '-q', '-m', 'adopt')
 
-    def test_an_untouched_factory_file_takes_the_target(self):
+    def test_an_untouched_template_file_takes_the_target(self):
         code, output = self.run_tool('--from-ref', 'v1.0.0', '--ref', 'v2.0.0')
         self.assertEqual(code, 1, output)  # AGENTS.md and the knowledge doc still need a human
         # The git hook is outside the contract; 2.0.0 projects must not keep the 1.x gate.
@@ -241,7 +241,7 @@ class TemplateUpdateTests(unittest.TestCase):
         self.assertFalse((self.project / 'knowledge/policies/security.md').exists())
         self.assertFalse((self.project / 'CHANGELOG.md').exists())
 
-    def test_untouched_knowledge_follows_the_factory(self):
+    def test_untouched_knowledge_follows_the_template(self):
         self.project_file('knowledge/policies/security.md', 'policy 1\n')
         code, output = self.run_tool('--from-ref', 'v1.0.0', '--ref', 'v2.0.0')
         self.assertEqual((self.project / 'knowledge/policies/security.md').read_text(), 'policy 2\n')
@@ -256,13 +256,13 @@ class TemplateUpdateTests(unittest.TestCase):
         self.assertFalse((self.project / '.aeion/template-update/v2.0.0/knowledge').exists())
 
     def release(self, version, changes):
-        """A further factory release on top of v2.0.0: changes is a callable editing the factory tree."""
+        """A further template release on top of v2.0.0: changes is a callable editing the template tree."""
         self.write('VERSION', f'{version}\n')
         changes()
         self.commit(version)
         self.git('tag', f'v{version}')
 
-    def test_a_removed_factory_link_is_removed(self):
+    def test_a_removed_template_link_is_removed(self):
         link = '.agents/skills/retired'
 
         def add():
@@ -276,7 +276,7 @@ class TemplateUpdateTests(unittest.TestCase):
         self.assertNotIn('refusing', output)
         self.assertFalse((self.project / link).is_symlink(), output)
 
-    def test_a_new_factory_folder_comes_in_and_a_left_out_one_does_not(self):
+    def test_a_new_template_folder_comes_in_and_a_left_out_one_does_not(self):
         (self.project / 'efficiency/old.md').unlink()
         (self.project / 'efficiency').rmdir()
 
@@ -289,7 +289,7 @@ class TemplateUpdateTests(unittest.TestCase):
         # efficiency/ existed at the baseline, so its absence is the project's choice.
         self.assertFalse((self.project / 'efficiency').exists())
 
-    def test_a_renamed_factory_file_moves_and_its_empty_folder_goes(self):
+    def test_a_renamed_template_file_moves_and_its_empty_folder_goes(self):
         self.release('2.1.0', lambda: self.write('tools/old/process.py', 'shared code\n'))
         self.release('3.0.0', lambda: self.git('mv', 'tools/old/process.py', 'tools/new-process.py'))
         self.project_file('tools/old/process.py', 'shared code\n')
@@ -309,23 +309,23 @@ class TemplateUpdateTests(unittest.TestCase):
     def test_the_marker_is_written_then_used(self):
         code, output = self.run_tool('--from-ref', 'v1.0.0', '--ref', 'v2.0.0')
         self.assertEqual(code, 1, output)
-        marker = (self.project / '.aeion-factory').read_text().split()
+        marker = (self.project / '.aeion-template').read_text().split()
         self.assertEqual(marker[0], 'v2.0.0')
         self.assertEqual(len(marker[1]), 40)
         code, output = self.run_tool('--ref', 'v2.0.0', '--check')
         self.assertEqual(code, 0, output)
-        self.assertIn('(v2.0.0, .aeion-factory)', output)
+        self.assertIn('(v2.0.0, .aeion-template)', output)
         self.assertIn('nothing to do', output)
 
     def test_a_new_project_marker_names_its_release(self):
-        self.project_file('.aeion-factory', 'v1.0.0\n')
+        self.project_file('.aeion-template', 'v1.0.0\n')
         code, output = self.run_tool('--ref', 'v2.0.0')
         self.assertEqual(code, 1, output)
-        self.assertIn('(v1.0.0, .aeion-factory)', output)
+        self.assertIn('(v1.0.0, .aeion-template)', output)
         self.assertIn('mode != "team"', (self.project / HOOK).read_text())
 
     def test_an_unknown_marker_is_refused(self):
-        self.project_file('.aeion-factory', 'v9.9.9\n')
+        self.project_file('.aeion-template', 'v9.9.9\n')
         code, output = self.run_tool('--ref', 'v2.0.0')
         self.assertEqual(code, 2, output)
         self.assertIn('git fetch --tags', output)
@@ -396,17 +396,17 @@ class TemplateUpdateTests(unittest.TestCase):
         self.commit_project()
         code, output = self.run_tool('--ref', 'v2.0.0', '--repo', str(self.project))
         self.assertEqual(code, 2, output)
-        self.assertIn(f'from its own repository {self.project.resolve()}; run template-update from the Æion Factory clone', output)
+        self.assertIn(f'from its own repository {self.project.resolve()}; run template-update from the Æion Template clone', output)
         self.assertEqual((self.project / HOOK).read_text(), HOOK_V1)
 
-    def test_a_project_copy_names_the_factory_clone_before_a_mistyped_root(self):
+    def test_a_project_copy_names_the_template_clone_before_a_mistyped_root(self):
         # Run from inside a project, `--root <its name>` resolves to a folder inside the project.
-        self.project_file('.aeion-factory', 'v1.0.0\n')
+        self.project_file('.aeion-template', 'v1.0.0\n')
         self.commit_project()
         code, output = self.run_tool('--ref', 'v2.0.0', '--repo', str(self.project),
                                      '--root', str(self.project / 'project'))
         self.assertEqual(code, 2, output)
-        self.assertIn('run template-update from the Æion Factory clone', output)
+        self.assertIn('run template-update from the Æion Template clone', output)
         self.assertIn('--root <project>', output)
         self.assertNotIn('no such project', output)
         self.assertEqual((self.project / HOOK).read_text(), HOOK_V1)
@@ -428,7 +428,7 @@ class TemplateUpdateTests(unittest.TestCase):
         self.assertIn('intro of 2.1.0', readme)
         self.assertIn('footer of 2.0.0', readme)
         self.assertIn('updated   README.md — untouched since v1.0.0', output)
-        # The factory left the hook alone since 2.0.0; the project's 1.0.0 copy still catches up.
+        # The template left the hook alone since 2.0.0; the project's 1.0.0 copy still catches up.
         self.assertIn('mode != "team"', (self.project / HOOK).read_text())
         self.assertIn(f'updated   {HOOK} — untouched since v1.0.0', output)
 
@@ -492,12 +492,12 @@ class TemplateUpdateTests(unittest.TestCase):
         self.assertTrue(hooks.is_symlink())
 
 
-def factory_has(ref):
+def template_has(ref):
     return subprocess.run(['git', 'rev-parse', '--verify', '--quiet', f'{ref}^{{commit}}'], cwd=ROOT,
                           capture_output=True).returncode == 0
 
 
-@unittest.skipUnless(factory_has('v2.1.1') and factory_has('HEAD'), 'needs the factory history with tag v2.1.1')
+@unittest.skipUnless(template_has('v2.1.1') and template_has('HEAD'), 'needs the template history with tag v2.1.1')
 class ReleaseUpdateTests(unittest.TestCase):
     """A project adopted at an earlier release, untouched, updated to this commit: it must commit again
     after the one step the update names (the AGENTS.md proposal)."""
@@ -510,7 +510,7 @@ class ReleaseUpdateTests(unittest.TestCase):
             subprocess.run(['tar', '-x', '-C', str(project)], input=archive.stdout, check=True)
             commit = subprocess.run(['git', 'rev-parse', 'v2.1.1^{commit}'], cwd=ROOT, capture_output=True,
                                     text=True, check=True).stdout.strip()
-            (project / '.aeion-factory').write_text(f'v2.1.1 {commit}\n')
+            (project / '.aeion-template').write_text(f'v2.1.1 {commit}\n')
 
             def git(*arguments):
                 return subprocess.run(['git', '-c', 'user.name=Test', '-c', 'user.email=test@example.com',
@@ -531,7 +531,7 @@ class ReleaseUpdateTests(unittest.TestCase):
             self.assertEqual(hook.returncode, 0, hook.stdout + hook.stderr)
 
 
-    @unittest.skipUnless(factory_has('v3.0.0'), 'needs the factory history with tag v3.0.0')
+    @unittest.skipUnless(template_has('v3.0.0'), 'needs the template history with tag v3.0.0')
     def test_a_3_0_0_project_keeps_its_spec_and_drops_the_engine(self):
         with tempfile.TemporaryDirectory() as folder:
             project = Path(folder).resolve() / 'app'
@@ -540,7 +540,7 @@ class ReleaseUpdateTests(unittest.TestCase):
             subprocess.run(['tar', '-x', '-C', str(project)], input=archive.stdout, check=True)
             commit = subprocess.run(['git', 'rev-parse', 'v3.0.0^{commit}'], cwd=ROOT, capture_output=True,
                                     text=True, check=True).stdout.strip()
-            (project / '.aeion-factory').write_text(f'v3.0.0 {commit}\n')
+            (project / '.aeion-template').write_text(f'v3.0.0 {commit}\n')
             spec = (project / 'knowledge/spec/spec.json').read_bytes()
 
             def git(*arguments):

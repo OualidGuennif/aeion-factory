@@ -4,7 +4,7 @@ title: "Operations index"
 description: "Getting started, build and test, the loops, recovery."
 status: stable
 generated:
-  by: aeion-factory/1.6
+  by: aeion-template/1.6
   at: 2026-10-29
 ---
 

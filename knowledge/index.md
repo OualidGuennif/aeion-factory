@@ -4,7 +4,7 @@ title: "Knowledge index"
 description: "The entry point: to do X, open Y."
 status: stable
 generated:
-  by: aeion-factory/1.0
+  by: aeion-template/1.0
   at: 2026-10-20T00:00:00Z
 ---
 

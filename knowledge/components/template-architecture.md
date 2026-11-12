@@ -1,14 +1,14 @@
 ---
 type: Component
-title: "Æion Factory architecture"
-description: "Complete specification of Æion Factory's authority, execution, Knowledge, context checkpoints and delivery, with its diagrams."
+title: "Æion Template architecture"
+description: "Complete specification of Æion Template's authority, execution, Knowledge, context checkpoints and delivery, with its diagrams."
 status: stable
 generated:
-  by: aeion-factory/3.0
+  by: aeion-template/3.0
   at: 2026-11-10
 verified:
   - at: 2026-11-12
-    what: "tools/factory-tests and the knowledge, link and health checks passed with no embedded spec engine"
+    what: "tools/template-tests and the knowledge, link and health checks passed with no embedded spec engine"
 sources:
   - id: instructions
     resource: ../../AGENTS.md
@@ -24,14 +24,14 @@ sources:
     title: "Pull request and branch checks"
 ---
 
-# Æion Factory architecture
+# Æion Template architecture
 
 ## Intent
 
-Æion Factory is a Git repository template and local toolset for agent-assisted engineering. The
+Æion Template is a Git repository template and local toolset for agent-assisted engineering. The
 owner authorizes scope and delivery. Agents plan and edit; Python/Git checks establish bounded
 structural facts; fresh review establishes the verdict; GitHub records PR/merge/CI evidence.
-There is no application server, broker, production database or deployed Æion Factory control plane.
+There is no application server, broker, production database or deployed Æion Template control plane.
 Adopting projects keep their existing instructions and architecture.
 
 Claude Code retains its native hooks. Codex, OpenCode, Pi, dsh (DeepSeek Harness), Devin, Droid
@@ -41,7 +41,7 @@ compaction checkpoint; Droid, which reports no tokens, owes its closure after a 
 cannot refuse compaction). Grok's hooks live in `.grok/`. During closure, plain read commands (`cat`, `head`, `sed -n`, `rg` and
 the like, without operators, globs or secret files) are closure tools, because Codex reads only
 through its shell. Droid owns `.factory/`, so
-Æion Factory's local state lives in the ignored `.aeion/`. A per-clone flow mode selects local mode, the default
+Æion Template's local state lives in the ignored `.aeion/`. A per-clone flow mode selects local mode, the default
 (local commits, no sign-off reminder), or the team flow (`aeion.mode team`: develop, review, release PR);
 the safety guards run in both.
 Their native token/compaction interfaces differ; compatibility is not a claim of identical
@@ -92,11 +92,11 @@ Unavailable child usage stops that child's profile without contaminating the par
 | Instructions | Owner precedence, scope and adoption | Markdown links; `CLAUDE.md` points to `AGENTS.md` |
 | Skills | Plan/spec/build/test/review/sign-off/ship, template update and focused procedures | `.claude/skills/*/SKILL.md`; no second task ledger |
 | Connector checks | Byte equality against a checkout or a git reference, config wiring, regular-file and executable-mode checks, steer identity and role | `tools/agents/adapter-check`; `connectors.py` (one file list), `refs.py` (one reference reader and git mode) |
-| Project update | Move an adopted project between factory references: connectors byte for byte, other factory files three-way, never the application's `VERSION` | `tools/agents/template-update`; baseline from `--from-ref`, `.aeion-factory` or an exact tag inference; names `AGENTS.md`, merged settings, conflicts and `knowledge/` for a human with proposals; refuses dirty trees and linked destinations |
-| Desktop install | Pin the dsh profile's plugin at a release instead of a working tree | `tools/agents/dsh-install`; `<profile>/aeion-factory` symlink |
+| Project update | Move an adopted project between template references: connectors byte for byte, other template files three-way, never the application's `VERSION` | `tools/agents/template-update`; baseline from `--from-ref`, `.aeion-template` or an exact tag inference; names `AGENTS.md`, merged settings, conflicts and `knowledge/` for a human with proposals; refuses dirty trees and linked destinations |
+| Desktop install | Pin the dsh profile's plugin at a release instead of a working tree | `tools/agents/dsh-install`; `<profile>/aeion-template` symlink |
 | Hook adapter | Read event JSON and call a bounded local check | stdin/stdout JSON; failure blocks where supported |
-| Headless Pi RPC | Keep one `pi --mode rpc` process alive through the settlement compaction and its resumed run, streaming the answer and failing closed on a failed compaction or the deadline | `tools/agents/pi-rpc`, reached through `tools/agents/run pi rpc`; the factory extension supplies the guards |
-| dsh connector | Guard every tool call and drive the 340k/390k handover-compact-resume cycle | `.dsh/plugins/factory/*.js`; the root compaction service (headless) or the `/compact` command on idle (web, whose service is isolated in an agent-preset group) |
+| Headless Pi RPC | Keep one `pi --mode rpc` process alive through the settlement compaction and its resumed run, streaming the answer and failing closed on a failed compaction or the deadline | `tools/agents/pi-rpc`, reached through `tools/agents/run pi rpc`; the template extension supplies the guards |
+| dsh connector | Guard every tool call and drive the 340k/390k handover-compact-resume cycle | `.dsh/plugins/template/*.js`; the root compaction service (headless) or the `/compact` command on idle (web, whose service is isolated in an agent-preset group) |
 | Context budget | Usage, closure-only state, checkpoint receipt (with per-file digests, so a stale one names what changed), 390k forced compaction | `.aeion/context/<session>.json`; per-session file lock |
 | Handover | Recovery facts for the current session | Ignored `work/handovers/<session>.md`, created atomically only when closure needs it |
 | Knowledge/link/health checkers | Frontmatter, caps, traceability and diff coverage | Exit code + bounded diagnostics; no provider |
@@ -149,7 +149,7 @@ stateDiagram-v2
     RECOVERING --> RUNNING: new positive usage
     RUNNING --> STOPPED: invalid complete usage
 ```
-Deployment remains the adopting project's own guarded procedure. Æion Factory loops never deploy.
+Deployment remains the adopting project's own guarded procedure. Æion Template loops never deploy.
 
 ### Context and recovery
 
@@ -245,7 +245,7 @@ the existing fresh PR reviewer remains.
 
 ## Acceptance checks
 
-Run the commands in [build and test](../operations/build-and-test.md), including `tools/factory-tests`.
+Run the commands in [build and test](../operations/build-and-test.md), including `tools/template-tests`.
 Preview a changed diagram before claiming it reads well. Native long-session qualification
 remains unavailable until a real controlled run succeeds; a failed or partial run is not a pass.
 
@@ -270,7 +270,7 @@ child process group as well as enforcing deadlines. No SDK dependency is bundled
 The root `skills/` directory is a passive, self-contained source library: 525 physical
 skill folders, 99 physical agent profiles, support files, copied licenses and a provenance
 catalog. These are not symlinks into another repository. Reading, searching and checking
-work in a Factory-only checkout. `tools/skills/pool.py` manages materialization and integrity;
+work in a Template-only checkout. `tools/skills/pool.py` manages materialization and integrity;
 only a refresh needs the four allowed source copies. The optional external lifecycle folder
 contains the human/LLM maintenance brief only and is never a runtime dependency.
 

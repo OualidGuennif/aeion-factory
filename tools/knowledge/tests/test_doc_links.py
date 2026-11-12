@@ -140,7 +140,7 @@ t = repo()
 (t / "demo/lone/app.ts").write_text(f"// {TAG} knowledge/components/nested.md\n")
 sh(t, "git", "add", ".")
 check("a folder without AGENTS.md is not a nested project", t, [], 1, "RULE L1 demo/lone/app.ts:1")
-# A folder release archives leave out (the factory's demo) keeps its own pointers too.
+# A folder release archives leave out (the template's demo) keeps its own pointers too.
 (t / ".gitattributes").write_text("/demo export-ignore\n")
 sh(t, "git", "add", ".")
 check("a folder releases leave out keeps its own pointers", t, [], 0, "PASS")

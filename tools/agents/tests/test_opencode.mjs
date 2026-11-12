@@ -4,24 +4,24 @@ import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } fro
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import plugin from '../../../.opencode/plugins/factory/index.js';
+import plugin from '../../../.opencode/plugins/template/index.js';
 
 const root = fileURLToPath(new URL('../../../', import.meta.url));
 const hooks = {};
 const register = (domain) => async (name, callback) => { hooks[`${domain}.${name}`] = callback; };
 await plugin.setup({ location: { directory: root }, tool: { hook: register('tool') }, session: { hook: register('session') } });
-const sessionID = `factory-v2-plugin-test-${process.pid}`;
+const sessionID = `template-v2-plugin-test-${process.pid}`;
 
 // The plugin runs only the hook.py shipped beside it, so a stand-in project gets its own copy of the plugin.
 const copies = new Map();
 async function standIn(prefix, hook) {
   const folder = mkdtempSync(join(tmpdir(), prefix));
-  cpSync(join(root, '.opencode/plugins/factory'), join(folder, '.opencode/plugins/factory'), { recursive: true });
+  cpSync(join(root, '.opencode/plugins/template'), join(folder, '.opencode/plugins/template'), { recursive: true });
   if (hook !== undefined) {
     mkdirSync(join(folder, 'tools/agents'), { recursive: true });
     writeFileSync(join(folder, 'tools/agents/hook.py'), hook);
   }
-  copies.set(folder, (await import(pathToFileURL(join(folder, '.opencode/plugins/factory/index.js')).href)).default);
+  copies.set(folder, (await import(pathToFileURL(join(folder, '.opencode/plugins/template/index.js')).href)).default);
   return folder;
 }
 

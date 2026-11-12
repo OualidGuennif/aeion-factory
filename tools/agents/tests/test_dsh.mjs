@@ -4,12 +4,12 @@ import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symli
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { apply, inject } from '../../../.dsh/plugins/factory/index.js';
-import * as compaction from '../../../.dsh/plugins/factory/compaction.js';
-import { seam } from '../../../.dsh/plugins/factory/seam.js';
+import { apply, inject } from '../../../.dsh/plugins/template/index.js';
+import * as compaction from '../../../.dsh/plugins/template/compaction.js';
+import { seam } from '../../../.dsh/plugins/template/seam.js';
 
 const root = fileURLToPath(new URL('../../../', import.meta.url));
-const sessionID = `factory-dsh-plugin-test-${process.pid}`;
+const sessionID = `template-dsh-plugin-test-${process.pid}`;
 
 // The plugin trusts the project it ships in, so a stand-in project gets its own copy of the plugin.
 const copies = new Map();
@@ -19,10 +19,10 @@ async function plugin(folder) {
 }
 async function standIn(prefix, hook) {
   const folder = mkdtempSync(join(tmpdir(), prefix));
-  cpSync(join(root, '.dsh/plugins/factory'), join(folder, '.dsh/plugins/factory'), { recursive: true });
+  cpSync(join(root, '.dsh/plugins/template'), join(folder, '.dsh/plugins/template'), { recursive: true });
   mkdirSync(join(folder, 'tools/agents'), { recursive: true });
   writeFileSync(join(folder, 'tools/agents/hook.py'), hook);
-  copies.set(folder, await plugin(join(folder, '.dsh/plugins/factory')));
+  copies.set(folder, await plugin(join(folder, '.dsh/plugins/template')));
   return folder;
 }
 
@@ -82,7 +82,7 @@ test('dsh tool calls that read a secret are denied before execution', () => {
   assert.equal(guard(call(agent, 'bash', { command: 'git status --short' })), undefined);
 });
 
-test('dsh guards a session by its own directory and leaves one outside any factory project alone', () => {
+test('dsh guards a session by its own directory and leaves one outside any template project alone', () => {
   const { guard, agent } = load(join(root, 'demo'));
   assert.ok(guard(call(agent, 'bash', { command: 'cat .env' })));
   const outside = mkdtempSync(join(tmpdir(), 'dsh-outside-'));
@@ -91,7 +91,7 @@ test('dsh guards a session by its own directory and leaves one outside any facto
   rmSync(outside, { recursive: true, force: true });
 });
 
-test('dsh refuses a factory project its profile does not trust, without running its hooks', () => {
+test('dsh refuses a template project its profile does not trust, without running its hooks', () => {
   // A folder someone hands over may plant its own adapter; it runs only once the user trusts that project.
   const planted = mkdtempSync(join(tmpdir(), 'dsh-planted-'));
   mkdirSync(join(planted, 'tools/agents'), { recursive: true });
@@ -107,14 +107,14 @@ test('dsh refuses a factory project its profile does not trust, without running 
 test('dsh runs the hooks of a project its installed profile trusts', async () => {
   // dsh-install vendors the plugin into the profile and links it; --trust lists a project beside that link.
   const profile = mkdtempSync(join(tmpdir(), 'dsh-profile-'));
-  cpSync(join(root, '.dsh/plugins/factory'), join(profile, 'vendor/aeion-factory-v9.9.9'), { recursive: true });
-  symlinkSync('vendor/aeion-factory-v9.9.9', join(profile, 'aeion-factory'));
+  cpSync(join(root, '.dsh/plugins/template'), join(profile, 'vendor/aeion-template-v9.9.9'), { recursive: true });
+  symlinkSync('vendor/aeion-template-v9.9.9', join(profile, 'aeion-template'));
   const { folder, events } = await recorder();
-  copies.set(folder, await plugin(join(profile, 'aeion-factory')));
+  copies.set(folder, await plugin(join(profile, 'aeion-template')));
   const { guard, agent } = load(folder);
   assert.match(guard(call(agent, 'bash', { command: 'true' })), /not trusted/);
   const ranUntrusted = existsSync(join(folder, 'events.jsonl'));
-  writeFileSync(join(profile, 'aeion-factory.trusted'), `/nonexistent\n${folder}\n`);
+  writeFileSync(join(profile, 'aeion-template.trusted'), `/nonexistent\n${folder}\n`);
   assert.equal(guard(call(agent, 'bash', { command: 'true' })), undefined);
   const seen = events().map((event) => event.hook_event_name);
   rmSync(profile, { recursive: true, force: true });
@@ -136,7 +136,7 @@ test('dsh past 340k is held to closure by its own token meter', () => {
 
 test('dsh steers an advisory notice that a denial would otherwise carry', async () => {
   // The web profile's gate allows the call, so its notice must reach the agent through a steer instead.
-  const notice = 'Æion Factory: this harness compacts on its own; the gate is advisory here.';
+  const notice = 'Æion Template: this harness compacts on its own; the gate is advisory here.';
   const folder = await answering({ PreToolUse: { systemMessage: notice, hookSpecificOutput: { hookEventName: 'PreToolUse', additionalContext: notice } } });
   const { guard, agent, steered } = load(folder, 1000);
   agent.session.id = `${sessionID}-notice`;
@@ -203,7 +203,7 @@ test('dsh never tells the user to type /compact, verified or owed (dsh FB-004)',
   // idle and resumes; it never orders a human /compact command either way.
   const owed = await answering({
     PostToolUse: { aeion: { compact: true } },
-    PreCompact: { systemMessage: 'Æion Factory 390k: compacting before a verified checkpoint' },
+    PreCompact: { systemMessage: 'Æion Template 390k: compacting before a verified checkpoint' },
   });
   const first = load(owed, 390000, { root: false });
   await first.handlers['tools/post-execute'](call(first.agent, 'bash', { command: 'true' }), {}, async () => ({}));

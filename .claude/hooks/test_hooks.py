@@ -712,14 +712,14 @@ expect("session-start names a plain folder", result, 0, "git: inactive (plain fo
 expect("session-start in a plain folder still lists tasks", result, 0, "Probe task")
 result = session_start("team")
 expect("session-start runs", result, 0, "git status")
-expect("session-start names the team flow", result, 0, "Æion Factory mode: team")
+expect("session-start names the team flow", result, 0, "Æion Template mode: team")
 expect("session-start lists the last commit", result, 0, "Probe commit")
 expect("session-start lists the open task", result, 0, "Probe task — ACTIVE")
 if len(result.stdout.strip().split("\n")) > 25:
     failures.append("session-start printed more than 25 lines")
-expect("session-start names local mode", session_start("local"), 0, "Æion Factory mode: local")
+expect("session-start names local mode", session_start("local"), 0, "Æion Template mode: local")
 result = session_start(None)
-expect("session-start defaults to local mode", result, 0, "Æion Factory mode: local (git lifecycle off")
+expect("session-start defaults to local mode", result, 0, "Æion Template mode: local (git lifecycle off")
 if "git hooks: off" in result.stdout or "branch: main" in result.stdout:
     failures.append("session-start gave team-flow advice in local mode")
 expect("session-start points team work on main to develop", session_start("team"), 0,
@@ -734,7 +734,7 @@ expect("session-start names git hooks that are off", session_start("team"), 0,
 if "git hooks: off" in session_start("team", hooks_path="tools/git-hooks").stdout:
     failures.append("session-start called the repository's own git hooks off")
 # The global config cannot switch the mode: only the repository's own config does.
-expect("session-start ignores a global aeion.mode", session_start(None, "team"), 0, "Æion Factory mode: local")
+expect("session-start ignores a global aeion.mode", session_start(None, "team"), 0, "Æion Template mode: local")
 
 print(f"hook tests: {passes} passed, {len(failures)} failed")
 for f in failures:

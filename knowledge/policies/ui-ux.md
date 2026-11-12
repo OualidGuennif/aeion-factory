@@ -4,7 +4,7 @@ title: "UI and UX"
 description: "Sober interfaces: tokens in one file with light and dark sets, AA contrast, phone first, shared blocks, unknown never reads as fine, a visual yes before shipping."
 status: stable
 generated:
-  by: aeion-factory/1.0
+  by: aeion-template/1.0
   at: 2026-10-20T00:00:00Z
 ---
 

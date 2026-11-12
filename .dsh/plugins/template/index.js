@@ -5,12 +5,12 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { seam } from './seam.js';
 
-export const name = 'aeion-factory';
+export const name = 'aeion-template';
 export const inject = ['tools', 'tokenMeter', 'workingDirectory'];
 
-const UNAVAILABLE = 'Æion Factory hook unavailable; action refused.';
-const RESUME = 'Æion Factory: context compacted. Read your handover in work/handovers/ and continue the task.';
-const ASK = 'Æion Factory: this profile gives the plugin no compaction service, so dsh compacts on its own. Keep the handover current and continue.';
+const UNAVAILABLE = 'Æion Template hook unavailable; action refused.';
+const RESUME = 'Æion Template: context compacted. Read your handover in work/handovers/ and continue the task.';
+const ASK = 'Æion Template: this profile gives the plugin no compaction service, so dsh compacts on its own. Keep the handover current and continue.';
 // dsh's built-in tools under the names the shared guards know; glob only lists paths.
 const TOOLS = { bash: 'Bash', read: 'Read', write: 'Write', edit: 'Edit', str_replace_editor: 'Edit', glob: 'Glob', grep: 'Grep' };
 
@@ -19,14 +19,14 @@ const LOCAL = new Set(['Read', 'Grep', 'Glob', 'LS', 'Edit', 'Write', 'MultiEdit
 // The hook refuses a payload over 2 MB; a larger result is not forwarded rather than truncated mid-text.
 const MAX_RESULT = 256 * 1024;
 
-// This plugin's own folder, links resolved: the factory's .dsh/plugins/factory, or a profile's vendored copy.
+// This plugin's own folder, links resolved: the template's .dsh/plugins/template, or a profile's vendored copy.
 const HERE = realpathSync(dirname(fileURLToPath(import.meta.url)));
 // The project this plugin ships in, and the profile's list of projects `dsh-install --trust` recorded.
 const OWN = resolve(HERE, '../../..');
-const TRUSTED = resolve(HERE, '../../aeion-factory.trusted');
+const TRUSTED = resolve(HERE, '../../aeion-template.trusted');
 
 // A session may work in a subfolder, so the hooks live in the nearest folder above that has them;
-// a session outside any Æion Factory project has none, and the plugin leaves it alone.
+// a session outside any Æion Template project has none, and the plugin leaves it alone.
 function projectRoot(directory) {
   for (let folder = resolve(directory); ; folder = dirname(folder)) {
     if (existsSync(resolve(folder, 'tools/agents/hook.py'))) return folder;
@@ -46,7 +46,7 @@ function trustedRoot(directory) {
   } catch { /* no list: only the project this plugin ships in */ }
   const same = (path) => { try { return realpathSync(path) === real; } catch { return false; } };
   if (real === OWN || listed.some(same)) return root;
-  throw new Error(`Æion Factory: ${root} is not trusted by this dsh profile, so its hooks do not run and its tools `
+  throw new Error(`Æion Template: ${root} is not trusted by this dsh profile, so its hooks do not run and its tools `
     + `are refused. If it is yours: tools/agents/dsh-install --trust ${root}`);
 }
 
@@ -72,7 +72,7 @@ function toolName(exec) {
 export function apply(ctx) {
   // Each session's own directory, not the launch folder: one dsh web server serves many projects.
   const rootOf = (agent) => trustedRoot(ctx.workingDirectory.get(agent.session));
-  // Sessions given the factory's start context; a compaction removes one, so its next call is told again.
+  // Sessions given the template's start context; a compaction removes one, so its next call is told again.
   const started = new Set();
   const compacted = new Set();
   // Agents whose verified handover asked for a compaction; it runs before their next model step.
@@ -102,8 +102,8 @@ export function apply(ctx) {
     last.set(session, now);
   }
 
-  // The factory's start context reaches the model as steering: dsh has no hook that adds it to the prompt.
-  const say = (agent, text) => agent.steer({ id: globalThis.crypto.randomUUID(), role: 'user', content: [{ type: 'text', text }], source: { kind: 'aeion-factory' } });
+  // The template's start context reaches the model as steering: dsh has no hook that adds it to the prompt.
+  const say = (agent, text) => agent.steer({ id: globalThis.crypto.randomUUID(), role: 'user', content: [{ type: 'text', text }], source: { kind: 'aeion-template' } });
 
   function start(root, agent) {
     const session = agent.session.id;
@@ -169,12 +169,12 @@ export function apply(ctx) {
       const context = output.hookSpecificOutput?.additionalContext;
       if (context) say(exec.agent, context);
     } catch (error) {
-      ctx.logger?.warn?.(`aeion-factory: ${error.message || UNAVAILABLE}`);
+      ctx.logger?.warn?.(`aeion-template: ${error.message || UNAVAILABLE}`);
     }
     return downstream;
   });
 
-  // The turn's close is the factory's Stop: a sign-off finding steers one more step; the hook shows each
+  // The turn's close is the template's Stop: a sign-off finding steers one more step; the hook shows each
   // finding once per session, so a second close passes. `continue: false` is the hook's terminal stop, and
   // steering it would start another turn that closes the same way.
   ctx.on('agent/turn-stopping', async ({ agent }) => {
@@ -185,7 +185,7 @@ export function apply(ctx) {
         compaction_unavailable: !canCompact(agent) });
       if (reason && output.continue !== false) say(agent, reason);
     } catch (error) {
-      ctx.logger?.warn?.(`aeion-factory: ${error.message || UNAVAILABLE}`);
+      ctx.logger?.warn?.(`aeion-template: ${error.message || UNAVAILABLE}`);
     }
   });
 
@@ -209,7 +209,7 @@ export function apply(ctx) {
       compacted.add(session);
       say(agent, RESUME);
     } catch (error) {
-      ctx.logger?.warn?.(`aeion-factory: compaction failed: ${error.message}`);
+      ctx.logger?.warn?.(`aeion-template: compaction failed: ${error.message}`);
     }
     return next();
   });
@@ -252,7 +252,7 @@ export function apply(ctx) {
       }
       if (settled?.result?.kind !== 'success') {
         due.delete(agent);
-        say(agent, 'Æion Factory: the /compact command did not run, so the 340k gate stays closed. Once the handover, work/current.md and checkpoint verify, stop this session and start a new one from the handover; compaction is not guaranteed here.');
+        say(agent, 'Æion Template: the /compact command did not run, so the 340k gate stays closed. Once the handover, work/current.md and checkpoint verify, stop this session and start a new one from the handover; compaction is not guaranteed here.');
         return;
       }
       due.delete(agent);
@@ -260,7 +260,7 @@ export function apply(ctx) {
       compacted.add(session);
       say(agent, RESUME);
     } catch (error) {
-      ctx.logger?.warn?.(`aeion-factory: compaction failed: ${error.message}`);
+      ctx.logger?.warn?.(`aeion-template: compaction failed: ${error.message}`);
     }
   });
 }

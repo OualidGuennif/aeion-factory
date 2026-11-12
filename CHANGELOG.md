@@ -6,6 +6,17 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+- **Breaking: Æion Factory is now Æion Template (`aeion-template`), with no compatibility for the old
+  names.** The repository is `OualidGuennif/aeion-template`; the release marker is `.aeion-template`;
+  the test runner is `tools/template-tests`; the harness folders are `.dsh/plugins/template/`,
+  `.dsh/template.patch.yml`, `.opencode/plugins/template/`, `.pi/extensions/template/` and
+  `.grok/hooks/template.json`; the launchd label is `com.aeion.template.outer`; the evals field is
+  `template`. Droid's `.factory/` is unchanged (it belongs to factory.ai). After updating an existing
+  project, by hand: rename `.aeion-factory` to `.aeion-template` (without it, template-update falls
+  back to the closest tag); run `tools/agents/dsh-install --tag <tag> --trust <project>` again and
+  restart the desktop; reinstall a loaded launchd schedule under its new label; start headless Pi with
+  `-e .pi/extensions/template/index.js`.
+
 - **Breaking: the embedded AxiomSpec engine is removed.** `tools/axiom/`, `knowledge/axiomspec/`, the
   template's own `knowledge/spec/`, the generated cockpit (`docs/README.md`, `docs/generated/`,
   `docs/views/`, the catalogs) and the `axiom` skill are gone, and nothing runs `axiom check` any more

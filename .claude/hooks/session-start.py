@@ -36,11 +36,11 @@ elif not repository:
 else:
     # The flow mode decides whether work ends in a reviewed push or a local commit; local unless set to team.
     if out("git", "config", "--local", "--get", "aeion.mode") != ["team"]:
-        lines.append("Æion Factory mode: local (git lifecycle off: no develop, review, PR or release gate; "
+        lines.append("Æion Template mode: local (git lifecycle off: no develop, review, PR or release gate; "
                      "safety guards stay on). Team flow: README.md#team-git-flow")
     else:
         branch = " ".join(out("git", "branch", "--show-current")) or "a detached HEAD"
-        lines.append(f"Æion Factory mode: team on {branch} "
+        lines.append(f"Æion Template mode: team on {branch} "
                      "(develop: review before each push; main: release PR). Local: git config --unset aeion.mode")
         # Team work happens on develop; main moves only through the release pull request.
         if branch == "main":

@@ -5,7 +5,7 @@ description: "Every gate of this repository, where to run it, and the language s
 status: stable
 review_after: 2027-01-29
 generated:
-  by: aeion-factory/1.0
+  by: aeion-template/1.0
   at: 2026-10-20T00:00:00Z
 sources:
   - id: ci
@@ -28,8 +28,8 @@ sources:
     title: "jdtls-launch, which names this doc as its spec"
   - resource: ../../tools/claude-plugins/native-lsp/scripts/tsc-lsp
     title: "tsc-lsp, which names this doc as its spec"
-  - resource: ../../tools/factory-tests
-    title: "factory-tests, which names this doc as its spec"
+  - resource: ../../tools/template-tests
+    title: "template-tests, which names this doc as its spec"
   - resource: ../../tools/git-hooks/pre-commit
     title: "pre-commit, which names this doc as its spec"
   - resource: ../../tools/knowledge/orphans
@@ -49,8 +49,8 @@ CI action revisions are pinned to upstream commit SHAs; review upstream changes 
 | Knowledge reachability | `tools/knowledge/orphans`: a document nothing links | the root |
 | Docs and code links | `tools/knowledge/doc-links` (`--diff origin/develop` before a push) | the root |
 | Comments, file size, caps | `tools/repo-health/repo-health` | the root |
-| The factory's own test suites (hooks, tools, evals, push gate, release, context, adapters including the OpenCode, Pi and dsh plugins and the Pi RPC bridge, connector drift, the tag-pinned desktop install, loops) | `tools/factory-tests` (each suite also runs alone; the script lists them) | root; Node 18+ for the three JavaScript adapter suites, reported NOT RUN without it |
-| Connector copies | `tools/agents/adapter-check` (`--root` for a project that adopted the factory) | the root |
+| The template's own test suites (hooks, tools, evals, push gate, release, context, adapters including the OpenCode, Pi and dsh plugins and the Pi RPC bridge, connector drift, the tag-pinned desktop install, loops) | `tools/template-tests` (each suite also runs alone; the script lists them) | root; Node 18+ for the three JavaScript adapter suites, reported NOT RUN without it |
+| Connector copies | `tools/agents/adapter-check` (`--root` for a project that adopted the template) | the root |
 | Your code | add your build, lint and test commands here, copied from CI | |
 
 `stale` and `orphans` reject a missing root or `knowledge/` directory with a nonzero exit;
@@ -59,11 +59,11 @@ A valid knowledge directory with no dated documents still passes `stale`.
 
 The pre-commit (`git config core.hooksPath tools/git-hooks`) runs `knowledge-check`, `doc-links`,
 and `repo-health`. The pre-push refuses a push of `develop` without a recorded `Review: OK`
-and any direct push to `main`. CI runs those three checks, `factory-tests` and security scans on pushes to `main` or `develop` and pull requests targeting either; the
+and any direct push to `main`. CI runs those three checks, `template-tests` and security scans on pushes to `main` or `develop` and pull requests targeting either; the
 Semgrep container is pinned by digest like the actions.
-`stale` and `orphans` remain manual checks; CI exercises their fixtures through `factory-tests`.
+`stale` and `orphans` remain manual checks; CI exercises their fixtures through `template-tests`.
 
-Many people run Æion Factory in a plain folder, without git. The link and health checks, the context
+Many people run Æion Template in a plain folder, without git. The link and health checks, the context
 fingerprint and the session-start summary then walk the files on disk (skipping `.git`, `.aeion`,
 dependencies, caches, the root's build output such as `dist/` or `target/`, and desktop files such as
 `.DS_Store`; `.claude/hooks/project_files.py`). Each folder's `.gitignore` applies to it and below for
@@ -127,9 +127,9 @@ require Python 3.12+ excluding 3.14.1. `knowledge-check` also validates public r
 
 The seventeen native skills are checked by `tools/skills/lint`: `name` against its folder, a
 description of at most 1024 characters that names its trigger, a body of at most 150 lines and no
-duplicate name; `tools/skills/tests/test_lint.py` is in `tools/factory-tests`.
+duplicate name; `tools/skills/tests/test_lint.py` is in `tools/template-tests`.
 
-`tools/factory-tests` runs `tools/skills/tests/test_pool.py` and the real offline pool check
+`tools/template-tests` runs `tools/skills/tests/test_pool.py` and the real offline pool check
 `python3 tools/skills/pool.py check`. They verify materialized files, support resources, license
 restrictions, local-edit preservation and operation without third-party/lifecycle folders.
 The root `skills/` data preserves upstream formatting; authored-source size/comment heuristics

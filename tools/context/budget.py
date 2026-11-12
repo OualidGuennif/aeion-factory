@@ -328,7 +328,7 @@ def apply_usage(root, session, state, name, event, usage):
     if usage is None and name == "UserPromptSubmit" and not state.get("bootstrapped"):
         state["bootstrapped"] = True
     elif usage is None:
-        reason = "Æion Factory native usage temporarily unavailable; work is blocked. Retry after transcript persistence; no terminal stop was latched."
+        reason = "Æion Template native usage temporarily unavailable; work is blocked. Retry after transcript persistence; no terminal stop was latched."
         # Transcripts persist asynchronously: deny only this call so the agent can retry it, not stop the agent.
         if name == "PreToolUse":
             result = {"hookSpecificOutput": {"hookEventName": name, "permissionDecision": "deny", "permissionDecisionReason": reason}}
@@ -367,7 +367,7 @@ def apply_usage(root, session, state, name, event, usage):
                     # 390k stopgap: code is already frozen here, so a check that failed before this session would
                     # leave no way to verify and no way to repair. The compaction runs, the closure stays owed.
                     state["closure_owed"] = "due"
-                    result = {"systemMessage": f"Æion Factory {LIMIT_K}: compacting before a verified checkpoint; the "
+                    result = {"systemMessage": f"Æion Template {LIMIT_K}: compacting before a verified checkpoint; the "
                                                f"closure stays owed until the failing check is fixed and "
                                                f"{handover.relative_to(root)} is verified: {checkpoint_command(root, session)}."}
                 elif state.get("checkpoint") and not handover_faults(handover):
@@ -376,7 +376,7 @@ def apply_usage(root, session, state, name, event, usage):
                     # the closure gate is blocking. Compact, keep the debt, and let Stop refuse until a fresh
                     # receipt settles it; an unverified handover still refuses below, so the rule keeps its teeth.
                     state["closure_owed"] = "due"
-                    result = {"systemMessage": f"Æion Factory {WARN_K}: {handover.relative_to(root)} was verified and the "
+                    result = {"systemMessage": f"Æion Template {WARN_K}: {handover.relative_to(root)} was verified and the "
                                                f"tree moved since; compacting now, and the closure stays owed until a "
                                                f"fresh checkpoint: {checkpoint_command(root, session)}."}
                 else:
@@ -391,7 +391,7 @@ def apply_usage(root, session, state, name, event, usage):
                 # The harness reaches no compaction service from this plugin (dsh web keeps it inside each agent
                 # preset), so a hard gate would stall the run until a human typed /compact. Keep the alert and the
                 # handover so recovery survives the harness's own compaction, and never stop the work.
-                message = (f"Æion Factory: this harness compacts on its own, so the {WARN_K}/{LIMIT_K} gate is advisory here. "
+                message = (f"Æion Template: this harness compacts on its own, so the {WARN_K}/{LIMIT_K} gate is advisory here. "
                            f"Keep {handover.relative_to(root)} current so the session can recover, and continue; "
                            f"verify before it compacts: {checkpoint_command(root, session)}.")
                 if first or name in {"Stop", "SubagentStop"}:
@@ -401,11 +401,11 @@ def apply_usage(root, session, state, name, event, usage):
                 # only holds the session hostage until a compaction the plugin cannot guarantee actually lands.
                 verified = ready(root, session, state)
                 if state["state"] == "COMPACT_REQUIRED":
-                    message = (f"Æion Factory {LIMIT_K}: write {handover.relative_to(root)} and verify the checkpoint now "
+                    message = (f"Æion Template {LIMIT_K}: write {handover.relative_to(root)} and verify the checkpoint now "
                                f"({checkpoint_command(root, session)}); compaction follows; {SHAPE}.")
                     allowed = verified or compact_tool(root, call)
                 else:
-                    message = (f"Æion Factory {WARN_K} alert: finish closure only, update {handover.relative_to(root)}, work/current.md and affected docs; "
+                    message = (f"Æion Template {WARN_K} alert: finish closure only, update {handover.relative_to(root)}, work/current.md and affected docs; "
                                f"verify the checkpoint before compaction ({checkpoint_command(root, session)}); {SHAPE}.")
                     allowed = verified or closure_tool(root, call)
                 if name == "PreToolUse" and not allowed:
@@ -422,7 +422,7 @@ def apply_usage(root, session, state, name, event, usage):
             state["state"] = "RUNNING"
         # A closure the 390k stopgap deferred is still owed: the run ends with its receipt, or not at all.
         if not result and name in {"Stop", "SubagentStop"} and state.get("closure_owed") == "due" and not ready(root, session, state):
-            result = stop(name, f"Æion Factory {LIMIT_K}: closure is still owed; fix the failing check and verify the "
+            result = stop(name, f"Æion Template {LIMIT_K}: closure is still owed; fix the failing check and verify the "
                                 f"checkpoint: {checkpoint_command(root, session)}. Task has not been signed off.")
     return result
 
@@ -477,9 +477,9 @@ def handle(root, event):
                 state["closure_owed"] = "due"
         result = {}
         if state.get("state") == "STOPPED":
-            result = stop(name, "Æion Factory context run is stopped; start a new validated session from its handover.")
+            result = stop(name, "Æion Template context run is stopped; start a new validated session from its handover.")
         elif name == "SessionStart":
-            context = f"Æion Factory checkpoint profile: {WARN_K} handover/compact, {LIMIT_K} forced handover and compaction; not a strict ceiling."
+            context = f"Æion Template checkpoint profile: {WARN_K} handover/compact, {LIMIT_K} forced handover and compaction; not a strict ceiling."
             if handover.is_file():
                 context += f" Recovery: {handover.relative_to(root)}"
             if state.get("closure_owed") == "due":
@@ -487,8 +487,8 @@ def handle(root, event):
                             f"checkpoint: {checkpoint_command(root, session)}.")
             result = {"hookSpecificOutput": {"hookEventName": name, "additionalContext": context}}
             if state.pop("warning_pending", False):
-                message = (f"Æion Factory {WARN_K} alert: a verified handover was retained before compaction." if compact_verified
-                           else f"Æion Factory {WARN_K} alert: closure remains required; verify the handover/docs before compaction.")
+                message = (f"Æion Template {WARN_K} alert: a verified handover was retained before compaction." if compact_verified
+                           else f"Æion Template {WARN_K} alert: closure remains required; verify the handover/docs before compaction.")
                 result["systemMessage"] = message
                 result["hookSpecificOutput"]["additionalContext"] += "\n" + message
         else:
@@ -497,7 +497,7 @@ def handle(root, event):
             except (ValueError, OSError, TypeError, AttributeError):
                 state["state"] = "STOPPED"
                 atomic(file, json.dumps(state, sort_keys=True) + "\n")
-                return stop(name, "Æion Factory native usage is invalid; refusing further work.")
+                return stop(name, "Æion Template native usage is invalid; refusing further work.")
             result = apply_usage(root, session, state, name, event, usage)
             state["source"] = "current-session native transcript usage"
         atomic(file, json.dumps(state, sort_keys=True) + "\n")

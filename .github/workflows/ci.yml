@@ -24,7 +24,7 @@ jobs:
         run: |
           if [[ -n "$BASE_REF" ]]; then ./tools/knowledge/doc-links --diff "origin/$BASE_REF"; else ./tools/knowledge/doc-links; fi
       - run: ./tools/repo-health/repo-health
-      - run: ./tools/factory-tests
+      - run: ./tools/template-tests
 
   # Add your build and test job here.
 

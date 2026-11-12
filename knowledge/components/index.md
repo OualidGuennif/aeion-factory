@@ -4,7 +4,7 @@ title: "Components index"
 description: "One spec per unit."
 status: stable
 generated:
-  by: aeion-factory/1.0
+  by: aeion-template/1.0
   at: 2026-10-20T00:00:00Z
 ---
 
@@ -16,4 +16,4 @@ Start from [the template](_template.md).
 | Component | Status | Notes |
 | --- | --- | --- |
 | [Integration choices](context-and-architecture.md) | stable | scoped upstream adoption and runtime qualification boundaries |
-| [Æion Factory architecture](factory-architecture.md) | stable | complete spec, with its diagrams |
+| [Æion Template architecture](template-architecture.md) | stable | complete spec, with its diagrams |

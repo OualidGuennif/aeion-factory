@@ -5,7 +5,7 @@ description: "Native-first skill selection, selective enrichment and the boundar
 status: stable
 review_after: 2027-01-29
 generated:
-  by: aeion-factory/local-skill-maintenance
+  by: aeion-template/local-skill-maintenance
   at: 2026-10-31
 sources:
   - resource: ../../.claude/skills/
@@ -24,7 +24,7 @@ sources:
 
 # Native skills and passive source guidance
 
-Æion Factory keeps its sixteen task skills and adds one selector, `skill-route`.
+Æion Template keeps its sixteen task skills and adds one selector, `skill-route`.
 It does not activate a second skill framework or register a source library globally.
 The [selector](../../.claude/skills/skill-route/SKILL.md) gives native guidance priority;
 copied source material supplies a concrete missing technique only when useful.
@@ -35,7 +35,7 @@ The project-local `skills/` library indexes canonical definitions from ECC, Addy
 official plugins and knowledge-work-plugins. Skill folders are directly under
 `skills/`; agent Markdown definitions are under `skills/agents/`. The pool contains real versioned files and resources, not source symlinks. Metadata search
 returns a small candidate list before any full definition is read. Reading, searching
-and integrity checks require neither third-party source copies nor the lifecycle folder. If the optional source copies are absent, native Factory tasks continue to work.
+and integrity checks require neither third-party source copies nor the lifecycle folder. If the optional source copies are absent, native Template tasks continue to work.
 
 Read the lifecycle pool policy before using a candidate. Only one relevant technique
 and genuinely distinct specialist guidance belong in the task context. Neither a
@@ -65,14 +65,14 @@ trigger, a body of at most 150 lines, and no name declared twice. It prints one
 `FAIL <folder>: <reason>` line per violation and exits 1, or `PASS: 17 skills`. The trigger
 rule accepts the forms the native set uses: `when`, `whenever`, `before`, `after`,
 `monthly`, `weekly`, `periodic` or `at the end`. `tools/skills/tests/test_lint.py` holds the
-fixtures and `tools/factory-tests` runs it.
+fixtures and `tools/template-tests` runs it.
 
 ## Maintenance and evidence
 
 The sibling lifecycle `AUTOMATION.md` is a model-independent maintenance brief. Its run
 updates the four source copies first, then rebuilds the passive catalog and verifies
 pins, all copied-file/license fingerprints and physical contents. It does not create a timer.
-Native Factory edits still require the owner's plan approval; source updates alone
+Native Template edits still require the owner's plan approval; source updates alone
 do not authorize policy changes. Existing approvals for the same scope are reused.
 
 The current update strengthens diagnosis, behavioral tests, refusal paths, review
@@ -96,4 +96,4 @@ eval viewer serves only its own localhost origin and escapes its embedded data a
 benchmark value its page writes (quotes included), and the
 continuous-learning-v2 instinct import refuses redirects. Each patch is bound to the exact
 upstream file hash and a unique needle, applies in order before the annotations, and its
-lines say "Æion Factory security patch"; the [pool policy](../../skills/README.md) has the detail.
+lines say "Æion Template security patch"; the [pool policy](../../skills/README.md) has the detail.

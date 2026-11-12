@@ -1,4 +1,4 @@
-# Æion Factory
+# Æion Template
 
 **Your coding agent. A clear workflow. Checks you can verify.**
 
@@ -12,7 +12,7 @@ decisions come first. It runs on **Python 3 and your coding agent, nothing else*
 
 You need **Git, Python 3.12+ and one installed, connected coding agent** (macOS, Linux or WSL).
 
-1. On GitHub, [create a repository from this template](https://github.com/OualidGuennif/aeion-factory/generate).
+1. On GitHub, [create a repository from this template](https://github.com/OualidGuennif/aeion-template/generate).
 2. Clone it, reset it as a new project, and start your agent:
 
 ```bash
@@ -22,8 +22,8 @@ tools/release/release --new-project
 tools/agents/run claude
 ```
 
-`--new-project` sets version 0.1.0, empties the changelog, leaves one task (adapt the factory to
-your project) and records the factory release in `.aeion-factory`
+`--new-project` sets version 0.1.0, empties the changelog, leaves one task (adapt the template to
+your project) and records the template release in `.aeion-template`
 for later updates. Then give your agent the
 [ready-to-copy setup prompt](knowledge/operations/getting-started.md#new-project).
 
@@ -36,19 +36,19 @@ to run `cat .env`: it must be refused. [First-run setup per agent →](knowledge
 a review before each push, a release pull request) is off until you
 [enable the team git flow](#team-git-flow).
 
-To try the factory itself, clone `https://github.com/OualidGuennif/aeion-factory.git` and run
+To try the template itself, clone `https://github.com/OualidGuennif/aeion-template.git` and run
 `tools/agents/run claude` in it.
 
 ## Existing project
 
-Open your project with your agent and use the **adopt** skill from a reference copy of Æion Factory.
+Open your project with your agent and use the **adopt** skill from a reference copy of Æion Template.
 It inspects what you have and proposes one phase at a time; your instructions, tools and history
 stay in place, and you approve each change before it is applied.
 [Existing-project walkthrough and ready-to-copy prompt →](knowledge/operations/getting-started.md#existing-project)
 
 ### Update to a new release
 
-From an up-to-date clone of Æion Factory (`git fetch --tags`), not the project's own copy of the
+From an up-to-date clone of Æion Template (`git fetch --tags`), not the project's own copy of the
 tool, preview, then apply the latest release tag:
 
 ```bash
@@ -56,8 +56,8 @@ tools/agents/template-update --ref v2.0.2 --root ../your-project --check
 tools/agents/template-update --ref v2.0.2 --root ../your-project
 ```
 
-It finds the release your project came from (`.aeion-factory`, else the closest tag), shows the
-release notes, updates every factory file you left untouched, merges the ones you edited, and leaves
+It finds the release your project came from (`.aeion-template`, else the closest tag), shows the
+release notes, updates every template file you left untouched, merges the ones you edited, and leaves
 your instructions, settings, knowledge and changelog to you, with a proposal for each. The
 [template-update skill](.agents/skills/template-update/SKILL.md) walks your agent through it.
 
@@ -103,7 +103,7 @@ A skill is a reusable procedure your agent follows for one kind of task. Ask nat
 | Update the docs and finish a task | [okf-update](.claude/skills/okf-update/SKILL.md) · [sign-off](.claude/skills/sign-off/SKILL.md) |
 | Review and release (team flow) | [pr-review](.claude/skills/pr-review/SKILL.md) · [ship](.claude/skills/ship/SKILL.md) |
 | Check a sensitive change | [security-scan](.claude/skills/security-scan/SKILL.md) |
-| Adopt the factory, or update to a new release | [adopt](.claude/skills/adopt/SKILL.md) · [template-update](.agents/skills/template-update/SKILL.md) |
+| Adopt the template, or update to a new release | [adopt](.claude/skills/adopt/SKILL.md) · [template-update](.agents/skills/template-update/SKILL.md) |
 | Triage findings, watch technical changes | [loop-triage](.claude/skills/loop-triage/SKILL.md) · [tech-watch](.claude/skills/tech-watch/SKILL.md) |
 | Keep feedback and improve the workflow | [pr-taste](.claude/skills/pr-taste/SKILL.md) · [retro](.claude/skills/retro/SKILL.md) |
 
@@ -150,7 +150,7 @@ it actually ran.
 | Tests and checks | [Build and test](knowledge/operations/build-and-test.md) |
 | Context limits and handovers | [Context safety](knowledge/operations/context-safety.md) |
 
-Æion Factory works on its own. Optional [Æion modules](https://github.com/OualidGuennif/aeion-spaceship/blob/main/docs/modules.md)
+Æion Template works on its own. Optional [Æion modules](https://github.com/OualidGuennif/aeion-spaceship/blob/main/docs/modules.md)
 cover security, audit, observability and integration.
 
 [MIT license](LICENSE) · [Credits](CREDITS.md) · [Security](SECURITY.md)

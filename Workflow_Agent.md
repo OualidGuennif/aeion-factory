@@ -7,7 +7,7 @@ knowledge base.
 
 - Read `AGENTS.md` (it is short). The session starts with a summary from the `SessionStart` hook:
   git status, recent commits, open tasks.
-- Instructions that existed before Æion Factory, and the owner's words, win.
+- Instructions that existed before Æion Template, and the owner's words, win.
 - Nothing needs installing beyond Python 3 and the agent. Start through `tools/agents/run <claude|codex|opencode|pi|devin|droid|antigravity|grok>`; Claude also retains `tools/context/run`.
 
 ## 1. Plan (skill `plan`)

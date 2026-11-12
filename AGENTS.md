@@ -14,7 +14,7 @@
 - A scope change: write the new scope down and get a yes before editing.
 - Ambiguous owner intent: ask one concrete question with your default; never pick silently.
 
-**Precedence.** Instructions that existed here before Æion Factory, and anything the owner says,
+**Precedence.** Instructions that existed here before Æion Template, and anything the owner says,
 win; on conflict keep theirs and note it in `knowledge/policies/owner-preferences.md`.
 
 **Plan first.** For any non-trivial task, enter plan mode, propose, and wait for a yes.
@@ -45,7 +45,7 @@ tools/        knowledge/link/health checks, context budget, release, agent adapt
 
 ```bash
 tools/knowledge/knowledge-check && tools/knowledge/doc-links && tools/repo-health/repo-health
-tools/factory-tests                          # the factory's own test suites, as CI runs them
+tools/template-tests                          # the template's own test suites, as CI runs them
 loops/orchestrator.sh outer --dry-run        # shows the command a loop would run, runs nothing
 ```
 
@@ -66,9 +66,9 @@ A skill is `.agents/skills/<name>/SKILL.md`; open it when your agent does not of
 | Security-sensitive code | `knowledge/policies/security.md`; `.agents/skills/security-scan/SKILL.md` |
 | A user interface | `knowledge/policies/ui-ux.md` |
 | The loops and schedules | `knowledge/operations/loops.md`, `command.md` |
-| Adopting Æion Factory in another repo | `.agents/skills/adopt/SKILL.md`; [Getting started](knowledge/operations/getting-started.md#existing-project) |
+| Adopting Æion Template in another repo | `.agents/skills/adopt/SKILL.md`; [Getting started](knowledge/operations/getting-started.md#existing-project) |
 | Large files, logs and tool output | [Bounded intake](knowledge/policies/bounded-intake.md); targeted reads and summary commands |
-| The architecture and its diagrams | [Architecture](knowledge/components/factory-architecture.md) |
+| The architecture and its diagrams | [Architecture](knowledge/components/template-architecture.md) |
 
 ## Critical rules
 

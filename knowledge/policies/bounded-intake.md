@@ -4,7 +4,7 @@ title: "Bounded tool intake"
 description: "Refuse obvious large dumps before execution; use targeted reads and summary commands."
 status: stable
 generated:
-  by: aeion-factory/1.6.2
+  by: aeion-template/1.6.2
   at: 2026-10-29
 sources:
   - resource: ../../.claude/hooks/guard-path.py

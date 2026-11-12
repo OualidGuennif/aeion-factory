@@ -4,7 +4,7 @@ title: "Component template"
 description: "Copy this file to specify a component; keep the eight sections."
 status: draft
 generated:
-  by: aeion-factory/1.0
+  by: aeion-template/1.0
   at: 2026-10-20T00:00:00Z
 sources:
   - id: none

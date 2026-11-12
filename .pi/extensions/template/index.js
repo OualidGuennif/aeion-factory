@@ -3,8 +3,8 @@ import { spawnSync } from 'node:child_process';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const UNAVAILABLE = 'Æion Factory hook unavailable; action refused.';
-const RESUME = 'Æion Factory: context compacted. Read your handover in work/handovers/ and continue the task.';
+const UNAVAILABLE = 'Æion Template hook unavailable; action refused.';
+const RESUME = 'Æion Template: context compacted. Read your handover in work/handovers/ and continue the task.';
 // A local file tool reads the project's own text; any other result may have come from outside.
 const LOCAL = new Set(['Read', 'Grep', 'Glob', 'LS', 'Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
 // The hook refuses a payload over 2 MB; a larger result is not forwarded rather than truncated mid-text.
@@ -50,7 +50,7 @@ function toolEvent(event, ctx, name, result) {
 }
 
 export default function (pi) {
-  // Sessions given the factory's start context; a compaction removes one, so its next run is told again.
+  // Sessions given the template's start context; a compaction removes one, so its next run is told again.
   const started = new Set();
   const compacted = new Set();
   const settles = new Map();
@@ -64,7 +64,7 @@ export default function (pi) {
     started.add(session);
     compacted.delete(session);
     const content = output.hookSpecificOutput?.additionalContext;
-    return content ? { message: { customType: 'aeion-factory', content, display: false } } : undefined;
+    return content ? { message: { customType: 'aeion-template', content, display: false } } : undefined;
   });
 
   pi.on('tool_call', async (event, ctx) => {
@@ -84,10 +84,10 @@ export default function (pi) {
     // safe place, and the Stop payload now carries the context measure that asks for it.
     const message = reason || output.hookSpecificOutput?.additionalContext;
     if (!message) return undefined;
-    return { content: [...event.content, { type: 'text', text: `Æion Factory feedback: ${message}` }], structuredContent: event.structuredContent };
+    return { content: [...event.content, { type: 'text', text: `Æion Template feedback: ${message}` }], structuredContent: event.structuredContent };
   });
 
-  // The run's settlement is the factory's Stop: a sign-off finding asks for one more model request. The hook
+  // The run's settlement is the template's Stop: a sign-off finding asks for one more model request. The hook
   // shows each finding once per session, so the next settlement passes. A closure refusal is different: it
   // repeats until the checkpoint runs, so it asks a bounded number of times and then settles with the reason.
   pi.on('agent_before_settle', async (event, ctx) => {
@@ -104,7 +104,7 @@ export default function (pi) {
         // A one-shot print/json run ends at this settlement, so a compaction started here is disposed
         // before the summary is written. End cleanly and send the user to the verified handover instead.
         if (!ctx.hasUI) {
-          console.error('Æion Factory: the 340k gate is reached and the handover is verified. This one-shot run '
+          console.error('Æion Template: the 340k gate is reached and the handover is verified. This one-shot run '
             + 'cannot finish a compaction; start a new session from work/handovers/ to continue.');
           return undefined;
         }
@@ -130,7 +130,7 @@ export default function (pi) {
           ctx.ui.notify(reason, 'error');
           return undefined;
         }
-        return { entries: [{ type: 'custom_message', customType: 'aeion-factory', content: reason, display: true }], continue: true };
+        return { entries: [{ type: 'custom_message', customType: 'aeion-template', content: reason, display: true }], continue: true };
       }
       const count = (settles.get(session) || 0) + 1;
       settles.set(session, count);
@@ -139,7 +139,7 @@ export default function (pi) {
         ctx.ui.notify(reason, 'error');
         return undefined;
       }
-      return { entries: [{ type: 'custom_message', customType: 'aeion-factory', content: reason, display: true }], continue: true };
+      return { entries: [{ type: 'custom_message', customType: 'aeion-template', content: reason, display: true }], continue: true };
     } catch (error) {
       ctx.ui.notify(error.message || UNAVAILABLE, 'error');
       return undefined;
@@ -150,7 +150,7 @@ export default function (pi) {
     const session = ctx.sessionManager.getSessionId();
     let reason;
     try {
-      // `native` tells the shared rule this is Pi's own compaction at its window, not one the factory asked for:
+      // `native` tells the shared rule this is Pi's own compaction at its window, not one the template asked for:
       // refusing it would trap the session past the window, so it runs and the closure is owed after it.
       ({ reason } = invoke({ session_id: session, hook_event_name: 'PreCompact', native: true }));
     } catch (error) {

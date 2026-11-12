@@ -22,7 +22,7 @@
     "model": {
       "type": "string"
     },
-    "factory": {
+    "template": {
       "type": "string"
     },
     "tokens": {
@@ -53,6 +53,6 @@
       "format": "date-time"
     }
   },
-  "required": ["task", "harness", "success", "minutes", "factory", "recorded_at"],
+  "required": ["task", "harness", "success", "minutes", "template", "recorded_at"],
   "additionalProperties": true
 }

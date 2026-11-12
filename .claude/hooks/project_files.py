@@ -1,7 +1,7 @@
 # Spec: knowledge/operations/build-and-test.md
 """The project's files: from git when the folder is a repository, from the file system otherwise.
 
-Many people run Æion Factory in a plain folder, so no check may require git just to list files."""
+Many people run Æion Template in a plain folder, so no check may require git just to list files."""
 import fnmatch
 import os
 import subprocess

@@ -6,6 +6,9 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+- `template-update` refuses a linked `.aeion-template` marker before writing any project file,
+  including a dangling link, so recording the update never overwrites a file outside the project.
+
 ## [4.0.0] - 2026-11-12
 
 - `tools/release/release --new-project` also refuses in a template clone whose origin still names

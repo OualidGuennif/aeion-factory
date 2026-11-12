@@ -5,8 +5,11 @@ description: "tools/agents/template-update: moves an adopted project's template 
 status: stable
 review_after: 2027-01-29
 generated:
-  by: aeion-template/3.0
-  at: 2026-11-10
+  by: aeion-template/4.0
+  at: 2026-11-12
+verified:
+  - at: 2026-11-12
+    what: "tools/agents/tests/test_template_update.py: 39 passed, including linked and dangling marker refusals before writes"
 sources:
   - resource: ../../tools/agents/template-update
     title: "The update tool"
@@ -123,9 +126,10 @@ Template clone` (its hint names `--root <project>` when `--root` is no folder).
    `test_an_exact_inference_writes`, `test_a_partial_inference_only_checks`.
 6. Repeating the same from/to pair keeps naming an unpaid merge even when every connector matches —
    `test_a_merge_only_check_keeps_naming_the_merge`.
-7. A linked destination file or parent, or a linked proposal folder, is refused before the first
-   write — `test_a_linked_connector_is_refused_before_any_write`, `test_a_linked_parent_is_refused`,
-   `test_a_linked_proposal_folder_is_refused`.
+7. A linked destination file or parent, including the `.aeion-template` marker, or a linked proposal
+   folder, is refused before the first write — `test_a_linked_connector_is_refused_before_any_write`,
+   `test_a_linked_parent_is_refused`,
+   `test_a_linked_marker_is_refused_before_any_write`, `test_a_linked_proposal_folder_is_refused`.
 8. A created or repaired launcher carries the reference's executable mode —
    `test_a_missing_launcher_is_written_executable`,
    `test_a_launcher_that_lost_its_mode_is_repaired`.

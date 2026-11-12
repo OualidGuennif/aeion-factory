@@ -384,7 +384,7 @@ def update(root, repo, ref, from_ref, check, force):
         decisions.append((label, relative, data, mode, proposal, None if since == base else since))
     # A write must not go through a link into a file the project does not own; a template symlink
     # (a skill link, added, replaced or removed) is itself the destination, so only its folders are checked.
-    writes = [(relative, relative) for relative in CONTRACT] + [
+    writes = [(MARKER, MARKER)] + [(relative, relative) for relative in CONTRACT] + [
         (str(Path(relative).parent) if label == "link" or (label == "removed" and (root / relative).is_symlink())
          else relative, relative)
         for label, relative, *_ in decisions if label in ("added", "updated", "merged", "removed", "link", "mode")]

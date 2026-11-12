@@ -481,6 +481,29 @@ class TemplateUpdateTests(unittest.TestCase):
         # The earlier drifted connector was not written before the preflight refused the linked one.
         self.assertEqual(plugin.read_text(), 'local drift\n')
 
+    def test_a_linked_marker_is_refused_before_any_write(self):
+        marker = self.project / update_tool.MARKER
+        outside = self.base / 'outside-marker.txt'
+        plugin = self.project / PLUGIN
+        plugin.write_text('local drift\n')
+        for exists in (True, False):
+            if exists:
+                outside.write_text('PROJECT OWNED SENTINEL\n')
+            else:
+                outside.unlink(missing_ok=True)
+            marker.symlink_to(outside)
+            for flags in (('--check',), ()):
+                with self.subTest(exists=exists, flags=flags):
+                    code, output = self.run_tool('--from-ref', 'v1.0.0', '--ref', 'v2.0.0', *flags)
+                    self.assertEqual(code, 2, output)
+                    self.assertIn('refusing linked destination .aeion-template', output)
+                    self.assertTrue(marker.is_symlink())
+                    self.assertEqual(outside.exists(), exists)
+                    if exists:
+                        self.assertEqual(outside.read_text(), 'PROJECT OWNED SENTINEL\n')
+                    self.assertEqual(plugin.read_text(), 'local drift\n')
+            marker.unlink()
+
     def test_a_linked_parent_is_refused(self):
         hooks = self.project / '.claude/hooks'
         outside = self.base / 'linked-hooks'

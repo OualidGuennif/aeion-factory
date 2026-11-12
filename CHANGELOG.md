@@ -6,6 +6,9 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+- Framework addresses with a malformed IPv6 host are refused with a diagnostic instead of a
+  traceback, whether given to connect or read from the settings or environment.
+
 - `template-update` refuses a linked `.aeion-template` marker before writing any project file,
   including a dangling link, so recording the update never overwrites a file outside the project.
 

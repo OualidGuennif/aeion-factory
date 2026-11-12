@@ -6,6 +6,9 @@ status: draft
 generated:
   by: aeion-template/4.0
   at: 2026-11-12
+verified:
+  - at: 2026-11-12
+    what: "tools/framework/tests/test_settings.py: 23 passed, including malformed URL refusals from connect, settings and environment"
 sources:
   - id: reader
     resource: ../../.claude/hooks/aeion_settings.py
@@ -55,7 +58,9 @@ The same per-clone settings carry the doc gate's mode. Agents read the settings 
 - `tools/aeion-settings doc-gate enforce|warn|off`.
 - `tools/aeion-settings framework [URL]`: without a URL it asks on a terminal, and refuses (exit 2)
   without one. An address is an `http://` or `https://` URL with a host, a numeric port if any, no
-  credentials, no query or fragment, at most 2,048 characters.
+  credentials, no query or fragment, at most 2,048 characters. A malformed URL, including an invalid
+  IPv6 host, is refused without a traceback; when configured in the file or environment it leaves
+  framework mode off with a diagnostic.
 - `tools/aeion-settings framework off`.
 - `tools/framework/axiom-api ready | node ID [--full] | context ID[,ID…] [--scope direct|change] |
   trace --path P|--symbol S|--id ID | gaps [--phase design|implementation]`, with `--snapshot DIGEST`
@@ -109,7 +114,7 @@ The same per-clone settings carry the doc gate's mode. Agents read the settings 
 | Invariant | Test |
 | --- | --- |
 | 1 | `tools/framework/tests/test_settings.py` (`test_an_unreadable_file_fails_closed`, `test_the_gate_takes_only_its_three_modes`); session-start cases in `.claude/hooks/test_hooks.py` |
-| 2 | `test_settings.py` (`test_connect_refuses_and_saves_nothing`, `test_a_service_that_is_not_ready_or_too_old_or_absent`) |
+| 2 | `test_settings.py` (`test_connect_refuses_and_saves_nothing`, `test_a_service_that_is_not_ready_or_too_old_or_absent`, `test_a_malformed_address_is_refused_without_a_traceback`) |
 | 3 | `test_settings.py` (`test_the_token_travels_only_in_the_header`, `test_a_redirect_is_never_followed`, `test_the_token_goes_only_over_https_or_to_this_machine`, `test_this_machine_is_never_reached_through_a_proxy`, `test_an_address_that_http_cannot_use_is_unreachable_never_a_crash`) |
 | 4 | `.claude/hooks/test_hooks.py` (`bash deny settings write`, `path deny: … on .aeion/settings.json`) |
 | 5, 6 | `tools/framework/tests/test_axiom_api.py` (`test_framework_off_sends_nothing`); every test uses a local stand-in |

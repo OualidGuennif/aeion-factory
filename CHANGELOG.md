@@ -6,6 +6,9 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+- `tools/release/release --new-project` also refuses in a template clone whose origin still names
+  `aeion-factory`, so a clone made before the rename is never reset as a new project.
+
 - Framework mode keeps the gateway token on its path: a redirect from the service is reported, never
   followed (urllib would have copied the token to its target), and `AEION_FRAMEWORK_TOKEN` goes only
   over https or to this machine. The `@req` briefs are framed as data and stay one line each.

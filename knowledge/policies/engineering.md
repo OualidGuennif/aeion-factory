@@ -110,7 +110,8 @@ tests for what changed still run.
   empty `Unreleased`, and `work/current.md` holding only the "Adapt Æion Template to this project" entry,
   dated today; `.aeion-template` records the template release copied
   (`v<VERSION>`), which `tools/agents/template-update` reads as the update baseline. It refuses in
-  Æion Template's own clone (origin `OualidGuennif/aeion-template`), and running it twice changes nothing.
+  Æion Template's own clone (origin `OualidGuennif/aeion-template`, or the former `aeion-factory` a clone
+  made before the rename may still carry), and running it twice changes nothing.
 - Independent review requires an authorized independent pass. Reading a pool agent profile does
   not authorize creating an agent; local self-assessment cannot issue the independent push-gate receipt.
 - A deploy or a human decision waits for that human. The owner's comments become preferences

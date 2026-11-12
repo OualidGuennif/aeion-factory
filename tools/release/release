@@ -19,7 +19,8 @@ ROOT = Path(__file__).resolve().parents[2]
 SEMVER = re.compile(r"(\d+)\.(\d+)\.(\d+)")
 UNRELEASED = "## [Unreleased]"
 ADAPT = "## Adapt Æion Template to this project"
-TEMPLATE_ORIGIN = re.compile(r"[/:]OualidGuennif/aeion-template(\.git)?$")
+# The former name too: a clone made before the rename keeps that origin until its owner changes it.
+TEMPLATE_ORIGIN = re.compile(r"[/:]OualidGuennif/aeion-(template|factory)(\.git)?$")
 
 
 def template_clone(root):

@@ -32,6 +32,8 @@ under its heading: `- <preference> (<source>, YYYY-MM-DD)`.
 - The product is always "Æion Template" (renamed from Æion Factory on 2026-11-12, chat), never a bare
   "Factory": Factory (factory.ai) is another company's harness. Its Droid CLI owns `.factory/`; Æion state lives in `.aeion/`, the mode switch
   is `aeion.mode` and internal variables use `AEION_` (chat, 2026-10-27)
+- No compatibility for the old name, except refusals: `--new-project` still refuses in a clone whose
+  origin names `aeion-factory` (chat, 2026-11-12)
 - Google Antigravity is a supported agent as well (chat, 2026-10-27)
 - Work on `develop`: a review before every push of it, another on the release PR `develop → main`;
   CI only for `main`. Replaces Æion Template's one-branch-and-PR-per-task flow (chat, 2026-10-28)

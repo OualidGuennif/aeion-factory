@@ -91,11 +91,14 @@ class ReleaseTests(unittest.TestCase):
         subprocess.run(["git", "init", "-q", str(self.root)], check=True)
         subprocess.run(["git", "-C", str(self.root), "remote", "add", "origin",
                         "https://github.com/OualidGuennif/aeion-template.git"], check=True)
-        result = self.release("--new-project")
-        self.assertEqual(result.returncode, 1)
-        self.assertIn("own clone", result.stderr)
-        self.assertEqual((self.root / "VERSION").read_text(), "1.4.0\n")
-        self.assertFalse((self.root / ".aeion-template").exists())
+        # A clone made before the rename keeps the old origin until its owner changes it.
+        for origin in ("https://github.com/OualidGuennif/aeion-template.git", "git@github.com:OualidGuennif/aeion-factory.git"):
+            subprocess.run(["git", "-C", str(self.root), "remote", "set-url", "origin", origin], check=True)
+            result = self.release("--new-project")
+            self.assertEqual(result.returncode, 1, origin)
+            self.assertIn("own clone", result.stderr)
+            self.assertEqual((self.root / "VERSION").read_text(), "1.4.0\n")
+            self.assertFalse((self.root / ".aeion-template").exists())
 
 
 if __name__ == "__main__":

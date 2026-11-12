@@ -78,8 +78,9 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 - **Breaking: the context rule moves to 340k/390k** (was 250k/300k) in every harness: the handover and
   compaction at 340k, both forced at 390k. Native compaction windows follow (`.claude/settings.json`,
-  `.codex/config.toml`, `tools/context/run`), and every message names the thresholds from
-  `tools/context/budget.py`'s two constants. A model window under about 400k keeps native compaction.
+  `.codex/config.toml`, `tools/context/run`); the Python hooks' messages name the thresholds from
+  `tools/context/budget.py`'s two constants, and the Pi and dsh plugins state the same values. A model
+  window under about 400k keeps native compaction.
 
 ## [3.0.0] - 2026-11-10
 

@@ -177,6 +177,8 @@ step-usage event, which arrives after the tool hook. Pi's headless 340k run no l
 288,668 tokens; the TUI path was not re-tested; see [agent compatibility](agent-compatibility.md)).
 When dsh compaction does not run, its messages give the recovery step: once the handover,
 `work/current.md` and the checkpoint verify, stop and start a new session from the handover.
+After a compaction the [doc gate](../components/doc-gate.md) forgets the docs read before it, so the
+resumed agent reads a covered file's docs again before editing it; the handover and docs stay editable.
 
 Verification: `python3 tools/context/tests/test_budget.py`, `tools/agents/tests/test_hooks.py`,
 `test_pi.mjs` and `test_opencode.mjs`. Synthetic fixtures prove state and

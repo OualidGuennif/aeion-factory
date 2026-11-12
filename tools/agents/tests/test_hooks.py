@@ -640,6 +640,45 @@ class HookTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             hook.handle(self.root,'codex',event)
 
+    def test_the_doc_gate_reaches_every_harness_through_its_read_tool_or_its_shell(self):
+        doc='knowledge/components/a.md'
+        (self.root/doc).write_text('---\ntitle: a\nsources:\n  - resource: ../../src/a.py\n---\n# A\n')
+        (self.root/'src').mkdir()
+        (self.root/'src/a.py').write_text('a = 1\n')
+        patch_text='*** Begin Patch\n*** Update File: src/a.py\n@@\n-a = 1\n+a = 2\n*** End Patch'
+        cases=(('codex','apply_patch',{'command':patch_text}),('devin','edit',{'file_path':'src/a.py'}),
+               ('droid','ApplyPatch',{'input':patch_text}),('grok','search_replace',{'file_path':str(self.root/'src/a.py')}),
+               # The OpenCode and Pi plugins name the tools before the adapter sees them.
+               ('opencode','Edit',{'filePath':str(self.root/'src/a.py')}),('pi','Edit',{'path':'src/a.py'}))
+        reads={'codex':('Bash',{'command':f'sed -n 1,80p {doc}'}),'devin':('read',{'file_path':doc}),
+               'droid':('Execute',{'command':f'head -n 40 {doc}'}),'grok':('read_file',{'file_path':str(self.root/doc)}),
+               'opencode':('Read',{'filePath':str(self.root/doc)}),'pi':('Read',{'path':doc})}
+        for provider,tool,data in cases:
+            with self.subTest(provider=provider):
+                session=f'gate-{provider}-{os.getpid()}'
+                for kind in ('read','warned'):
+                    self.addCleanup((Path(tempfile.gettempdir())/f'claude-doc-{kind}-{hook.key(provider,{"session_id":session})}').unlink,
+                                    missing_ok=True)
+                self.call(provider,hook_event_name='SessionStart',source='startup',session_id=session)
+                with self.assertRaisesRegex(hook.GuardRefusal,f'Doc gate: read {doc}'):
+                    self.call(provider,tool_name=tool,tool_input=data,session_id=session)
+                read_tool,read_data=reads[provider]
+                self.call(provider,hook_event_name='PostToolUse',tool_name=read_tool,tool_input=read_data,session_id=session)
+                self.assertEqual(self.call(provider,tool_name=tool,tool_input=data,session_id=session),{})
+                # A compaction empties the context, so the doc is read again.
+                self.call(provider,hook_event_name='SessionStart',source='compact',session_id=session)
+                with self.assertRaisesRegex(hook.GuardRefusal,'Doc gate'):
+                    self.call(provider,tool_name=tool,tool_input=data,session_id=session)
+        # Antigravity sends no SessionStart and no session: one key per clone, reads and edits still meet the gate.
+        for kind in ('read','warned'):
+            state=Path(tempfile.gettempdir())/f'claude-doc-{kind}-{hook.key("antigravity",{})}'
+            state.unlink(missing_ok=True)
+            self.addCleanup(state.unlink,missing_ok=True)
+        with self.assertRaisesRegex(hook.GuardRefusal,f'Doc gate: read {doc}'):
+            self.agy('replace_file_content',{'TargetFile':str(self.root/'src/a.py')})
+        self.agy('view_file',{'AbsolutePath':str(self.root/doc)},event='PostToolUse')
+        self.agy('replace_file_content',{'TargetFile':str(self.root/'src/a.py')})
+
     def test_devin_edits_are_recorded_for_feedback_and_sign_off(self):
         key=hook.key('devin',self.event)
         log=Path(tempfile.gettempdir())/f'claude-edited-{key}'

@@ -121,6 +121,12 @@ with one line naming a missing agent binary and the setup link, exit 1.
   Claude Code natively and Codex through its rollout transcript. Devin, Droid and Antigravity pass
   no transcript the hook can read and the OpenCode and Pi extensions pass no assistant text, so they get the
   written rule in `AGENTS.md` only; the adapter stays silent for them and keeps working.
+- The [doc gate](../components/doc-gate.md) runs in every harness through the adapter: each file an
+  edit, a write or a patch names meets it before the tool runs, and a doc counts as read through the
+  harness's read tool (as mapped above) or a shell reader (`cat`, `head`, `tail`, `sed`, …) on its path.
+  Codex reads only through its shell, and that is enough. A compact or resume SessionStart empties the
+  read set. OpenCode sends no compact SessionStart (only a startup before each prompt) and Antigravity
+  sends none, so there a doc read before a compaction still counts.
 - In a plain folder without git, every hook command falls back from `git rev-parse --show-toplevel`
   to the current folder, so the adapters run where the agent starts. Limit: a plain folder started
   from a subfolder, or nested in another repository, does not find `tools/agents/hook.py`; Codex and

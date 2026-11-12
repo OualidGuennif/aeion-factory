@@ -88,7 +88,7 @@ path has nothing recorded and passes. The path guard and after-edit also cover M
 NotebookEdit (`notebook_path`). `repo-health --json` exposes its source suffix
 set and selected file count; its caps are not language-aware lint or security coverage.
 
-Policy hooks require Claude Code 2.1.295+ for `onFailure: block`; the Bash/path guard command timeout is three
+Policy hooks require Claude Code 2.1.295+ for `onFailure: block`; the Bash/path guard and the [doc gate](../components/doc-gate.md) command timeout is three
 seconds (context hooks use five; native adapter hooks use fifteen). Independently, the after-edit hook limits each checker to two seconds for fast feedback.
 Nonzero exits, missing executables and timeouts produce exit 2 and at most 15 lines
 of diagnostics. Direct script tests do not qualify live harness dispatch or runtime isolation.

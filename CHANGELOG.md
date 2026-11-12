@@ -6,6 +6,13 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+- **Breaking: the doc gate.** An edit of a file a doc covers (its `Spec:` header, or a doc listing it in
+  `sources`) is refused until each covering doc was read in the session, through the read tool or a
+  shell reader (`cat`, `head`, `tail`, `sed -n`, …). A compaction or a resume asks for the reading again;
+  docs, `knowledge/` and `work/` are never gated. Every harness gets it through the shared adapter. The
+  owner chooses `enforce` (default), `warn` or `off` with `tools/aeion-settings doc-gate`
+  (`knowledge/components/doc-gate.md`).
+
 - The owner's per-clone settings: `tools/aeion-settings` shows and sets the doc gate's mode
   (`enforce`, the default, `warn`, `off`) and framework mode, which is on only while an aeion-framework
   API address is set (`.aeion/settings.json`, never committed, or `AEION_FRAMEWORK_URL`). Connecting

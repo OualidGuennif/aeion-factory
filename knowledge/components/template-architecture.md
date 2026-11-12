@@ -95,6 +95,7 @@ Unavailable child usage stops that child's profile without contaminating the par
 | Project update | Move an adopted project between template references: connectors byte for byte, other template files three-way, never the application's `VERSION` | `tools/agents/template-update`; baseline from `--from-ref`, `.aeion-template` or an exact tag inference; names `AGENTS.md`, merged settings, conflicts and `knowledge/` for a human with proposals; refuses dirty trees and linked destinations |
 | Desktop install | Pin the dsh profile's plugin at a release instead of a working tree | `tools/agents/dsh-install`; `<profile>/aeion-template` symlink |
 | Hook adapter | Read event JSON and call a bounded local check | stdin/stdout JSON; failure blocks where supported |
+| [Doc gate](doc-gate.md) | The docs covering a file (its `Spec:` header, the docs listing it) are read in the session before it is edited; `enforce`, `warn` or `off` | `.claude/hooks/doc-gate.py`; the read set in `<tmp>/claude-doc-read-<session>`, emptied at each session start |
 | Headless Pi RPC | Keep one `pi --mode rpc` process alive through the settlement compaction and its resumed run, streaming the answer and failing closed on a failed compaction or the deadline | `tools/agents/pi-rpc`, reached through `tools/agents/run pi rpc`; the template extension supplies the guards |
 | dsh connector | Guard every tool call and drive the 340k/390k handover-compact-resume cycle | `.dsh/plugins/template/*.js`; the root compaction service (headless) or the `/compact` command on idle (web, whose service is isolated in an agent-preset group) |
 | Context budget | Usage, closure-only state, checkpoint receipt (with per-file digests, so a stale one names what changed), 390k forced compaction | `.aeion/context/<session>.json`; per-session file lock |
@@ -131,10 +132,15 @@ sequenceDiagram
     participant A as Agent
     participant H as Harness
     participant G as guard-path / guard-bash
+    participant D as doc-gate
     participant E as after-edit
+    A->>H: Read knowledge/components/a.md
+    H->>D: after the read: remember the doc
     A->>H: Edit src/a.py
     H->>G: before the tool runs
     G-->>H: refuse (secret, .git/config, oversized dump) or allow
+    H->>D: before the tool runs
+    D-->>H: refuse until every doc covering src/a.py was read (enforce)
     H->>E: after the tool ran
     E-->>A: failing checks, and the doc that covers the file
 ```

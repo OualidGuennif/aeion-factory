@@ -19,6 +19,14 @@
             "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/session-start.py\""
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/doc-gate.py\""
+          }
+        ]
       }
     ],
     "PreToolUse": [
@@ -53,6 +61,17 @@
             "onFailure": "block"
           }
         ]
+      },
+      {
+        "matcher": "Edit|MultiEdit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/doc-gate.py\"",
+            "timeout": 3,
+            "onFailure": "block"
+          }
+        ]
       }
     ],
     "PostToolUse": [
@@ -72,6 +91,15 @@
           {
             "type": "command",
             "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/after-edit.py\""
+          }
+        ]
+      },
+      {
+        "matcher": "Read|Bash|Edit|MultiEdit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/doc-gate.py\""
           }
         ]
       },

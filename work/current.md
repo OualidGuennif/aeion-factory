@@ -7,10 +7,10 @@ lines `- Owner decision:`, `- State:`, `- Next:` (with who), `- Blocker:`, `- Ev
 
 ## Æion Template 4.0.0: back to the essence, framework optional — ACTIVE
 - Owner decision: 2026-11-12, rename to aeion-template (no compatibility), remove the embedded AxiomSpec engine, demo/ and efficiency/, framework mode optional and off by default (the API address is the switch), a blocking doc gate, context rule 340k/390k.
-- State: committed on develop: 340k/390k (1ec5a2b), removals (03d16d2), rename (860ffe8). Uncommitted: settings reader, tools/aeion-settings, guards for .aeion/settings.json, session-start line, knowledge/components/framework-mode.md (draft).
-- Next: settings tests (tools/framework/tests/), commit; doc gate; framework client tools/framework/axiom-api and @req briefs; README/AGENTS rewrite; review; release PR (who: agent; the owner renames the GitHub repository and approves the push).
+- State: committed on develop: 340k/390k (1ec5a2b), removals (03d16d2), rename (860ffe8), owner's settings (6fba16b), doc gate (live in Claude Code: refused an unread-doc edit, allowed it after the reads).
+- Next: framework client tools/framework/axiom-api and @req briefs; README/AGENTS rewrite; review; release PR (who: agent; the owner renames the GitHub repository and approves the push).
 - Blocker: none.
-- Evidence: CHANGELOG.md Unreleased; knowledge/components/framework-mode.md; /Users/wallseven/.claude/plans/kind-wobbling-star.md
+- Evidence: CHANGELOG.md Unreleased; knowledge/components/framework-mode.md; knowledge/components/doc-gate.md; /Users/wallseven/.claude/plans/kind-wobbling-star.md
 
 ## Grok adapter — ACTIVE
 - Owner decision: 2026-11-06, release the Grok adapter as 2.1.1. This replaces the same-day decision to keep it on a local `grok` branch.

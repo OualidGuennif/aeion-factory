@@ -67,6 +67,9 @@ that run both ways between docs and code (below).
   `--diff origin/develop` (or `origin/main` without develop) when a file changed while a doc covering it did not. Updating the doc, or a
   commit trailer `Docs-Checked: knowledge/<doc>.md -- <why no documented fact changed>`, passes.
 - A link is a pointer, never copied content.
+- The same links decide what an agent reads first: the [doc gate](../components/doc-gate.md) refuses
+  an edit of a covered file until each covering doc was read in the session (the owner can set it to
+  `warn` or `off`).
 - Git enumeration, history and diff failures return nonzero with a short diagnostic. An unreadable
   repository (a `.git` git cannot read) or missing comparison base is not an empty change set and
   never produces PASS. A plain folder without git is walked from disk (L1, L2 and L4; `--diff` needs git).

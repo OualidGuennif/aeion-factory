@@ -783,6 +783,96 @@ expect("session-start names an unreachable framework address",
 expect("session-start refuses a bad framework address", session_start(None, env={"AEION_FRAMEWORK_URL": "ftp://x"}), 0,
        "framework: off (AEION_FRAMEWORK_URL: the address must be an http")
 
+# doc gate: in a throwaway project, so the owner's own settings never decide a case.
+project = Path(tempfile.mkdtemp())
+for rel in (".claude/hooks/doc-gate.py", ".claude/hooks/aeion_settings.py", ".claude/hooks/project_files.py",
+            ".claude/hooks/secret_names.py", "tools/knowledge/doc-links"):
+    (project / rel).parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy(ROOT / rel, project / rel)
+DOC = "knowledge/components/a.md"
+(project / "knowledge/components").mkdir(parents=True)
+(project / DOC).write_text("---\ntitle: a\nsources:\n  - resource: ../../src/a.py\n---\n# A\n")
+(project / "src").mkdir()
+(project / "src/a.py").write_text("a = 1\n")
+(project / "src/b.py").write_text("b = 1\n")
+gate_session = f"doc-gate-{os.getpid()}"
+
+
+def gate(event, tool, data, session=gate_session):
+    return run_hook("doc-gate.py", data, cwd=project, hook_event_name=event, tool_name=tool, session_id=session)
+
+
+def gate_settings(text):
+    (project / ".aeion").mkdir(exist_ok=True)
+    (project / ".aeion/settings.json").write_text(text)
+
+
+def forget():
+    gate("SessionStart", None, {})
+
+
+edit_a = {"file_path": str(project / "src/a.py"), "old_string": "a = 1", "new_string": "a = 2"}
+forget()
+expect("doc gate refuses a covered file before its doc", gate("PreToolUse", "Edit", edit_a), 2,
+       stderr_has=f"read {DOC} before editing src/a.py")
+expect("doc gate names the owner's switch", gate("PreToolUse", "MultiEdit", edit_a), 2, stderr_has="tools/aeion-settings doc-gate")
+for tool, data in (("Edit", {"file_path": str(project / "src/b.py")}), ("Write", {"file_path": str(project / DOC)}),
+                   ("Write", {"file_path": str(project / "work/current.md")}), ("Write", {"file_path": str(project / "notes.md")}),
+                   ("Edit", {"file_path": "/elsewhere/src/a.py"}), ("Write", {"file_path": str(project / "src/new.py"), "content": "x\n"})):
+    expect(f"doc gate never gates {tool} {data['file_path']}", gate("PreToolUse", tool, data), 0)
+# A grep or a read of another doc is not reading this one.
+gate("PostToolUse", "Bash", {"command": f"grep -n A {DOC}"})
+gate("PostToolUse", "Read", {"file_path": str(project / "knowledge/components/other.md")})
+expect("doc gate is not satisfied by a grep", gate("PreToolUse", "Edit", edit_a), 2)
+gate("PostToolUse", "Read", {"file_path": str(project / DOC), "offset": 1, "limit": 3})
+expect("doc gate opens after the Read of the doc", gate("PreToolUse", "Edit", edit_a), 0)
+run_hook("doc-gate.py", {}, cwd=project, hook_event_name="SessionStart", source="startup", session_id=gate_session)
+expect("doc gate keeps the reads at a startup", gate("PreToolUse", "Edit", edit_a), 0)
+run_hook("doc-gate.py", {}, cwd=project, hook_event_name="SessionStart", source="compact", session_id=gate_session)
+expect("doc gate forgets at a compaction", gate("PreToolUse", "Edit", edit_a), 2)
+gate("PostToolUse", "Read", {"file_path": str(project / DOC)})
+expect("doc gate forgets at session start", (forget(), gate("PreToolUse", "Edit", edit_a))[1], 2)
+for command in (f"sed -n 1,20p {DOC}", f"cat {DOC} | head -5", f"head -n 40 './{DOC}'", f"tail -n 5 {project / DOC}"):
+    forget()
+    gate("PostToolUse", "Bash", {"command": command})
+    expect(f"doc gate counts a shell read: {command}", gate("PreToolUse", "Edit", edit_a), 0)
+forget()
+gate("PostToolUse", "Bash", {"command": "sed -n 1,9p ../a.md", "workdir": str(project / "src")})
+gate("PostToolUse", "Bash", {"command": f"cd src && sed -n 1,9p ../{DOC}"})
+# A shell's own folder counts; a cd inside the command is not followed, so that read is not recorded.
+expect("doc gate does not follow a cd", gate("PreToolUse", "Edit", edit_a), 2)
+forget()
+gate("PostToolUse", "Edit", {"file_path": str(project / DOC)})
+expect("doc gate counts a doc the agent edited", gate("PreToolUse", "Edit", edit_a), 0)
+# A new file names its spec in its header: the gate reads it from the content, built here so this file names none.
+forget()
+header = "# " + "Spec" + f": {DOC}\nx = 1\n"
+expect("doc gate reads a new file's Spec header", gate("PreToolUse", "Write", {"file_path": str(project / "src/new.py"),
+                                                                               "content": header}), 2, stderr_has=DOC)
+expect("doc gate refuses an event without a valid session", gate("PreToolUse", "Edit", edit_a, session="../x"), 2)
+# warn: the edit goes through, and after it one line per file names the doc; off: silent.
+gate_settings('{"doc_gate": "warn"}')
+expect("doc gate warn allows the edit", gate("PreToolUse", "Edit", edit_a), 0)
+expect("doc gate warn names the doc after the edit", gate("PostToolUse", "Edit", edit_a), 0, stdout_has=f"Doc gate (warn): src/a.py")
+expect("doc gate warn says it once per file", gate("PostToolUse", "Edit", edit_a), 0)
+if gate("PostToolUse", "Edit", edit_a).stdout.strip():
+    failures.append("doc gate warn repeated its note for the same file")
+gate_settings('{"doc_gate": "off"}')
+forget()
+result = gate("PostToolUse", "Edit", edit_a)
+expect("doc gate off allows the edit", gate("PreToolUse", "Edit", edit_a), 0)
+if result.stdout.strip():
+    failures.append("doc gate off still printed a note")
+gate_settings('{"doc_gate": "of"}')
+expect("doc gate enforces on an unknown mode", gate("PreToolUse", "Edit", edit_a), 2)
+(project / ".aeion/settings.json").unlink()
+# The coverage cannot be listed: enforce refuses, as uncertain is no.
+(project / "tools/knowledge/doc-links").write_text("import sys\nsys.exit(1)\n")
+expect("doc gate refuses when the coverage cannot be listed", gate("PreToolUse", "Edit", edit_a), 2, stderr_has="could not be listed")
+for kind in ("read", "warned"):
+    (Path(tempfile.gettempdir()) / f"claude-doc-{kind}-{gate_session}").unlink(missing_ok=True)
+shutil.rmtree(project)
+
 print(f"hook tests: {passes} passed, {len(failures)} failed")
 for f in failures:
     print(f"  FAIL {f}")

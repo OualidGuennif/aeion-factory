@@ -118,6 +118,16 @@ def script(root, name, event):
     return json.loads(result.stdout) if result.stdout.lstrip().startswith('{') else {}
 
 
+# The tools whose files the doc gate checks before an edit; apply_patch once per file it names.
+GATED_TOOLS = {'Edit', 'MultiEdit', 'Write', 'NotebookEdit', 'apply_patch'}
+
+
+def absolute(root, raw):
+    """A harness path as the hooks see it: relative paths are the project's."""
+    path = Path(raw)
+    return path if path.is_absolute() else root / path
+
+
 def edit_paths(event, provider=None):
     data = event.get('tool_input', {})
     if not isinstance(data, dict):
@@ -551,6 +561,8 @@ def handle(root, provider, event):
                     or (state['state'] == 'HANDOVER_REQUIRED' and budget.ready(root, session, state))):
                 measured['aeion'] = {'compact': True}
     if name == 'SessionStart':
+        # The doc gate forgets what was read: a compacted or resumed context no longer holds it.
+        script(root, 'doc-gate.py', normalized)
         result = script(root, 'session-start.py', normalized)
         pointer = 'Handover' if handover.is_file() else 'Handover (created at the first refused compaction)'
         context = (f'Æion Template {provider} checkpoint profile. {pointer}: {handover.relative_to(root)}. '
@@ -595,6 +607,10 @@ def handle(root, provider, event):
             tool = 'Edit' if event.get('tool_name') == 'apply_patch' else event.get('tool_name')
             data = {**event['tool_input'], 'file_path': path}
             script(root, 'guard-path.py', {'tool_name': tool, 'tool_input': data})
+            # Each file a patch or an edit touches meets the doc gate, as a native Edit does.
+            if tool in GATED_TOOLS:
+                script(root, 'doc-gate.py', {**normalized, 'tool_name': tool,
+                                             'tool_input': {**data, 'file_path': str(absolute(root, path))}})
         return alert({}, measured)
     if name == 'PostToolUse':
         messages = [measured['systemMessage']] if measured.get('systemMessage') else []
@@ -608,6 +624,26 @@ def handle(root, provider, event):
                 stream.write(path.relative_to(root).as_posix() + '\n')
             result = script(root, 'after-edit.py', {**normalized, 'tool_input': {'file_path': str(path)}})
             context = result.get('hookSpecificOutput', {}).get('additionalContext')
+            if context:
+                messages.append(context)
+        # The doc gate remembers the docs read through the read tool or the shell, and the docs written.
+        tool = event.get('tool_name')
+        if tool == 'Bash':
+            # A shell result may come without its input (Pi's tool_result); then nothing is recorded.
+            data = event.get('tool_input')
+            records = [{'tool_name': 'Bash', 'tool_input': data}] if isinstance(data, dict) and isinstance(data.get('command'), str) else []
+        elif tool == 'Read' or tool in GATED_TOOLS:
+            try:
+                raws = edited if tool in {'apply_patch', 'Edit', 'Write'} else edit_paths(event, provider)
+            except ValueError:
+                # A result without a path records nothing; the gate then asks for the read again.
+                raws = []
+            records = [{'tool_name': 'Edit' if tool == 'apply_patch' else tool,
+                        'tool_input': {'file_path': str(absolute(root, raw))}} for raw in raws]
+        else:
+            records = []
+        for record in records:
+            context = script(root, 'doc-gate.py', {**normalized, **record}).get('hookSpecificOutput', {}).get('additionalContext')
             if context:
                 messages.append(context)
         context = advisory(root, normalized).get('hookSpecificOutput', {}).get('additionalContext')

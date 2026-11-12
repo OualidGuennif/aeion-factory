@@ -48,7 +48,7 @@ never change them.
 
 ## Outputs
 
-- `doc_gate()` answers `enforce`, `warn` or `off`; `enforce` when absent.
+- `doc_gate()` answers `enforce`, `warn` or `off`; `enforce` when absent. The [doc gate](doc-gate.md) reads it at each event.
 - `framework()` answers the address and its source, or none: no address means framework mode is off.
 - Connect saves the address only after `/health/ready` answers 200 with a `version` from 1.1 up to,
   not including, 2.0 (tested 1.1.9), then prints the Claude Code MCP command for `{address}/mcp/`

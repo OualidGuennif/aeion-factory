@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """The owner's settings: the reader every hook shares, the tools/aeion-settings switch and the
 session-start line, against a local stand-in for the aeion-framework readiness probe."""
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import os
 from pathlib import Path
@@ -10,50 +9,18 @@ import stat
 import subprocess
 import sys
 import tempfile
-import threading
 import unittest
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / ".claude/hooks"))
 import aeion_settings as settings  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from fake_service import Service  # noqa: E402
 
 CLI = ROOT / "tools/aeion-settings"
 # Built by concatenation so the template's own code never carries an annotation.
 ANNOTATION = "# " + "@req" + " CORE-001\n"
-
-
-class Service:
-    """A readiness probe that answers what a test sets, and remembers each request's headers."""
-
-    def __init__(self):
-        self.status, self.body, self.seen = 200, {"status": "ready", "version": settings.TESTED, "mode": "local"}, []
-        service = self
-
-        class Handler(BaseHTTPRequestHandler):
-            def do_GET(self):
-                service.seen.append((self.path, self.headers.get("Authorization")))
-                raw = json.dumps(service.body).encode() if service.path_ok(self.path) else b"{}"
-                self.send_response(service.status if service.path_ok(self.path) else 404)
-                self.send_header("Content-Type", "application/json")
-                self.send_header("Content-Length", str(len(raw)))
-                self.end_headers()
-                self.wfile.write(raw)
-
-            def log_message(self, *args):
-                pass
-
-        self.server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
-        self.url = f"http://127.0.0.1:{self.server.server_address[1]}"
-        threading.Thread(target=self.server.serve_forever, daemon=True).start()
-
-    @staticmethod
-    def path_ok(path):
-        return path == "/health/ready"
-
-    def close(self):
-        self.server.shutdown()
-        self.server.server_close()
 
 
 class SettingsTests(unittest.TestCase):
@@ -139,13 +106,13 @@ class SettingsTests(unittest.TestCase):
         self.assertEqual(settings.health(self.service.url), (settings.TESTED, None))
 
     def test_a_service_that_is_not_ready_or_too_old_or_absent(self):
-        self.service.status = 503
+        self.service.set("/health/ready", 503, {"code": "NOT_READY", "detail": "starting"})
         self.assertIn("503", settings.health(self.service.url)[1])
-        self.service.status, self.service.body = 200, {"status": "ready", "version": "1.0.4"}
+        self.service.set("/health/ready", 200, {"status": "ready", "version": "1.0.4"})
         version, problem = settings.health(self.service.url)
         self.assertIsNone(version)
         self.assertIn(f"tested {settings.TESTED}", problem)
-        self.service.body = ["not", "an", "object"]
+        self.service.set("/health/ready", 200, ["not", "an", "object"])
         self.assertIsNone(settings.health(self.service.url)[0])
         version, problem = settings.health("http://127.0.0.1:9")
         self.assertIsNone(version)
@@ -173,6 +140,16 @@ class SettingsTests(unittest.TestCase):
         self.assertEqual(settings.cached_health(self.root, self.service.url, now=1000), (settings.TESTED, None))
 
     # The @req hint.
+    def test_every_annotation_form_the_framework_reads(self):
+        mark = "@" + "req"
+        cases = {f"# {mark} REQ-005 REQ-006 REQ-009\n": ["REQ-005", "REQ-006", "REQ-009"],
+                 f"// {mark}: REQ-005\n": ["REQ-005"], f"# {mark}(REQ-005, REQ-006)\n# REQ-007\n": ["REQ-005", "REQ-006"],
+                 f"# {mark} REQ-005 and REQ-006\n": ["REQ-005"], f"# {mark} A_B-123456 A-1234567\n": ["A_B-123456"],
+                 f"# {mark}uired X-001\n": [], f"# {mark}\n# REQ-001\n": [], f"# {mark} req-001\n": [],
+                 f"# {mark} REQ-001\n# {mark} REQ-001 REQ-002\n": ["REQ-001", "REQ-002"]}
+        for text, ids in cases.items():
+            self.assertEqual(settings.req_ids(text), ids, text)
+
     def test_annotations_are_found_in_code_only(self):
         for git in (False, True):
             with self.subTest(git=git), tempfile.TemporaryDirectory() as folder:
@@ -224,7 +201,7 @@ class SettingsTests(unittest.TestCase):
         self.assertEqual(json.loads((self.root / settings.SETTINGS).read_text()), {})
 
     def test_connect_refuses_and_saves_nothing(self):
-        self.service.body = {"status": "ready", "version": "0.3.0"}
+        self.service.set("/health/ready", 200, {"status": "ready", "version": "0.3.0"})
         for args in ((self.service.url,), ("http://127.0.0.1:9",), ("http://u:p@127.0.0.1:1",), ("ftp://h",)):
             result = self.cli("framework", *args)
             self.assertEqual(result.returncode, 1, args)

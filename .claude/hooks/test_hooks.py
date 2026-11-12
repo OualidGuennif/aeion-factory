@@ -814,7 +814,7 @@ def forget():
 edit_a = {"file_path": str(project / "src/a.py"), "old_string": "a = 1", "new_string": "a = 2"}
 forget()
 expect("doc gate refuses a covered file before its doc", gate("PreToolUse", "Edit", edit_a), 2,
-       stderr_has=f"read {DOC} before editing src/a.py")
+       stderr_has=f"before editing src/a.py, read {DOC} (it covers this file")
 expect("doc gate names the owner's switch", gate("PreToolUse", "MultiEdit", edit_a), 2, stderr_has="tools/aeion-settings doc-gate")
 for tool, data in (("Edit", {"file_path": str(project / "src/b.py")}), ("Write", {"file_path": str(project / DOC)}),
                    ("Write", {"file_path": str(project / "work/current.md")}), ("Write", {"file_path": str(project / "notes.md")}),

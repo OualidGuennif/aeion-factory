@@ -16,3 +16,4 @@ is superseded by a newer ADR, never edited away.
 | ADR | Status | Notes |
 | --- | --- | --- |
 | [ADR-001 Start from Æion Template](ADR-001-start-from-aeion-template.md) | stable | the structure, the loops, what is off by default |
+| [ADR-002 AxiomSpec comes from aeion-framework](ADR-002-framework-optional.md) | stable | no embedded engine; framework mode on only while the owner sets an API address |

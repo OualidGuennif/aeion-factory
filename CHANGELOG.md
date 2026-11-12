@@ -6,6 +6,14 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+- Framework mode reads the spec from aeion-framework 1.1.9. `tools/framework/axiom-api` (`ready`, `node`,
+  `context`, `trace`, `gaps`) prints the service's answers, pages bounded at 16 KiB by default and four
+  pages at most, problems as `CODE (status): detail`; it exits 3 when framework mode is off. Reading a
+  file annotated with `@req` loads the briefs of its requirements, and the doc gate waits for them as it
+  waits for a doc: an unreachable service keeps the file closed in `enforce`, an unknown ID never does.
+  New skill `framework` (the agent protocol: context before a change, `@req` kept true, disagreements to
+  `axiom-proposals.md`); `plan`, `spec`, `build` and `sign-off` point to it. ADR-002 records the decision.
+
 - **Breaking: the doc gate.** An edit of a file a doc covers (its `Spec:` header, or a doc listing it in
   `sources`) is refused until each covering doc was read in the session, through the read tool or a
   shell reader (`cat`, `head`, `tail`, `sed -n`, …). A compaction or a resume asks for the reading again;

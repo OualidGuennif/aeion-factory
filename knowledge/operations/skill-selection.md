@@ -24,7 +24,7 @@ sources:
 
 # Native skills and passive source guidance
 
-Æion Template keeps its sixteen task skills and adds one selector, `skill-route`.
+Æion Template keeps its seventeen task skills (`framework` among them, for framework mode) and adds one selector, `skill-route`.
 It does not activate a second skill framework or register a source library globally.
 The [selector](../../.claude/skills/skill-route/SKILL.md) gives native guidance priority;
 copied source material supplies a concrete missing technique only when useful.

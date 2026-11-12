@@ -129,7 +129,7 @@ require Python 3.12+ excluding 3.14.1. `knowledge-check` also validates public r
 
 ## Passive pool checks
 
-The seventeen native skills are checked by `tools/skills/lint`: `name` against its folder, a
+The eighteen native skills are checked by `tools/skills/lint`: `name` against its folder, a
 description of at most 1024 characters that names its trigger, a body of at most 150 lines and no
 duplicate name; `tools/skills/tests/test_lint.py` is in `tools/template-tests`.
 

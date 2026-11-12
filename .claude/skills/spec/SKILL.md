@@ -17,7 +17,8 @@ A new feature, a changed contract, a new refusal or error. Not for a refactor th
    high or critical risk: a normal and a refusal case, one integration), Determinism, Acceptance
    checks (commands), Out of scope.
 2. A choice you may not make goes to `knowledge/decisions/` as an open question for the owner.
-   Never invent the answer.
+   Never invent the answer. Framework mode on: the requirements are the service's; the doc explains
+   how the code meets them and names their IDs, and a disagreement goes to `axiom-proposals.md` (skill `framework`).
 3. Add the code files to `sources`, and a `Spec: knowledge/components/<doc>.md` line to each file.
 4. Write the acceptance checks as tests that fail today.
 5. `tools/knowledge/knowledge-check` and `tools/knowledge/doc-links`.

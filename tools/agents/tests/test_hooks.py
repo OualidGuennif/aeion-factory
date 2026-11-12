@@ -660,7 +660,7 @@ class HookTests(unittest.TestCase):
                     self.addCleanup((Path(tempfile.gettempdir())/f'claude-doc-{kind}-{hook.key(provider,{"session_id":session})}').unlink,
                                     missing_ok=True)
                 self.call(provider,hook_event_name='SessionStart',source='startup',session_id=session)
-                with self.assertRaisesRegex(hook.GuardRefusal,f'Doc gate: read {doc}'):
+                with self.assertRaisesRegex(hook.GuardRefusal,f'Doc gate: before editing src/a.py, read {doc}'):
                     self.call(provider,tool_name=tool,tool_input=data,session_id=session)
                 read_tool,read_data=reads[provider]
                 self.call(provider,hook_event_name='PostToolUse',tool_name=read_tool,tool_input=read_data,session_id=session)
@@ -674,7 +674,7 @@ class HookTests(unittest.TestCase):
             state=Path(tempfile.gettempdir())/f'claude-doc-{kind}-{hook.key("antigravity",{})}'
             state.unlink(missing_ok=True)
             self.addCleanup(state.unlink,missing_ok=True)
-        with self.assertRaisesRegex(hook.GuardRefusal,f'Doc gate: read {doc}'):
+        with self.assertRaisesRegex(hook.GuardRefusal,f'Doc gate: before editing src/a.py, read {doc}'):
             self.agy('replace_file_content',{'TargetFile':str(self.root/'src/a.py')})
         self.agy('view_file',{'AbsolutePath':str(self.root/doc)},event='PostToolUse')
         self.agy('replace_file_content',{'TargetFile':str(self.root/'src/a.py')})

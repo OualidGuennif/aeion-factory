@@ -35,6 +35,7 @@ asks for the reading before it, when the doc can still shape the change.
 | a Write's `content` | `Spec: knowledge/<doc>.md` in its first 30 lines, for a file that does not exist yet | the agent | each Write |
 | `<tmp>/claude-doc-read-<session>` | the docs this session read or wrote | this hook | each event |
 | `.aeion/settings.json` `doc_gate` | `enforce` (default), `warn` or `off` ([framework mode](framework-mode.md)) | the owner | each event |
+| the file's `@req` IDs, framework mode only | the requirements whose briefs must have loaded (`axiom:<ID>` in the read set) | the code; the aeion-framework service | each gated edit; each Read of the file loads them |
 
 ## Inputs
 
@@ -51,6 +52,8 @@ asks for the reading before it, when the doc can still shape the change.
 
 - `enforce`: exit 2 before the edit, naming each unread doc, how to read it, and the owner's switch:
   `tools/aeion-settings doc-gate warn|off`. The edit goes through once every covering doc is read.
+  In framework mode it also names the `@req` IDs whose briefs have not loaded, and asks for the file
+  to be read again: that read loads them ([framework mode](framework-mode.md)).
 - `warn`: the edit goes through; after it, one line of context per file and session names the unread
   docs.
 - `off`: silent.

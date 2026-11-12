@@ -28,10 +28,25 @@ GATES = ("enforce", "warn", "off")
 SUPPORTED = ((1, 1), (2, 0))
 TESTED = "1.1.9"
 HEALTH_SECONDS = 600
-# aeion-framework's code annotation: a comment naming the requirement a line implements.
-REQ = re.compile(r"@req\s+([A-Z][A-Z0-9_]*-[0-9]{3,6})\b")
-REQ_GIT = r"@req[[:space:]]+[A-Z][A-Z0-9_]*-[0-9]{3,6}"
+# aeion-framework's code annotation: a comment holding "@req", then the IDs of the requirements the code
+# implements on the same line, separated by spaces or commas; "@req:" and "@req(" open it too.
+ID = re.compile(r"^[A-Z][A-Z0-9_]*-[0-9]{3,6}$")
+REQ_MARK = re.compile(r"@req\b[:(]?")
+REQ_NEXT = re.compile(r"[ \t]*,?[ \t]*([A-Z][A-Z0-9_]*-[0-9]{3,6})\b")
+REQ_GIT = r"@req[:(]?[[:space:]]*[A-Z][A-Z0-9_]*-[0-9]{3,6}"
 REQUEST_SECONDS = 3
+
+
+def req_ids(text):
+    """The requirement IDs the @req annotations of a text name, first seen first."""
+    ids = []
+    for mark in REQ_MARK.finditer(text):
+        end = text.find("\n", mark.end())
+        end, position = (len(text) if end < 0 else end), mark.end()
+        while found := REQ_NEXT.match(text, position, end):
+            ids.append(found.group(1))
+            position = found.end()
+    return list(dict.fromkeys(ids))
 
 
 def load(root):
@@ -113,29 +128,31 @@ def supported(version):
 
 
 def request(url, timeout=REQUEST_SECONDS):
-    """GET url as JSON: (status, body or None). The gateway token, when set, travels in a header."""
+    """GET url as JSON: (status, body or None, Retry-After seconds or None). The gateway token, when
+    set, travels in a header."""
     headers = {"Accept": "application/json, application/problem+json"}
     token = os.environ.get("AEION_FRAMEWORK_TOKEN")
     if token:
         headers["Authorization"] = f"Bearer {token}"
     try:
         with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=timeout) as answer:
-            status, raw = answer.status, answer.read(1_048_576)
+            status, raw, retry = answer.status, answer.read(1_048_576), None
     except urllib.error.HTTPError as error:
         try:
-            status, raw = error.code, error.read(65_536)
+            status, raw, retry = error.code, error.read(65_536), error.headers.get("Retry-After")
         finally:
             error.close()
+    retry = int(retry) if isinstance(retry, str) and retry.strip().isdigit() else None
     try:
-        return status, json.loads(raw.decode("utf-8")) if raw else None
+        return status, json.loads(raw.decode("utf-8")) if raw else None, retry
     except (UnicodeDecodeError, ValueError):
-        return status, None
+        return status, None, retry
 
 
 def health(url, timeout=REQUEST_SECONDS):
     """(version or None, problem or None) from the service's readiness probe; unknown is never ready."""
     try:
-        status, body = request(f"{url}/health/ready", timeout)
+        status, body, _ = request(f"{url}/health/ready", timeout)
     except (OSError, ValueError) as error:
         return None, f"{url} is unreachable ({type(error).__name__})"
     if status != 200 or not isinstance(body, dict):
@@ -183,7 +200,7 @@ def annotated(root, limit=5000):
                 continue
             try:
                 with open(root / relative, "rb") as stream:
-                    if REQ.search(stream.read(65_536).decode("utf-8", "ignore")):
+                    if req_ids(stream.read(65_536).decode("utf-8", "ignore")):
                         return True
             except OSError:
                 continue

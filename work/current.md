@@ -7,8 +7,8 @@ lines `- Owner decision:`, `- State:`, `- Next:` (with who), `- Blocker:`, `- Ev
 
 ## Æion Template 4.0.0: back to the essence, framework optional — ACTIVE
 - Owner decision: 2026-11-12, rename to aeion-template (no compatibility), remove the embedded AxiomSpec engine, demo/ and efficiency/, framework mode optional and off by default (the API address is the switch), a blocking doc gate, context rule 340k/390k.
-- State: committed on develop: 340k/390k (1ec5a2b), removals (03d16d2), rename (860ffe8), owner's settings (6fba16b), doc gate (live in Claude Code: refused an unread-doc edit, allowed it after the reads).
-- Next: framework client tools/framework/axiom-api and @req briefs; README/AGENTS rewrite; review; release PR (who: agent; the owner renames the GitHub repository and approves the push).
+- State: committed on develop: 340k/390k (1ec5a2b), removals (03d16d2), rename (860ffe8), owner's settings (6fba16b), doc gate (4751e82; live in Claude Code: refused an unread-doc edit, allowed it after the reads), framework client, @req briefs, skill framework, ADR-002 (offline stand-in only; the live 1.1.9 service run waits for the owner's yes).
+- Next: README/AGENTS rewrite; tech-watch note on SUPPORTED/TESTED; review; release PR (who: agent; the owner renames the GitHub repository and approves the push).
 - Blocker: none.
 - Evidence: CHANGELOG.md Unreleased; knowledge/components/framework-mode.md; knowledge/components/doc-gate.md; /Users/wallseven/.claude/plans/kind-wobbling-star.md
 

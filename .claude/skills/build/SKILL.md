@@ -17,7 +17,8 @@ After `plan` (and `spec` when behaviour changes). Not before a yes.
    A branch switch or pull must preserve existing work; do not perform either blindly.
 2. Pick the smallest slice that moves toward the plan; settle the data's shape first, and write
    its test first when practical.
-3. Edit; read the diagnostics and hook output after each edit; fix before moving on.
+3. Edit; read the diagnostics and hook output after each edit; fix before moving on. A doc gate refusal
+   names what to read first: read it, never route the edit around it. Framework mode on: keep the `@req` annotations true.
 4. Run the slice's tests and add its `CHANGELOG.md` line. Commit with a what/why message
    only when a commit is included in the owner-authorized workflow.
 5. Repeat. Stop and re-plan if the plan turns out wrong.

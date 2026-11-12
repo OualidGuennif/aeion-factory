@@ -65,7 +65,7 @@ if framework_problem:
 elif url:
     version, unready = aeion_settings.cached_health(ROOT, url)
     framework = (f"on → {url} (aeion-framework {version}, ready)" if version
-                 else f"on → {url}, but {unready}; spec reads fail until it answers")
+                 else f"on → {url}, but {unready}; spec reads fail until it answers") + "; skill framework"
 else:
     framework = "off"
     # Committed @req annotations say this project is specified with aeion-framework; this clone is not connected.

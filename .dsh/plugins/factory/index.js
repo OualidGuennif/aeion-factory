@@ -25,7 +25,7 @@ const HERE = realpathSync(dirname(fileURLToPath(import.meta.url)));
 const OWN = resolve(HERE, '../../..');
 const TRUSTED = resolve(HERE, '../../aeion-factory.trusted');
 
-// A session may work in a subfolder (demo/), so the hooks live in the nearest folder above that has them;
+// A session may work in a subfolder, so the hooks live in the nearest folder above that has them;
 // a session outside any Æion Factory project has none, and the plugin leaves it alone.
 function projectRoot(directory) {
   for (let folder = resolve(directory); ; folder = dirname(folder)) {

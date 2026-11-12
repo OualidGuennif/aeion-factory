@@ -18,10 +18,10 @@ change that fits; list what you will not do. Wait for a yes.
 
 ## 2. Spec (skill `spec`)
 
-For a feature or a component, change `knowledge/spec/spec.json` first (the requirement, its test case and
-oracle, an open decision for any choice that is not yours), run `tools/axiom/axiom validate`, then
-update the component doc's spec sections. Before editing code, read the change's context packet:
-`tools/axiom/axiom packet --files <files>` (skill `axiom`). The spec is the source of truth.
+For a feature or a component, update the component doc's spec sections first: intent, outputs and
+refusals, invariants with the test that proves each; a choice that is not yours goes to a decision
+record for the owner. Before editing code, read the doc that covers each file
+(`tools/knowledge/doc-links --for <file>`). The spec is the source of truth.
 
 ## 3. Branch
 
@@ -55,7 +55,7 @@ until OK, then push: `tools/git-hooks/pre-push` refuses `develop` without it.
 
 A pull request `develop → main`, reviewed again, merged with a merge commit after a green CI, then
 tagged `vX.Y.Z`. Anything that needs a deploy or a human decision waits for that human.
-Keep the complete architecture spec and the generated cockpit current (`tools/axiom/axiom check` in CI).
+Keep the complete architecture spec current.
 
 ## 8. Learn (skills `pr-taste`, `retro`)
 

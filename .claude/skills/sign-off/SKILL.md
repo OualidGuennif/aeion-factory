@@ -16,9 +16,7 @@ Done means proven and documented, not "the code is written". Reasons: `AGENTS.md
 5. A sensitive diff (auth, infrastructure, CI, secrets): skill `security-scan` on the changes.
    Match each completion claim to fresh relevant command output and its exit status. A model's
    report, partial check or stale result is not verification; inspect the actual diff/artifact.
-   Update the architecture spec when its facts change. When `knowledge/spec/spec.json` or a view changed:
-   `tools/axiom/axiom docs`; when bound tests changed: `tools/axiom/axiom evidence run --ids TEST-...`.
-   `tools/axiom/axiom check` must pass before the commit.
+   Update the architecture spec when its facts change.
 6. Team flow (`aeion.mode team`): skill `pr-review` on `origin/develop..HEAD`, then push `develop`; its verdict lists the checks run. A release goes through skill `ship`. Local mode, the default: a local commit; pushing is the owner's call. Without git: the tests and docs are the whole sign-off.
 
 ## Red flags

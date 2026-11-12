@@ -47,7 +47,7 @@ in step 3. A present configuration file alone does not prove the hooks are activ
 1. [Create a repository from this template](https://github.com/OualidGuennif/aeion-factory/generate),
    then clone your new repository and open its folder.
    Reset the copied release metadata and tasks: `tools/release/release --new-project` (version 0.1.0, an
-   empty changelog, one task: adapt the factory to this project; the factory's `demo/` is removed).
+   empty changelog, one task: adapt the factory to this project).
 2. Prepare your harness (once), then start it in that folder:
 
    | Harness | Start | What to do first |
@@ -64,11 +64,10 @@ in step 3. A present configuration file alone does not prove the hooks are activ
 3. Check the hooks: ask the agent to run `cat .env`. The guard must refuse it and name its rule. If it runs, the hooks are not loaded: redo step 2.
 4. Give the agent this setup request:
 
-   > Read AGENTS.md, README.md and efficiency/00-EFFICIENCY.md. Prepare Æion Factory for this new
-   > project: describe the project and owner, add its actual build/test commands, fill
-   > docs/authored/brief.md with me and start knowledge/spec/spec.json from it (knowledge/axiomspec/index.md),
-   > and configure my chosen agent's native setup. Run the checks, including tools/axiom/axiom
-   > check. Ask me before enabling the Git hooks. Keep one maintained source for instructions,
+   > Read AGENTS.md, README.md and knowledge/index.md. Prepare Æion Factory for this new
+   > project: describe the project and owner, add its actual build/test commands, write the first
+   > component docs with me in the eight sections of knowledge/policies/specs-first.md, and configure
+   > my chosen agent's native setup. Run the checks. Ask me before enabling the Git hooks. Keep one maintained source for instructions,
    > Knowledge and skills. Report anything that still needs configuration. Wait for approval before
    > implementing application features.
 
@@ -90,11 +89,11 @@ in step 3. A present configuration file alone does not prove the hooks are activ
 
 3. Give the agent this adoption request, replacing the reference path:
 
-   > Read ../aeion-factory-reference/AGENTS.md, efficiency/00-EFFICIENCY.md and the adopt skill.
+   > Read ../aeion-factory-reference/AGENTS.md, its README.md and the adopt skill.
    > Inspect this project's existing instructions, docs, CI, skills and hooks first. Propose the
    > smallest adoption plan, one phase at a time. Merge useful Æion Factory pieces into what exists;
    > preserve my project's authority, conventions and working tools. Include native setup for my
-   > agent, linked specs (knowledge/spec/spec.json for the product's obligations) and relevant checks; offer
+   > agent, docs linked to the code they describe and relevant checks; offer
    > the Git hooks and ask me before installing anything. Wait for my approval before changing files.
 
 4. Approve the fitting phases, validate each one and deliver through your project's PR workflow.
@@ -112,7 +111,7 @@ in step 3. A present configuration file alone does not prove the hooks are activ
    | Grok | `.grok/hooks/factory.json` | Trust the folder; `/hooks` lists it. The Claude budget hook ignores a Grok envelope |
 
 5. Check the hooks as in a new project (step 3), then say yes to the Git hooks unless your policy
-   forbids them. Use [the adoption guide](../../efficiency/00-EFFICIENCY.md) and
+   forbids them. Use [the adopt skill](../../.claude/skills/adopt/SKILL.md) and
    [runtime setup](agent-compatibility.md) for exact requirements.
 
 ## Start a prepared project

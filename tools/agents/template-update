@@ -4,19 +4,18 @@
 
 Every file the factory changed between the project's baseline and the target is decided on its own:
 - contract connectors (connectors.CONTRACT) are copied byte for byte, as a harness loads them;
-- the project's own files (VERSION, CHANGELOG.md, work/, knowledge/spec/, demo/, the marker, and the
-  AxiomSpec cockpit, views and catalogs in docs/) are never written;
+- the project's own files (VERSION, CHANGELOG.md, work/, the marker, and what 3.0.0 generated for a
+  project: knowledge/spec/ and the cockpit, views and catalogs in docs/) are never written;
 - a factory knowledge/ doc follows the factory only while the project has not edited it: an untouched
   copy is updated or removed, a new doc is added, and an edited one is listed for review, never merged;
-  the vendored AxiomSpec package (knowledge/axiomspec/) updates like any factory file, since
-  tools/axiom/ cannot run without its schemas;
+  the AxiomSpec package 3.0.0 vendored (knowledge/axiomspec/) goes like any factory file;
 - AGENTS.md and the merged settings (connectors.MERGE) are never written; a merge proposal is;
 - every other file is a three-way update: untouched since the baseline takes the target, an edited
   one is merged with git merge-file, and a conflict leaves the project's file as it is;
 - a factory file the project still holds as an older release's untouched copy (an update before 2.0.1
   moved only the connectors) diffs from that release, so it takes the target too;
 - a new file in a folder the project lacks is skipped when the baseline had that folder (the project
-  left it out), and added when the folder is new in the factory (3.0.0's tools/axiom/, for example).
+  left it out), and added when the folder is new in the factory (tools/framework/, for example).
 
 The baseline is --from-ref, else the tracked marker .aeion-factory a previous update or
 `release --new-project` wrote, else the release tag whose files the project matches best. The
@@ -41,13 +40,13 @@ from refs import Refused, git, ref_bytes, ref_diff, ref_exists, ref_files, ref_m
 
 SEMVER = re.compile(r"(\d+)\.(\d+)\.(\d+)")
 MARKER = ".aeion-factory"
-# The AxiomSpec cockpit, views and catalogs under docs/ describe the project, like knowledge/spec/.
+# What 3.0.0 generated for a project (its spec, cockpit, views and catalogs) describes the project.
 OWNED_FILES = ("VERSION", "CHANGELOG.md", MARKER, "docs/README.md", "docs/view-catalog.json", "docs/feature-catalog.json")
 OWNED_FOLDERS = ("work/", "knowledge/spec/", "demo/", "docs/generated/", "docs/views/", "docs/features/", "docs/authored/")
 # The project's knowledge: a doc it edited is its own words, so a factory change there is only listed.
 REVIEWED_FOLDERS = ("knowledge/",)
-# The vendored AxiomSpec package (contracts, schemas the toolkit loads, playbooks) belongs to the template:
-# tools/axiom/ cannot run without its schemas, so an update carries both or neither.
+# The AxiomSpec package 3.0.0 vendored belongs to the template, not to the project's knowledge: an update
+# removes it like any template file, never listing it as the project's doc to review.
 TEMPLATE_FOLDERS = ("knowledge/axiomspec/",)
 LINK, GITLINK = "120000", "160000"
 NOTES_CAP = 80
@@ -198,9 +197,9 @@ def develop_without_team_mode(root):
     return has_develop and local_git(root, "config", "--local", "--get", "aeion.mode") != "team"
 
 
-def without_a_spec(root):
-    """3.0.0's knowledge docs and checks cite a project's AxiomSpec spec, catalogs and cockpit."""
-    return not (root / "knowledge/spec/spec.json").is_file()
+def with_a_spec(root):
+    """4.0.0 leaves AxiomSpec to aeion-framework; a project 3.0.0 specified keeps its spec as it is."""
+    return (root / "knowledge/spec/spec.json").is_file()
 
 
 # (release, applies to this project, what the owner runs): the tool never runs these itself.
@@ -208,9 +207,10 @@ MIGRATIONS = (
     ("2.0.0", develop_without_team_mode,
      "the git lifecycle is now off unless aeion.mode is team; this project has a develop branch, so the "
      "owner runs `git config aeion.mode team` in each clone to keep the team flow"),
-    ("3.0.0", without_a_spec,
-     "AxiomSpec replaces Graphify and Archify; the owner runs `tools/axiom/axiom init` once, which starts "
-     "this project's spec, catalogs and cockpit (the factory's knowledge docs cite them)"),
+    ("4.0.0", with_a_spec,
+     "AxiomSpec left the template for aeion-framework; knowledge/spec/ and the docs/ cockpit stay as they "
+     "are. To keep using the spec, migrate it with aeion-framework's qa/migrate_0_1.py then "
+     "qa/migrate_0_2.py, serve it, and the owner runs `tools/aeion-settings framework <url>`"),
 )
 
 

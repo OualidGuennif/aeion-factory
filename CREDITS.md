@@ -28,10 +28,8 @@
 - **Robert C. Martin, ub-mode** — the three passes and the build principles (the data's shape first,
   a design fitted to the change, idempotent operations, one writer for shared state) are adapted in
   our own words; no ub-mode text is copied. https://github.com/unclebob/ub-mode
-- **AxiomSpec**, edition 0.3.0, and its two playbooks — the specification method, schemas,
-  conformance fixtures and reference example, authored for the Æion project and vendored verbatim in
-  `knowledge/axiomspec/`. Its optional CROA profile adapts selected inputs of the CROA public review
-  draft (The CROA Project, CC BY 4.0), with the attribution stated in that profile.
+- **AxiomSpec** (aeion-framework, MIT) — the specification method the optional framework mode reads
+  through its service; nothing of it is vendored here. https://github.com/OualidGuennif/aeion-framework
 
 - Chroma, *Context Rot* (2025) — long inputs degrade every model measured.
 - Gloaguen et al., context files and agent success (arXiv 2602.11988, 2026).

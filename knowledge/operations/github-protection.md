@@ -21,7 +21,7 @@ pull request `develop → main` merges with a merge commit so `develop` stays an
 force-push and branch deletion. Preserve stronger existing rules. Pin required checks to their
 actual GitHub App where available; do not invent check names or require disabled optional jobs.
 
-Æion Factory requires Knowledge/links/health (which includes `axiom check`), secret-scan,
+Æion Factory requires Knowledge/links/health, secret-scan,
 dependency-scan and sast-scan. The fresh `Review: OK` comment remains required by the delivery workflow; it is not
 an approving forge review. The solo-owner workflow uses zero required human approvals, rather
 than making the author approve their own PR. This distinction is explicit: CI/PR requirements

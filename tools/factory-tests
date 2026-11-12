@@ -23,7 +23,6 @@ run python3 tools/repo-health/tests/test_repo_health.py
 run python3 tools/git-hooks/tests/test_pre_push.py
 run python3 tools/release/tests/test_release.py
 run python3 tools/context/tests/test_budget.py
-run python3 -m unittest discover -s tools/axiom/tests -t tools/axiom/tests
 run python3 tools/agents/tests/test_hooks.py
 run python3 tools/agents/tests/test_prompt_defense.py
 run python3 tools/agents/tests/test_adapter_check.py
@@ -43,10 +42,6 @@ else
 fi
 run python3 tools/evals/tests/test_evals.py
 run python3 tools/loops/tests/test_loops.py
-# The factory's own demo (absent from projects): every AxiomSpec step replayed on a fresh copy.
-if [[ -x demo/check ]]; then
-    run demo/check
-fi
 if [[ ${not_run:-0} -eq 1 ]]; then
     echo "factory-tests: PASS (Python suites); JavaScript adapter suites NOT RUN"
 else

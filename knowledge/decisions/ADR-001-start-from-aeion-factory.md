@@ -8,8 +8,8 @@ generated:
   at: 2026-10-20T00:00:00Z
 sources:
   - id: guide
-    resource: ../../efficiency/00-EFFICIENCY.md
-    title: "The seven-phase guide"
+    resource: ../../README.md
+    title: "The template and its principles"
 ---
 
 # ADR-001 — Start from Æion Factory

@@ -94,8 +94,8 @@ The command runs knowledge/link/health checks and binds readiness to the current
 and handover hash. Later edits invalidate it. A refused check names the check and a bounded tail of
 its output, so the agent can fix the failure instead of retrying a bare exit status. Compaction is
 refused without a current receipt, and the refusal names the paths changed since it: a live session
-log inside the tree changes on every event, so it is git-ignored (`/demo/*/journal/*.jsonl`) or
-written outside the project.
+log inside the tree changes on every event, so it is git-ignored or written outside
+the project.
 Local mode (the default: `aeion.mode` unset or not `team`, read with `--local` so includes and the
 global config do not count) keeps no `work/current.md` entry, so its checkpoint
 does not require one. During closure a command the shell cannot parse is denied, never a stop.

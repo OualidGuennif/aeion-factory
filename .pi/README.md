@@ -7,7 +7,7 @@ existing Python guards, edit checks and handover checkpoints through `tools/agen
 
 Launch with `tools/agents/run pi` and trust the project when Pi asks, so `.pi/extensions/` loads. Pi loads
 project extensions from its start folder only: started elsewhere, pass it explicitly
-(`pi -e ../.pi/extensions/factory/index.js` from `demo/`). The extension uses Node built-ins only.
+(`pi -e ../.pi/extensions/factory/index.js` from a subfolder). The extension uses Node built-ins only.
 
 It blocks a tool call on any refusal or hook failure, appends edit feedback to the tool result, gives
 the factory context once per session and again after a compaction, and cancels a compaction without the

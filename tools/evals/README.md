@@ -31,7 +31,7 @@ For before/after comparisons, use separate `--file` datasets with matched tasks 
 baseline commits; rows group by harness, not by task or version.
 
 `changelog-line` above is one of the shipped tasks; the rest sit beside it in `tools/evals/tasks/`,
-eleven still at the "not run yet" baseline; `architecture-answer` records one Pi run.
+all still at the "not run yet" baseline.
 One record line looks like this (`--dry-run` prints it
 without writing):
 

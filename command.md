@@ -8,10 +8,9 @@ Everything you can run here, grouped by loop. Skills are invoked by name in a Cl
 | Skill | When |
 | --- | --- |
 | `plan` | start any non-trivial task: inspect, propose, wait for a yes |
-| `spec` | a feature or component changes: its requirement and test case in `knowledge/spec/spec.json`, then its spec sections |
+| `spec` | a feature or component changes: its doc's eight spec sections, before the code |
 | `build` | implement in thin, tested slices |
 | `test` | add or fix tests; never weaken an assertion |
-| `axiom` | before changing or tracing code: the requirement and context packet, then `tools/axiom/axiom query`, then the language server |
 | `debug` | reproduce a failure, test one hypothesis, fix its root cause and prove the regression |
 | `sign-off` | end a task: tests, docs and links, task state, security on sensitive diffs |
 | `pr-review` | a pull request is open: fresh reviewer, verified findings, one verdict comment |
@@ -36,13 +35,7 @@ tools/factory-tests                                   # every factory test suite
 python3 tools/knowledge/tests/test_doc_links.py       # tool tests
 python3 .claude/hooks/test_hooks.py                   # hook tests
 python3 tools/context/tests/test_budget.py            # context boundary/recovery regressions
-python3 -m unittest discover -s tools/axiom/tests -t tools/axiom/tests   # the axiom toolkit's tests
-tools/axiom/axiom check                               # the commit gate: spec structure, dangling IDs, docs current
-tools/axiom/axiom validate [--phase implementation]   # design gates G01-G07 (G08-G12 for implementation)
-tools/axiom/axiom query spec|tests|rdeps|path|impact|gaps|requirement|node ...   # bounded graph answers
-tools/axiom/axiom packet --files a.py,b.py            # the mandatory context of a change
-tools/axiom/axiom docs | views | export --all | evidence run   # cockpit, diagrams, feature export, receipts
-tools/axiom/axiom init                                # a new project's spec skeleton, catalogs and brief
+tools/knowledge/doc-links --for src/a.py             # the docs that cover a file: read them before editing it
 tools/agents/run claude                             # existing Claude integration
 tools/agents/run codex                              # trust project/hooks first
 tools/agents/run opencode                           # native plugin, shared skills

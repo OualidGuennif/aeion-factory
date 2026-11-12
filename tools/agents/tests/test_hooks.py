@@ -1004,7 +1004,7 @@ class HookTests(unittest.TestCase):
             self.assertTrue(all(h['command'].endswith(f'tools/agents/hook.py" grok {event}') for e in entries for h in e['hooks']))
 
     def test_read_only_loop_denies_writers_and_shell_composition(self):
-        for command in ('tools/efficiency/bundle','tools/axiom/axiom docs','git diff --output=x',
+        for command in ('tools/release/release minor','tools/agents/template-update --ref v1.0.0','git diff --output=x',
                         'gh issue list; touch unexpected'):
             with patch.dict(hook.subprocess.os.environ,{'AEION_LOOP_READ_ONLY':'1'}):
                 with self.assertRaises(ValueError):

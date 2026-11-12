@@ -6,6 +6,20 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+- **Breaking: the embedded AxiomSpec engine is removed.** `tools/axiom/`, `knowledge/axiomspec/`, the
+  template's own `knowledge/spec/`, the generated cockpit (`docs/README.md`, `docs/generated/`,
+  `docs/views/`, the catalogs) and the `axiom` skill are gone, and nothing runs `axiom check` any more
+  (pre-commit, CI, the loops). AxiomSpec lives in aeion-framework; the engine here read format
+  `axiomspec/0.1`, which the framework no longer serves. Component docs in the OKF format are the spec
+  again (`knowledge/policies/specs-first.md`); the architecture diagrams are hand-written Mermaid.
+- `template-update` from 3.0.0 removes the engine and the vendored package a project never edited,
+  keeps the project's `knowledge/spec/` and `docs/` cockpit byte for byte, and names the
+  aeion-framework migration when the project has a spec.
+- **Breaking: `demo/` and `efficiency/` are removed.** The Holiday Planner stays readable at tag
+  v3.0.0. The adopt skill now carries the four promises and the seven adoption phases with their
+  checks; `tools/efficiency/bundle` and its CI step are gone, and so is the `architecture-answer` eval
+  task, which needed the engine.
+
 - **Breaking: the context rule moves to 340k/390k** (was 250k/300k) in every harness: the handover and
   compaction at 340k, both forced at 390k. Native compaction windows follow (`.claude/settings.json`,
   `.codex/config.toml`, `tools/context/run`), and every message names the thresholds from

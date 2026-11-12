@@ -12,7 +12,7 @@ description: Cuts a release from develop to main behind a review and a green CI,
    `pr-review` on it; wait for a green `gh pr checks`.
 3. Release gate: skill `security-scan` on the changes since the last tag, `tools/knowledge/doc-links`.
 4. `gh pr merge <n> --merge` (a merge commit: `develop` stays an ancestor of `main`; never squash a release).
-   Wait for CI to pass on the exact merged main SHA (it runs `tools/axiom/axiom check`). A failed run is
+   Wait for CI to pass on the exact merged main SHA. A failed run is
    corrected, never skipped.
 5. Tag and publish: `git fetch origin`, `git tag -a vX.Y.Z origin/main -m vX.Y.Z`, `git push origin vX.Y.Z`,
    `gh release create vX.Y.Z --notes "$(tools/release/release --notes X.Y.Z)"`. The release name is exactly

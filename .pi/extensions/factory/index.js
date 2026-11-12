@@ -15,7 +15,7 @@ const SETTLE_LIMIT = 3;
 // Pi's built-in tools under the names the shared guards know; find and ls only list paths.
 const TOOLS = { bash: 'Bash', powershell: 'Bash', read: 'Read', edit: 'Edit', write: 'Write', grep: 'Grep', find: 'Glob', ls: 'LS' };
 
-// The hooks are the ones shipped with this extension, three folders up, wherever Pi starts (demo/ too): a
+// The hooks are the ones shipped with this extension, three folders up, wherever Pi starts (a subfolder too): a
 // tools/agents/hook.py above the folder a session opens may be planted, and would run as the user.
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 

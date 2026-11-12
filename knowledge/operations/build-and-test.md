@@ -28,8 +28,6 @@ sources:
     title: "jdtls-launch, which names this doc as its spec"
   - resource: ../../tools/claude-plugins/native-lsp/scripts/tsc-lsp
     title: "tsc-lsp, which names this doc as its spec"
-  - resource: ../../tools/efficiency/bundle
-    title: "bundle, which names this doc as its spec"
   - resource: ../../tools/factory-tests
     title: "factory-tests, which names this doc as its spec"
   - resource: ../../tools/git-hooks/pre-commit
@@ -44,10 +42,6 @@ sources:
 
 CI action revisions are pinned to upstream commit SHAs; review upstream changes before updating them.
 
-The standalone efficiency bundle includes the CRAFTED principles as well as the seven chapters.
-Rebuild it with `tools/efficiency/bundle` after editing those sources or `CREDITS.md`; CI rebuilds
-it and fails when the committed bundle differs.
-
 | Layer | Gate | From |
 | --- | --- | --- |
 | Knowledge | `tools/knowledge/knowledge-check` | the root |
@@ -55,10 +49,8 @@ it and fails when the committed bundle differs.
 | Knowledge reachability | `tools/knowledge/orphans`: a document nothing links | the root |
 | Docs and code links | `tools/knowledge/doc-links` (`--diff origin/develop` before a push) | the root |
 | Comments, file size, caps | `tools/repo-health/repo-health` | the root |
-| The factory's own test suites (hooks, tools, evals, push gate, release, context, the axiom toolkit, adapters including the OpenCode, Pi and dsh plugins and the Pi RPC bridge, connector drift, the tag-pinned desktop install, loops) | `tools/factory-tests` (each suite also runs alone; the script lists them) | root; Node 18+ for the three JavaScript adapter suites, reported NOT RUN without it |
+| The factory's own test suites (hooks, tools, evals, push gate, release, context, adapters including the OpenCode, Pi and dsh plugins and the Pi RPC bridge, connector drift, the tag-pinned desktop install, loops) | `tools/factory-tests` (each suite also runs alone; the script lists them) | root; Node 18+ for the three JavaScript adapter suites, reported NOT RUN without it |
 | Connector copies | `tools/agents/adapter-check` (`--root` for a project that adopted the factory) | the root |
-| Efficiency bundle | `tools/efficiency/bundle`, then `git diff --exit-code efficiency/efficiency-bundle.md` | the root |
-| Spec, graph and cockpit | `tools/axiom/axiom check` (structure, references, dangling IDs, generated docs current); `tools/axiom/axiom validate` for design readiness | the root; Python 3 only |
 | Your code | add your build, lint and test commands here, copied from CI | |
 
 `stale` and `orphans` reject a missing root or `knowledge/` directory with a nonzero exit;
@@ -66,14 +58,13 @@ it and fails when the committed bundle differs.
 A valid knowledge directory with no dated documents still passes `stale`.
 
 The pre-commit (`git config core.hooksPath tools/git-hooks`) runs `knowledge-check`, `doc-links`,
-`repo-health` and `axiom check`. The pre-push refuses a push of `develop` without a recorded `Review: OK`
-and any direct push to `main`. CI runs those four checks, `factory-tests`, the efficiency-bundle
-check and security scans on pushes to `main` or `develop` and pull requests targeting either; the
+and `repo-health`. The pre-push refuses a push of `develop` without a recorded `Review: OK`
+and any direct push to `main`. CI runs those three checks, `factory-tests` and security scans on pushes to `main` or `develop` and pull requests targeting either; the
 Semgrep container is pinned by digest like the actions.
 `stale` and `orphans` remain manual checks; CI exercises their fixtures through `factory-tests`.
 
 Many people run Æion Factory in a plain folder, without git. The link and health checks, the context
-fingerprint, the knowledge graph (`tools/axiom/axiom`) and the session-start summary then walk the files on disk (skipping `.git`, `.aeion`,
+fingerprint and the session-start summary then walk the files on disk (skipping `.git`, `.aeion`,
 dependencies, caches, the root's build output such as `dist/` or `target/`, and desktop files such as
 `.DS_Store`; `.claude/hooks/project_files.py`). Each folder's `.gitignore` applies to it and below for
 its simple rules (a name or glob, optionally ending in `/`); negations and paths with a slash are not
@@ -130,8 +121,7 @@ type error reported then cleared, and the same after a fresh session. Roll back 
 `claude plugin uninstall native-lsp@aeion-local --scope project`.
 
 Agent-specific setup and qualification: [compatibility](agent-compatibility.md). Integration pins
-require Python 3.12+ excluding 3.14.1. `knowledge-check` also validates public root/setup docs and
-the portable efficiency bundle; its bundled Superpowers notice is self-contained.
+require Python 3.12+ excluding 3.14.1. `knowledge-check` also validates public root/setup docs.
 
 ## Passive pool checks
 

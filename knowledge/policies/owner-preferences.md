@@ -22,7 +22,9 @@ under its heading: `- <preference> (<source>, YYYY-MM-DD)`.
 - Never install anything outside the repository's existing tools without the user's explicit yes;
   ask whether the machine is a work computer first (chat, 2026-10-27)
 - The factory runs on Python 3 and a coding agent only: no virtual environment, browser or Node
-  install for analysis or diagrams; Graphify and Archify are gone, AxiomSpec replaces them (chat, 2026-11-09)
+  install for analysis or diagrams; Graphify and Archify are gone (chat, 2026-11-09)
+- AxiomSpec is optional and lives in aeion-framework: the template embeds no spec engine; framework
+  mode is off by default and turns on when the owner gives the API address (chat, 2026-11-12)
 - Colleagues may play locally without a Git/CI cycle: local mode commits on `main` (chat, 2026-10-27)
 - The git lifecycle is off by default: local mode unless the owner sets `aeion.mode team`; the README
   opens with new project, existing project, optional tools, skills and hooks (chat, 2026-11-03)

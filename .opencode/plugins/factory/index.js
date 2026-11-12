@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 const LOCAL = new Set(['Read', 'Grep', 'Glob', 'LS', 'Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
 // The hook refuses a payload over 2 MB; a larger result is not forwarded rather than truncated mid-text.
 const MAX_RESULT = 256 * 1024;
-// The hooks are the ones shipped with this plugin, three folders up, wherever OpenCode starts (demo/ too): a
+// The hooks are the ones shipped with this plugin, three folders up, wherever OpenCode starts (a subfolder too): a
 // tools/agents/hook.py above the folder a session opens may be planted, and would run as the user.
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 

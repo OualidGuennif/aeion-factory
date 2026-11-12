@@ -2,11 +2,11 @@
 
 **Your coding agent. A clear workflow. Checks you can verify.**
 
-A repository template that gives coding agents shared instructions, reusable skills, a checkable
-specification, linked documentation and automatic safety checks. Your project's rules and your
+A repository template that gives coding agents shared instructions, reusable skills, linked
+documentation and automatic safety checks. Your project's rules and your
 decisions come first. It runs on **Python 3 and your coding agent, nothing else**.
 
-[New project](#start-a-new-project) · [Existing project](#existing-project) · [Specify with AxiomSpec](#specify-with-axiomspec) · [Optional tools](#enable-optional-tools) · [Skills](#skills) · [Hooks](#hooks) · [Docs](#documentation)
+[New project](#start-a-new-project) · [Existing project](#existing-project) · [Optional tools](#enable-optional-tools) · [Skills](#skills) · [Hooks](#hooks) · [Docs](#documentation)
 
 ## Start a new project
 
@@ -23,7 +23,7 @@ tools/agents/run claude
 ```
 
 `--new-project` sets version 0.1.0, empties the changelog, leaves one task (adapt the factory to
-your project), removes the factory's `demo/` and records the factory release in `.aeion-factory`
+your project) and records the factory release in `.aeion-factory`
 for later updates. Then give your agent the
 [ready-to-copy setup prompt](knowledge/operations/getting-started.md#new-project).
 
@@ -58,7 +58,7 @@ tools/agents/template-update --ref v2.0.2 --root ../your-project
 
 It finds the release your project came from (`.aeion-factory`, else the closest tag), shows the
 release notes, updates every factory file you left untouched, merges the ones you edited, and leaves
-your instructions, settings, knowledge (with your `knowledge/spec/spec.json`), the AxiomSpec cockpit and views in `docs/`, and your changelog to you, with a proposal for each. The
+your instructions, settings, knowledge and changelog to you, with a proposal for each. The
 [template-update skill](.agents/skills/template-update/SKILL.md) walks your agent through it.
 
 ## Enable optional tools
@@ -90,27 +90,6 @@ push (the pre-push hook refuses `develop` without a `Review: OK`), and releases 
 Back to local mode: `git config --unset aeion.mode`. The pre-commit checks also work on their own in
 local mode: run only the `core.hooksPath` line.
 
-## Specify with AxiomSpec
-
-Every project gets one canonical **`knowledge/spec/spec.json`** ([AxiomSpec](knowledge/axiomspec/index.md)):
-goals, terms, structured requirements, decisions, constraints, scenarios, tests and the code that
-implements them, each with a stable ID. `tools/axiom/axiom` (Python standard library, no model)
-checks it and derives everything else:
-
-```bash
-tools/axiom/axiom validate                 # gates G01-G07: is the design ready, and if not, exactly why
-tools/axiom/axiom packet --files src/a.py  # every requirement, rule, decision and test a change must respect
-tools/axiom/axiom query tests src/a.py     # which tests reach a file; also spec, rdeps, path, impact, gaps
-tools/axiom/axiom docs                     # the cockpit (docs/README.md), pages and SVG diagrams
-tools/axiom/axiom export --all             # one eight-section feature Markdown per goal, for a build factory
-tools/axiom/axiom evidence run             # run the bound unittest tests and keep a receipt
-```
-
-The knowledge graph joins the spec, `knowledge/` and the code: declared links, bindings resolved to
-`file:line`, Python and ECMAScript imports, `Spec:` headers. Diagrams (system, process, sequence, use
-case, state) are rendered to SVG from JSON views. Unknown is never pass. [The toolkit →](knowledge/components/axiom-toolkit.md)
-· [The method →](knowledge/axiomspec/index.md) · [The demo →](https://github.com/OualidGuennif/aeion-factory/tree/main/demo)
-
 ## Skills
 
 A skill is a reusable procedure your agent follows for one kind of task. Ask naturally
@@ -121,7 +100,6 @@ A skill is a reusable procedure your agent follows for one kind of task. Ask nat
 | Pick task guidance, without launching agents | [skill-route](.claude/skills/skill-route/SKILL.md) — native skills first, optional passive pool |
 | Plan a change and define its behaviour | [plan](.claude/skills/plan/SKILL.md) · [spec](.claude/skills/spec/SKILL.md) |
 | Implement, test or fix a bug | [build](.claude/skills/build/SKILL.md) · [test](.claude/skills/test/SKILL.md) · [debug](.claude/skills/debug/SKILL.md) |
-| Know a change's obligations, dependencies and tests | [axiom](.claude/skills/axiom/SKILL.md) — spec, graph and context packet, no LLM |
 | Update the docs and finish a task | [okf-update](.claude/skills/okf-update/SKILL.md) · [sign-off](.claude/skills/sign-off/SKILL.md) |
 | Review and release (team flow) | [pr-review](.claude/skills/pr-review/SKILL.md) · [ship](.claude/skills/ship/SKILL.md) |
 | Check a sensitive change | [security-scan](.claude/skills/security-scan/SKILL.md) |
@@ -155,8 +133,8 @@ request and on pushes to `main` and `develop`.
 
 ## How the pieces fit
 
-**Plan → specify → build → test → review → release.** `AGENTS.md` sets the rules, `knowledge/spec/spec.json`
-says what the product must do, `knowledge/` explains how, skills guide each task, hooks check the
+**Plan → specify → build → test → review → release.** `AGENTS.md` sets the rules, `knowledge/` says
+what the product must do and how, skills guide each task, hooks check the
 work as it happens, and `work/current.md` tracks open tasks. You approve meaningful plans; the agent reports the checks
 it actually ran.
 
@@ -171,7 +149,6 @@ it actually ran.
 | Agent configuration and known limits | [Agent compatibility](knowledge/operations/agent-compatibility.md) |
 | Tests and checks | [Build and test](knowledge/operations/build-and-test.md) |
 | Context limits and handovers | [Context safety](knowledge/operations/context-safety.md) |
-| The method, one phase at a time | [Seven-phase guide](efficiency/00-EFFICIENCY.md) |
 
 Æion Factory works on its own. Optional [Æion modules](https://github.com/OualidGuennif/aeion-spaceship/blob/main/docs/modules.md)
 cover security, audit, observability and integration.

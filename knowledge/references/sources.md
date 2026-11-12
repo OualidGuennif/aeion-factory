@@ -31,8 +31,11 @@ sources:
   Eclipse JDT Language Server.
 - **Superpowers** informs the focused debugging, planning, test, verification and review updates;
   **context-mode** informs bounded output and recovery without bundling its runtime.
-- **AxiomSpec** (edition 0.3.0, vendored in [knowledge/axiomspec](../axiomspec/index.md)) supplies
-  the canonical specification format, gates, graph and query contracts that `tools/axiom` implements.
+- **aeion-framework** (AxiomSpec 1.1.9, MIT) owns the specification method, its engine and the
+  service the optional framework mode reads: [service interface](https://github.com/OualidGuennif/aeion-framework/blob/main/AxiomSpec/docs/19_SERVICE_INTERFACE.md),
+  [agent coding contract](https://github.com/OualidGuennif/aeion-framework/blob/main/AxiomSpec/docs/08_AGENT_CODING_CONTRACT.md),
+  [canonical model](https://github.com/OualidGuennif/aeion-framework/blob/main/AxiomSpec/docs/03_CANONICAL_MODEL.md),
+  [agent in a sandbox](https://github.com/OualidGuennif/aeion-framework/blob/main/playbooks/03_AGENT_IN_A_SANDBOX.md).
 
 ## Research and practice
 

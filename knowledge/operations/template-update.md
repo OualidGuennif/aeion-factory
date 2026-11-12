@@ -75,8 +75,8 @@ most). Then one line per file, in these classes:
 | Class | Files | Line |
 | --- | --- | --- |
 | contract | `connectors.CONTRACT` | `written`, `mode`, `skipped — not in <ref>`; `DRIFT`/`MODE` under `--check` |
-| project-owned | `VERSION`, `CHANGELOG.md`, `.aeion-factory`, `work/`, `knowledge/spec/`, `demo/`, the AxiomSpec cockpit, views and catalogs in `docs/` | never written |
-| knowledge | the factory's other `knowledge/` docs | follows the factory while the project has not edited it (`updated`, `removed`, `added`); an edited doc is `review <file>`, kept byte for byte and never merged; the vendored `knowledge/axiomspec/` is three-way |
+| project-owned | `VERSION`, `CHANGELOG.md`, `.aeion-factory`, `work/`, and what 3.0.0 generated for a project (`knowledge/spec/`, the cockpit, views and catalogs in `docs/`) | never written |
+| knowledge | the factory's other `knowledge/` docs | follows the factory while the project has not edited it (`updated`, `removed`, `added`); an edited doc is `review <file>`, kept byte for byte and never merged; the AxiomSpec package 3.0.0 vendored in `knowledge/axiomspec/` is three-way, so an untouched copy is removed |
 | merge | `connectors.MERGE` (`AGENTS.md`, merged settings) | never written; `merge <file> — proposal: <path>` |
 | three-way | every other changed file, and every factory file still an older release's copy | `updated` (the project kept the baseline, or an older release's copy: `— untouched since <tag>`), `added` (new, in a folder the project has or one new in the factory), `removed` (deleted upstream, untouched here), `merged` (`git merge-file` was clean), `conflict` (left as it is, with a proposal), `review` (removed upstream but edited here, or a link the project changed), `link`, `mode` |
 
@@ -84,14 +84,14 @@ An update before 2.0.1 moved only the connectors, so a project can hold a factor
 as an older release had it; such a file diffs from that release, not from the baseline, and takes
 the target even when the factory left it alone since the baseline. Files the project deleted, and
 new files in a folder the baseline had but the project left out, stay out and are counted on one
-`untouched` line; a folder new in the factory (3.0.0's `tools/axiom/`) comes in whole. A rename is
+`untouched` line; a folder new in the factory comes in whole. A rename is
 both of its paths, so the old copy is removed and a folder the removal empties goes with it.
 A proposal (the three-way result, conflict markers included) is written under
 `.aeion/template-update/<ref>/` on a write; that folder carries its own `.gitignore`, so a project
 that does not ignore `.aeion/` never sees the proposals as files to commit. A `migrate` line names what
 the owner must run for a release crossed, such as `git config aeion.mode team` for 2.0.0 when the
-project has a `develop` branch and no team mode, or `tools/axiom/axiom init` for 3.0.0 when the
-project has no `knowledge/spec/spec.json`; the tool never runs it. A write ends by recording
+project has a `develop` branch and no team mode, or, for 4.0.0 when the project has a
+`knowledge/spec/spec.json`, the aeion-framework migration of that spec; the tool never runs it. A write ends by recording
 `<ref> <commit>` in `.aeion-factory` and naming the verification and the commit.
 
 Exit code 0 when nothing needs a human, 1 when a merge, conflict, review or migration remains (and,
@@ -148,9 +148,10 @@ Factory clone` (its hint names `--root <project>` when `--root` is no folder).
     project left out stays out, and a renamed file moves — `test_a_removed_factory_link_is_removed`,
     `test_a_new_factory_folder_comes_in_and_a_left_out_one_does_not`,
     `test_a_renamed_factory_file_moves_and_its_empty_folder_goes`.
-15. An untouched project adopted at v2.1.1 commits again after the update and the two steps it names
-    (the `AGENTS.md` proposal, `axiom init`) — `ReleaseUpdateTests` (needs the tag; skipped without it),
-    `test_the_axiomspec_migration_is_named_until_the_project_has_a_spec`.
+15. An untouched project adopted at v2.1.1 commits again after the update and the step it names
+    (the `AGENTS.md` proposal); a project at v3.0.0 loses the embedded engine and keeps its spec byte
+    for byte — `ReleaseUpdateTests` (needs the tags; skipped without them),
+    `test_the_framework_migration_is_named_only_for_a_specified_project`.
 
 ## Determinism
 

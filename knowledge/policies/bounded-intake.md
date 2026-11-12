@@ -90,7 +90,7 @@ Durable facts belong in Knowledge; session noise stays out of AGENTS.md and hand
 ## Acceptance
 
 Run `python3 .claude/hooks/test_hooks.py` and `python3 tools/agents/tests/test_hooks.py`, then the
-existing Knowledge, context, axiom and native-plugin checks. Check real workflow friction
+existing Knowledge, context and native-plugin checks. Check real workflow friction
 before extending the recognized command patterns.
 
 ## Out of scope

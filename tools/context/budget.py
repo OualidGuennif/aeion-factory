@@ -26,7 +26,7 @@ WARN_K = f"{WARNING // 1000}k"
 LIMIT_K = f"{LIMIT // 1000}k"
 MAX_TAIL = 4 * 1024 * 1024
 FIELDS = ("input_tokens", "cache_creation_input_tokens", "cache_read_input_tokens", "output_tokens")
-DOC_ROOTS = ("knowledge/", "work/", "efficiency/")
+DOC_ROOTS = ("knowledge/", "work/")
 DOC_FILES = {"AGENTS.md", "CLAUDE.md", "README.md", "command.md", "Workflow_Agent.md", "CREDITS.md"}
 CHECKS = (("tools/knowledge/knowledge-check",), ("tools/repo-health/repo-health",))
 

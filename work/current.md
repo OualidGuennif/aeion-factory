@@ -5,12 +5,12 @@ Finished tasks are deleted: the commit message and knowledge/ keep what matters.
 Status: ACTIVE, WAITING-OWNER, MEASURING, BLOCKED, BACKLOG. An entry is `## <title> — <STATUS>`, then the
 lines `- Owner decision:`, `- State:`, `- Next:` (with who), `- Blocker:`, `- Evidence:`.
 
-## Factory 3.0.0: AxiomSpec replaces Graphify and Archify — ACTIVE
-- Owner decision: 2026-11-09, remove Graphify/Archify (Python 3 and an agent only), integrate AxiomSpec, new demo, release to main; AxiomSpec fully public.
-- State: tools/axiom (76 tests), vendored package, factory spec design_ready, cockpit and diagrams, demo/check 17/17; release PR next.
-- Next: review, release v3.0.0, then build aeion-core from the template and update adopted projects with template-update (who: agent, owner approves).
+## Æion Template 4.0.0: back to the essence, framework optional — ACTIVE
+- Owner decision: 2026-11-12, rename to aeion-template (no compatibility), remove the embedded AxiomSpec engine, demo/ and efficiency/, framework mode optional and off by default (the API address is the switch), a blocking doc gate, context rule 340k/390k.
+- State: the 340k/390k rule and the removals are on develop; rename, settings, doc gate, framework client and docs remain.
+- Next: the remaining slices, then review and the release PR (who: agent; the owner renames the GitHub repository and approves the push).
 - Blocker: none.
-- Evidence: knowledge/components/axiom-toolkit.md; knowledge/axiomspec/index.md; tools/axiom/tests/; demo/check
+- Evidence: CHANGELOG.md Unreleased; knowledge/components/context-and-architecture.md
 
 ## Grok adapter — ACTIVE
 - Owner decision: 2026-11-06, release the Grok adapter as 2.1.1. This replaces the same-day decision to keep it on a local `grok` branch.
@@ -28,17 +28,10 @@ lines `- Owner decision:`, `- State:`, `- Next:` (with who), `- Blocker:`, `- Ev
 
 ## Golden task set — MEASURING
 - Owner decision: 2026-10-31, start the local evaluation harness, then approve the twelve candidate tasks proposed with it.
-- State: twelve tasks in `tools/evals/tasks/`, six implementation and six process; one baseline is recorded (architecture-answer on pi, success, 0.9 minutes) and eleven still say "not run yet"; `report` renders one row.
+- State: eleven tasks in `tools/evals/tasks/`, five implementation and six process, all at "not run yet"; the one Pi baseline (architecture-answer, 2026-10-31) stays in results.jsonl, its task left with the embedded engine in 4.0.0.
 - Next: one baseline per harness on the same fixed commit, then compare (who: owner; an agent prepares each run).
 - Blocker: one harness measured, so no across-harness comparison is possible yet.
-- Evidence: knowledge/operations/evals.md; tools/evals/tasks/architecture-answer/BASELINE.md
-
-## Holiday Planner demo runs — WAITING-OWNER
-- Owner decision: 2026-11-09, remove the Idea Board demo; a holiday planner on 20 feature specs replaces it.
-- State: spec, views, 20 feature files, rounds 00-10 and `demo/check` (17 steps, all passing) are in demo/; no harness run yet.
-- Next: run round 00 then 01-10 with one harness at a time, records in demo/runs/<harness>-run-NN/ (who: owner starts, agent builds).
-- Blocker: none.
-- Evidence: demo/README.md; demo/check; demo/holiday-planner/knowledge/spec/spec.json
+- Evidence: knowledge/operations/evals.md; tools/evals/results.jsonl
 
 ## Live Devin, Droid, Antigravity and Pi hook qualification — WAITING-OWNER
 - Owner decision: 2026-10-27, support Devin, Droid and Antigravity; 2026-10-28, Pi 1.4.0; adapters use documented, not live-run, payloads.
@@ -57,6 +50,6 @@ lines `- Owner decision:`, `- State:`, `- Next:` (with who), `- Blocker:`, `- Ev
 ## Adapt Æion Factory to this project — ACTIVE
 - Owner decision: <date>, started from Æion Factory (knowledge/decisions/ADR-001).
 - State: the structure is in place; AGENTS.md still describes Æion Factory, not the project.
-- Next: write the project's paragraph and build commands in AGENTS.md; walk efficiency/ phases 1 to 7 (who: agent, with the owner's yes per phase).
+- Next: write the project's paragraph and build commands in AGENTS.md; walk the adopt skill's phases 1 to 7 (who: agent, with the owner's yes per phase).
 - Blocker: none.
-- Evidence: efficiency/00-EFFICIENCY.md
+- Evidence: .claude/skills/adopt/SKILL.md

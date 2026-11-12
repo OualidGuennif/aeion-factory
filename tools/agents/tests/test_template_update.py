@@ -298,13 +298,13 @@ class TemplateUpdateTests(unittest.TestCase):
         self.assertFalse((self.project / 'tools/old').exists())
         self.assertEqual((self.project / 'tools/new-process.py').read_text(), 'shared code\n')
 
-    def test_the_axiomspec_migration_is_named_until_the_project_has_a_spec(self):
-        self.release('3.0.0', lambda: self.write('tools/axiom/axiom', 'toolkit\n'))
-        code, output = self.run_tool('--from-ref', 'v2.0.0', '--ref', 'v3.0.0', '--check')
-        self.assertIn('migrate   AxiomSpec replaces Graphify', output)
-        self.project_file('knowledge/spec/spec.json', '{}\n')
-        code, output = self.run_tool('--from-ref', 'v2.0.0', '--ref', 'v3.0.0', '--check')
+    def test_the_framework_migration_is_named_only_for_a_specified_project(self):
+        self.release('4.0.0', lambda: self.write('tools/framework/axiom-api', 'client\n'))
+        code, output = self.run_tool('--from-ref', 'v2.0.0', '--ref', 'v4.0.0', '--check')
         self.assertNotIn('migrate   AxiomSpec', output)
+        self.project_file('knowledge/spec/spec.json', '{}\n')
+        code, output = self.run_tool('--from-ref', 'v2.0.0', '--ref', 'v4.0.0', '--check')
+        self.assertIn('migrate   AxiomSpec left the template for aeion-framework', output)
 
     def test_the_marker_is_written_then_used(self):
         code, output = self.run_tool('--from-ref', 'v1.0.0', '--ref', 'v2.0.0')
@@ -499,8 +499,8 @@ def factory_has(ref):
 
 @unittest.skipUnless(factory_has('v2.1.1') and factory_has('HEAD'), 'needs the factory history with tag v2.1.1')
 class ReleaseUpdateTests(unittest.TestCase):
-    """A project adopted at v2.1.1, untouched, updated to this commit: it must commit again after the
-    two steps the update names (the AGENTS.md proposal and `axiom init`)."""
+    """A project adopted at an earlier release, untouched, updated to this commit: it must commit again
+    after the one step the update names (the AGENTS.md proposal)."""
 
     def test_a_2_1_1_project_takes_this_release(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -520,14 +520,44 @@ class ReleaseUpdateTests(unittest.TestCase):
                                    '--repo', str(ROOT), '--root', str(project)], capture_output=True, text=True)
             self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
             self.assertNotIn('refusing', done.stdout + done.stderr)
-            self.assertIn('migrate   AxiomSpec', done.stdout)
+            self.assertNotIn('migrate   AxiomSpec', done.stdout)
             self.assertFalse((project / 'tools/architecture').exists())
             for link in (project / '.agents/skills').iterdir():
                 self.assertTrue(link.exists(), f'{link.name} dangles')
-            # The owner's two steps, then the project's own commit gate.
+            # The owner's step, then the project's own commit gate.
             shutil.copyfile(project / '.aeion/template-update/HEAD/AGENTS.md', project / 'AGENTS.md')
-            init = subprocess.run([str(project / 'tools/axiom/axiom'), 'init'], cwd=project, capture_output=True, text=True)
-            self.assertEqual(init.returncode, 0, init.stdout + init.stderr)
+            git('add', '-A')
+            hook = subprocess.run(['sh', 'tools/git-hooks/pre-commit'], cwd=project, capture_output=True, text=True)
+            self.assertEqual(hook.returncode, 0, hook.stdout + hook.stderr)
+
+
+    @unittest.skipUnless(factory_has('v3.0.0'), 'needs the factory history with tag v3.0.0')
+    def test_a_3_0_0_project_keeps_its_spec_and_drops_the_engine(self):
+        with tempfile.TemporaryDirectory() as folder:
+            project = Path(folder).resolve() / 'app'
+            project.mkdir()
+            archive = subprocess.run(['git', 'archive', 'v3.0.0'], cwd=ROOT, capture_output=True, check=True)
+            subprocess.run(['tar', '-x', '-C', str(project)], input=archive.stdout, check=True)
+            commit = subprocess.run(['git', 'rev-parse', 'v3.0.0^{commit}'], cwd=ROOT, capture_output=True,
+                                    text=True, check=True).stdout.strip()
+            (project / '.aeion-factory').write_text(f'v3.0.0 {commit}\n')
+            spec = (project / 'knowledge/spec/spec.json').read_bytes()
+
+            def git(*arguments):
+                return subprocess.run(['git', '-c', 'user.name=Test', '-c', 'user.email=test@example.com',
+                                       *arguments], cwd=project, capture_output=True, text=True)
+            git('init', '-q', '-b', 'main'), git('add', '-A'), git('commit', '-q', '-m', 'adopt 3.0.0')
+            done = subprocess.run([sys.executable, str(ROOT / 'tools/agents/template-update'), '--ref', 'HEAD',
+                                   '--repo', str(ROOT), '--root', str(project)], capture_output=True, text=True)
+            self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+            # The migrate line names 4.0.0, so it shows once this commit carries that version.
+            if tuple(int(n) for n in (ROOT / 'VERSION').read_text().split('.')) >= (4, 0, 0):
+                self.assertIn('migrate   AxiomSpec left the template for aeion-framework', done.stdout)
+            for gone in ('tools/axiom', 'knowledge/axiomspec', 'efficiency', 'tools/efficiency'):
+                self.assertFalse((project / gone).exists(), gone)
+            self.assertEqual((project / 'knowledge/spec/spec.json').read_bytes(), spec)
+            self.assertTrue((project / 'docs/README.md').is_file())
+            shutil.copyfile(project / '.aeion/template-update/HEAD/AGENTS.md', project / 'AGENTS.md')
             git('add', '-A')
             hook = subprocess.run(['sh', 'tools/git-hooks/pre-commit'], cwd=project, capture_output=True, text=True)
             self.assertEqual(hook.returncode, 0, hook.stdout + hook.stderr)

@@ -11,6 +11,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
 import unittest
 from unittest.mock import patch
 
@@ -279,6 +280,13 @@ class SettingsTests(unittest.TestCase):
         result = self.cli("framework", "off")
         self.assertEqual(result.returncode, 0)
         self.assertEqual(json.loads((self.root / settings.SETTINGS).read_text()), {})
+
+    def test_connect_forgets_a_probe_cached_while_the_service_was_down(self):
+        (self.root / ".aeion").mkdir()
+        (self.root / settings.HEALTH_CACHE).write_text(json.dumps(
+            {"url": self.service.url, "at": time.time(), "version": None, "problem": "unreachable"}), encoding="utf-8")
+        self.assertEqual(self.cli("framework", self.service.url).returncode, 0)
+        self.assertEqual(settings.cached_health(self.root, self.service.url), (settings.TESTED, None))
 
     def test_connect_refuses_and_saves_nothing(self):
         self.service.set("/health/ready", 200, {"status": "ready", "version": "0.3.0"})

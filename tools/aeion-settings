@@ -51,6 +51,8 @@ def connect(root, url):
         return 1
     data, problem = settings.load(root)
     settings.save(root, {**data, "framework": url})
+    # A probe cached while the service was down would tell the next session start it still is.
+    (root / settings.HEALTH_CACHE).unlink(missing_ok=True)
     print(f"framework: on → {url} (aeion-framework {version}, ready), saved in {settings.SETTINGS}")
     print("Agents read the spec with tools/framework/axiom-api. For native MCP tools in Claude Code:")
     print(f"  claude mcp add --transport http aeion-axiom {url}/mcp/ --scope local")

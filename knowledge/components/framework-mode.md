@@ -7,8 +7,8 @@ generated:
   by: aeion-template/4.0
   at: 2026-11-12
 verified:
-  - at: 2026-11-12
-    what: "tools/framework/tests/test_settings.py: 23 passed, including malformed URL refusals from connect, settings and environment"
+  - at: 2026-11-13
+    what: "tools/framework/tests/test_settings.py: 24 passed, including malformed URL refusals and a connect that clears a stale probe"
   - at: 2026-11-12
     what: "tools/framework/tests/test_axiom_api.py: 16 passed; native and shell reads share the brief loading and per-call budget"
 sources:
@@ -50,7 +50,7 @@ The same per-clone settings carry the doc gate's mode. Agents read the settings 
 | `.aeion/settings.json` (ignored local state, with or without git) | `doc_gate`, `framework` | the owner, through `tools/aeion-settings` | each read |
 | `AEION_FRAMEWORK_URL` | an address overriding the file for one process tree (CI, a container, a sandbox) | whoever starts the process | each read |
 | `AEION_FRAMEWORK_TOKEN` | a gateway token, sent as `Authorization: Bearer` over https or to this machine only; never stored, never printed | the owner's environment | each request |
-| `{address}/health/ready` | `version` of the running aeion-framework service | the service | at connect; at session start, cached ten minutes in `.aeion/framework-health.json` |
+| `{address}/health/ready` | `version` of the running aeion-framework service | the service | at connect, which clears the cache; at session start, cached ten minutes in `.aeion/framework-health.json` |
 | `{address}/v1/snapshots/{current or digest}/…` | `nodes/{id}`, `context`, `trace`, `gaps` (aeion-framework 1.1.9) | the service | each request; `current` is the one release a sandbox service serves |
 | committed code | `@req` annotations: `@req A-001 B-002`, `@req: A-001`, `@req(A-001, B-002)`, every ID on the `@req` line | the project | each session start; each Read of the file |
 

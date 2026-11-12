@@ -168,21 +168,23 @@ class SettingsTests(unittest.TestCase):
         self.assertIn("port", settings.address_problem("http://127.0.0.1:87a7"))
         self.assertIn("port", settings.address_problem("http://127.0.0.1:99999"))
         self.assertIn("unreachable", settings.health("http://127.0.0.1:87a7")[1])
-        # A port that answers something other than HTTP.
-        listener = socket.socket()
-        listener.bind(("127.0.0.1", 0))
-        listener.listen(1)
-        self.addCleanup(listener.close)
+        # A port that answers something other than HTTP, then an error status whose body breaks.
+        for reply, expected in ((b"hello, not http\r\n\r\n", "unreachable"),
+                                (b"HTTP/1.1 503 Service Unavailable\r\nTransfer-Encoding: chunked\r\n\r\nzz\r\n", "503")):
+            listener = socket.socket()
+            listener.bind(("127.0.0.1", 0))
+            listener.listen(1)
+            self.addCleanup(listener.close)
 
-        def answer():
-            connection, _ = listener.accept()
-            with connection:
-                connection.recv(1024)
-                connection.sendall(b"hello, not http\r\n\r\n")
-        threading.Thread(target=answer, daemon=True).start()
-        version, problem = settings.health(f"http://127.0.0.1:{listener.getsockname()[1]}")
-        self.assertIsNone(version)
-        self.assertIn("unreachable", problem)
+            def answer(listener=listener, reply=reply):
+                connection, _ = listener.accept()
+                with connection:
+                    connection.recv(1024)
+                    connection.sendall(reply)
+            threading.Thread(target=answer, daemon=True).start()
+            version, problem = settings.health(f"http://127.0.0.1:{listener.getsockname()[1]}")
+            self.assertIsNone(version)
+            self.assertIn(expected, problem)
 
     def test_the_probe_is_remembered_ten_minutes_per_address(self):
         self.assertEqual(settings.cached_health(self.root, self.service.url, now=1000), (settings.TESTED, None))

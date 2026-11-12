@@ -96,7 +96,8 @@ The same per-clone settings carry the doc gate's mode. Agents read the settings 
    `http://` only to a loopback host), and never follows a redirect: a redirect is answered as a
    refusal, because urllib would copy the header to its target. This machine is reached directly,
    never through a proxy from the environment, which would read the token and could answer for the
-   service. A port that answers something other than HTTP is unreachable, never a failed hook.
+   service. A port that answers something other than HTTP is unreachable, and an error status with a
+   broken body keeps its status: neither ends a hook.
 4. Only the owner changes a setting; the agent's guards refuse every write path they recognize.
 5. CI never depends on framework mode.
 6. With framework mode off, `axiom-api` sends nothing and no brief is fetched.

@@ -181,8 +181,12 @@ def request(url, timeout=REQUEST_SECONDS):
         with opener.open(urllib.request.Request(url, headers=headers), timeout=timeout) as answer:
             status, raw, retry = answer.status, answer.read(1_048_576), None
     except urllib.error.HTTPError as error:
+        status, raw, retry = error.code, b"", error.headers.get("Retry-After")
         try:
-            status, raw, retry = error.code, error.read(65_536), error.headers.get("Retry-After")
+            raw = error.read(65_536)
+        except (OSError, http.client.HTTPException):
+            # The status stands; a body that breaks is no body.
+            pass
         finally:
             error.close()
     except http.client.HTTPException as error:

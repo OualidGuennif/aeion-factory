@@ -15,7 +15,7 @@ dates them at release time. Spec: knowledge/policies/engineering.md
   followed (urllib would have copied the token to its target), and `AEION_FRAMEWORK_TOKEN` goes only
   over https or to this machine, which is reached directly, never through a proxy from the
   environment. An address with a port that is not a number is refused, and a port that answers
-  something other than HTTP counts as unreachable instead of ending the hook. The `@req` briefs are
+  something other than HTTP, or breaks the body of an error, no longer ends the hook. The `@req` briefs are
   framed as data and stay one line each.
 
 - **Security fix in the skill pool refresh.** The rename had moved the paths of the reviewed security

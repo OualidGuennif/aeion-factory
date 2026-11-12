@@ -6,6 +6,10 @@ dates them at release time. Spec: knowledge/policies/engineering.md
 
 ## [Unreleased]
 
+- `template-update` checks the full destination of every merge/conflict proposal and its `.gitignore`
+  before the first project write. A linked release folder or proposal file is refused, preserving
+  both the project and any file outside it.
+
 - Framework briefs load after shell reads of annotated code (`sed`, `head`, `cat`, …), so Codex can
   satisfy the doc gate. A multi-file read shares one eight-ID budget and deadline; further reads
   load the remaining briefs, and an unserved requirement still keeps its file closed.

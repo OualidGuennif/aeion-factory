@@ -225,6 +225,35 @@ class TemplateUpdateTests(unittest.TestCase):
         self.assertEqual(list(outside.iterdir()), [])
         self.assertEqual((self.project / HOOK).read_text(), HOOK_V1)
 
+    def test_linked_proposal_destinations_are_refused_before_any_write(self):
+        paths = ('.aeion/template-update/v2.0.0', '.aeion/template-update/v2.0.0/AGENTS.md',
+                 '.aeion/template-update/v2.0.0/README.md', '.aeion/template-update/.gitignore')
+        for relative in paths:
+            state = self.project / '.aeion'
+            if state.exists():
+                shutil.rmtree(state)
+            self.project_file('README.md', README_V1.replace('footer', 'our footer'))
+            self.project_file(PLUGIN, 'local drift\n')
+            self.project_file(HOOK, HOOK_V1)
+            outside = self.base / 'outside-proposals'
+            outside.mkdir(exist_ok=True)
+            sentinel = outside / ('AGENTS.md' if relative.endswith('v2.0.0') else 'sentinel.txt')
+            sentinel.write_text('PROJECT OWNED SENTINEL\n')
+            link = self.project / relative
+            link.parent.mkdir(parents=True, exist_ok=True)
+            link.symlink_to(outside if relative.endswith('v2.0.0') else sentinel,
+                            target_is_directory=relative.endswith('v2.0.0'))
+            for flags in (('--check',), ()):
+                with self.subTest(path=relative, flags=flags):
+                    code, output = self.run_tool('--from-ref', 'v1.0.0', '--ref', 'v2.0.0', *flags)
+                    self.assertEqual(code, 2, output)
+                    self.assertIn(f'refusing linked destination {relative}', output)
+                    self.assertEqual(sentinel.read_text(), 'PROJECT OWNED SENTINEL\n')
+                    self.assertEqual((self.project / PLUGIN).read_text(), 'local drift\n')
+                    self.assertEqual((self.project / HOOK).read_text(), HOOK_V1)
+                    self.assertIn('our footer', (self.project / 'README.md').read_text())
+                    self.assertFalse((self.project / update_tool.MARKER).exists())
+
     def test_a_file_the_project_deleted_stays_deleted(self):
         (self.project / HOOK).unlink()
         (self.project / 'efficiency').joinpath('old.md').unlink()

@@ -9,7 +9,7 @@ generated:
   at: 2026-11-12
 verified:
   - at: 2026-11-12
-    what: "tools/agents/tests/test_template_update.py: 39 passed, including linked and dangling marker refusals before writes"
+    what: "tools/agents/tests/test_template_update.py: 40 passed; linked markers, proposal folders/files and .gitignore are refused before writes"
 sources:
   - resource: ../../tools/agents/template-update
     title: "The update tool"
@@ -91,7 +91,9 @@ new files in a folder the baseline had but the project left out, stay out and ar
 both of its paths, so the old copy is removed and a folder the removal empties goes with it.
 A proposal (the three-way result, conflict markers included) is written under
 `.aeion/template-update/<ref>/` on a write; that folder carries its own `.gitignore`, so a project
-that does not ignore `.aeion/` never sees the proposals as files to commit. A `migrate` line names what
+that does not ignore `.aeion/` never sees the proposals as files to commit. Each proposal's full path
+and that `.gitignore` meet the same link and regular-file checks before any project file is written;
+a linked release folder, proposal file or ignore file refuses the update. A `migrate` line names what
 the owner must run for a release crossed, such as `git config aeion.mode team` for 2.0.0 when the
 project has a `develop` branch and no team mode, or, for 4.0.0 when the project has a
 `knowledge/spec/spec.json`, the aeion-framework migration of that spec; the tool never runs it. A write ends by recording
@@ -129,7 +131,8 @@ Template clone` (its hint names `--root <project>` when `--root` is no folder).
 7. A linked destination file or parent, including the `.aeion-template` marker, or a linked proposal
    folder, is refused before the first write — `test_a_linked_connector_is_refused_before_any_write`,
    `test_a_linked_parent_is_refused`,
-   `test_a_linked_marker_is_refused_before_any_write`, `test_a_linked_proposal_folder_is_refused`.
+   `test_a_linked_marker_is_refused_before_any_write`, `test_a_linked_proposal_folder_is_refused`,
+   `test_linked_proposal_destinations_are_refused_before_any_write`.
 8. A created or repaired launcher carries the reference's executable mode —
    `test_a_missing_launcher_is_written_executable`,
    `test_a_launcher_that_lost_its_mode_is_repaired`.

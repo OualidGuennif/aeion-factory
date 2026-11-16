@@ -477,7 +477,7 @@ function renderBuilds() {
 }
 function renderBudgets(budget) {
   const scopes = budget?.scopes || {};
-  const names = { "aeion-autonomous-forum": "Forum workers", "aeion-observability": "Observability" };
+  const names = { "aeion-autonomous-forum": "Forum workers", "aeion-factory": "Cockpit" };
   $("budgets").innerHTML = budget?.status === "available" ? Object.entries(scopes).map(([scope, value]) => {
     const settled = Number(value.settled_usd ?? value.spent_usd);
     const reserved = Number(value.reserved_usd || 0);

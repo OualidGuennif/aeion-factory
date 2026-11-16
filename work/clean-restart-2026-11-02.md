@@ -6,7 +6,7 @@ it is not a reset, model evaluation, remote publication or deployment.
 
 ## Running services
 
-All nine `aeion-observability-demo` containers were stopped gracefully and restarted through
+All nine `aeion-factory-demo` containers were stopped gracefully and restarted through
 the existing Compose configuration, with `--no-build --pull never --wait`. Existing private
 configuration was consumed by the trusted runtime, without inspection or regeneration.
 PostgreSQL, ClickHouse, Redis, MinIO and Langfuse Web report healthy. OTel, Langfuse, Hindsight

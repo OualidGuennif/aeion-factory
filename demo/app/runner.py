@@ -150,7 +150,7 @@ def task_contract(run):
 
 class Runner:
     def __init__(self, telemetry, save, work_root=WORK, memory=None, audit=None,
-                 budget=None, budget_scope="aeion-observability"):
+                 budget=None, budget_scope="aeion-factory"):
         self.telemetry, self.save, self.work_root = telemetry, save, work_root
         self.memory = memory
         self.audit = audit

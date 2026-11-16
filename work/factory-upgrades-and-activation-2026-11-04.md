@@ -55,7 +55,7 @@ Completed: the owner answered done and actual local configuration reads team. Th
 through another mechanism or claim the team migration happened before reading it back:
 
 ```sh
-git -C /Users/wallseven/Desktop/AEion./aeion-observability config aeion.mode team
+git -C /Users/wallseven/Desktop/AEion./aeion-factory config aeion.mode team
 ```
 
 This is independent of completing Langfuse and the product adapters; no question about already

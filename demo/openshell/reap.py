@@ -25,7 +25,7 @@ import sys
 import time
 
 LABEL = "openshell.ai/managed-by=openshell"
-NAMESPACE = "aeion-observability"
+NAMESPACE = "aeion-factory"
 DEFAULT_OLDER_THAN = 3600
 DEFAULT_STORE = Path(__file__).resolve().parents[2] / "demo" / ".local" / "factory" / "factory.db"
 UNSAFE_LEASES = {"active", "unknown"}

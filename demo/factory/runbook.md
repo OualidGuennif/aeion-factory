@@ -30,21 +30,16 @@ The factory owns a SQLite database (WAL) and a disposable work tree. Both live u
 
 ## 3. Harness prerequisite: the Pi extension
 
-Agents must be started with the factory extension, or **the skills and the hooks never load**:
+Agents must be started with the template extension, or **the skills and the hooks never load**:
 
 ```bash
-pi -e .pi/extensions/factory/index.js
+pi -e .pi/extensions/template/index.js
 ```
 
 `flue run` (2.3.0) exposes no `-e`/`--extension` option, so the flag belongs to the Pi
-invocation that Flue drives, not to the Flue command line. Cloning and installing the
-architecture integrations do not register it.
-
-The factory checks this when it prepares an agent workspace: `factory.analysis.prepare()`
-returns `pi_extension: {"path": ".pi/extensions/factory/index.js", "present": true|false,
-"required_flag": "pi -e .pi/extensions/factory/index.js"}`. A workspace reporting
-`present: false` runs the agent without its skills and hooks — treat that as unqualified,
-not as a cosmetic warning.
+invocation that Flue drives, not to the Flue command line. Ensure every prepared agent
+workspace carries `.pi/extensions/template/index.js` before launching; running without the
+extension runs the agent without its skills and hooks.
 
 ## 4. Trust boundary
 
@@ -111,7 +106,7 @@ the factory's own reviewer: a worker that approved its own output still faces a 
 Foreground (manual, easiest to watch):
 
 ```bash
-cd /srv/aeion-observability
+cd /srv/aeion-factory
 python3 demo/run.py
 ```
 
@@ -128,7 +123,7 @@ After=network.target
 [Service]
 Type=simple
 User=aeion
-WorkingDirectory=/srv/aeion-observability
+WorkingDirectory=/srv/aeion-factory
 Environment=AEION_COCKPIT_PORT=8088
 ExecStart=/usr/bin/python3 demo/run.py
 Restart=on-failure
@@ -137,7 +132,7 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=/srv/aeion-observability/demo/.local
+ReadWritePaths=/srv/aeion-factory/demo/.local
 
 [Install]
 WantedBy=multi-user.target
@@ -167,7 +162,7 @@ log.
 The drill uses SQLite's online backup API, safe while WAL is live, then re-verifies the copy:
 
 ```bash
-cd /srv/aeion-observability/demo
+cd /srv/aeion-factory/demo
 .local/venv/bin/python -m factory.restore \
   .local/factory/factory.db \
   /var/backups/aeion/factory-$(date -u +%Y%m%dT%H%M%SZ).db
@@ -184,7 +179,7 @@ Schedule it from `systemd` timers or cron, and fail the job on a non-zero exit.
 1. Stop the service so no writer is live.
 2. Verify the backup **before** touching the live file:
    ```bash
-   cd /srv/aeion-observability/demo
+   cd /srv/aeion-factory/demo
    .local/venv/bin/python -c \
      "from factory.restore import verify_db; import json; print(json.dumps(verify_db('/var/backups/aeion/factory-XXXX.db')))"
    ```

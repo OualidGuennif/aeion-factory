@@ -139,7 +139,7 @@ class ReviewBudgetTests(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
         self.budget = DailyBudget(
             Path(self.tmp.name) / "ledger.jsonl",
-            limits={"aeion-observability": Decimal("15.00"),
+            limits={"aeion-factory": Decimal("15.00"),
                     "aeion-autonomous-forum": Decimal("15.00")},
             today=lambda: "2026-11-02")
         self.worker = DispatchWorker.__new__(DispatchWorker)

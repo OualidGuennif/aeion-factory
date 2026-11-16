@@ -424,7 +424,7 @@
   `127.0.0.1:8081`, with CSP, `nosniff`, `no-referrer` and HSTS on `/healthz` and on a 404, and
   no report-only header. No paid inference, registry push, VPS deployment or remote publication
   ran. The main repository's `demo/forum-app/` is now a reading mirror.
-- Enforce two independent daily purses of **$15.00**: `aeion-observability` for the cockpit and
+- Enforce two independent daily purses of **$15.00**: `aeion-factory` for the cockpit and
   `aeion-autonomous-forum` for the factory workers. `demo/factory/budget.py` journals a
   reservation before any live work and settles the actual cost after it; an open reservation
   counts against the day, a corrupt ledger fails closed, one purse cannot borrow from the other,

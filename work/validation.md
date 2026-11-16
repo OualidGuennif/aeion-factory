@@ -535,7 +535,7 @@ Commands run from the parent workspace:
 
 Additional checks used inline standard-library Python and read-only HTTPS HEAD requests. The
 worked arithmetic is reproducible with the command in `examples/README.md`. Temporary retrieval
-and link-check logs live under `/private/tmp/aeion-observability-research-20261023`; they are not
+and link-check logs live under `/private/tmp/aeion-factory-research-20261023`; they are not
 permanent vendored upstream content.
 
 ## Recomputed synthetic arithmetic
@@ -645,7 +645,7 @@ search-tool correction below).
   before requalification. Other projects were not stopped or modified.
 
 The latest harness commit `4efc12b` passes both hosted CI jobs
-([run 40485917551](https://github.com/OualidGuennif/aeion-observability/actions/runs/40485917551)).
+([run 40485917551](https://github.com/OualidGuennif/aeion-factory/actions/runs/40485917551)).
 Local runtime checks pass 20 Python tests and seven Node gate tests; the existing offline
 suite passes 33 tests. Paid campaign and full-stack receipts follow below.
 
@@ -833,7 +833,7 @@ host-backed volume and each sandbox mounts only its run subpath.
 - Bridge round trip through the real TypeScript adapter; observer canary test; provider
   configuration test; relay admission refusal before forwarding; host-native cockpit start.
 - Offline suite 33 tests; demo suite 32 tests (pinned venv, 4 tokenizer-file skips); Flue 5 tests.
-- Hosted CI on Linux ([run 40576060598](https://github.com/OualidGuennif/aeion-observability/actions/runs/40576060598),
+- Hosted CI on Linux ([run 40576060598](https://github.com/OualidGuennif/aeion-factory/actions/runs/40576060598),
   commit `65bf79b`, real OpenShell 0.1.5): security qualification passed with agent UID 1001,
   Landlock denial, read-only workspace, invisible host paths, network mode `none`, network denied,
   NVIDIA telemetry off and the labeled work volume; demo suite 32 tests with the pinned tokenizer
@@ -876,7 +876,7 @@ harness receives only events and labels; the frozen answers in `demo/fixtures/tr
 - Offline suite 33 tests; demo suite 40 tests (8 skips on system Python, 4 tokenizer-file skips
   on the pinned venv); Flue 14 tests; fixture validation and cohort comparison passed.
 
-- Hosted CI on Linux ([run 40589836618](https://github.com/OualidGuennif/aeion-observability/actions/runs/40589836618),
+- Hosted CI on Linux ([run 40589836618](https://github.com/OualidGuennif/aeion-factory/actions/runs/40589836618),
   commit `944d237`, real OpenShell 0.1.5): security qualification passed as for tier 3; demo suite
   40 tests with the pinned tokenizer files and no skips; Flue 14 tests; `qualify_scenarios.py`
   12/14/14/14; `qualify_flue.py` in `openshell` mode passed tier 3 (6 requests, 2 fresh
@@ -1135,7 +1135,7 @@ inference, publication, deployment or credential read occurred.
 | Change | Check | Result |
 | --- | --- | --- |
 | A, old demo removed | `git ls-files demo/playground`; `grep 8090` in active app/config/docs | no tracked file, no service, no link or probe; `demo/tests/test_playground_removed.py` passes |
-| A, running container | `docker ps` then stop/remove `aeion-observability-demo-playground-1` | removed; `http://127.0.0.1:8090/` returns `URLError` |
+| A, running container | `docker ps` then stop/remove `aeion-factory-demo-playground-1` | removed; `http://127.0.0.1:8090/` returns `URLError` |
 | A, operator entry | cockpit `index.html` | hero and nav link `/factory`; forum API/web rows in the demo runbook |
 | F1, content binding | pipeline fixture: approve, then change one queued byte, keep all receipt fields | `verified_receipt` returns `None`; `Publisher` refuses `forged_content`; fake forge receives nothing |
 | F1, unsupported effects | artifact tests | rename/delete/binary/unreadable held with `unsupported_effect:*` or `binary_content`; digest changes with bytes |
@@ -1148,7 +1148,7 @@ inference, publication, deployment or credential read occurred.
 | Template | `template-update --from-ref v1.9.0 --ref v1.9.1 --check`, `adapter-check --ref v1.9.1` | 0 files differ; 27/27 connectors match; demo product checkout moved v1.8.6 → v1.9.1 and matches too |
 
 The fix-verification script is temporary and lives at
-`/private/tmp/aeion-observability-review-20261102-6lixqiw6/verify-fixes.py`; its output recorded
+`/private/tmp/aeion-factory-review-20261102-6lixqiw6/verify-fixes.py`; its output recorded
 `F1 forged_content`, `F2 ran`, `F3 success_rate 1.0`, `F4 attempted_server_start false` and the
 F5 statuses above. These are local mechanism checks, not a live harness, provider or Langfuse
 ingestion proof.
@@ -1238,12 +1238,12 @@ gateway log; the observable failure is a cleanup path that did not run or did no
 The safety window is one hour: a normal agent is bounded to 360 seconds × at most three agents,
 and the harness qualification is shorter, so only abandoned pairs are eligible. The reaper is
 host-side and never runs inside an agent sandbox; it only removes containers carrying OpenShell's
-`managed-by` and `sandbox-namespace=aeion-observability` labels.
+`managed-by` and `sandbox-namespace=aeion-factory` labels.
 
 ## Publication to main through PR #11 — 2026-11-02
 
 The reviewed `develop` head was released to protected `main` through
-[PR #11](https://github.com/OualidGuennif/aeion-observability/pull/11), never a direct push.
+[PR #11](https://github.com/OualidGuennif/aeion-factory/pull/11), never a direct push.
 `main` requires linear history, so the release was a squash.
 
 | Claim | Evidence | Result |
@@ -1335,7 +1335,7 @@ then the cockpit trace confirmation.
 
 The reviewed `develop` work (review coverage, trace delivery, Paris budget day, Factory v1.9.2 and
 the explicit execution path) was released to protected `main` through
-[PR #12](https://github.com/OualidGuennif/aeion-observability/pull/12), again as a squash.
+[PR #12](https://github.com/OualidGuennif/aeion-factory/pull/12), again as a squash.
 
 | Claim | Evidence | Result |
 | --- | --- | --- |
@@ -1436,7 +1436,7 @@ the exact `origin/develop..HEAD` diff and the review checklist) returned **NOT O
 Full demo suite after the fixes: 494 tests OK. Review-call budgeting: four `$0.25`
 reservations were opened for the four independent-review attempts; the attempt that returned
 the verdict and the attempt whose provider-reported cost was measured `0` are settled, the two
-whose usage is unknown stay open. `aeion-observability` shows `$0.50` outstanding and `$14.50`
+whose usage is unknown stay open. `aeion-factory` shows `$0.50` outstanding and `$14.50`
 remaining for 2026-11-02; that is journal liability, not an invoice.
 
 ## Re-review at 13a1470 and the container/probe fixes — 2026-11-02
@@ -1469,7 +1469,7 @@ settling the previous vote's cost). Full demo suite: 500 tests OK.
 
 `develop` was pushed at `f677e1a` with an exact-head `Review: OK` receipt for the full delta
 and at `3069ad1` with the per-vote review budget receipt; both receipts are posted as commit
-comments. [PR #14](https://github.com/OualidGuennif/aeion-observability/pull/14) is open against
+comments. [PR #14](https://github.com/OualidGuennif/aeion-factory/pull/14) is open against
 `main`. GitHub reported it `DIRTY` because the squashed PR #13 changed the same two work files,
 so `origin/main` was merged into `develop` keeping this branch's newer entry; the conflict was
 only in `work/current.md` and `work/validation.md`, and no code changed in the merge. The demo
@@ -1492,7 +1492,7 @@ errors. This is the host-only job's environment, so the check should go green on
 ## Release PR #14 merged to main — 2026-11-02
 
 `develop` head `7c6a775` passed `docker-demo`, `offline-examples`, `Graphify and Archify` and
-`Knowledge, links and repository health` on [PR #14](https://github.com/OualidGuennif/aeion-observability/pull/14).
+`Knowledge, links and repository health` on [PR #14](https://github.com/OualidGuennif/aeion-factory/pull/14).
 The release review (`.aeion/loop-bodies/review-14.md`) recorded `Review: OK` for that exact head
 and was posted on the pull request; the squash merge is `main` `6d76c99555fef3f90ce951b4bd516083c921d2e3`.
 `origin/main` was merged back into `develop` as `2f04111` with no conflict, and
@@ -1563,7 +1563,7 @@ unpushed; publishing them remains the owner's decision.
 
 ## PR #15 merged to main — 2026-11-02
 
-[PR #15](https://github.com/OualidGuennif/aeion-observability/pull/15) carried `cc671e4` (the
+[PR #15](https://github.com/OualidGuennif/aeion-factory/pull/15) carried `cc671e4` (the
 reaper lease gate), `ae42ed9` (the pinned product snapshot) and `3660d09` (the task record) from
 `develop`. Its head `3660d09e1d13ba07b16575e4d6c9c998ee2ba482` passed `docker-demo` (2m11s),
 `offline-examples` (21s), `Graphify and Archify` (34s) and `Knowledge, links and repository
@@ -1583,10 +1583,10 @@ run finish together). `tools/agents/connectors.py` lists it and `tools/agents/ru
 it. The factory changed no merge file, so no project text was proposed.
 
 `/Users/wallseven/Desktop/AEion./aeion-factory/tools/agents/template-update --from-ref v1.9.2
---ref v1.9.3 --root /Users/wallseven/Desktop/AEion./aeion-observability` reported exactly three
+--ref v1.9.3 --root /Users/wallseven/Desktop/AEion./aeion-factory` reported exactly three
 files (`run`, `pi-rpc`, `connectors.py`) and wrote them; `VERSION`, `knowledge/`, `work/`,
 `CHANGELOG.md`, `AGENTS.md` and the harness settings were left alone. `adapter-check --root
-/Users/wallseven/Desktop/AEion./aeion-observability --ref v1.9.3` reports 28 connectors, 28
+/Users/wallseven/Desktop/AEion./aeion-factory --ref v1.9.3` reports 28 connectors, 28
 matching, 0 drifted, 0 absent, 0 unwired, 0 invalid, 0 linked, 0 mode: PASS. `pi-rpc --help`
 renders; `tools/factory-tests` PASS; demo suite 512 tests OK; doc-links PASS (97); knowledge-check
 PASS; repo-health PASS.

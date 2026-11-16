@@ -28,7 +28,7 @@ than making the author approve their own PR. This distinction is explicit: CI/PR
 are server-enforced; the comment verdict is a reviewed procedure.
 
 On 2026-10-25, main protection was applied and re-read for OualidGuennif's aeion-template,
-aeion-spaceship, aeion-playground, aeion-croa, aeion-ops, aeion-observability and aeion-website.
+aeion-spaceship, aeion-playground, aeion-croa, aeion-ops, aeion-factory and aeion-website.
 Each uses its own observed CI names. Playground's existing restrictions were preserved and its
 additional product/telemetry jobs added. No production deployment setting was changed.
 

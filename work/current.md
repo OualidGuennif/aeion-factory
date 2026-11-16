@@ -1,15 +1,15 @@
 # Current work
 
-Updated 2026-11-14. Current facts only; historical evidence is in HANDOVER.md and validation.md.
+Updated 2026-11-16. Current facts only; historical evidence is in HANDOVER.md and validation.md.
 No final operational Go or actual product feature merge is claimed.
 
-## Lab playground live runs and /lab redesign — ACTIVE
+## Template v4.0.3, aeion-factory rename, and UI modernization — OWNER COMPOSE RESET PENDING
 
-- Owner decision: make the /lab demo work before redesigning it (4 sections, plain wording, no versions or internal numbers in the main text).
-- State: root cause fixed (uncommitted). The lab's durable audit (`demo/app/audit.py`, lab runner only) rejected the relay's `aeion.context.measurement_basis` preflight field; the audit's ValueError surfaced as CONTEXT_UNKNOWN on every first lab call. Allowlist extended; relay refusals now carry `aeion.relay.stage` and `aeion.error.type`. Controller restarted by the agent. Live run ab8db36b (GLM 5.3 Flash, webhook triage) passed 8/8 in 17.9 s for 0.00136068 USD, usage complete.
-- Next: commit and review the fix; requalify the factory natively; then redesign /lab (who: agent, after owner yes).
-- Blocker: the relay edit changed the protocol hash, so factory admission is revoked until native requalification. Lab qualification uses a fixture model and counter and never exercises the real GLM/DeepSeek path or the audit.
-- Evidence: runs `e7cb3056` (refused) and `ab8db36b` (passed, trace 92efd868fda98ecd0b3a571ad8a60e5d) under `demo/.local/data/`; tests `test_context_admission` (two audit regressions fail without the fix), `test_relay_budget_settlement`, `test_runtime`, `test_kpis_memory`.
+- Owner decision: rename all `aeion-observability` identifiers and docs to `aeion-factory`, adopt Æion Template `v4.0.3` (removing Archify/Graphify), restart the local stack on `aeion-factory`, simplify `/` + `/lab`, and ship to `main`.
+- State: template updated to `v4.0.3` (`ed98774`), `aeion-observability` identifiers + Archify/Graphify removed (`a502de2`), ledger migrated (161 entries), venv & OpenShell `0.1.8` rebuilt, 6/6 capabilities activated, live cockpit running on `127.0.0.1:8088`, and `/` + 4-section `/lab` modernized across desktop/mobile light/dark.
+- Next: owner runs the 3 `docker compose` reset commands (`demo/.local/stack.env` protected from agent shell) to recreate running containers as `aeion-factory-demo` and drop old `aeion-observability-demo_*` volumes.
+- Blocker: `guard-bash.py` blocks agent access to `stack.env`; `v4.0.3` `CONTRACT` hooks drop our earlier git transport (`--upload-pack`/`ext::`) and Grok multi-path checks until ported upstream.
+- Evidence: [validation](validation.md); [cockpit spec](../knowledge/components/operator-cockpit.md); [build and test](../knowledge/operations/build-and-test.md).
 
 ## Feature 003 Live Completion, Authoring Playbook & Catalog Alignment — COMPLETED
 

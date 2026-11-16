@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- Upgrades repository template foundation to Æion Template `v4.0.3` (`adapter-check` 31/31),
+  retires Archify and Graphify artifacts/helpers (`docs/architecture/high-level.md` retains pure
+  Mermaid), and aligns hook tests and security/loop docs with `v4.0.3` `CONTRACT` connectors
+  (noting upstream absence of the post-v2.1.1 git transport option and Grok multi-path checks).
+- Renames all remaining `aeion-observability` identifiers, docs, tests, Compose project
+  (`aeion-factory-demo`), budget scope (`aeion-factory`), and OpenShell namespace/label to
+  `aeion-factory`, migrating `demo/.local/budget/ledger.jsonl` without losing ledger history.
+- Streamlines `/` (`demo/app/factory.html`, `factory.css`) and `/lab` (`demo/app/index.html`,
+  `style.css`) into a quieter paper-atelier hierarchy with 4 clean `/lab` sections, collapsible
+  system health drawer, legible body/metadata scale, and clean `375px` mobile table scrolling
+  preserving `theme.css` tokens, CSP, and all test contracts.
+
 - Lab live runs work again: the lab audit now accepts the relay's preflight fields, which it
   rejected since 2026-11-05 and turned every first model call into `CONTEXT_UNKNOWN`.
 - A relay refusal (`context.refused`) now names the relay step it reached

@@ -1,4 +1,4 @@
-# Æion Observatory — the agent atelier
+# Æion Factory — cockpit and model lab
 
 A local showcase connecting **OpenTelemetry, Langfuse, Hindsight and claude-mem** around real
 **Flue + Pi** agent sessions. The cockpit/supervisor is Python and runs **natively on the

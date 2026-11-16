@@ -1,6 +1,6 @@
 # Credits and attribution
 
-Æion Observability combines existing standards, tooling and research. The proposed task/outcome
+Æion Factory combines existing standards, tooling and research. The proposed task/outcome
 contracts and control requirements are Æion's synthesis; errors in that synthesis are ours.
 No upstream project endorses this work, and no product/research performance claim is adopted
 as a measured Æion result.
@@ -22,8 +22,19 @@ as a measured Æion result.
   Raj, Kundu, Joshi and Krishna (ORACLE); Li, Gao and Lakshmanan (WISERouter); Paul and Nandy
   (AgentRouter); Dudík, Langford and Li (doubly robust evaluation); Howard, Ramdas, McAuliffe
   and Sekhon (confidence sequences). See the [papers and reading scope](knowledge/references/sources.md).
-- **Æion Factory and contributors** — the fixed development foundation, CRAFTED, specification
-  structure and evidence-led workflow. [Repository](https://github.com/OualidGuennif/aeion-factory).
+- **Æion Template and contributors** — the fixed development foundation, specification structure,
+  adapters and evidence-led workflow. [Repository](https://github.com/OualidGuennif/aeion-template).
+- **Anthropic, Claude Code and its official plugins** — `hookify`, `skill-creator`, `claude-security`
+  and the LSP plugin format. [Plugins](https://github.com/anthropics/claude-plugins-official),
+  [Documentation](https://code.claude.com/docs).
+- **Addy Osmani, `agent-skills`** (MIT) — skill anatomy and outer-loop lifecycle.
+  [Repository](https://github.com/addyosmani/agent-skills).
+- **Jesse Vincent / obra, Superpowers** (MIT) — investigation, planning and verification updates;
+  [license notice](docs/licenses/superpowers-MIT.txt).
+- **Mert Koseoğlu, context-mode** (Elastic-2.0) — bounded output and pre-compaction recovery ideas.
+  [Repository](https://github.com/mksglu/context-mode).
+- **AxiomSpec** (`aeion-framework`, MIT) — optional specification service used when framework mode
+  is enabled. [Repository](https://github.com/OualidGuennif/aeion-framework).
 - **Robert C. Martin, ub-mode** — the build principles carried by the Factory engineering policy
   (the data's shape first, a design fitted to the change, idempotent operations, one writer for
   shared state) are adapted in our own words; no ub-mode text is copied.
@@ -72,14 +83,13 @@ Source fingerprints identify consulted material; full upstream pages are not rep
   The current profiles carry their own Go prices and limits; neither is an account entitlement check.
 
 
-## Factory security maintenance
+## Template security maintenance
 
-Æion Factory v2.1.0 supplies source-hash-bound patch recipes for the skill-creator eval viewer
+Æion Template v4.0.3 supplies source-hash-bound patch recipes for the skill-creator eval viewer
 and ECC continuous-learning importer in `tools/skills/patches.json`. This project's passive
 catalog intentionally remains empty; no upstream skill or agent was materialized by this update.
 Project-specific OpenShell, Langfuse and models.dev attribution above remains authoritative.
 
-The bundled Factory guide also preserves the upstream Superpowers MIT notice in
-[docs/licenses/superpowers-MIT.txt](docs/licenses/superpowers-MIT.txt), copied unchanged from
-Factory v2.0.3 and unchanged in v2.1.0. This notice grants no license to unrelated proprietary
-tools or services.
+The repository also preserves the upstream Superpowers MIT notice in
+[docs/licenses/superpowers-MIT.txt](docs/licenses/superpowers-MIT.txt). This notice grants no
+license to unrelated proprietary tools or services.

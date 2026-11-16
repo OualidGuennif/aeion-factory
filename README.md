@@ -1,4 +1,4 @@
-# Æion Observability
+# Æion Factory
 
 **See what your coding agents really deliver. Pay for results, not attempts.**
 
@@ -60,8 +60,8 @@ In short:
 No key, no service:
 
 ```bash
-git clone https://github.com/OualidGuennif/aeion-observability.git
-cd aeion-observability
+git clone https://github.com/OualidGuennif/aeion-factory.git
+cd aeion-factory
 python3 examples/compare_cohorts.py
 python3 -m unittest discover -s tests -v
 ```
@@ -99,17 +99,18 @@ build instead of guessing.
 | `examples/`, `tests/` | Offline synthetic fixtures and their tests |
 | `demo/` | The factory pilot: `app/` cockpit and relay, `factory/` supervisor, `flue/` agents, `openshell/` sandbox, `forum/` product catalog, `tests/` |
 | `work/` | Current work and the validation record |
-| `tools/`, `efficiency/`, `loops/`, `.claude/`, `.agents/`, `.grok/`, … | Development tooling from the template |
+| `tools/`, `loops/`, `.claude/`, `.agents/`, `.grok/`, … | Development tooling from the template |
 
 ## Development
 
-Built from the [Æion Factory](https://github.com/OualidGuennif/aeion-factory) template (v2.1.1).
+Built from the [Æion Template](https://github.com/OualidGuennif/aeion-template) template (v4.0.3).
 Agent instructions: [AGENTS.md](AGENTS.md).
 
 ```bash
 python3 -m unittest discover -s tests -v
 python3 -m unittest discover -s demo/tests -v
 tools/knowledge/knowledge-check && tools/knowledge/doc-links && tools/repo-health/repo-health
+tools/template-tests
 ```
 
 ## License

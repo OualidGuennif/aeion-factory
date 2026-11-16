@@ -40,9 +40,9 @@ class BudgetTests(unittest.TestCase):
     def test_warning_boundary_and_latched_closure(self):
         self.observe(249999)
         self.assertEqual(self.call(), {})
-        self.observe(250000)
+        self.observe(340000)
         first = self.call()
-        self.assertIn("250k", first["systemMessage"])
+        self.assertIn("340k", first["systemMessage"])
         self.assertEqual(first["hookSpecificOutput"]["permissionDecision"], "deny")
         again = self.call()
         self.assertNotIn("systemMessage", again)
@@ -53,15 +53,15 @@ class BudgetTests(unittest.TestCase):
         self.assertIn("closure is still owed", self.call(hook_event_name="Stop")["stopReason"])
 
     def test_a_second_fall_clears_the_latch_while_the_debt_survives(self):
-        # The first fall sets closure_owed; climbing back over 250k re-latches. A harness that compacts again
+        # The first fall sets closure_owed; climbing back over 340k re-latches. A harness that compacts again
         # without a SessionStart must still be released, or the debt turns the latch into a permanent gate:
         # the debt is enforced by Stop, never by keeping the session latched.
-        self.observe(260000)
-        self.assertIn("250k", self.call()["systemMessage"])
+        self.observe(350000)
+        self.assertIn("340k", self.call()["systemMessage"])
         self.observe(100)
         self.assertEqual(self.call(), {})
-        self.observe(260000)
-        self.assertIn("250k", self.call()["systemMessage"])
+        self.observe(350000)
+        self.assertIn("340k", self.call()["systemMessage"])
         self.observe(100)
         self.assertEqual(self.call(), {})
         state = json.loads((self.root / ".aeion/context/test-session.json").read_text())
@@ -74,7 +74,7 @@ class BudgetTests(unittest.TestCase):
         self.assertNotIn("Recovery", start["hookSpecificOutput"]["additionalContext"])
         self.call()
         self.assertFalse(handover.exists())
-        self.observe(250000)
+        self.observe(340000)
         self.assertIn(str(handover.relative_to(self.root)), self.call()["systemMessage"])
         self.assertIn("TODO", handover.read_text())
         resume = self.call(hook_event_name="SessionStart", source="resume")
@@ -90,15 +90,18 @@ class BudgetTests(unittest.TestCase):
         self.assertTrue(handover.is_file())
 
     def test_observed_limit_forces_handover_and_compaction_without_stopping(self):
-        self.observe(300000)
+        self.observe(390000)
         first = self.call()
-        self.assertIn("300k", first["systemMessage"])
+        self.assertIn("390k", first["systemMessage"])
         self.assertEqual(first["hookSpecificOutput"]["permissionDecision"], "deny")
-        # At 300k only the handover and its checkpoint remain; task state and docs were 250k's closure.
+        # 390k keeps 340k's closure: the checkpoint verifies the docs and work/current.md, so freezing them left
+        # a failing doc-links unrepairable before compaction. Code stays frozen.
         handover = budget.handover_path(self.root, "test-session")
-        self.assertNotIn("hookSpecificOutput", self.call(tool_name="Write", tool_input={"file_path": str(handover)}))
-        tasks = self.call(tool_name="Edit", tool_input={"file_path": str(self.root / "work/current.md")})
-        self.assertEqual(tasks["hookSpecificOutput"]["permissionDecision"], "deny")
+        for path in (handover, self.root / "work/current.md", self.root / "knowledge/policy.md"):
+            self.assertNotIn("hookSpecificOutput", self.call(tool_name="Write", tool_input={"file_path": str(path)}), path)
+        for command in ("tools/knowledge/doc-links", "tools/knowledge/knowledge-check", "git diff --stat"):
+            self.assertEqual(self.call(tool_name="Bash", tool_input={"command": command}), {}, command)
+        self.assertEqual(self.call()["hookSpecificOutput"]["permissionDecision"], "deny")
         self.assertFalse(self.call(hook_event_name="Stop")["continue"])
         self.assertNotIn("continue", self.call(hook_event_name="SessionStart", source="resume"))
         # Compaction ends the forced closure: the run continues instead of latching a stop.
@@ -110,10 +113,10 @@ class BudgetTests(unittest.TestCase):
 
     def test_cache_counts_once_per_latest_request(self):
         usage = {"input_tokens": 1000, "cache_creation_input_tokens": 4000,
-                 "cache_read_input_tokens": 244000, "output_tokens": 1000}
+                 "cache_read_input_tokens": 334000, "output_tokens": 1000}
         record = json.dumps({"type": "assistant", "message": {"usage": usage}}) + "\n"
         self.transcript.write_text(record * 2)
-        self.assertEqual(budget.native_usage(self.transcript, "test-session"), 250000)
+        self.assertEqual(budget.native_usage(self.transcript, "test-session"), 340000)
 
     def test_synthetic_records_do_not_hide_the_latest_request(self):
         synthetic = json.dumps({"type": "assistant", "message": {"model": "<synthetic>",
@@ -130,7 +133,7 @@ class BudgetTests(unittest.TestCase):
         self.observe(1000)
         self.transcript.write_text(self.transcript.read_text() + boundary + synthetic)
         self.assertIsNone(budget.native_usage(self.transcript, "test-session"))
-        self.observe(300000)
+        self.observe(390000)
         self.transcript.write_text(self.transcript.read_text() + synthetic)
         self.assertEqual(self.call()["hookSpecificOutput"]["permissionDecision"], "deny")
 
@@ -158,14 +161,14 @@ class BudgetTests(unittest.TestCase):
         self.assertEqual(self.call(), {})
 
     def test_precompact_latches_warning_and_delivers_it_at_next_supported_event(self):
-        self.observe(250000)
+        self.observe(340000)
         self.assertEqual(self.call(hook_event_name="PreCompact")["decision"], "block")
         state = json.loads((self.root / ".aeion/context/test-session.json").read_text())
         self.assertEqual(state["state"], "HANDOVER_REQUIRED")
-        self.assertIn("250k", self.call(tool_name="Read")["systemMessage"])
+        self.assertIn("340k", self.call(tool_name="Read")["systemMessage"])
 
     def test_resume_does_not_claim_an_unverified_compaction(self):
-        self.observe(250000)
+        self.observe(340000)
         self.call(hook_event_name="PreCompact")
         result = self.call(hook_event_name="SessionStart", source="resume")
         self.assertIn("closure remains required", result["systemMessage"])
@@ -218,6 +221,17 @@ class BudgetTests(unittest.TestCase):
         plain = tempfile.TemporaryDirectory()
         self.addCleanup(plain.cleanup)
         self.assertNotIn('--base', budget.checkpoint_command(Path(plain.name), 'test-session'))
+
+    def test_a_repository_before_its_first_commit_has_a_fingerprint(self):
+        # `git init`, then the tests, then the first commit: the gate must still measure the files.
+        fresh = tempfile.TemporaryDirectory()
+        self.addCleanup(fresh.cleanup)
+        root = Path(fresh.name)
+        subprocess.run(['git', 'init', '-q'], cwd=root, check=True)
+        (root / 'app.py').write_text('value = 1\n')
+        before = budget.fingerprint(root)
+        (root / 'app.py').write_text('value = 2\n')
+        self.assertNotEqual(budget.fingerprint(root), before)
 
     def test_plain_folder_checkpoints_without_git_or_base(self):
         # Many users have no git: the fingerprint is the files on disk and no diff check runs.
@@ -305,7 +319,7 @@ class BudgetTests(unittest.TestCase):
         self.assertIsNone(budget.native_usage(self.transcript, "test-session"))
 
     def test_closure_alert_and_settlement_name_the_checkpoint_command(self):
-        self.observe(250000)
+        self.observe(340000)
         command = budget.checkpoint_command(self.root, 'test-session')
         # An agent that is never told the command cannot run it; exploration commands are denied in closure.
         self.assertIn(command, self.call()['hookSpecificOutput']['permissionDecisionReason'])
@@ -315,7 +329,7 @@ class BudgetTests(unittest.TestCase):
         self.assertIn('No verified checkpoint receipt', stop['stopReason'])
 
     def test_closure_admits_project_markdown_but_not_code(self):
-        self.observe(250000)
+        self.observe(340000)
         allowed = ('cockpit/README.md', 'docs/guide.mdx')
         for path in allowed:
             result = self.call(tool_name='Edit', tool_input={'file_path': str(self.root / path)})
@@ -331,6 +345,27 @@ class BudgetTests(unittest.TestCase):
         with patch.object(budget, 'CHECKS', (failing,)):
             with self.assertRaisesRegex(ValueError, 'broken'):
                 budget.checkpoint(self.root, 'test-session', 'HEAD')
+
+    def test_checkpoint_refusal_lists_every_rule_line_whole(self):
+        # An 800-character tail kept three of six L3 violations and cut the first one mid-path.
+        self.call()
+        handover = budget.ensure_handover(self.root, 'test-session')
+        handover.write_text(handover.read_text().replace('TODO', 'Fixture evidence'))
+        rules = [f"RULE L3 tools/area{i}/module.py changed, knowledge/components/area{i}.md did not: update it "
+                 f"(skill okf-update), or add 'Docs-Checked: knowledge/components/area{i}.md -- <why>' to a commit."
+                 for i in range(6)]
+        script = f"print({chr(10).join(rules + ['RESULT: FAIL (6)'])!r}); raise SystemExit(1)"
+        with patch.object(budget, 'CHECKS', ((budget.sys.executable, '-c', script),)):
+            with self.assertRaises(ValueError) as refused:
+                budget.checkpoint(self.root, 'test-session', 'HEAD')
+        self.assertEqual(str(refused.exception).splitlines()[1:], rules + ['RESULT: FAIL (6)'])
+        # A large backlog is bounded and counted, never silently dropped.
+        many = [f"RULE L4 src/f{i}.py names knowledge/x.md as its spec" for i in range(60)]
+        shown = budget.failure_lines("\n".join(many + ["RESULT: FAIL (60)"]))
+        self.assertEqual(shown[:50], many[:50])
+        self.assertEqual(shown[50:], ["... and 10 more; fix these, then verify again.", "RESULT: FAIL (60)"])
+        # Output that names no rule keeps its bounded tail.
+        self.assertEqual(budget.failure_lines("x" * 900 + "\nend"), [("x" * 900 + " end")[-800:]])
 
     def test_precompact_requires_a_current_checkpoint_below_the_forced_band(self):
         result = self.call(hook_event_name="PreCompact")
@@ -350,7 +385,7 @@ class BudgetTests(unittest.TestCase):
         # only work the gate admits is the checkpoint, so a session that edited once could never compact again.
         handover = budget.ensure_handover(self.root, "test-session")
         handover.write_text("".join(f"## {h}\nEvidence\n" for h in budget.HEADINGS))
-        self.observe(260000)
+        self.observe(350000)
         self.call()
         state_file = self.root / ".aeion/context/test-session.json"
         state = json.loads(state_file.read_text())
@@ -363,10 +398,10 @@ class BudgetTests(unittest.TestCase):
         self.assertIn("compacting now", result["systemMessage"])
         self.assertEqual(json.loads(state_file.read_text())["closure_owed"], "due")
 
-    def test_300k_stopgap_compacts_and_keeps_the_closure_owed(self):
-        # The 300k profile freezes code, so a check that failed before this session would leave no verified
+    def test_390k_stopgap_compacts_and_keeps_the_closure_owed(self):
+        # The 390k profile freezes code, so a check that failed before this session would leave no verified
         # checkpoint and no way to repair it. The compaction runs; the closure stays owed.
-        self.observe(300000)
+        self.observe(390000)
         self.call()
         result = self.call(hook_event_name="PreCompact")
         self.assertNotIn("decision", result)
@@ -383,7 +418,7 @@ class BudgetTests(unittest.TestCase):
         self.assertIn("checkpoint --session test-session", stop["stopReason"])
 
     def test_a_verified_checkpoint_settles_the_owed_closure(self):
-        self.observe(300000)
+        self.observe(390000)
         self.call()
         self.call(hook_event_name="PreCompact")
         self.call(hook_event_name="SessionStart", source="compact")
@@ -403,7 +438,7 @@ class BudgetTests(unittest.TestCase):
         self.assertNotIn("closure_owed", json.loads(state_file.read_text()))
 
     def test_document_edits_allowed_and_shell_injection_denied_during_closure(self):
-        self.observe(250000)
+        self.observe(340000)
         self.assertNotIn("permissionDecision", self.call(tool_input={"file_path": str(self.root / "knowledge/policy.md")}).get("hookSpecificOutput", {}))
         for command in ("tools/knowledge/doc-links; touch /tmp/unsafe", "python3 -c 'print(1)'",
                         "git status --short && echo unsafe", "tools/knowledge/doc-links\nrm -rf x", "echo 'unterminated"):
@@ -412,7 +447,7 @@ class BudgetTests(unittest.TestCase):
 
     def test_plain_shell_reads_are_closure_tools(self):
         # Codex reads only through its shell, so closure must let it read the handover it has to fill.
-        self.observe(250000)
+        self.observe(340000)
         for command in ("sed -n 1,200p work/handovers/x.md", "rg -n TODO work/handovers/x.md", "cat AGENTS.md",
                         "head -n 40 knowledge/index.md"):
             result = self.call(tool_name="Bash", tool_input={"command": command})
@@ -426,7 +461,7 @@ class BudgetTests(unittest.TestCase):
 
     def test_checkpoint_is_admitted_from_any_folder_and_only_for_this_root(self):
         # A shell left in a subfolder at the alert must still reach this root's checkpoint.
-        self.observe(250000)
+        self.observe(340000)
         self.call()
         root = self.root.resolve()
         (root / "demo/copy").mkdir(parents=True)
@@ -464,9 +499,9 @@ class BudgetTests(unittest.TestCase):
 
     def test_alerts_name_the_handover_headings(self):
         # An agent that writes the handover itself never sees the template (Pi FB-002).
-        self.observe(250000)
+        self.observe(340000)
         self.assertIn("## Scope, ## Completed, ## Remaining, ## Constraints, ## Evidence", self.call()["systemMessage"])
-        self.observe(300000)
+        self.observe(390000)
         self.assertIn("## Evidence", self.call()["systemMessage"])
 
     def test_stale_receipt_names_the_changed_paths(self):
@@ -484,7 +519,7 @@ class BudgetTests(unittest.TestCase):
         self.assertIn("run.jsonl changed since it", self.call(hook_event_name="PreCompact")["reason"])
 
     def test_sessions_are_isolated(self):
-        self.observe(300000)
+        self.observe(390000)
         self.call()
         other = self.root / "other.jsonl"
         other.write_text(json.dumps({"type": "assistant", "message": {"usage": {
@@ -517,7 +552,7 @@ class BudgetTests(unittest.TestCase):
         self.assertEqual(self.call(agent_id="child2", hook_event_name="PreToolUse"), {})
 
     def test_child_uses_own_usage_and_cannot_stop_or_inherit_parent_budget(self):
-        self.observe(250000)
+        self.observe(340000)
         self.call()
         child = self.root / "test-session/subagents/agent-child1.jsonl"
         child.parent.mkdir(parents=True)
@@ -525,7 +560,7 @@ class BudgetTests(unittest.TestCase):
         child.write_text(json.dumps({"type": "assistant", "message": {"usage": usage}}) + "\n")
         event = {"agent_id": "child1", "agent_transcript_path": str(child)}
         self.assertEqual(self.call(**event), {})
-        usage["input_tokens"] = 300000
+        usage["input_tokens"] = 390000
         child.write_text(json.dumps({"type": "assistant", "message": {"usage": usage}}) + "\n")
         self.assertEqual(self.call(**event)["hookSpecificOutput"]["permissionDecision"], "deny")
         self.assertFalse(self.call(agent_id="agent-child1", agent_transcript_path=str(child), hook_event_name="SubagentStop")["continue"])

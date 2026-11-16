@@ -9,6 +9,9 @@ env.local
 node_modules/
 /demo/tokenizers/
 .aeion/
+.venv/
+CLAUDE-SECURITY-*/
+temporary_tools/
 work/handovers/
 .tmp/
 docs/architecture/*.html

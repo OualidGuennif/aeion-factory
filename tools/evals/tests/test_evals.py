@@ -39,7 +39,7 @@ class EvalTests(unittest.TestCase):
 
     def valid_row(self, **fields):
         return dict(task="a", harness="pi", success=True, minutes=1,
-                    factory="1.8.0", recorded_at="2026-10-31T00:00:00Z", **fields)
+                    template="1.8.0", recorded_at="2026-10-31T00:00:00Z", **fields)
 
     def test_valid_record_appends_one_parseable_line(self):
         result = self.record("--model", "m", "--tokens", "100", "--cost-usd", "0.5",
@@ -51,7 +51,7 @@ class EvalTests(unittest.TestCase):
         self.assertEqual((row["task"], row["harness"], row["success"], row["minutes"]), ("golden", "claude-code", True, 10.0))
         self.assertEqual((row["tokens"], row["cost_usd"], row["human_interventions"]), (100, 0.5, 2))
         self.assertTrue(row["recorded_at"].endswith("Z"))
-        self.assertTrue(row["factory"])
+        self.assertTrue(row["template"])
 
     def test_invalid_task_slug_exits_two_and_writes_nothing(self):
         result = self.run_tool(RECORD, "--task", "Bad_Task", "--harness", "claude-code",
@@ -120,10 +120,10 @@ class EvalTests(unittest.TestCase):
     def test_report_over_three_fixtures(self):
         rows = [
             {"task": "a", "harness": "claude-code", "success": True, "minutes": 10, "cost_usd": 1.5,
-             "human_interventions": 1, "defects_after_done": 0, "factory": "1.7.0", "recorded_at": "2026-10-31T00:00:00Z"},
+             "human_interventions": 1, "defects_after_done": 0, "template": "1.7.0", "recorded_at": "2026-10-31T00:00:00Z"},
             {"task": "b", "harness": "claude-code", "success": False, "minutes": 20, "cost_usd": 2.5,
-             "human_interventions": 2, "defects_after_done": 1, "factory": "1.7.0", "recorded_at": "2026-10-31T00:00:00Z"},
-            {"task": "a", "harness": "pi", "success": True, "minutes": 5, "factory": "1.7.0",
+             "human_interventions": 2, "defects_after_done": 1, "template": "1.7.0", "recorded_at": "2026-10-31T00:00:00Z"},
+            {"task": "a", "harness": "pi", "success": True, "minutes": 5, "template": "1.7.0",
              "recorded_at": "2026-10-31T00:00:00Z"},
         ]
         self.file.parent.mkdir(parents=True)
@@ -174,7 +174,7 @@ class EvalTests(unittest.TestCase):
         self.assertIsNone(report["harnesses"][0]["cost_usd"])
 
     def test_each_missing_required_field_names_its_line_and_field(self):
-        for key in ("task", "harness", "success", "minutes", "factory", "recorded_at"):
+        for key in ("task", "harness", "success", "minutes", "template", "recorded_at"):
             with self.subTest(field=key):
                 row = self.valid_row()
                 del row[key]

@@ -21,7 +21,7 @@ class PoolTests(unittest.TestCase):
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
         self.workspace = Path(self.temporary.name)
-        lifecycle = self.workspace / "aeion-factory"
+        lifecycle = self.workspace / "aeion-template"
         lifecycle.mkdir()
         for name, value in (("WORKSPACE", self.workspace), ("ROOT", lifecycle), ("POOL", lifecycle / "skills")):
             replace = patch.object(pool, name, value)
@@ -103,6 +103,20 @@ class PoolTests(unittest.TestCase):
         self.agent.write_text(self.agent.read_text() + "\nchanged upstream")
         with self.assertRaisesRegex(ValueError, "changed upstream source"):
             pool.materialized_bytes(self.agent)
+
+    def test_a_patch_or_annotation_bound_to_no_source_file_stops_the_catalog(self):
+        registry = pool.ROOT / "tools/skills"
+        registry.mkdir(parents=True)
+        # A moved source folder must not silently ship the unpatched file.
+        stray = {"file": "third-party/elsewhere/agents/code-reviewer.md", "source_sha256": pool.digest(self.agent),
+                 "needle": "# Reviewer\n", "replacement": "# Safe reviewer\n", "reason": "Fixture patch."}
+        (registry / "patches.json").write_text(json.dumps([stray]))
+        with self.assertRaisesRegex(ValueError, "matches no source file: third-party/elsewhere"):
+            pool.source_catalog()
+        (registry / "patches.json").write_text("[]")
+        (registry / "annotations.json").write_text(json.dumps([{**stray, "rule": "example.rule"}]))
+        with self.assertRaisesRegex(ValueError, "matches no source file: third-party/elsewhere"):
+            pool.source_catalog()
 
     def test_refresh_copies_real_files_and_supporting_resources_deterministically(self):
         self.write("ecc", "skills/review/references/case.md", "# Real case")

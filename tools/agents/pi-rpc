@@ -3,7 +3,7 @@
 """Headless Pi through the RPC protocol: one live process, compaction, and resume.
 
 Print mode disposes at settlement, so an asynchronous compaction started there is lost. RPC keeps
-the process alive; the factory extension (unchanged) compacts at settlement and sends the resume
+the process alive; the template extension (unchanged) compacts at settlement and sends the resume
 message, and this client waits for the compaction (`compaction_end`), the resumed run and the final
 settlement.
 """
@@ -18,7 +18,7 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-EXTENSION = ROOT / '.pi/extensions/factory/index.js'
+EXTENSION = ROOT / '.pi/extensions/template/index.js'
 GRACE = 2.0
 COMPACTION_WAIT = 10.0
 
@@ -36,7 +36,7 @@ def usage() -> None:
         '  --pi-executable PATH  Pi binary (default "pi"; tests use a fake)\n'
         '  -h, --help           show this help\n\n'
         'Pi options go before `--`: --provider, --model, --session-id, --session-dir, ...\n'
-        'The runner adds --mode rpc and the factory extension.\n',
+        'The runner adds --mode rpc and the template extension.\n',
         file=sys.stderr,
     )
 

@@ -4,7 +4,7 @@ One block per measured run, newest first. "not run yet" is a valid baseline.
 
 ## <date> — <harness>
 
-- Factory: `<VERSION>`
+- Template: `<VERSION>`
 - Model: `<model id>`
 - Result: `<success yes/no>`; `CHECK.md` said `<which line>`
 - Cost: `<cost_usd>` USD (or `<minutes>` minutes)

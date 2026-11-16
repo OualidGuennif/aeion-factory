@@ -67,6 +67,7 @@ def ref_mode(repo, ref, relative):
 
 
 def ref_diff(repo, before, after):
-    """The paths that differ between two references, each resolvable."""
-    listing = git(repo, "diff", "--name-only", before, after, text=True)
+    """The paths that differ between two references, each resolvable. A rename is both of its paths:
+    with rename detection, --name-only lists only the new name, and the old one would never be removed."""
+    listing = git(repo, "diff", "--no-renames", "--name-only", before, after, text=True)
     return sorted(line for line in listing.splitlines() if line.strip())

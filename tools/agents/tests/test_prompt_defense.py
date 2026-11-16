@@ -13,8 +13,8 @@ from pathlib import Path
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[3]
-loader = importlib.machinery.SourceFileLoader('factory_prompt_defense', str(ROOT / '.claude/hooks/prompt-defense.py'))
-spec = importlib.util.spec_from_loader('factory_prompt_defense', loader)
+loader = importlib.machinery.SourceFileLoader('aeion_prompt_defense', str(ROOT / '.claude/hooks/prompt-defense.py'))
+spec = importlib.util.spec_from_loader('aeion_prompt_defense', loader)
 defense = importlib.util.module_from_spec(spec)
 loader.exec_module(defense)
 

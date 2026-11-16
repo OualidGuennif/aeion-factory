@@ -8,6 +8,8 @@ generated:
   by: aeion-factory/1.0
   at: 2026-10-20T00:00:00Z
 sources:
+  - resource: ../../tools/loops/process.py
+    title: "process.py, which names this doc as its spec"
   - resource: ../../tools/loops/run
     title: "run, which names this doc as its spec"
   - resource: ../../loops/orchestrator.sh
@@ -22,10 +24,9 @@ sources:
 (`loops/prompts/`), model and thinking level (`loops/model-routing.md`), tool allowlist and
 permission mode. It reads only the loop settings of `env.local` (never the Decisions API secret)
 and runs nothing while `LOOPS_ENABLED` is not `true`; `--dry-run` prints the settings.
-Enabled jobs launch through `tools/context/run`: a verified Graphify/Archify baseline is
-recommended (the launcher warns without one), native compaction is fixed at 250k and the checkpoint profile applies. Strict pre-request 300k
-admission remains unqualified. See [context safety](context-safety.md) and
-[architecture maintenance](architecture-maintenance.md). Dry-run still launches nothing.
+Enabled jobs launch through `tools/context/run`: native compaction is fixed at 340k and the
+checkpoint profile applies. Strict pre-request 390k admission remains unqualified. See
+[context safety](context-safety.md). Dry-run still launches nothing.
 
 | Job | Schedule | Writes |
 | --- | --- | --- |
@@ -66,9 +67,7 @@ Every job exports `AEION_LOOP=<job>`, so the path guard keeps its file tools ins
 (`inner`, `watch`, `retro`) get the git subcommands their prompts use (`status`, `diff`, `log`,
 `show`, `fetch`, `switch`, `checkout`, `add`, `commit`, `push`, `branch`, `rev-parse`), never
 `git *`: `git config` and `git -c` could set a key that runs a program on every later git command.
-Subcommands alone are not a security boundary: the shared Bash guard also refuses explicit
-remote-helper URLs (`<helper>::...`) and transport program overrides (`--upload-pack`,
-`--receive-pack`, `--exec`, including abbreviated options). Ordinary HTTPS/SSH remotes remain usable.
+Ordinary HTTPS/SSH remotes remain usable.
 The retro writes `knowledge/`, hookify rules (`.claude/hookify.*.local.md`) and `.claude/skills/`,
 never the hooks or settings that guard every session; it opens its pull request with `gh pr
 create` and reads review comments through `gh pr list`/`view`, without `gh api`.

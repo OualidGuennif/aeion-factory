@@ -13,18 +13,6 @@ sources:
   - id: budget
     resource: ../../tools/context/budget.py
     title: "Context checkpoint state machine"
-  - id: refresh
-    resource: ../../tools/architecture/refresh
-    title: "Analysis snapshots and provenance"
-  - id: graph
-    resource: ../../tools/architecture/graph.py
-    title: "Native structural Graphify extraction"
-  - id: workflow
-    resource: ../../.github/workflows/architecture-refresh.yml
-    title: "PR and main maintenance rounds"
-  - id: views
-    resource: ../../tools/architecture/views.json
-    title: "Reviewed Archify views and evidence anchors"
   - resource: ../../demo/factory/api.py
     title: "Authenticated factory selection and current admission"
   - resource: ../../demo/factory/dispatch.py
@@ -162,8 +150,8 @@ the file it names (Graphify alone links only code names written in a body); `cov
 `resource` that names no file in the corpus. `refresh` runs only on a root that is its own git
 repository; a plain folder nested in another one is refused before any git call. This keeps the default independent of model credentials.
 `graph.py` also adds `specified_by` edges from `Spec:` lines, `names_file` edges from tests that name a
-file, and exact `imports` from `deno info` in a Deno project. For day-to-day questions on the working
-tree, [`tools/architecture/ask`](graph-queries.md) keeps its own graph in `.aeion/graph/`, apart from the baselines.
+file, and exact `imports` from `deno info` in a Deno project. Legacy Archify/Graphify templates were
+retired in Æion Template 4.0.3 (see [Template architecture](template-architecture.md)).
 Setup stamps Graphify's commit archive URL and SHA-256, including replacement of a same-version wheel
 from another source; analysis refuses mismatched package provenance or a dirty Archify checkout.
 

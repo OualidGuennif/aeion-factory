@@ -29,13 +29,13 @@ sources:
     title: "Codex hook registrations"
   - resource: ../../opencode.json
     title: "OpenCode native config"
-  - resource: ../../.opencode/plugins/factory/index.js
+  - resource: ../../.opencode/plugins/template/index.js
     title: "OpenCode plugin callbacks"
-  - resource: ../../.pi/extensions/factory/index.js
+  - resource: ../../.pi/extensions/template/index.js
     title: "Pi extension events"
-  - resource: ../../.dsh/factory.patch.yml
+  - resource: ../../.dsh/template.patch.yml
     title: "dsh patch overlay"
-  - resource: ../../.dsh/plugins/factory/index.js
+  - resource: ../../.dsh/plugins/template/index.js
     title: "dsh plugin guard and compaction"
   - resource: ../../.devin/config.json
     title: "Devin import settings"
@@ -45,11 +45,11 @@ sources:
     title: "Droid hook registrations"
   - resource: ../../.agents/hooks.json
     title: "Antigravity hook registrations"
-  - resource: ../../.grok/hooks/factory.json
+  - resource: ../../.grok/hooks/template.json
     title: "Grok hook registrations"
-  - resource: ../../.dsh/plugins/factory/compaction.js
+  - resource: ../../.dsh/plugins/template/compaction.js
     title: "compaction.js, which names this doc as its spec"
-  - resource: ../../.dsh/plugins/factory/seam.js
+  - resource: ../../.dsh/plugins/template/seam.js
     title: "seam.js, which names this doc as its spec"
   - resource: ../../.pi/README.md
     title: "Pi integration and its headless limitation"
@@ -75,18 +75,18 @@ with one line naming a missing agent binary and the setup link, exit 1.
   auto-compaction threshold is 250000. Codex has no compaction tool and ends its turn on a refused
   compaction, so a compaction that comes before the verified handover runs, and closure is owed right
   after it. Its rollout is not a stable token API.
-- OpenCode 2.1.4+ loads root `opencode.json` and `.opencode/plugins/factory/index.js`. The plugin reads each
-  step's tokens (`session.step.ended`) and compacts itself at 250k once the handover is verified. A live
+- OpenCode 2.1.4+ loads root `opencode.json` and `.opencode/plugins/template/index.js`. The plugin reads each
+  step's tokens (`session.step.ended`) and compacts itself at 340k once the handover is verified. A live
   2.2.0 run on 2026-11-02 compacted a 272k step on a turn with two tool calls; a one-tool turn can miss the
   trigger because that event arrives after the tool hook, so the next tool or turn sees it. See
   [the OpenCode integration note](../../.opencode/README.md).
 - Pi 1.4.0+ reads `AGENTS.md`/`CLAUDE.md` from its folder and every parent, and project
   `.agents/skills` from its folder or a parent, so the shared rules and skills need no copy. It loads
-  `.pi/extensions/factory/index.js` from **its start folder only**, once the project is trusted; started
-  elsewhere (`demo/`), pass it explicitly: `pi -e ../.pi/extensions/factory/index.js`. A headless run
+  `.pi/extensions/template/index.js` from **its start folder only**, once the project is trusted; started
+  elsewhere (`demo/`), pass it explicitly: `pi -e ../.pi/extensions/template/index.js`. A headless run
   (`pi -p`) is never a trusted project, so discovery loads nothing there: pass the extension explicitly,
-  `tools/agents/run pi -p -e .pi/extensions/factory/index.js "task"`, and add `--mode json` when a caller
-  needs the event stream. Without `-e`, a headless Pi session runs with no Æion Factory hook at all and
+  `tools/agents/run pi -p -e .pi/extensions/template/index.js "task"`, and add `--mode json` when a caller
+  needs the event stream. Without `-e`, a headless Pi session runs with no Æion Template hook at all and
   nothing in the transcript says so. The extension sends
   `before_agent_start` (once per session, and again after a compaction) as SessionStart, `tool_call` as
   PreToolUse (`{block: true, reason}`, also on any hook failure), `tool_result` as PostToolUse (feedback
@@ -135,7 +135,7 @@ with one line naming a missing agent binary and the setup link, exit 1.
   Native token stops and strict pre-request 300k admission are unqualified.
 - dsh (DeepSeek Harness, `dsh` 0.2.1+) reads `AGENTS.md`/`CLAUDE.md` and `.agents/skills` natively. It
   loads project plugins only from a patch: `tools/agents/run dsh [web|headless]` passes
-  `--patch .dsh/factory.patch.yml`, which loads `.dsh/plugins/factory/index.js` (the guards) and
+  `--patch .dsh/template.patch.yml`, which loads `.dsh/plugins/template/index.js` (the guards) and
   `compaction.js` (compaction, shared through `seam.js`); a dsh started without it is unguarded.
   - **Guards.** Each tool call goes to `tools/agents/hook.py dsh` as PreToolUse (a call without an agent
     is refused), with `ctx.tokenMeter.measure(session).totalTokens` as usage; `tools/post-execute` sends
@@ -216,9 +216,8 @@ with one line naming a missing agent binary and the setup link, exit 1.
   reads an empty answer as a refusal. Unverified until a live run: whether that `allow` also
   skips Antigravity's own approval prompt (a `run_command` with `SafeToAutoRun: false`); until
   then, assume it may. No compaction checkpoint or token stop.
-- Grok loads `AGENTS.md`, `CLAUDE.md` and the skill folders, and also `.claude/settings.json`. The Claude budget hook returns an empty object for a `hookEventName` envelope or a `chat_history.jsonl` or `updates.jsonl` transcript and does not latch STOPPED. Guards run from `.grok/hooks/factory.json`: `run_terminal_command`, `read_file` (`target_file`), `search_replace`, `write`, `grep` and `list_dir` (`target_directory`) map onto the shared guards; an unknown tool with a `command` string is a shell call. A second path field that names a different file is refused: `read_file` is checked at `target_file`, `list_dir` at `target_directory`, `search_replace` and `write` at `file_path`, and `grep` at every path field. `signals.json` beside `updates.jsonl` or `chat_history.jsonl` supplies the 250k/300k size as `contextTokensUsed` (it falls after compaction; missing is unmeasured, zero is a real reading). `usage.json` in that directory is the billed ledger and is not the context size. `SessionStart` uses `systemMessage`. `PreCompact` cannot be refused; `PostCompact` resumes in closure when the handover was not verified. Not live-qualified.
-- Managed CLI launchers enter the repository root and check the exact-HEAD architecture baseline;
-  its absence is a warning, because installing the integrations needs the user's yes.
+- Grok loads `AGENTS.md`, `CLAUDE.md` and the skill folders, and also `.claude/settings.json`. The Claude budget hook returns an empty object for a `hookEventName` envelope or a `chat_history.jsonl` or `updates.jsonl` transcript and does not latch STOPPED. Guards run from `.grok/hooks/template.json`: `run_terminal_command`, `read_file` (`target_file`), `search_replace`, `write`, `grep` and `list_dir` (`target_directory`) map onto the shared guards; an unknown tool with a `command` string is a shell call. A second path field that names a different file is refused: `read_file` is checked at `target_file`, `list_dir` at `target_directory`, `search_replace` and `write` at `file_path`, and `grep` at every path field. `signals.json` beside `updates.jsonl` or `chat_history.jsonl` supplies the 340k/390k size as `contextTokensUsed` (it falls after compaction; missing is unmeasured, zero is a real reading). `usage.json` in that directory is the billed ledger and is not the context size. `SessionStart` uses `systemMessage`. `PreCompact` cannot be refused; `PostCompact` resumes in closure when the handover was not verified. Not live-qualified.
+- Managed CLI launchers enter the repository root.
 - Raw command/MCP paths, host-managed/cloud orchestration and deliberate local modification are
   outside any complete isolation claim. Native project/hook trust and sandbox controls still apply.
 - The shared launcher also aligns `PWD`: OpenCode 2.1.4 uses it to select the run's location, so
@@ -252,8 +251,7 @@ qualification and setup commands are recorded below.
 
 ## Setup
 
-1. Follow the [getting-started checks](getting-started.md). Offer the recommended architecture
-   baseline and install it only on the user's yes ([architecture maintenance](architecture-maintenance.md)). Install the
+1. Follow the [getting-started checks](getting-started.md). Install the
    chosen native CLI separately; preserve user account/provider settings.
 2. Claude: trust the workspace, then `tools/agents/run claude`.
 3. Codex: trust the project in native settings, review/enable the local hooks in `/hooks`, restart,
@@ -263,13 +261,13 @@ qualification and setup commands are recorded below.
    the native loader loads the local plugin directory. A database schema conflict can use
    `--isolated`, a separate ignored XDG profile; connect that profile's provider natively.
 5. Pi: `tools/agents/run pi` (1.4.0+). Trust the project when Pi asks, so `.pi/extensions/` loads;
-   the startup list names `factory`. Connect the provider in Pi's own settings.
+   the startup list names `template`. Connect the provider in Pi's own settings.
 6. Devin CLI: `devin` or `tools/agents/run devin` from the repository root. Approve the project
    hooks if Devin asks. Keep the model/provider choice in Devin's own user settings.
 7. Droid: `droid` or `tools/agents/run droid` from the repository root. Approve the project hooks
    if Droid asks; account and model stay in Droid's user settings (`~/.factory/`).
 8. Antigravity: `agy` or `tools/agents/run antigravity` from the repository root, or open the
-   folder in the IDE. Trust the folder so `.agents/hooks.json` loads; `/hooks` lists it. Grok: `grok` or `tools/agents/run grok` from the repository root. Trust the folder so `.grok/hooks/factory.json` loads; leave Claude hook compatibility on.
+   folder in the IDE. Trust the folder so `.agents/hooks.json` loads; `/hooks` lists it. Grok: `grok` or `tools/agents/run grok` from the repository root. Trust the folder so `.grok/hooks/template.json` loads; leave Claude hook compatibility on.
 
 The shared guards are basename/command-pattern safeguards. Codex native Bash and apply_patch
 payloads are normalized explicitly, including deleted/moved patch paths. OpenCode maps native

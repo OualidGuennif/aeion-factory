@@ -28,10 +28,8 @@ sources:
     title: "jdtls-launch, which names this doc as its spec"
   - resource: ../../tools/claude-plugins/native-lsp/scripts/tsc-lsp
     title: "tsc-lsp, which names this doc as its spec"
-  - resource: ../../tools/efficiency/bundle
-    title: "bundle, which names this doc as its spec"
-  - resource: ../../tools/factory-tests
-    title: "factory-tests, which names this doc as its spec"
+  - resource: ../../tools/template-tests
+    title: "template-tests, which names this doc as its spec"
   - resource: ../../tools/git-hooks/pre-commit
     title: "pre-commit, which names this doc as its spec"
   - resource: ../../tools/knowledge/orphans
@@ -44,10 +42,6 @@ sources:
 
 CI action revisions are pinned to upstream commit SHAs; review upstream changes before updating them.
 
-The standalone efficiency bundle includes the CRAFTED principles as well as the seven chapters.
-Rebuild it with `tools/efficiency/bundle` after editing those sources or `CREDITS.md`; CI rebuilds
-it and fails when the committed bundle differs.
-
 | Layer | Gate | From |
 | --- | --- | --- |
 | Knowledge | `tools/knowledge/knowledge-check` | the root |
@@ -55,10 +49,8 @@ it and fails when the committed bundle differs.
 | Knowledge reachability | `tools/knowledge/orphans`: a document nothing links | the root |
 | Docs and code links | `tools/knowledge/doc-links` (`--diff origin/develop` before a push) | the root |
 | Comments, file size, caps | `tools/repo-health/repo-health` | the root |
-| The factory's own test suites (hooks, tools, evals, push gate, release, context, analysis and graph queries, adapters including the OpenCode, Pi and dsh plugins and the Pi RPC bridge, connector drift, the tag-pinned desktop install, loops) | `tools/factory-tests` (each suite also runs alone; the script lists them) | root; Node 18+ |
-| Connector copies | `tools/agents/adapter-check` (`--root` for a project that adopted the factory) | the root |
-| Efficiency bundle | `tools/efficiency/bundle`, then `git diff --exit-code efficiency/efficiency-bundle.md` | the root |
-| Source analysis (CI on every main update; local run recommended) | `tools/architecture/refresh --target HEAD --base origin/main` after committing | pinned tools installed on the user's yes, Node and Chrome required |
+| The template's own test suites (hooks, tools, evals, push gate, release, context, owner settings, adapters including the OpenCode, Pi and dsh plugins and the Pi RPC bridge, connector drift, the tag-pinned desktop install, loops) | `tools/template-tests` (each suite also runs alone; the script lists them) | root; Node 18+ |
+| Connector copies | `tools/agents/adapter-check` (`--root` for a project that adopted the template) | the root |
 | Your code | add your build, lint and test commands here, copied from CI | |
 
 `stale` and `orphans` reject a missing root or `knowledge/` directory with a nonzero exit;
@@ -69,12 +61,12 @@ The pre-commit (`git config core.hooksPath tools/git-hooks`) runs `knowledge-che
 and `repo-health`. The pre-push refuses a push of `develop` without a recorded `Review: OK`
 and any direct push to `main` when the team flow is selected. This project CI runs the offline
 examples, demo units, real Flue/OpenShell fixtures, knowledge/link/health gates and source-lock check
-on pushes to `main` or `develop` and pull requests targeting `main`. The Factory suite above is
+on pushes to `main` or `develop` and pull requests targeting `main`. The Template suite above is
 also run locally for foundation updates; CI does not currently define a Semgrep job.
-`stale` and `orphans` remain manual checks; CI exercises their fixtures through `factory-tests`.
+`stale` and `orphans` remain manual checks; CI exercises their fixtures through `template-tests`.
 
-Many people run Æion Factory in a plain folder, without git. The link and health checks, the context
-fingerprint, the code graph (`tools/architecture/ask`) and the session-start summary then walk the files on disk (skipping `.git`, `.aeion`,
+Many people run Æion Template in a plain folder, without git. The link and health checks, the context
+fingerprint and the session-start summary then walk the files on disk (skipping `.git`, `.aeion`,
 dependencies, caches, the root's build output such as `dist/` or `target/`, and desktop files such as
 `.DS_Store`; `.claude/hooks/project_files.py`). Each folder's `.gitignore` applies to it and below for
 its simple rules (a name or glob, optionally ending in `/`); negations and paths with a slash are not
@@ -130,16 +122,15 @@ type error reported then cleared, and the same after a fresh session. Roll back 
 `claude plugin uninstall native-lsp@aeion-local --scope project`.
 
 Agent-specific setup and qualification: [compatibility](agent-compatibility.md). Integration pins
-require Python 3.12+ excluding 3.14.1. `knowledge-check` also validates public root/setup docs and
-the portable efficiency bundle; its bundled Superpowers notice is self-contained.
+require Python 3.12+ excluding 3.14.1. `knowledge-check` also validates public root/setup docs.
 
 ## Passive pool checks
 
 The seventeen native skills are checked by `tools/skills/lint`: `name` against its folder, a
 description of at most 1024 characters that names its trigger, a body of at most 150 lines and no
-duplicate name; `tools/skills/tests/test_lint.py` is in `tools/factory-tests`.
+duplicate name; `tools/skills/tests/test_lint.py` is in `tools/template-tests`.
 
-`tools/factory-tests` runs `tools/skills/tests/test_pool.py` and the real offline pool check
+`tools/template-tests` runs `tools/skills/tests/test_pool.py` and the real offline pool check
 `python3 tools/skills/pool.py check`. They verify materialized files, support resources, license
 restrictions, local-edit preservation and operation without third-party/lifecycle folders.
 The root `skills/` data preserves upstream formatting; authored-source size/comment heuristics

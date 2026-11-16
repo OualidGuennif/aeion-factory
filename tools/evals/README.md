@@ -31,12 +31,12 @@ For before/after comparisons, use separate `--file` datasets with matched tasks 
 baseline commits; rows group by harness, not by task or version.
 
 `changelog-line` above is one of the shipped tasks; the rest sit beside it in `tools/evals/tasks/`,
-eleven still at the "not run yet" baseline; `architecture-answer` records one Pi run.
+all still at the "not run yet" baseline.
 One record line looks like this (`--dry-run` prints it
 without writing):
 
 ```json
-{"task":"changelog-line","harness":"claude-code","success":true,"minutes":12.5,"factory":"1.7.0","recorded_at":"2026-10-31T09:12:44Z"}
+{"task":"changelog-line","harness":"claude-code","success":true,"minutes":12.5,"template":"1.7.0","recorded_at":"2026-10-31T09:12:44Z"}
 ```
 
 Records go to `tools/evals/results.jsonl` (git-ignored, resolved from the repository root);
@@ -48,4 +48,4 @@ nothing. The record shape is `schema.json`; a bad input exits 2 and writes nothi
 - Self-reported: the person who ran the task fills the numbers in.
 - Small samples: three runs of one task say little; treat a difference under a run or two as noise.
 - No model calls and no sandbox: this tool records, it does not execute or verify the work.
-- Not a public benchmark: the task set is local, comparable only inside this factory.
+- Not a public benchmark: the task set is local, comparable only inside this template.

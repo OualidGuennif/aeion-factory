@@ -460,33 +460,6 @@ def docker_inspect_dump(command):
     return False
 
 
-GRAPHIFY_LLM = {"extract": "runs semantic LLM extraction", "label": "names communities with an LLM",
-                "provider": "configures LLM providers", "add": "fetches a URL into the corpus",
-                "clone": "clones a repository for LLM extraction", "global": "writes the global graph in ~/.graphify"}
-GRAPHIFY_INSTALLERS = {"install", "uninstall", "hook"}
-
-
-def graphify_command(command):
-    """Graphify stays structural and read-only here: no LLM call, no rewrite of agent instructions."""
-    for words in simple_commands(command):
-        words = program(words)
-        if words and words[0] == "<script>":
-            reason = graphify_command(words[1])
-            if reason:
-                return reason
-            continue
-        if not words or PurePosixPath(words[0]).name != "graphify" or len(words) < 2:
-            continue
-        sub, rest = words[1], words[2:]
-        if sub in GRAPHIFY_LLM:
-            return f"graphify {sub} {GRAPHIFY_LLM[sub]}"
-        if sub == "cluster-only" and "--no-label" not in rest:
-            return "graphify cluster-only names communities with an LLM unless --no-label is given"
-        if sub in GRAPHIFY_INSTALLERS or rest[:1] in (["install"], ["uninstall"]):
-            return f"graphify {' '.join(words[1:3])} rewrites agent instructions or git hooks"
-    return ""
-
-
 GIT_VALUE_FLAGS = {"-C", "-c", "--config-env", "--git-dir", "--work-tree", "--namespace"}
 HOOKS_PATH = "tools/git-hooks"
 # Config keys whose value git runs as a program or command line; once set, later git commands run it out of
@@ -538,21 +511,6 @@ def git_bypass(command):
                     flag.startswith("--config-env") or setting not in SAFE_PROGRAM):
                 return PROGRAM_REASON.format(key)
         sub, args = (rest[0], rest[1:]) if rest else (None, [])
-        if sub in {"fetch", "push", "pull", "clone", "ls-remote"}:
-            # Subcommand allowlisting alone does not exclude Git's program hooks.
-            # Check remote-helper URLs even after --, which only ends option parsing.
-            for arg in args:
-                if re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*::", arg):
-                    return PROGRAM_REASON.format("a remote-helper URL")
-            options = {"push": ("--receive-pack", "--exec")}.get(sub, ("--upload-pack",))
-            for arg in args:
-                if arg == "--":
-                    break
-                name = arg.partition("=")[0]
-                if (name.startswith("--") and len(name) >= 4
-                        and any(option.startswith(name) for option in options)) or (
-                        sub == "clone" and arg.startswith("-u")):
-                    return PROGRAM_REASON.format("a Git transport option")
         if sub == "config":
             positional = [a for a in args if not a.startswith("-")]
             keys = [i for i, a in enumerate(positional) if a.lower() == "core.hookspath"]
@@ -653,21 +611,67 @@ def names_git_directory(word, anywhere=False):
     return False
 
 
+GIT_CONFIG_REASON = "writing .git/config directly skips the git config checks; use git config."
+SETTINGS_REASON = ("the doc gate and the framework address are the owner's settings in .aeion/settings.json; "
+                   "the owner runs tools/aeion-settings.")
+# The settings tool's subcommands that write; showing the settings stays allowed.
+SETTINGS_WRITES = {"doc-gate", "framework"}
+
+
+SETTINGS_FILE = re.compile(r"(^|[^\w.-])\.aeion/settings\.json(?![\w.-])")
+
+
+def names_settings(word):
+    """Whether a word names the settings file: as a path, inside code (open('.aeion/settings.json')) or as a glob."""
+    for form in path_forms(word):
+        parts = PurePosixPath(form).parts
+        if SETTINGS_FILE.search(form) or len(parts) >= 2 and (parts[-2] == ".aeion" or globs_to(".aeion", parts[-2])) and (
+                parts[-1] == "settings.json" or any(char in parts[-1] for char in "*?[")
+                and fnmatch.fnmatchcase("settings.json", shell_pattern(parts[-1]))):
+            return True
+    return False
+
+
+def names_settings_directory(word, anywhere=False):
+    """Moving into .aeion/ or copying a file named settings.json there is not singled out: nothing
+    but the settings file there is the owner's, and a copy into .aeion/ under another name is inert."""
+    return False
+
+
 def config_write(command):
     """The reason a command writes the repository's git config file directly, or None: an editor
     or redirection there sets aeion.mode or core.hooksPath without git config's checks."""
-    reason = "writing .git/config directly skips the git config checks; use git config."
+    return protected_write(command, names_git_config, names_git_directory, GIT_CONFIG_REASON)
+
+
+def settings_write(command):
+    """The reason a command writes the owner's settings, or None: the doc gate the agent must pass
+    and the framework address it reads are the owner's to change, like aeion.mode."""
+    for words in simple_commands(command):
+        words = program(words)
+        if words and words[0] == "<script>":
+            if settings_write(words[1]):
+                return SETTINGS_REASON
+            continue
+        names = [PurePosixPath(w).name for w in words[:2]]
+        if "aeion-settings" in names and SETTINGS_WRITES & set(words):
+            return SETTINGS_REASON
+    return protected_write(command, names_settings, names_settings_directory, SETTINGS_REASON)
+
+
+def protected_write(command, names, directory, reason):
+    """The reason a command writes a file the names test matches, or None."""
     # >, >>, >|, zsh >! and >& all write their target. A quoted span with spaces is prose (a commit
     # message) and a heredoc fed to a program is text; sh -c scripts are judged below on their own.
     shell_text = re.sub(r"'[^']*'|\"[^\"]*\"", lambda m: " " if re.search(r"\s", m.group(0)) else m.group(0),
                         without_inert_heredocs(command))
-    if any(names_git_config(as_shell_sees(t)) for t in re.findall(r">[|!]?&?\s*([^\s;&|<>]+)", shell_text)):
+    if any(names(as_shell_sees(t)) for t in re.findall(r">[|!]?&?\s*([^\s;&|<>]+)", shell_text)):
         return reason
     quoted = {a or b for a, b in re.findall(r"'([^']*)'|\"([^\"]*)\"", command)}
     for words in simple_commands(command):
         words = program(words)
         if words and words[0] == "<script>":
-            if config_write(words[1]):
+            if protected_write(words[1], names, directory, reason):
                 return reason
             continue
         if not words:
@@ -676,13 +680,13 @@ def config_write(command):
         # A word with spaces is prose (a title, a message) unless an interpreter runs it as code.
         code = re.match(r"(python|perl|ruby|node|php)", name)
         args = [as_shell_sees(w, quoted) for w in words[1:] if code or not re.search(r"\s", w)]
-        if name not in CONFIG_READERS and any(names_git_config(w) for w in args):
+        if name not in CONFIG_READERS and any(names(w) for w in args):
             return reason
         # git log --output writes any text it formats.
         outputs = [i for i, w in enumerate(words) if w.startswith("--output")]
-        if name == "git" and any(names_git_config(as_shell_sees(" ".join(words[i:i + 2]), quoted)) for i in outputs):
+        if name == "git" and any(names(as_shell_sees(" ".join(words[i:i + 2]), quoted)) for i in outputs):
             return reason
-        if name in {"cd", "pushd"} and any(names_git_directory(w, anywhere=True) for w in args):
+        if name in {"cd", "pushd"} and any(directory(w, anywhere=True) for w in args):
             return reason
         targets = args[-1:] if name in INTO_DIRECTORY else []
         # A directory option names the destination too: cp -t .git, tar -C.git, unzip -d .git.
@@ -690,7 +694,7 @@ def config_write(command):
         targets += [args[i + 1] for i, w in enumerate(args[:-1]) if w in options]
         targets += [w.split("=", 1)[1] for w in args if w.split("=", 1)[0] in options and "=" in w]
         targets += [w[2:] for w in args if len(w) > 2 and w[:2] in options]
-        if any(names_git_directory(w) for w in targets):
+        if any(directory(w) for w in targets):
             return reason
     return None
 
@@ -1024,12 +1028,6 @@ if refuses(docker_inspect_dump, command):
 if refuses(compose_config, command):
     deny("docker compose config prints the configuration with the secrets filled in.")
 
-# The code graph is deterministic: tools/architecture/ask answers structural questions without an LLM.
-graphify_reason = refuses(graphify_command, command)
-if graphify_reason:
-    deny((graphify_reason if isinstance(graphify_reason, str) else "the graphify command is nested too deeply to verify")
-         + "; use tools/architecture/ask (skill graph), which stays structural and calls no model.")
-
 # History and checks are not bypassed.
 if re.search(r"\bgit\s+push\b", command) and re.search(r"\s(-f|--force|--force-with-lease)(\s|=|$)", command):
     deny("force-pushing rewrites shared history.")
@@ -1041,6 +1039,9 @@ if bypass:
 written = refuses(config_write, command)
 if written:
     deny(written if isinstance(written, str) else "the command is nested too deeply to verify.")
+owned = refuses(settings_write, command)
+if owned:
+    deny(owned if isinstance(owned, str) else "the command is nested too deeply to verify.")
 try:
     base = event["tool_input"].get("workdir", event["tool_input"].get("cwd", event.get("cwd", ".")))
     reason = intake_dump(command, Path(base))

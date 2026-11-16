@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Lab live runs work again: the lab audit now accepts the relay's preflight fields, which it
+  rejected since 2026-11-05 and turned every first model call into `CONTEXT_UNKNOWN`.
+- A relay refusal (`context.refused`) now names the relay step it reached
+  (`aeion.relay.stage`: validate, count, admission, forward, stream, settle) and the error
+  type (`aeion.error.type`), never the message or request content, so a lab `CONTEXT_UNKNOWN`
+  can be told apart from a forward or stream failure.
+
 - Clarifies Feature `004` (`demo/forum/tools/specs_a.py`): `POST /api/auth/register`
   keeps creating enabled accounts (first on an empty forum is `owner`) that stay active
   until `POST /api/auth/accounts/{username}/disable`; the disabled flag defaults to false.

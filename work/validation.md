@@ -1,3 +1,9 @@
+## Lab live runs: audit allowlist and relay refusal stage — 2026-11-14
+
+- Root cause: `demo/app/audit.py` (lab runner only) rejected the relay's `context.preflight` field `aeion.context.measurement_basis`; the audit's ValueError was caught by the relay as `CONTEXT_UNKNOWN`, so every lab run since 2026-11-05 stopped at its first model call. Controller log traceback confirmed it; offline replay without the audit passed.
+- Fix: audit allowlist adds the relay preflight/refusal fields and the retired-process fields; relay refusals carry `aeion.relay.stage` and `aeion.error.type` (no message or content).
+- Verification: `test_context_admission` OK (2 new audit regressions fail without the fix), `test_relay_budget_settlement`, `test_runtime`, `test_kpis_memory` OK; `qualify_flue.py` PASS (3 tiers, offline); live run `ab8db36bc7204637b3a458381bace80e` (GLM 5.3 Flash, webhook triage) passed 8/8 in 17.9 s, 0.00136068 USD, usage complete. Factory admission revoked by the relay hash change until native requalification.
+
 ## Feature 004 Registration/Disabled-State Clarification — 2026-11-13
 
 - Removed the `disabled-by-default` ambiguity in `004`: product `main` `8bde82c2` `AuthService.register`, `AuthResourceTest` and `ThreadsResourceTest` require `/api/auth/register` accounts to log in immediately, and the external verifier has no CLI to bootstrap an owner. Spec now pins enabled registration, `disabled` default false, owner-only `/disable`.

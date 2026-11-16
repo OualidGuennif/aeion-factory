@@ -1,7 +1,15 @@
 # Current work
 
-Updated 2026-11-13. Current facts only; historical evidence is in HANDOVER.md and validation.md.
+Updated 2026-11-14. Current facts only; historical evidence is in HANDOVER.md and validation.md.
 No final operational Go or actual product feature merge is claimed.
+
+## Lab playground live runs and /lab redesign — ACTIVE
+
+- Owner decision: make the /lab demo work before redesigning it (4 sections, plain wording, no versions or internal numbers in the main text).
+- State: root cause fixed (uncommitted). The lab's durable audit (`demo/app/audit.py`, lab runner only) rejected the relay's `aeion.context.measurement_basis` preflight field; the audit's ValueError surfaced as CONTEXT_UNKNOWN on every first lab call. Allowlist extended; relay refusals now carry `aeion.relay.stage` and `aeion.error.type`. Controller restarted by the agent. Live run ab8db36b (GLM 5.3 Flash, webhook triage) passed 8/8 in 17.9 s for 0.00136068 USD, usage complete.
+- Next: commit and review the fix; requalify the factory natively; then redesign /lab (who: agent, after owner yes).
+- Blocker: the relay edit changed the protocol hash, so factory admission is revoked until native requalification. Lab qualification uses a fixture model and counter and never exercises the real GLM/DeepSeek path or the audit.
+- Evidence: runs `e7cb3056` (refused) and `ab8db36b` (passed, trace 92efd868fda98ecd0b3a571ad8a60e5d) under `demo/.local/data/`; tests `test_context_admission` (two audit regressions fail without the fix), `test_relay_budget_settlement`, `test_runtime`, `test_kpis_memory`.
 
 ## Feature 003 Live Completion, Authoring Playbook & Catalog Alignment — COMPLETED
 

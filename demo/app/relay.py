@@ -141,6 +141,9 @@ class ContextRelay:
                     routes.add(relay.route + '?beta=true')
                 if self.path not in routes or not relay.active.acquire(blocking=False):
                     return self.deny(409, "GATE_CLOSED")
+                # The relay step reached when a refusal is raised: metadata only, never content. It
+                # tells a malformed request apart from a forward or stream failure under one code.
+                stage = 'validate'
                 try:
                     if relay.closed:
                         return self.deny(403, "GATE_CLOSED")
@@ -193,6 +196,7 @@ class ContextRelay:
                             or (payload.get('thinking',{}).get('type')!='enabled' if relay.reasoning_thinking_object
                                 else 'thinking' in payload)):
                         raise ValueError('CONTEXT_UNKNOWN')
+                    stage = 'count'
                     counted = relay.counter.count(payload)
                     relay.last_count = counted
                     relay.event("context.preflight", **{
@@ -207,6 +211,7 @@ class ContextRelay:
                         relay.last_error_code = "STEP_LIMIT"
                         relay.event("context.refused", **{"aeion.failure.code": "STEP_LIMIT"})
                         return self.deny(409, "STEP_LIMIT")
+                    stage = 'admission'
                     stop = relay.admission() if relay.admission else None
                     if stop:
                         relay.closed = True
@@ -276,6 +281,7 @@ class ContextRelay:
                     if not relay.claim_forward(counted):
                         self.deny(409,'RELAY_CLOSED')
                         return
+                    stage = 'forward'
                     usage = ReportedUsage()
                     attempt = 0
                     while True:
@@ -295,6 +301,7 @@ class ContextRelay:
                             if relay.stopping.wait(delay) or relay.closed:
                                 relay.last_error_code = relay.last_error_code or 'RELAY_CLOSED'
                                 return self.deny(409, 'RELAY_CLOSED')
+                    stage = 'stream'
                     with opened as response:
                         relay.responses.append(response)
                         self.send_response(response.status)
@@ -310,6 +317,7 @@ class ContextRelay:
                             self.wfile.write(block)
                             self.wfile.flush()
                         relay.responses.remove(response)
+                        stage = 'settle'
                         summary=usage.summary()
                         relay.reported_usage.append(summary)
                         if (relay.prices is not None and relay.cost_limit is not None
@@ -362,10 +370,11 @@ class ContextRelay:
                     relay.last_error_code = code
                     relay.event("provider.reason", **{"aeion.failure.code": code})
                     self.deny(error.code, code)
-                except (ValueError, TypeError, KeyError):
+                except (ValueError, TypeError, KeyError) as error:
                     relay.closed = True
                     relay.last_error_code = 'CONTEXT_UNKNOWN'
-                    relay.event("context.refused", **{"aeion.failure.code": "CONTEXT_UNKNOWN"})
+                    relay.event("context.refused", **{"aeion.failure.code": "CONTEXT_UNKNOWN",
+                                "aeion.relay.stage": stage, "aeion.error.type": type(error).__name__})
                     self.deny(409, "CONTEXT_UNKNOWN")
                 except OSError as error:
                     relay.closed = True
@@ -380,8 +389,9 @@ class ContextRelay:
                     relay.closed = True
                     relay.last_error_code = 'TRANSPORT_ERROR'
                     relay.event("provider.failed", **{"aeion.failure.code": "TRANSPORT_ERROR"})
-                except Exception:
+                except Exception as error:
                     relay.closed = True
+                    unexpected = {"aeion.relay.stage": stage, "aeion.error.type": type(error).__name__}
                     # Continue only when every claim already has a usage row. An in-flight claim
                     # has no row yet; handing it over leaves the finish non-retryable.
                     if relay.reported_usage and len(relay.reported_usage) == relay.forwarded_count:
@@ -389,11 +399,11 @@ class ContextRelay:
                         self.deny(409, 'RELAY_FAULT')
                     elif relay.forwarded_count:
                         relay.last_error_code = 'RELAY_FAULT' if relay.reported_usage else 'CONTEXT_UNKNOWN'
-                        relay.event("context.refused", **{"aeion.failure.code": relay.last_error_code})
+                        relay.event("context.refused", **{"aeion.failure.code": relay.last_error_code, **unexpected})
                         self.deny(409, relay.last_error_code)
                     else:
                         relay.last_error_code = 'CONTEXT_UNKNOWN'
-                        relay.event("context.refused", **{"aeion.failure.code": "CONTEXT_UNKNOWN"})
+                        relay.event("context.refused", **{"aeion.failure.code": "CONTEXT_UNKNOWN", **unexpected})
                         self.deny(409, "CONTEXT_UNKNOWN")
                 finally:
                     relay.active.release()

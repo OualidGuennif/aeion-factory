@@ -6,7 +6,7 @@ This report distinguishes actual delivery, scripted mechanism checks and unfinis
 
 ## Published upgrade and branch hygiene
 
-[PR19](https://github.com/OualidGuennif/aeion-observability/pull/19) is merged into main as
+[PR19](https://github.com/OualidGuennif/aeion-factory/pull/19) is merged into main as
 `48d1ae4173ca53685de4d65e7183714fd2553673`. Reviewed source head:
 `32dc0cd3dbd91b3eda7a5ac56eb1485f698783cf`. Both GLM5.3Flash and Qwen3.8Flash approved both
 complete packets with complete usage accounting. Original rejections and contextual follow-ups

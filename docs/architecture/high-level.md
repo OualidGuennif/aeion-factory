@@ -1,8 +1,6 @@
 # High-level architecture
 
 One page for the repository: what it measures, where the demo runs, and what stays offline.
-The editable Archify source is [aeion-observability-high-level.architecture.json](aeion-observability-high-level.architecture.json);
-`archify render architecture` regenerates the HTML next to it.
 
 ```mermaid
 flowchart LR

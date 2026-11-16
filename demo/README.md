@@ -1,4 +1,4 @@
-# Æion Observatory — the agent atelier
+# Æion Factory — cockpit and model lab
 
 A local showcase connecting **OpenTelemetry, Langfuse, Hindsight and claude-mem** around real
 **Flue + Pi** agent sessions. The cockpit/supervisor is Python and runs **natively on the
@@ -263,7 +263,7 @@ are not included in the model estimate. The four small contracts support explora
 ### Two independent daily purses (at most $150.00 each)
 
 `demo/factory/budget.py` keeps one append-only JSONL journal with two scopes. The cockpit's live
-runs spend from `aeion-observability`; the forum workers spend from `aeion-autonomous-forum`.
+runs spend from `aeion-factory`; the forum workers spend from `aeion-autonomous-forum`.
 Each scope is capped per Europe/Paris day by `DAILY_LIMIT_USD` in [`demo/budget.conf`](budget.conf)
 (at most **$150.00**), and one scope can never borrow from the other.
 A run journals a reservation before it can call a model, then settles the actual cost; an open
@@ -367,7 +367,7 @@ crontab -e
 ```
 
 ```cron
-0 */6 * * * cd /path/to/aeion-observability && demo/.local/venv/bin/python -c 'import sys; from pathlib import Path; sys.path.insert(0, "demo/app"); import settings; from sandbox import connection; connection()' >/dev/null 2>&1
+0 */6 * * * cd /path/to/aeion-factory && demo/.local/venv/bin/python -c 'import sys; from pathlib import Path; sys.path.insert(0, "demo/app"); import settings; from sandbox import connection; connection()' >/dev/null 2>&1
 ```
 
 *Note: The wrapper checks `needs_refresh()`. If more than 1 hour remains, it exits immediately without

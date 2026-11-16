@@ -13,12 +13,12 @@ from pathlib import Path
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[3]
-loader = importlib.machinery.SourceFileLoader('factory_dsh_install', str(ROOT / 'tools/agents/dsh-install'))
-spec = importlib.util.spec_from_loader('factory_dsh_install', loader)
+loader = importlib.machinery.SourceFileLoader('aeion_dsh_install', str(ROOT / 'tools/agents/dsh-install'))
+spec = importlib.util.spec_from_loader('aeion_dsh_install', loader)
 install_tool = importlib.util.module_from_spec(spec)
 loader.exec_module(install_tool)
 
-PLUGIN = '.dsh/plugins/factory'
+PLUGIN = '.dsh/plugins/template'
 
 
 class DshInstallTests(unittest.TestCase):
@@ -29,17 +29,17 @@ class DshInstallTests(unittest.TestCase):
         self.repo = self.base / 'repo'
         self.repo.mkdir()
         self.git('init', '-q')
-        self.write('index.js', 'export const name = "aeion-factory";\n')
-        self.write('compaction.js', 'export const name = "aeion-factory-compaction";\n')
+        self.write('index.js', 'export const name = "aeion-template";\n')
+        self.write('compaction.js', 'export const name = "aeion-template-compaction";\n')
         self.commit('v1')
         self.git('tag', 'v1.0.0')
-        self.write('index.js', 'export const name = "aeion-factory";\nexport const version = 2;\n')
+        self.write('index.js', 'export const name = "aeion-template";\nexport const version = 2;\n')
         self.commit('v2')
         self.git('tag', 'v2.0.0')
         self.profiles = self.base / 'profiles'
         self.profile = self.profiles / 'desktop'
         self.profile.mkdir(parents=True)
-        self.entry = self.profile / 'aeion-factory'
+        self.entry = self.profile / 'aeion-template'
 
     def write(self, name, text):
         target = self.repo / PLUGIN / name
@@ -70,8 +70,8 @@ class DshInstallTests(unittest.TestCase):
     def test_installs_the_tag_bytes(self):
         code, output = self.run_tool('--tag', 'v1.0.0')
         self.assertEqual(code, 0, output)
-        self.assertEqual(self.target_of(), 'vendor/aeion-factory-v1.0.0')
-        copy = self.profile / 'vendor/aeion-factory-v1.0.0'
+        self.assertEqual(self.target_of(), 'vendor/aeion-template-v1.0.0')
+        copy = self.profile / 'vendor/aeion-template-v1.0.0'
         for name in ('index.js', 'compaction.js'):
             expected = subprocess.run(
                 ['git', 'show', f'v1.0.0:{PLUGIN}/{name}'],
@@ -83,8 +83,8 @@ class DshInstallTests(unittest.TestCase):
     def test_a_second_tag_repoints_the_link(self):
         self.assertEqual(self.run_tool('--tag', 'v1.0.0')[0], 0)
         self.assertEqual(self.run_tool('--tag', 'v2.0.0')[0], 0)
-        self.assertEqual(self.target_of(), 'vendor/aeion-factory-v2.0.0')
-        self.assertTrue((self.profile / 'vendor/aeion-factory-v1.0.0/index.js').is_file())
+        self.assertEqual(self.target_of(), 'vendor/aeion-template-v2.0.0')
+        self.assertTrue((self.profile / 'vendor/aeion-template-v1.0.0/index.js').is_file())
 
     def test_a_failed_copy_keeps_the_old_link(self):
         self.assertEqual(self.run_tool('--tag', 'v1.0.0')[0], 0)
@@ -98,8 +98,8 @@ class DshInstallTests(unittest.TestCase):
         with patch.object(install_tool, 'ref_bytes', failing):
             code, output = self.run_tool('--tag', 'v2.0.0')
         self.assertEqual(code, 2, output)
-        self.assertEqual(self.target_of(), 'vendor/aeion-factory-v1.0.0')
-        self.assertFalse((self.profile / 'vendor/aeion-factory-v2.0.0').exists())
+        self.assertEqual(self.target_of(), 'vendor/aeion-template-v1.0.0')
+        self.assertFalse((self.profile / 'vendor/aeion-template-v2.0.0').exists())
 
     def test_unknown_tag_refuses(self):
         code, output = self.run_tool('--tag', 'v9.9.9')
@@ -120,26 +120,26 @@ class DshInstallTests(unittest.TestCase):
         self.entry.mkdir()
         (self.entry / 'index.js').write_text('unmanaged\n')
         self.assertEqual(self.run_tool('--tag', 'v1.0.0', '--force')[0], 0)
-        self.assertEqual(self.target_of(), 'vendor/aeion-factory-v1.0.0')
-        self.assertTrue((self.profile / 'aeion-factory.replaced/index.js').is_file())
+        self.assertEqual(self.target_of(), 'vendor/aeion-template-v1.0.0')
+        self.assertTrue((self.profile / 'aeion-template.replaced/index.js').is_file())
         # A second hand-made entry cannot displace the copy the first one left behind.
         self.entry.unlink()
         self.entry.mkdir()
         code, output = self.run_tool('--tag', 'v1.0.0', '--force')
         self.assertEqual(code, 2, output)
-        self.assertIn('aeion-factory.replaced', output)
+        self.assertIn('aeion-template.replaced', output)
 
     def test_reinstalling_a_tag_replaces_its_copy(self):
         self.assertEqual(self.run_tool('--tag', 'v1.0.0')[0], 0)
-        copy = self.profile / 'vendor/aeion-factory-v1.0.0/index.js'
+        copy = self.profile / 'vendor/aeion-template-v1.0.0/index.js'
         copy.write_text('a hand edit that must not survive\n')
         self.assertEqual(self.run_tool('--tag', 'v1.0.0')[0], 0)
         self.assertNotIn('hand edit', copy.read_text())
-        self.assertEqual(self.target_of(), 'vendor/aeion-factory-v1.0.0')
+        self.assertEqual(self.target_of(), 'vendor/aeion-template-v1.0.0')
 
     def test_check_names_a_hand_edited_copy(self):
         self.assertEqual(self.run_tool('--tag', 'v1.0.0')[0], 0)
-        edited = self.profile / 'vendor/aeion-factory-v1.0.0/index.js'
+        edited = self.profile / 'vendor/aeion-template-v1.0.0/index.js'
         edited.write_text(edited.read_text() + '// local edit\n')
         code, output = self.run_tool('--check')
         self.assertEqual(code, 1, output)
@@ -160,14 +160,14 @@ class DshInstallTests(unittest.TestCase):
         self.assertEqual(self.run_tool('--tag', 'v1.0.0', '--trust', str(project / '.'))[0], 0)
         code, output = self.run_tool('--trust', str(project))
         self.assertEqual(code, 0, output)
-        self.assertEqual((self.profile / 'aeion-factory.trusted').read_text(), f'{project}\n')
-        self.assertEqual(self.target_of(), 'vendor/aeion-factory-v1.0.0')
+        self.assertEqual((self.profile / 'aeion-template.trusted').read_text(), f'{project}\n')
+        self.assertEqual(self.target_of(), 'vendor/aeion-template-v1.0.0')
 
-    def test_trust_refuses_a_folder_without_the_factory_hooks(self):
+    def test_trust_refuses_a_folder_without_the_template_hooks(self):
         code, output = self.run_tool('--trust', str(self.base))
         self.assertEqual(code, 2, output)
         self.assertIn('tools/agents/hook.py', output)
-        self.assertFalse((self.profile / 'aeion-factory.trusted').exists())
+        self.assertFalse((self.profile / 'aeion-template.trusted').exists())
 
     def test_check_refuses_a_foreign_link(self):
         os.symlink(self.repo / PLUGIN, self.entry)

@@ -179,7 +179,7 @@ class TargetDispatchTests(unittest.TestCase):
     def test_a_claim_that_never_starts_the_author_settles_at_zero(self):
         budget = DailyBudget(
             self.root / "ledger.jsonl",
-            limits={"aeion-observability": Decimal("15.00"),
+            limits={"aeion-factory": Decimal("15.00"),
                     "aeion-autonomous-forum": Decimal("15.00")},
             today=lambda: "2026-11-02",
         )
@@ -204,7 +204,7 @@ class TargetDispatchTests(unittest.TestCase):
     def test_an_incomplete_forwarded_author_keeps_its_reservation(self):
         budget = DailyBudget(
             self.root / "ledger.jsonl",
-            limits={"aeion-observability": Decimal("15.00"),
+            limits={"aeion-factory": Decimal("15.00"),
                     "aeion-autonomous-forum": Decimal("15.00")},
             today=lambda: "2026-11-02",
         )
@@ -318,7 +318,7 @@ class TargetDispatchTests(unittest.TestCase):
 
         budget = DailyBudget(
             self.root / "ledger.jsonl",
-            limits={"aeion-observability": Decimal("15.00"),
+            limits={"aeion-factory": Decimal("15.00"),
                     "aeion-autonomous-forum": Decimal("15.00")},
             today=lambda: "2026-11-02",
         )
@@ -334,7 +334,7 @@ class TargetDispatchTests(unittest.TestCase):
     def test_a_build_journals_its_zero_cost_reservation_in_the_forum_purse(self):
         budget = DailyBudget(
             self.root / "ledger.jsonl",
-            limits={"aeion-observability": Decimal("15.00"),
+            limits={"aeion-factory": Decimal("15.00"),
                     "aeion-autonomous-forum": Decimal("15.00")},
             today=lambda: "2026-11-02",
         )
@@ -342,7 +342,7 @@ class TargetDispatchTests(unittest.TestCase):
         result = self.worker(self.builder, budget=budget, require_circuit=False).run_once()
         self.assertEqual(result["result"]["status"], "completed")
         self.assertEqual(budget.spent("aeion-autonomous-forum"), Decimal("0.00"))
-        self.assertEqual(budget.spent("aeion-observability"), Decimal("0.00"))
+        self.assertEqual(budget.spent("aeion-factory"), Decimal("0.00"))
         entries = [json.loads(line) for line in
                    (self.root / "ledger.jsonl").read_text().splitlines()]
         self.assertEqual([entry["kind"] for entry in entries], ["reserve", "settle"])
@@ -351,7 +351,7 @@ class TargetDispatchTests(unittest.TestCase):
     def test_a_configured_review_circuit_reserves_each_vote_and_keeps_them_open(self):
         budget = DailyBudget(
             self.root / "ledger.jsonl",
-            limits={"aeion-observability": Decimal("15.00"),
+            limits={"aeion-factory": Decimal("15.00"),
                     "aeion-autonomous-forum": Decimal("15.00")},
             today=lambda: "2026-11-02",
         )
@@ -378,7 +378,7 @@ class TargetDispatchTests(unittest.TestCase):
     def test_an_exhausted_purse_holds_before_a_session_or_builder(self):
         budget = DailyBudget(
             self.root / "ledger.jsonl",
-            limits={"aeion-observability": Decimal("15.00"),
+            limits={"aeion-factory": Decimal("15.00"),
                     "aeion-autonomous-forum": Decimal("0.00")},
             today=lambda: "2026-11-02",
         )

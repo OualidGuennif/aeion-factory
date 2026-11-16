@@ -2,7 +2,7 @@
 
 The demo has two independent purses, each capped per local day by ``demo/budget.conf``
 (at most $150.00):
-``aeion-observability`` for the cockpit's own runs and ``aeion-autonomous-forum`` for the
+``aeion-factory`` for the cockpit's own runs and ``aeion-autonomous-forum`` for the
 factory workers that build the product. A reservation is journaled before a paid action and
 settled with the actual cost after it; an open reservation counts against the day so two
 workers cannot both spend the last dollar. The summary names settled spend and reserved
@@ -24,7 +24,7 @@ from decimal import Decimal, InvalidOperation, ROUND_CEILING
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-SCOPES = ("aeion-observability", "aeion-autonomous-forum")
+SCOPES = ("aeion-factory", "aeion-autonomous-forum")
 BUDGET_ZONE = "Europe/Paris"
 _LEDGER_VERSION = 1
 CONFIG_PATH = Path(__file__).resolve().parents[1] / "budget.conf"

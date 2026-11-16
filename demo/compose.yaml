@@ -1,4 +1,4 @@
-name: aeion-observability-demo
+name: aeion-factory-demo
 
 x-langfuse: &langfuse
   DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?run python3 demo/setup.py}@postgres:5432/langfuse

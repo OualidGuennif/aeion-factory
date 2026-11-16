@@ -103,8 +103,8 @@ def main(argv):
             problems.append("CLAUDE.md: neither a link to AGENTS.md nor '@AGENTS.md'")
         check_links(agents, root, problems)
 
-    # Public setup and the portable bundle must not advertise broken relative links.
-    for path in [*root.glob("*.md"), *root.glob("efficiency/*.md"), *root.glob(".codex/*.md"), *root.glob(".opencode/*.md"), *root.glob(".pi/*.md")]:
+    # Public setup must not advertise broken relative links.
+    for path in [*root.glob("*.md"), *root.glob(".codex/*.md"), *root.glob(".opencode/*.md"), *root.glob(".pi/*.md")]:
         if path.name not in {"AGENTS.md", "CLAUDE.md"}:
             check_links(path, root, problems)
 

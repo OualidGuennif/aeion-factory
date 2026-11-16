@@ -5,7 +5,7 @@ description: "One appended record per run, a report of three numbers, and the ta
 status: draft
 review_after: 2027-01-29
 generated:
-  by: aeion-factory/1.7
+  by: aeion-template/1.7
   at: 2026-10-31
 sources:
   - id: record
@@ -41,7 +41,7 @@ an opinion. It records; it does not run an agent, call a provider or reach the n
 2. Run the task on one harness from the starting commit named in `TASK.md`.
 3. Decide with `CHECK.md`, then `tools/evals/record` the outcome.
 4. `tools/evals/report` shows the harness rows and the `All` row.
-5. Change one thing in the factory, run the same task again, and compare the rows.
+5. Change one thing in the template, run the same task again, and compare the rows.
 
 ## The two commands
 
@@ -54,7 +54,7 @@ tools/evals/report [--file PATH] [--json]
 
 `record` appends one compact JSON object to `tools/evals/results.jsonl` (git-ignored, resolved from
 the repository root, not the current directory), adds `recorded_at` in UTC with a `Z` suffix, and
-takes `factory` from `VERSION` unless given. An invalid slug, a `--success` other than `yes`/`no`,
+takes `template` from `VERSION` unless given. An invalid slug, a `--success` other than `yes`/`no`,
 a negative number, a non-finite number (`nan`, `inf`) or a missing required flag exits 2 and writes
 nothing. `--dry-run` prints the record and writes nothing.
 Appending also separates an existing final record that has no trailing newline; its bytes are preserved.
@@ -101,6 +101,6 @@ Read them together: a cheaper harness that needs rework is not cheaper. The coun
 - Self-reported: whoever ran the task fills the numbers in, and nothing verifies them.
 - Small samples: one or two runs per task are noise, not a trend.
 - No model calls, no sandbox: the tool records and reports; it does not execute or grade the work.
-- Local, not public: the task set is comparable inside this factory only, and changes to it reset
+- Local, not public: the task set is comparable inside this template only, and changes to it reset
   the baseline.
 - Usage and examples: [tools/evals/README.md](../../tools/evals/README.md).

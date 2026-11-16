@@ -12,7 +12,7 @@ generated:
 
 - [Native skills and passive source guidance](skill-selection.md)
 - [Context safety and handover](context-safety.md)
-- [Graphify/Archify maintenance](architecture-maintenance.md)
+- [Updating a project to a new release](template-update.md)
 - [Authoring factory-compatible features](feature-authoring.md)
 
 | Concept | Status | Notes |

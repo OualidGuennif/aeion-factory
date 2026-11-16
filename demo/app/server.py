@@ -165,7 +165,7 @@ def read_checkpoint(observation_id):
 # One journal, two independent $150.00 purses: the cockpit and the forum workers never share money.
 BUDGET = DailyBudget(os.environ.get("AEION_BUDGET_LEDGER") or LOCAL / "budget/ledger.jsonl")
 runner = Runner(Telemetry(), save, memory=memory, audit=Audit(DATA), budget=BUDGET,
-                budget_scope="aeion-observability")
+                budget_scope="aeion-factory")
 
 factory = FactoryApp(FACTORY_MANIFEST, FACTORY_STATE, spec_dir=FACTORY_SPEC_DIR, budget=BUDGET,
                      execution=EXECUTION)

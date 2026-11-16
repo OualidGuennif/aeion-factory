@@ -3,12 +3,14 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 from pathlib import Path
 import sys
+import tempfile
 import threading
 import unittest
 import urllib.error
 import urllib.request
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'app'))
+from audit import Audit
 from provider_usage import ReportedUsage
 from relay import ContextRelay
 
@@ -222,6 +224,60 @@ class ContextAdmissionTests(unittest.TestCase):
         self.assertEqual(box.last_error_code,'CONTEXT_UNKNOWN')
         self.assertEqual(self.calls,[])
         self.assertEqual(self.checkpoints,[])
+
+    def refusals(self, box):
+        events=[]
+        box.event=lambda name,**attrs:events.append((name,attrs))
+        return events
+
+    def test_a_refusal_names_the_relay_stage_and_error_type_without_content(self):
+        box=self.relay()
+        events=self.refusals(box)
+        class Boom:
+            def count(self, _payload):
+                raise RuntimeError('synthetic secret text')
+        box.counter=Boom()
+        self.assertEqual(self.send(box),409)
+        refused=[attrs for name,attrs in events if name=='context.refused']
+        self.assertEqual(refused,[{'aeion.failure.code':'CONTEXT_UNKNOWN',
+                                   'aeion.relay.stage':'count','aeion.error.type':'RuntimeError'}])
+        self.assertNotIn('synthetic secret text',json.dumps(events))
+
+    def test_a_malformed_first_request_is_refused_at_validation(self):
+        box=self.relay()
+        events=self.refusals(box)
+        self.assertEqual(self.post_messages(box,257),409)
+        refused=[attrs for name,attrs in events if name=='context.refused']
+        self.assertEqual(refused,[{'aeion.failure.code':'CONTEXT_UNKNOWN',
+                                   'aeion.relay.stage':'validate','aeion.error.type':'ValueError'}])
+
+    def audited(self, box):
+        """Route relay events through the lab's durable audit, as the lab runner does."""
+        folder=tempfile.TemporaryDirectory();self.addCleanup(folder.cleanup)
+        audit,run,names=Audit(folder.name),{'id':'audit-test'},[]
+        def record(name,**attrs):
+            audit.record(run,{'name':name,'id':f'audit-test:{len(names)+1}','sequence':len(names)+1,
+                              'severity':'INFO','aeion.task.id':'t','aeion.runtime':'flue-just-bash',**attrs})
+            names.append(name)
+        box.event=record
+        return names
+
+    def test_the_lab_audit_accepts_every_preflight_and_forwards_the_first_call(self):
+        # Regression 2026-11-14: an unlisted preflight field made the audit raise inside the
+        # relay, so every lab run was refused CONTEXT_UNKNOWN before its first model call.
+        box=self.relay()
+        names=self.audited(box)
+        self.assertEqual(self.send(box),200)
+        self.assertIsNone(box.last_error_code)
+        self.assertEqual(len(self.calls),1)
+        self.assertIn('context.preflight',names)
+
+    def test_the_lab_audit_records_a_refusal_with_its_stage(self):
+        box=self.relay()
+        names=self.audited(box)
+        self.assertEqual(self.post_messages(box,257),409)
+        self.assertEqual(box.last_error_code,'CONTEXT_UNKNOWN')
+        self.assertEqual(names,['context.refused'])
 
 
 class ProviderContextTests(unittest.TestCase):

@@ -27,44 +27,44 @@ class BudgetTests(unittest.TestCase):
 
     def test_reserve_then_settle_journals_the_actual_cost(self):
         b = budget(self.root)
-        reservation = b.admit("aeion-observability", "0.10", note="run-1")
-        self.assertEqual(b.spent("aeion-observability"), Decimal("0.10"))
+        reservation = b.admit("aeion-factory", "0.10", note="run-1")
+        self.assertEqual(b.spent("aeion-factory"), Decimal("0.10"))
         self.assertEqual(b.settle(reservation, "0.10"), Decimal("0.10"))
-        self.assertEqual(b.spent("aeion-observability"), Decimal("0.10"))
-        self.assertEqual(b.remaining("aeion-observability"), Decimal("149.90"))
+        self.assertEqual(b.spent("aeion-factory"), Decimal("0.10"))
+        self.assertEqual(b.remaining("aeion-factory"), Decimal("149.90"))
         lines = (self.root / "ledger.jsonl").read_text().splitlines()
         self.assertEqual([json.loads(line)["kind"] for line in lines], ["reserve", "settle"])
 
     def test_an_open_reservation_counts_against_the_day(self):
         b = budget(self.root)
-        b.admit("aeion-observability", "149.50")
+        b.admit("aeion-factory", "149.50")
         with self.assertRaisesRegex(BudgetError, "budget_unavailable"):
-            b.admit("aeion-observability", "0.60")
+            b.admit("aeion-factory", "0.60")
 
     def test_a_scope_cannot_spend_past_its_limit(self):
         b = budget(self.root)
-        b.admit("aeion-observability", "149.95")
+        b.admit("aeion-factory", "149.95")
         with self.assertRaisesRegex(BudgetError, "budget_unavailable"):
-            b.admit("aeion-observability", "0.10")
-        self.assertEqual(b.spent("aeion-observability"), Decimal("149.95"))
+            b.admit("aeion-factory", "0.10")
+        self.assertEqual(b.spent("aeion-factory"), Decimal("149.95"))
 
     def test_a_higher_actual_cost_counts_and_the_next_call_is_refused(self):
         b = budget(self.root)
-        reservation = b.admit("aeion-observability", "0.10")
+        reservation = b.admit("aeion-factory", "0.10")
         self.assertEqual(b.settle(reservation, "1.00"), Decimal("1.00"))
         with self.assertRaises(BudgetError):
-            b.admit("aeion-observability", "149.50")
+            b.admit("aeion-factory", "149.50")
 
     def test_settling_twice_is_idempotent(self):
         b = budget(self.root)
-        reservation = b.admit("aeion-observability", "0.10")
+        reservation = b.admit("aeion-factory", "0.10")
         b.settle(reservation, "0.10")
         self.assertEqual(b.settle(reservation, "9.99"), Decimal("0.10"))
 
     def test_the_two_purses_are_independent(self):
         b = budget(self.root)
-        b.admit("aeion-observability", "150.00")
-        self.assertEqual(b.remaining("aeion-observability"), Decimal("0"))
+        b.admit("aeion-factory", "150.00")
+        self.assertEqual(b.remaining("aeion-factory"), Decimal("0"))
         self.assertEqual(b.remaining("aeion-autonomous-forum"), Decimal("150.00"))
         b.admit("aeion-autonomous-forum", "150.00")
 
@@ -93,7 +93,7 @@ class BudgetTests(unittest.TestCase):
 
     def test_an_unknown_reservation_is_refused(self):
         b = budget(self.root)
-        reservation = b.admit("aeion-observability", "0.10")
+        reservation = b.admit("aeion-factory", "0.10")
         other = type(reservation)(id="0" * 32, scope=reservation.scope,
                                   day=reservation.day, estimate_usd=reservation.estimate_usd)
         with self.assertRaisesRegex(BudgetError, "unknown_reservation"):
@@ -102,42 +102,42 @@ class BudgetTests(unittest.TestCase):
     def test_a_corrupt_ledger_fails_closed(self):
         (self.root / "ledger.jsonl").write_text("not json\n")
         with self.assertRaisesRegex(BudgetError, "budget_ledger_corrupt"):
-            budget(self.root).spent("aeion-observability")
+            budget(self.root).spent("aeion-factory")
 
     def test_a_line_missing_its_day_or_reservation_fails_closed(self):
         for line in (
-            {"version": 1, "kind": "reserve", "scope": "aeion-observability",
+            {"version": 1, "kind": "reserve", "scope": "aeion-factory",
              "reservation": "a" * 32, "usd": "0.00"},
-            {"version": 1, "kind": "reserve", "scope": "aeion-observability",
+            {"version": 1, "kind": "reserve", "scope": "aeion-factory",
              "day": DAY, "usd": "0.00"},
         ):
             with self.subTest(line=line):
                 (self.root / "ledger.jsonl").write_text(json.dumps(line) + "\n")
                 with self.assertRaisesRegex(BudgetError, "budget_ledger_corrupt"):
-                    budget(self.root).spent("aeion-observability")
+                    budget(self.root).spent("aeion-factory")
 
     def test_a_positive_sub_cent_reservation_is_rounded_up_not_free(self):
         b = budget(self.root)
-        reservation = b.admit("aeion-observability", "0.001")
+        reservation = b.admit("aeion-factory", "0.001")
         self.assertEqual(reservation.estimate_usd, Decimal("0.01"))
-        self.assertEqual(b.spent("aeion-observability"), Decimal("0.01"))
+        self.assertEqual(b.spent("aeion-factory"), Decimal("0.01"))
         self.assertEqual(b.settle(reservation, "0.001"), Decimal("0.01"))
 
     def test_a_zero_reservation_cannot_settle_a_positive_cost(self):
         b = budget(self.root)
-        reservation = b.admit("aeion-observability", "0.00")
+        reservation = b.admit("aeion-factory", "0.00")
         with self.assertRaisesRegex(BudgetError, "settlement_exceeds_reservation"):
             b.settle(reservation, "0.01")
-        self.assertEqual(b.spent("aeion-observability"), Decimal("0.00"))
+        self.assertEqual(b.spent("aeion-factory"), Decimal("0.00"))
 
     def test_summary_reports_both_purses(self):
         b = budget(self.root)
-        b.admit("aeion-observability", "0.25")
+        b.admit("aeion-factory", "0.25")
         summary = b.summary()
-        self.assertEqual(summary["aeion-observability"]["limit_usd"], "150.00")
-        self.assertEqual(summary["aeion-observability"]["spent_usd"], "0.25")
-        self.assertEqual(summary["aeion-observability"]["settled_usd"], "0.00")
-        self.assertEqual(summary["aeion-observability"]["reserved_usd"], "0.25")
+        self.assertEqual(summary["aeion-factory"]["limit_usd"], "150.00")
+        self.assertEqual(summary["aeion-factory"]["spent_usd"], "0.25")
+        self.assertEqual(summary["aeion-factory"]["settled_usd"], "0.00")
+        self.assertEqual(summary["aeion-factory"]["reserved_usd"], "0.25")
         self.assertEqual(summary["aeion-autonomous-forum"]["spent_usd"], "0.00")
         self.assertEqual(summary["aeion-autonomous-forum"]["settled_usd"], "0.00")
         self.assertEqual(summary["aeion-autonomous-forum"]["reserved_usd"], "0.00")
@@ -162,8 +162,8 @@ class BudgetDayTests(unittest.TestCase):
             clock.now.return_value = fixed
             with tempfile.TemporaryDirectory() as root:
                 b = DailyBudget(Path(root) / "ledger.jsonl")
-                b.admit("aeion-observability", "0.10")
-                self.assertEqual(b.summary()["aeion-observability"]["day"], "2026-11-03")
+                b.admit("aeion-factory", "0.10")
+                self.assertEqual(b.summary()["aeion-factory"]["day"], "2026-11-03")
 
 
 class BudgetSettingsTests(unittest.TestCase):

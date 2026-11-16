@@ -19,6 +19,10 @@ class Audit:
         allowed.update({"aeion.tool.name", "aeion.tool.status", "aeion.step.elapsed_ms", "trace_id", "span_id", "aeion.cost.estimated_usd", "aeion.human.interventions"})
         allowed.update({"aeion.context.reserve", "aeion.context.max_output", "aeion.context.tokenizer_revision"})
         allowed.update({"aeion.context.basis", "aeion.handover.sha256", "aeion.sandbox.id", "aeion.task.id", "aeion.runtime"})
+        # Relay preflight and refusal metadata, and the retired harness process. A missing name
+        # here makes the lab's audit raise inside the relay, refusing every first model call.
+        allowed.update({"aeion.context.measurement_basis", "aeion.cost.input_token_bound",
+                        "aeion.relay.stage", "aeion.error.type", "aeion.process.exit_code", "aeion.cli.steps"})
         if set(event) - allowed or any(not isinstance(v, (str, int, float, bool)) or isinstance(v, str) and len(v) > 256 for v in event.values()):
             raise ValueError("INVALID_AUDIT_EVENT")
         path = self.folder / (run["id"] + ".events.jsonl")

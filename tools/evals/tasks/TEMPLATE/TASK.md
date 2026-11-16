@@ -5,7 +5,7 @@ Copy this folder to `tools/evals/tasks/<slug>/`, then replace every `<...>`.
 ## Starting point
 
 - Commit: `<sha of develop or the release tag>`
-- Factory: `<VERSION>`
+- Template: `<VERSION>`
 - Branch: `task/<slug>` from `<starting commit>`
 
 ## Prompt (send this text unchanged)

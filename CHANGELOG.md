@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+- Upgrades repository template foundation to Æion Template `v4.0.3` (`adapter-check` 31/31),
+  retires Archify and Graphify artifacts/helpers (`docs/architecture/high-level.md` retains pure
+  Mermaid), and aligns hook tests and security/loop docs with `v4.0.3` `CONTRACT` connectors
+  (noting upstream absence of the post-v2.1.1 git transport option and Grok multi-path checks).
+- Renames all remaining `aeion-observability` identifiers, docs, tests, Compose project
+  (`aeion-factory-demo`), budget scope (`aeion-factory`), and OpenShell namespace/label to
+  `aeion-factory`, migrating `demo/.local/budget/ledger.jsonl` without losing ledger history.
+- Streamlines `/` (`demo/app/factory.html`, `factory.css`) and `/lab` (`demo/app/index.html`,
+  `style.css`) into a quieter paper-atelier hierarchy with 4 clean `/lab` sections, collapsible
+  system health drawer, legible body/metadata scale, and clean `375px` mobile table scrolling
+  preserving `theme.css` tokens, CSP, and all test contracts.
+
+- Lab live runs work again: the lab audit now accepts the relay's preflight fields, which it
+  rejected since 2026-11-05 and turned every first model call into `CONTEXT_UNKNOWN`.
+- A relay refusal (`context.refused`) now names the relay step it reached
+  (`aeion.relay.stage`: validate, count, admission, forward, stream, settle) and the error
+  type (`aeion.error.type`), never the message or request content, so a lab `CONTEXT_UNKNOWN`
+  can be told apart from a forward or stream failure.
+
 - Clarifies Feature `004` (`demo/forum/tools/specs_a.py`): `POST /api/auth/register`
   keeps creating enabled accounts (first on an empty forum is `owner`) that stay active
   until `POST /api/auth/accounts/{username}/disable`; the disabled flag defaults to false.
@@ -417,7 +436,7 @@
   `127.0.0.1:8081`, with CSP, `nosniff`, `no-referrer` and HSTS on `/healthz` and on a 404, and
   no report-only header. No paid inference, registry push, VPS deployment or remote publication
   ran. The main repository's `demo/forum-app/` is now a reading mirror.
-- Enforce two independent daily purses of **$15.00**: `aeion-observability` for the cockpit and
+- Enforce two independent daily purses of **$15.00**: `aeion-factory` for the cockpit and
   `aeion-autonomous-forum` for the factory workers. `demo/factory/budget.py` journals a
   reservation before any live work and settles the actual cost after it; an open reservation
   counts against the day, a corrupt ledger fails closed, one purse cannot borrow from the other,

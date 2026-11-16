@@ -78,22 +78,21 @@ policy changes no model, reasoning-effort or provider setting and claims no meas
 ## Invariants
 
 Secrets remain refused even with a limiter. Native adapters preserve tool kind and range/count
-arguments, so bounded reads work and large-file edits remain available. Factory v2.1.1 replaced
-`tools/agents/hook.py` and `.claude/hooks/guard-path.py`. Checked 2026-11-06: the path guard still
-uses 65536 bytes, 400 lines and 1 MiB of scanning. Grok's tool names are mapped in
-[agent compatibility](../operations/agent-compatibility.md). Guard regressions cover thresholds,
-long lines, explicit ranges, real native fields and misleading limiter placement.
+arguments, so bounded reads work and large-file edits remain available. Guard regressions cover
+thresholds, long lines, explicit ranges, real native fields and misleading limiter placement.
 
 ## Determinism
 
 Local regular-file metadata and bounded reads establish the decision; no model or new package
 is involved. Owner tuning changes the checked-in constants and tests, not an ambient override.
 Durable facts belong in Knowledge; session noise stays out of AGENTS.md and handovers.
+The session start shows these intake limits first, then the flow mode, the doc gate's mode and
+framework mode; the owner's settings never change an intake limit.
 
 ## Acceptance
 
 Run `python3 .claude/hooks/test_hooks.py` and `python3 tools/agents/tests/test_hooks.py`, then the
-existing Knowledge, context, architecture and native-plugin checks. Check real workflow friction
+existing Knowledge, context and native-plugin checks. Check real workflow friction
 before extending the recognized command patterns.
 
 ## Out of scope

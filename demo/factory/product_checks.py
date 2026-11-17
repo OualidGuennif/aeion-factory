@@ -27,15 +27,201 @@ APP = 'demo/forum-app/'
 WEB = 'demo/forum-web/'
 
 
+_STRICT_ASSERT_EXPORTS = frozenset({
+    'ok', 'equal', 'notEqual', 'strictEqual', 'notStrictEqual',
+    'deepEqual', 'notDeepEqual', 'deepStrictEqual', 'notDeepStrictEqual',
+    'fail', 'ifError', 'throws', 'doesNotThrow', 'rejects', 'doesNotReject',
+    'match', 'doesNotMatch', 'partialDeepStrictEqual',
+})
+
+
+def _add_strict_bindings(clause, alias_sep, namespaces, callables, strip_default=False):
+    """Register namespace and assertion aliases imported or destructured from node:assert/strict."""
+    for raw_item in clause.split(','):
+        item = raw_item.split('=', 1)[0].strip() if strip_default else raw_item.strip()
+        if not item:
+            continue
+        aliased = re.fullmatch(rf'([A-Za-z_$][\w$]*){alias_sep}([A-Za-z_$][\w$]*)', item)
+        if aliased:
+            orig, local = aliased.groups()
+        elif re.fullmatch(r'[A-Za-z_$][\w$]*', item):
+            orig = local = item
+        else:
+            continue
+        if orig in ('default', 'strict'):
+            namespaces.add(local)
+        elif orig in _STRICT_ASSERT_EXPORTS:
+            callables.add(local)
+
+
+_REGEX_PRECEDING_KEYWORDS = frozenset({
+    'return', 'throw', 'case', 'delete', 'void', 'typeof',
+    'instanceof', 'in', 'of', 'await', 'yield', 'new', 'else', 'do', 'export', 'default',
+})
+
+
+def _scan_quoted_literal(text, start):
+    """Return index immediately after a single/double-quoted JS literal from start."""
+    quote = text[start]
+    i, n = start + 1, len(text)
+    while i < n:
+        ch = text[i]
+        if ch == '\\':
+            i += 2
+        elif ch == quote or ch == '\n':
+            return i + (ch == quote)
+        else:
+            i += 1
+    return n
+
+
+def _scan_regex_literal(text, start):
+    """Return index immediately after a JS regex literal starting at '/', or None."""
+    i, n = start + 1, len(text)
+    in_class = False
+    while i < n:
+        ch = text[i]
+        if ch == '\\':
+            i += 2
+        elif ch == '\n':
+            return None
+        elif ch == '[':
+            in_class = True
+            i += 1
+        elif ch == ']' and in_class:
+            in_class = False
+            i += 1
+        elif ch == '/' and not in_class:
+            i += 1
+            while i < n and text[i].isalpha():
+                i += 1
+            return i
+        else:
+            i += 1
+    return n
+
+
+def _scan_js(text):
+    """Return (comments_stripped, code_only) preserving ES template expressions and regexes cleanly."""
+    stripped, code = [], []
+    tmpl_depths = []
+    in_template = False
+    expr_end = False
+    i, n = 0, len(text)
+    while i < n:
+        ch = text[i]
+        if in_template:
+            if ch == '\\' and i + 1 < n:
+                stripped.append(text[i:i + 2]); code.append(' '); i += 2
+            elif ch == '$' and i + 1 < n and text[i + 1] == '{':
+                stripped.append('${'); code.append('${'); tmpl_depths.append(0); in_template = False; expr_end = False; i += 2
+            elif ch == '`':
+                stripped.append('`'); code.append('`'); in_template = False; expr_end = True; i += 1
+            else:
+                stripped.append(ch); code.append('\n' if ch == '\n' else ' '); i += 1
+            continue
+        nxt = text[i + 1] if i + 1 < n else ''
+        if ch == '/' and nxt == '/':
+            end = text.find('\n', i + 2)
+            i = n if end == -1 else end
+            stripped.append(' '); code.append(' ')
+        elif ch == '/' and nxt == '*':
+            end = text.find('*/', i + 2)
+            raw_end = n if end == -1 else end + 2
+            sep = '\n' if '\n' in text[i:raw_end] else ' '
+            i = raw_end
+            stripped.append(sep); code.append(sep)
+        elif ch in ("'", '"'):
+            end = _scan_quoted_literal(text, i)
+            stripped.append(text[i:end]); code.append(ch * 2); expr_end = True; i = end
+        elif ch == '`':
+            stripped.append('`'); code.append('`'); in_template = True; i += 1
+        elif ch == '/' and not expr_end:
+            end = _scan_regex_literal(text, i)
+            if end is not None:
+                stripped.append(text[i:end]); code.append('/ /'); expr_end = True; i = end
+            else:
+                stripped.append('/'); code.append('/'); expr_end = False; i += 1
+        elif ch == '{' and tmpl_depths:
+            tmpl_depths[-1] += 1; stripped.append('{'); code.append('{'); expr_end = False; i += 1
+        elif ch == '}' and tmpl_depths:
+            stripped.append('}'); code.append('}'); i += 1
+            if tmpl_depths[-1] == 0:
+                tmpl_depths.pop(); in_template = True
+            else:
+                tmpl_depths[-1] -= 1
+                expr_end = False
+        elif ch.isalpha() or ch in '_$':
+            j = i + 1
+            while j < n and (text[j].isalnum() or text[j] in '_$'):
+                j += 1
+            tok = text[i:j]
+            stripped.append(tok); code.append(tok); expr_end = tok not in _REGEX_PRECEDING_KEYWORDS; i = j
+        elif ch.isdigit() or (ch == '.' and nxt.isdigit()):
+            j = i + 1
+            while j < n and (text[j].isalnum() or text[j] in '._'):
+                j += 1
+            tok = text[i:j]
+            stripped.append(tok); code.append(tok); expr_end = True; i = j
+        elif (ch == '+' and nxt == '+') or (ch == '-' and nxt == '-'):
+            stripped.append(text[i:i + 2]); code.append(text[i:i + 2]); expr_end = True; i += 2
+        else:
+            stripped.append(ch); code.append(ch)
+            if not ch.isspace():
+                expr_end = ch in ')]'
+            i += 1
+    return ''.join(stripped), ''.join(code)
+
+
+def _has_strict_assertions(imports_source, calls_source):
+    """Return True when the contract calls assert or a bound node:assert/strict helper."""
+    namespaces = {'assert'}
+    callables = set()
+    for match in re.finditer(
+        r'(?<![A-Za-z0-9_$])import(?:\s*\*\s*as\s+|\s+)([A-Za-z_$][\w$]*)(?:\s*,\s*\{[^}]*\})?\s*from\s*[\'"]node:assert/strict[\'"]',
+        imports_source,
+    ):
+        namespaces.add(match.group(1))
+    for match in re.finditer(
+        r'(?<![A-Za-z0-9_$])import\s*(?:[A-Za-z_$][\w$]*\s*,\s*)?\{([^}]*)\}\s*from\s*[\'"]node:assert/strict[\'"]',
+        imports_source,
+    ):
+        _add_strict_bindings(match.group(1), r'\s+as\s+', namespaces, callables)
+    seen_ns = set()
+    while namespaces != seen_ns:
+        seen_ns = set(namespaces)
+        for ns in sorted(seen_ns):
+            ns_pat = rf'(?<![A-Za-z0-9_$]){re.escape(ns)}(?![A-Za-z0-9_$])'
+            for match in re.finditer(
+                rf'(?<![A-Za-z0-9_$])(?:const|let|var)\s*\{{([^}}]*)\}}\s*=\s*{ns_pat}(?:\.strict)?(?![A-Za-z0-9_$.])',
+                imports_source,
+            ):
+                _add_strict_bindings(match.group(1), r'\s*:\s*', namespaces, callables, strip_default=True)
+            for match in re.finditer(
+                rf'(?<![A-Za-z0-9_$])(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*{ns_pat}(?:\.([A-Za-z_$][\w$]*))?\s*(?=[;\n,)]|$)',
+                imports_source,
+            ):
+                local, orig = match.groups()
+                if orig in (None, 'default', 'strict'):
+                    namespaces.add(local)
+                elif orig in _STRICT_ASSERT_EXPORTS:
+                    callables.add(local)
+    return (
+        any(re.search(rf'(?<![A-Za-z0-9_$]){re.escape(ns)}\s*[.(]', calls_source) for ns in namespaces)
+        or any(re.search(rf'(?<![A-Za-z0-9_$]){re.escape(fn)}\s*\(', calls_source) for fn in callables)
+    )
+
+
 def validate_acceptance(text):
     # Shape checks reject common no-ops; runtime isolation and independent review remain mandatory.
     if not isinstance(text,str) or not 1<=len(text.encode())<=48000 or '\0' in text:
         raise PreparationError('preparation_acceptance_size_invalid')
     if 'node:test' not in text or 'node:assert/strict' not in text:
         raise PreparationError('preparation_acceptance_runtime_mismatch')
-    if not re.search(r'\b(?:test|it)\s*\(',text) or not re.search(r'\bassert[.(]',text):
+    comments_stripped, code_only = _scan_js(text)
+    if not re.search(r'(?<![A-Za-z0-9_$])(?:test|it)\s*\(', code_only) or not _has_strict_assertions(comments_stripped, code_only):
         raise PreparationError('preparation_acceptance_assertions_missing')
-    if re.search(r'\.(?:skip|todo|only)\s*\(|\b(?:skip|todo|only)\s*:',text):
+    if re.search(r'\.(?:skip|todo|only)\s*\(|\b(?:skip|todo|only)\s*:', code_only):
         raise PreparationError('preparation_acceptance_skips_forbidden')
 
 
@@ -59,7 +245,7 @@ def registered_acceptance(root, task):
 
 def acceptance_prompt(task, interfaces, feedback=None):
     base_prompt = ('Prepare an executable EXTERNAL black-box acceptance file as JavaScript ESM.\n'
-        'Import test from node:test and assert from node:assert/strict. Use test() and real assertions.\n'
+        'Import test from node:test and assert from node:assert/strict. Use test() and real assertions (e.g. assert.equal, assert.ok).\n'
         'The verifier has Node26, fetch and Playwright1.64.1. Base URL is http://127.0.0.1:8080.\n'
         'It has NO application classes, database credentials, source code, shell authority or host files.\n'
         'Do not run application commands. No skipped/todo/only tests, mocks, arbitrary sleeps or remote requests.\n'

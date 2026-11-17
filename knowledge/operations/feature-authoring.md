@@ -59,7 +59,7 @@ Before an author starts, `TaskPreparer.prepare()` executes the frozen `acceptanc
 | **User-facing / API / Web (`004`+)** | LLM preparer writes Node 26 / `fetch` / Playwright 1.64.1 black-box tests against `http://127.0.0.1:8080`. It has **no** Java classes, DB credentials, shell, or host files. | Specify at least one concrete **externally observable HTTP or browser delta** (route, status code, JSON shape, DOM state, auth/CSRF refusal) that **does not already exist** on baseline. |
 | **Pure internal transition / SPI / build seed (`001`, `002`, `003`, `014`)** | Registered static contract in `demo/factory/transitions/<kind>/` plus supervisor-owned oracle (`product_checks.py`, `product_harness.py`). | Do **not** leave a pure internal/JUnit feature on LLM HTTP preparation if all HTTP probes already pass on baseline. Register a supervisor oracle + transition files and add the ID across `product_checks.py`, `preparation.py`, `store.py`, and `flue_qualification.py`. |
 
-Although `TaskPreparer.prepare()` retries baseline-passing contracts across up to `3` distinct model families with diagnostic feedback (`_baseline_retry_note`), unambiguous observable deltas prevent wasting preparation attempts altogether.
+Although `TaskPreparer.prepare()` clears and retries both contract-shape failures (`preparation_acceptance_*` with `_contract_retry_note`) and baseline-passing contracts (`_baseline_retry_note`) across up to `3` distinct model families with diagnostic feedback, unambiguous observable deltas prevent wasting preparation attempts altogether.
 
 ## 3. Battle-tested lessons from the factory (preventing deadlocks and hallucinations)
 
@@ -94,6 +94,7 @@ Every rule below comes directly from production incidents resolved in Features `
 
 | Hold / Stop reason | Meaning | Fix path |
 | --- | --- | --- |
+| `preparation_acceptance_*` | Proposed `acceptance.mjs` failed static ESM shape checks (for example missing assertions or `.skip`/`.todo`/`.only`) across up to 3 retryable preparer families. | Inspect `proposed-acceptance.json` and check logs; `validate_acceptance` accepts direct, destructured, and named `node:assert/strict` assertions and ignores prose comments/strings, while cancelling and relaunching retries cleanly. |
 | `preparation_negative_control_missing` | Prepared `acceptance.mjs` passed all assertions on untouched baseline after retries. | Tighten the feature spec's externally observable baseline delta (`specs_*.py`), or add a registered transition oracle if pure internal SPI/build work. |
 | `reviewer_rejected` / `correction_unchanged` | Author satisfied a buggy/out-of-scope contract or reviewers flagged out-of-scope edits. | Do not edit `acceptance.mjs` manually to loosen assertions; inspect `receipt.feedback` / `circuit.votes`, fix the spec or factory prompt, cancel the held build, and re-run cleanly (`reprepare_needed` auto-triggers on retry). |
 | `SANDBOX_UNAVAILABLE` | Docker/OpenShell TLS permissions or stale container collision. | Ensure `openshell/setup.py` `normalize_tls_permissions` ran and wait/clear stale gateway sandboxes; `dispatch.py` retries transient stops automatically up to attempt limit. |

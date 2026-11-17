@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- Fixed `validate_acceptance` (`demo/factory/product_checks.py`) rejecting valid
+  `node:assert/strict` contracts that destructure or import assertion helpers
+  (such as `const { ok, equal } = assert;` or named imports) or contain comments
+  like `// Diagnostic only:`, by scanning JS comments, strings, templates, and regex
+  literals before code-structure checks and resolving bound assertion identifiers.
+- Moved `_prepare_and_check` shape errors (`preparation_acceptance_*`) inside the
+  multi-attempt retry loop of `TaskPreparer.prepare()` (`demo/factory/preparation.py`)
+  so invalid contract shapes clear the attempt folder, avoid duplicate telemetry writes
+  across `DispatchWorker`, and retry with diagnostic feedback across up to three eligible
+  preparer families before holding.
+
 - Redesigned Feature Cockpit (`/` and `/factory`) and Model Lab (`/lab`) into a calm monochrome
   palette aligned with Æion Spec (`demo/app/theme.css` light/dark tokens), left-sidebar single-section
   navigation (4 cockpit sections, 5 lab sections), and bounded pagination (10 features per page in

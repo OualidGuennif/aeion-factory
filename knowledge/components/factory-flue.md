@@ -4,12 +4,12 @@ title: "Flue factory execution"
 description: "Deterministic supervision of untrusted Flue/Pi workers, isolated tools and protected publication."
 status: draft
 verified:
-  - at: 2026-11-09
-    what: "unittest product boundary, correction rounds, work limits, target check, execution, routing and telemetry: out-of-scope Spec doc refused; JUnit XML diagnostics; signature-based repeated-check stop with round continuation and prior candidate seed; routing v6"
   - at: 2026-11-10
     what: "unittest budget and dispatch: open_reservations lists unsettled entries, unconditional settlement clears reservations on incomplete usage, orphan reservations are reconciled at startup"
   - at: 2026-11-12
     what: "factory modernization: bridge read/stat caching with mutating invalidation, OpenShell 0.1.8 qualification, persistent author state with passed-check guidance, Langfuse v5.2 enterprise prompt management and multi-dimensional scores, Hindsight 1.2.1 reflection fallback"
+  - at: 2026-11-17
+    what: "unittest preparation and full suite: validate_acceptance scans JS comments, strings, templates and regex literals while resolving destructured/named node:assert/strict bindings, and TaskPreparer retries preparation_acceptance_* without double-recording telemetry"
 sources:
   - resource: ../../demo/factory/review_context.py
     title: "One-time operator repair of the old review envelope"
@@ -144,10 +144,7 @@ external Node acceptance, never a command or policy; the historical Java profile
 The exact registered001/002/003/014 MDs and architecture use fixed supervisor acceptance with no model request or
 cost. A changed MD cannot reuse that oracle. Its untouched-baseline startup rejection is a
 registered negative; arbitrary compiler/toolchain failure never qualifies an acceptance contract.
-Ordinary contracts require actual failing external assertions on the untouched baseline; if a live
-product contract passes on the untouched baseline (`preparation_negative_control_missing`) or fails
-baseline report production, `TaskPreparer.prepare` automatically retries with baseline diagnostic
-feedback across eligible preparer families before holding.
+Ordinary contracts require actual failing external assertions on the untouched baseline (`validate_acceptance` uses a JS lexical scanner for comments, strings, regex literals, and template expressions before checking `test`/`it`, `.skip`/`.todo`/`.only`, and strict assertions including destructured, aliased, or named `node:assert/strict` bindings). If a live product contract fails static shape validation (`preparation_acceptance_*`), passes on the untouched baseline (`preparation_negative_control_missing`), or fails baseline report production, `TaskPreparer.prepare` clears the temporary contract directory, resets `last_model` when recording intermediate retry telemetry so `DispatchWorker` never double-records an outcome, and automatically retries with diagnostic feedback across up to three eligible preparer families before holding (`test_factory_preparation`).
 The registered002/003/014 untouched baseline must lack their operator, test-harness SPI/role/host
 guarantees, or browser source; compiler failure
 or a missing checker reason cannot stand in for that absence. Positive candidates still need the

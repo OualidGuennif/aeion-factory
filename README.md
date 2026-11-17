@@ -1,119 +1,53 @@
 # Æion Factory
 
-**See what your coding agents really deliver. Pay for results, not attempts.**
+Æion Factory is the autonomous build and observability workspace for the Æion ecosystem. It pairs an offline evaluation suite (`examples/`) with an opt-in local runtime (`demo/`) where coding agents implement, test, review, and publish product features inside isolated sandboxes.
 
-A framework for observing complete coding-agent tasks, linking them to verified outcomes, and
-choosing models, providers and settings from that evidence, with offline examples and an opt-in
-local factory that builds real features end to end.
+Start at the [knowledge index](knowledge/index.md) and the [observability specification](knowledge/components/observability.md).
 
-[Framework](#the-framework) · [Try the examples](#try-the-examples) · [Factory pilot](#the-factory-pilot) · [Repository map](#repository-map) · [Development](#development)
+## Core principles
 
-## What is here
+1. Verified work beats raw speed or price. A clean, unassisted pass that clears protected checks outranks a faster or cheaper run that fails checks or needs manual rescue.
+2. Default telemetry exports metadata only. Prompts, source code, hidden reasoning, tool payloads, and secrets stay out of OTLP spans and local audit logs.
+3. Spending and context are capped on the host. Each daily purse enforces `$150.00/day` (`$50.00` per author run, `$1.00` per review vote) in [`demo/budget.conf`](demo/budget.conf). Active input context hands over to a fresh agent session at `250,000` tokens (`300,000` hard cap).
+4. Checks and reviews run independently of the author. Candidate diffs are verified in a container with `--network none` and reviewed by two distinct model families before any pull request can merge.
+5. Unknown states fail closed. Missing usage data, stale sandbox proofs, or unqualified capabilities pause admission rather than guessing.
 
-| Part | What you get | Where | You need |
-| --- | --- | --- | --- |
-| **Framework** | The design: telemetry contract, quality measure, control loop, security | [`knowledge/`](knowledge/index.md) | Nothing; read it |
-| **Examples** | Synthetic events and cost/quality arithmetic that check the contracts | [`examples/`](examples/README.md) | Python 3.9+ |
-| **Factory pilot** | A local Docker demo that turns a Markdown spec into a reviewed pull request on a real product | [`demo/`](demo/README.md) | Docker, Node, provider keys |
+## What is in this repository
 
-Each part works without the others.
-
-**Status.** The framework and examples are complete as a design. The pilot runs end to end on
-[`aeion-autonomous-forum`](https://github.com/OualidGuennif/aeion-autonomous-forum), but no
-product feature has completed the whole circuit to main yet, and no cost or quality improvement
-has been measured on real workloads. Synthetic examples are never benchmark evidence.
-[Current work →](work/current.md) · [Dated evidence →](work/validation.md)
-
-## The framework
-
-One number decides whether a setup is better:
-
-```text
-cost per verified autonomous success =
-  all attributable costs / number of verified autonomous successes
-```
-
-Failed attempts, retries, evaluations and sandboxes all count. Zero successes makes it undefined,
-never zero. Human repair time, missed deadlines and telemetry coverage are reported next to it.
-
-In short:
-
-- **OpenTelemetry/OTLP** carries the data; accounting and outcomes stay complete when traces are sampled.
-- **Langfuse** is evaluated for traces and evaluations; the contracts do not depend on it.
-- Rollout goes **observe → shadow recommendations → bounded canary**, with a small catalog of
-  tested profiles instead of tuning every parameter.
-- Both access paths stay: a **Claude subscription** through its CLI, and **OpenRouter or DeepInfra APIs**.
-- Observability recommends; it never widens an agent's permissions or removes a review gate.
-
-| Read | To learn |
+| Path | Purpose |
 | --- | --- |
-| [Framework specification](knowledge/components/observability.md) | Responsibilities, architecture, interfaces, invariants |
-| [Telemetry contract](knowledge/operations/telemetry-contract.md) | Task, session and attempt identity; events; usage |
-| [Quality and evaluation](knowledge/operations/quality-and-evaluation.md) | Autonomous success, human intervention, experiments |
-| [Control loop](knowledge/operations/control-loop.md) | When a decision may change during a task |
-| [Security and reliability](knowledge/operations/security-and-reliability.md) | Trust, content handling, outages, budgets |
-| [Provider capabilities](knowledge/references/provider-capabilities.md) | Exact controls per provider and harness |
-| [State of the art](knowledge/references/state-of-the-art.md) · [sources](knowledge/references/sources.md) | Alternatives and the primary sources behind each choice |
+| [`knowledge/index.md`](knowledge/index.md) | Canonical architecture, component specs, policies, and runbooks |
+| [`knowledge/components/observability.md`](knowledge/components/observability.md) | Event contract, privacy tiers, cost accounting, and routing rules |
+| [`knowledge/components/operator-cockpit.md`](knowledge/components/operator-cockpit.md) | Feature Cockpit (`/`) and Model Lab (`/lab`) specification |
+| [`knowledge/components/factory-flue.md`](knowledge/components/factory-flue.md) | End-to-end feature execution, two-reviewer circuit, and PR publication |
+| [`demo/README.md`](demo/README.md) | Local pilot runbook: OpenShell 0.1.8, Flue 2.3 + Pi 1.4, Langfuse, and Hindsight |
+| [`examples/README.md`](examples/README.md) | Offline synthetic fixtures, cohort comparisons, and deterministic guards |
+| [`docs/architecture/high-level.md`](docs/architecture/high-level.md) | High-level system and data-flow diagrams |
+| [`work/validation.md`](work/validation.md) | Dated verification records and test evidence |
 
-## Try the examples
+## Quick checks without external services
 
-No key, no service:
+The root test suite uses Python 3 standard library tooling and runs offline without Docker, network access, or API keys:
 
-```bash
-git clone https://github.com/OualidGuennif/aeion-factory.git
-cd aeion-factory
+```sh
 python3 examples/compare_cohorts.py
+python3 examples/validate_fixtures.py
 python3 -m unittest discover -s tests -v
-```
-
-The fictional `cheap` cohort costs $72 for six successes ($12 each); `balanced` costs $82 for
-nine (about $9.11 each). The cheaper cohort costs more per success.
-[Worked examples →](examples/README.md)
-
-## The factory pilot
-
-You pick a feature in a local cockpit; the factory builds it, checks it and publishes it only
-when everything agrees:
-
-```text
-Markdown spec ─► preparation ─► author agent (Flue + Pi, tools only inside an OpenShell sandbox)
-   ─► protected checks ─► two independent reviewer models
-   ─► rejected or failed gate? up to two automatic correction rounds, then you decide
-   ─► pull request ─► CI on the exact head ─► red CI? the same correction rounds
-   ─► product main
-```
-
-Every step is traced, budgeted (up to 150 USD a day per repository, 50 USD per author execution
-and 1 USD per review vote in `demo/budget.conf`) and kept as a receipt. The author
-has no network, reviewers never share the author's model family, and an uncertain step stops the
-build instead of guessing.
-
-[Setup and runbook →](demo/README.md) · [Execution contract](knowledge/components/factory-flue.md) ·
-[Cockpit](knowledge/components/operator-cockpit.md) · [Trust model](demo/factory/trust-model.md)
-
-## Repository map
-
-| Folder | Contents |
-| --- | --- |
-| `knowledge/` | The framework docs. Start at [the index](knowledge/index.md). |
-| `examples/`, `tests/` | Offline synthetic fixtures and their tests |
-| `demo/` | The factory pilot: `app/` cockpit and relay, `factory/` supervisor, `flue/` agents, `openshell/` sandbox, `forum/` product catalog, `tests/` |
-| `work/` | Current work and the validation record |
-| `tools/`, `loops/`, `.claude/`, `.agents/`, `.grok/`, … | Development tooling from the template |
-
-## Development
-
-Built from the [Æion Template](https://github.com/OualidGuennif/aeion-template) template (v4.0.3).
-Agent instructions: [AGENTS.md](AGENTS.md).
-
-```bash
-python3 -m unittest discover -s tests -v
-python3 -m unittest discover -s demo/tests -v
 tools/knowledge/knowledge-check && tools/knowledge/doc-links && tools/repo-health/repo-health
 tools/template-tests
 ```
 
-## License
+## Local Feature Cockpit and Model Lab (`demo/`)
 
-[MIT](LICENSE) for original material; upstream work keeps its own license ([credits](CREDITS.md)).
-Security reports: [SECURITY.md](SECURITY.md).
+The opt-in local controller serves two sidebar-driven monochrome views on `http://127.0.0.1:8088/`:
+
+- The Feature Cockpit (`/` and `/factory`) unlocks with `demo/.local/factory/admin.token` so you can browse the 100 Agora specs (10 per page), launch isolated Flue + Pi builds in OpenShell, inspect queued or historical builds (5 per page), and track the `$150/day` budget ledger.
+- The Model Lab (`/lab`) runs frozen JavaScript sandbox tasks, replays the 250k token handover, compares model cost against elapsed time, and queries local SHA-256 checkpoints or Hindsight session notes.
+
+See [`demo/README.md`](demo/README.md) for setup, qualification, and shutdown instructions.
+
+## How work flows here
+
+1. Read the covering spec in [`knowledge/`](knowledge/index.md) before editing code (`tools/knowledge/doc-links --for <file>`).
+2. Make small, tested changes on `develop`. Local hooks check secrets, syntax, and documentation links as you edit and commit.
+3. Record an independent review and dated test evidence in [`work/validation.md`](work/validation.md) before pushing `develop` or merging to `main`.

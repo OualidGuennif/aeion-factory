@@ -2,9 +2,12 @@
 "use strict";
 const TERMINAL = ["merged", "failed", "cancelled", "simulated_complete", "live_complete", "baseline"];
 const LANGFUSE_UI = "http://127.0.0.1:3300";
-const LANGFUSE_PROJECT = "aeion-demo"; // The project initialized by demo/compose.yaml.
+const LANGFUSE_PROJECT = "aeion-demo";
 const state = { csrf: null, selected: new Set(), catalog: [], builds: [], events: [], lastSeq: 0,
-  execution: {}, filter: "all", refreshing: false, submitting: false, stream: null, requestKey: null, specRequest: 0, buildMarkup: {} };
+  execution: {}, filter: "all", activeView: "catalog", catalogPage: 1, buildsPage: 1, historyPage: 1,
+  refreshing: false, submitting: false, stream: null, requestKey: null, specRequest: 0, buildMarkup: {} };
+const FEATURES_PER_PAGE = 10;
+const BUILDS_PER_PAGE = 5;
 const $ = (id) => document.getElementById(id);
 const LABELS = { ready: "Ready", implemented: "Implemented", built: "Built · awaiting integration",
   in_progress: "In progress", blocked: "Waiting", live_complete: "Built", baseline: "Verified baseline",
@@ -14,6 +17,18 @@ function esc(value) {
   return String(value).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 function uid() { return crypto.randomUUID(); }
+function switchView(viewName) {
+  if (!viewName || typeof document === "undefined" || !document.querySelectorAll) return;
+  state.activeView = viewName;
+  document.querySelectorAll("[data-view-target]").forEach((btn) => {
+    const active = btn.dataset.viewTarget === viewName;
+    btn.classList.toggle("is-active", active);
+    btn.setAttribute("aria-pressed", String(active));
+  });
+  document.querySelectorAll("[data-view-panel]").forEach((panel) => {
+    panel.hidden = panel.dataset.viewPanel !== viewName;
+  });
+}
 function availability(feature) {
   return feature.availability || { state: "blocked", selectable: false, reason: "availability_unavailable" };
 }
@@ -182,6 +197,7 @@ function setConnection(connected, label) {
 }
 function showLogin() {
   $("login").hidden = false; $("app").hidden = true;
+  if ($("workspace-tabs")) $("workspace-tabs").hidden = true;
   state.csrf = null; state.selected.clear();
   if (state.stream) { state.stream.close(); state.stream = null; }
   setConnection(false, "Sign in required");
@@ -223,21 +239,57 @@ function renderOverview() {
   $("next-title").textContent = step.title; $("next-detail").textContent = step.detail;
   $("next-step").classList.toggle("attention", /on hold|paused|Nothing real/.test(step.title));
 }
+function renderPager(id, page, totalItems, perPage, onPage) {
+  const nav = $(id);
+  if (!nav || typeof nav.querySelectorAll !== "function") return;
+  const totalPages = Math.max(1, Math.ceil(totalItems / perPage));
+  if (totalItems <= perPage) {
+    nav.hidden = true;
+    nav.innerHTML = "";
+    return;
+  }
+  nav.hidden = false;
+  const pages = [];
+  for (let p = 1; p <= totalPages; p++) {
+    if (p === 1 || p === totalPages || Math.abs(p - page) <= 1) pages.push(p);
+    else if (pages[pages.length - 1] !== "…") pages.push("…");
+  }
+  const start = (page - 1) * perPage + 1;
+  const end = Math.min(totalItems, page * perPage);
+  nav.innerHTML = `<span class="pager-info">${start}–${end} of ${totalItems} · Page ${page} / ${totalPages}</span>` +
+    `<div class="pager-controls"><button type="button" class="pager-btn" data-page="${page - 1}" ${page <= 1 ? "disabled" : ""}>← Prev</button>` +
+    pages.map((p) => p === "…" ? `<span class="pager-ellipsis">…</span>`
+      : `<button type="button" class="pager-btn ${p === page ? "is-active" : ""}" data-page="${p}" aria-current="${p === page ? "page" : "false"}">${p}</button>`).join("") +
+    `<button type="button" class="pager-btn" data-page="${page + 1}" ${page >= totalPages ? "disabled" : ""}>Next →</button></div>`;
+  nav.querySelectorAll("[data-page]").forEach((btn) => btn.addEventListener("click", () => {
+    const next = parseInt(btn.dataset.page, 10);
+    if (Number.isInteger(next) && next >= 1 && next <= totalPages && next !== page) onPage(next);
+  }));
+}
 function renderCards() {
   cleanSelection();
   const features = visibleFeatures();
+  const totalPages = Math.max(1, Math.ceil(features.length / FEATURES_PER_PAGE));
+  if (state.catalogPage > totalPages) state.catalogPage = totalPages;
+  if (state.catalogPage < 1) state.catalogPage = 1;
+  const paged = features.slice((state.catalogPage - 1) * FEATURES_PER_PAGE, state.catalogPage * FEATURES_PER_PAGE);
   $("catalog-count").textContent = `${features.length} of ${state.catalog.length}`;
-  $("cards").innerHTML = features.length ? features.map((f) => {
+  $("cards").innerHTML = paged.length ? paged.map((f) => {
     const a = availability(f);
     const checked = state.selected.has(f.id);
     const disabled = !a.selectable || state.submitting || (!checked && state.selected.size >= 10);
+    const showReason = a.state !== "ready" && a.state !== "implemented" && Boolean(a.reason);
     return `<article class="feature-row ${disabled ? "locked" : ""} ${checked ? "selected" : ""}">` +
       `<input type="checkbox" id="feature-${esc(f.id)}" data-id="${esc(f.id)}" aria-label="Select feature ${esc(f.id)}" ${checked ? "checked" : ""} ${disabled ? "disabled" : ""}>` +
-      `<div class="feature-copy"><div class="feature-top"><span class="feature-number">${f.sequence ? `Step ${esc(f.sequence)} · ` : ""}${esc(f.id)} · ${esc(f.phase)}</span>` +
-      `<span class="badge ${esc(a.state)}">${esc(featureLabel(a))}</span></div><label class="feature-title" for="feature-${esc(f.id)}">${esc(f.title)}</label>` +
-      `<p class="feature-reason">${esc(reasonText(a))}</p><button class="text-button spec-button" data-spec="${esc(f.id)}" type="button">Read MD →</button></div></article>`;
+      `<div class="feature-copy"><div class="feature-top"><div class="feature-heading"><span class="feature-number">${f.sequence ? `Step ${esc(f.sequence)} · ` : ""}#${esc(f.id)} · ${esc(f.phase)}</span>` +
+      `<label class="feature-title" for="feature-${esc(f.id)}">${esc(f.title)}</label></div>` +
+      `<div class="feature-actions"><span class="badge ${esc(a.state)}">${esc(featureLabel(a))}</span>` +
+      `<button class="text-button spec-button" data-spec="${esc(f.id)}" type="button">Spec →</button></div></div>` +
+      (showReason ? `<p class="feature-reason">${esc(reasonText(a))}</p>` : "") +
+      `</div></article>`;
   }).join("") : `<div class="empty-state"><div class="empty-icon">◇</div><h3>${state.filter === "ready" ? "Nothing ready to launch yet" : "No matching features"}</h3>` +
     `<p>${state.filter === "ready" ? "Browse the catalog to read the specifications and see the exact waiting states. Completed work stays locked." : "Try another search or status filter."}</p><button class="text-button" id="view-all">View all features →</button></div>`;
+  renderPager("catalog-pager", state.catalogPage, features.length, FEATURES_PER_PAGE, (p) => { state.catalogPage = p; renderCards(); });
   $("cards").querySelectorAll("[data-id]").forEach((input) => input.addEventListener("change", () => {
     if (input.checked && state.selected.size < 10) state.selected.add(input.dataset.id);
     else state.selected.delete(input.dataset.id);
@@ -271,6 +323,7 @@ async function openSpec(id) {
 }
 function setFilter(filter) {
   state.filter = filter;
+  state.catalogPage = 1;
   $("status-filters").querySelectorAll("[data-filter]").forEach((button) => {
     const selected = button.dataset.filter === filter;
     button.classList.toggle("selected", selected); button.setAttribute("aria-pressed", String(selected));
@@ -467,12 +520,26 @@ function splitBuilds(builds) {
 }
 function renderBuilds() {
   const { current, history } = splitBuilds(state.builds);
-  updateBuildList("builds", current.length ? current.slice(0, 8).map(buildCard).join("")
+  const buildsTotalPages = Math.max(1, Math.ceil(current.length / BUILDS_PER_PAGE));
+  if (state.buildsPage > buildsTotalPages) state.buildsPage = buildsTotalPages;
+  const pagedBuilds = current.slice((state.buildsPage - 1) * BUILDS_PER_PAGE, state.buildsPage * BUILDS_PER_PAGE);
+  updateBuildList("builds", pagedBuilds.length ? pagedBuilds.map(buildCard).join("")
     : '<div class="empty-state"><h3>No real build yet</h3><p>Your next admitted feature will appear here.</p></div>');
+  renderPager("builds-pager", state.buildsPage, current.length, BUILDS_PER_PAGE, (p) => { state.buildsPage = p; renderBuilds(); });
   $("queue-count").textContent = activitySummary(state.builds);
-  updateBuildList("history", history.map(buildCard).join(""));
+  const historyTotalPages = Math.max(1, Math.ceil(history.length / BUILDS_PER_PAGE));
+  if (state.historyPage > historyTotalPages) state.historyPage = historyTotalPages;
+  const pagedHistory = history.slice((state.historyPage - 1) * BUILDS_PER_PAGE, state.historyPage * BUILDS_PER_PAGE);
+  updateBuildList("history", pagedHistory.map(buildCard).join(""));
+  renderPager("history-pager", state.historyPage, history.length, BUILDS_PER_PAGE, (p) => { state.historyPage = p; renderBuilds(); });
   $("history-count").textContent = `(${history.length})`;
   $("history-panel").hidden = !history.length;
+  const activeCount = state.builds.filter((b) => RUNNING.includes(b.status)).length;
+  const badge = $("activity-tab-badge");
+  if (badge) {
+    badge.hidden = !activeCount;
+    badge.textContent = activeCount > 0 ? `${activeCount} active` : "Live";
+  }
   tickClocks();
 }
 function renderBudgets(budget) {
@@ -500,6 +567,7 @@ async function refresh() {
     if (catalog.status === 401 || board.status === 401) { showLogin(); return; }
     if (!catalog.ok || !board.ok) throw new Error("unavailable");
     $("login").hidden = true; $("app").hidden = false;
+    if ($("workspace-tabs")) $("workspace-tabs").hidden = false;
     state.catalog = catalog.body.features || []; state.execution = catalog.body.execution || {};
     state.builds = board.body.builds || []; state.csrf = board.body.csrf || state.csrf;
     const phase = $("phase-filter").value;
@@ -511,7 +579,11 @@ async function refresh() {
     if (!state.stream) connectSSE();
   } catch {
     setConnection(false, "Connection interrupted");
-    $("queue-msg").textContent = "The controller is unavailable. Reconnecting; no new request was sent.";
+    if ($("app")?.hidden) {
+      $("login-msg").textContent = "Cannot reach the local controller.";
+    } else {
+      $("queue-msg").textContent = "The controller is unavailable. Reconnecting; no new request was sent.";
+    }
   } finally { state.refreshing = false; }
 }
 async function queue() {
@@ -524,6 +596,7 @@ async function queue() {
       state.selected.clear(); state.requestKey = null;
       $("queue-msg").textContent = "Request recorded. Follow its progress in Build activity.";
       pushEvent("request_recorded");
+      switchView("activity");
     } else {
       const code = result.body.error || result.body.status || "request_refused";
       $("queue-msg").textContent = code.startsWith("feature_already_completed") ? "This feature is already completed and cannot be launched again."
@@ -552,6 +625,12 @@ function connectSSE() {
   es.onerror = () => setConnection(false, "Live updates reconnecting");
 }
 async function boot() {
+  document.querySelectorAll("[data-view-target]").forEach((btn) => {
+    btn.addEventListener("click", () => switchView(btn.dataset.viewTarget));
+  });
+  document.querySelectorAll("[data-jump-view]").forEach((btn) => {
+    btn.addEventListener("click", () => switchView(btn.dataset.jumpView));
+  });
   $("login-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     const button = $("login-form").querySelector("button"); button.disabled = true;
@@ -565,8 +644,8 @@ async function boot() {
   $("build-one").addEventListener("click", queue);
   $("spec-close").addEventListener("click", () => { state.specRequest++; $("spec-dialog").close(); });
   $("spec-dialog").addEventListener("cancel", () => { state.specRequest++; });
-  $("feature-search").addEventListener("input", renderCards);
-  $("phase-filter").addEventListener("change", renderCards);
+  $("feature-search").addEventListener("input", () => { state.catalogPage = 1; renderCards(); });
+  $("phase-filter").addEventListener("change", () => { state.catalogPage = 1; renderCards(); });
   $("status-filters").querySelectorAll("[data-filter]").forEach((button) => button.addEventListener("click", () => setFilter(button.dataset.filter)));
   await refresh();
   setInterval(() => { if (!$("app").hidden) refresh(); }, 10000);

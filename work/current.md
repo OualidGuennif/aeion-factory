@@ -1,15 +1,15 @@
 # Current work
 
-Updated 2026-11-16. Current facts only; historical evidence is in HANDOVER.md and validation.md.
+Updated 2026-11-17. Current facts only; historical evidence is in HANDOVER.md and validation.md.
 No final operational Go or actual product feature merge is claimed.
 
-## Template v4.0.3, aeion-factory rename, and UI modernization — OWNER COMPOSE RESET PENDING
+## Monochrome Cockpit & Lab UI Revamp + Humanized Docs — PENDING RELEASE
 
-- Owner decision: rename all `aeion-observability` identifiers and docs to `aeion-factory`, adopt Æion Template `v4.0.3` (removing Archify/Graphify), restart the local stack on `aeion-factory`, simplify `/` + `/lab`, and ship to `main`.
-- State: template updated to `v4.0.3` (`ed98774`), `aeion-observability` identifiers + Archify/Graphify removed (`a502de2`), ledger migrated (161 entries), venv & OpenShell `0.1.8` rebuilt, 6/6 capabilities activated, live cockpit running on `127.0.0.1:8088`, and `/` + 4-section `/lab` modernized across desktop/mobile light/dark.
-- Next: owner runs the 3 `docker compose` reset commands (`demo/.local/stack.env` protected from agent shell) to recreate running containers as `aeion-factory-demo` and drop old `aeion-observability-demo_*` volumes.
-- Blocker: `guard-bash.py` blocks agent access to `stack.env`; `v4.0.3` `CONTRACT` hooks drop our earlier git transport (`--upload-pack`/`ext::`) and Grok multi-path checks until ported upstream.
-- Evidence: [validation](validation.md); [cockpit spec](../knowledge/components/operator-cockpit.md); [build and test](../knowledge/operations/build-and-test.md).
+- Owner decision: redesign `/` and `/lab` around Æion Spec's monochrome light/dark palette with single-section sidebar navigation, 10-feature and 5-run/build pagination, and humanized documentation across the repo.
+- State: `/` (`Catalog`, `Builds`, `Budget & mode`, `Environments & logs`) and `/lab` (`Run a task`, `Run history`, `Models`, `Memory`, `Architecture`) switched to monochrome `theme.css` + `[hidden] { display: none !important; }` + pagers (`10` features, `5` builds/runs/checkpoints); `impeccable detect` clean (`0` findings); `375px`/`1440px` browser checks clean (`0` overflow/console/CSP errors); docs humanized and stale `claude-mem` notes fixed.
+- Next: review `develop`, merge PR to `main`, and owner runs Compose reset if still using `aeion-observability-demo` containers (`demo/.local/stack.env` protected by `guard-bash.py`).
+- Blocker: `guard-bash.py` blocks agent shell access to `stack.env`.
+- Evidence: [validation](validation.md); [cockpit spec](../knowledge/components/operator-cockpit.md); [UI policy](../knowledge/policies/ui-ux.md).
 
 ## Feature 003 Live Completion, Authoring Playbook & Catalog Alignment — COMPLETED
 

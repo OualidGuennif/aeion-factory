@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- Redesigned Feature Cockpit (`/` and `/factory`) and Model Lab (`/lab`) into a calm monochrome
+  palette aligned with Æion Spec (`demo/app/theme.css` light/dark tokens), left-sidebar single-section
+  navigation (4 cockpit sections, 5 lab sections), and bounded pagination (10 features per page in
+  Catalog; 5 items per page in Builds, History, Run history, and Checkpoints). Verified with 0
+  findings in `impeccable detect`, 0 horizontal overflow at `1440px`/`375px` light/dark, and 31/31
+  `test_cockpit_client.mjs` assertions.
+- Rewrote visible cockpit/lab UI strings and repository docs (`README.md`, `demo/README.md`,
+  `examples/README.md`, `demo/factory/runbook.md`, `demo/factory/trust-model.md`,
+  `docs/architecture/high-level.md`) using `humanizer`, replacing retired `claude-mem` / 9-service
+  references with 8 Compose services and local SHA-256 checkpoints.
+
 - Upgrades repository template foundation to Æion Template `v4.0.3` (`adapter-check` 31/31),
   retires Archify and Graphify artifacts/helpers (`docs/architecture/high-level.md` retains pure
   Mermaid), and aligns hook tests and security/loop docs with `v4.0.3` `CONTRACT` connectors

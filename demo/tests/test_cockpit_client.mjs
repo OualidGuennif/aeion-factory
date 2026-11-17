@@ -340,3 +340,48 @@ test('a failed review vote names the provider status and the retries it already 
   assert.match(substituted, /Busy reviewer replaced/);
   assert.match(substituted, /deepseek-4\.1-flash error · PROVIDER_RATE_LIMITED · provider HTTP 429 · 2 provider retries/);
 });
+
+test('catalog paginates at 10 features and hidden CSS rule protects panel switching', () => {
+  const { context, run } = client();
+  context.fixture = Array.from({ length: 14 }, (_, idx) => ({
+    id: String(idx + 1).padStart(3, '0'),
+    title: `Feature ${idx + 1}`,
+    phase: 'P0',
+    sequence: idx + 1,
+    availability: { state: 'ready', selectable: true },
+  }));
+  const nodes = {};
+  const stub = (id) => id === 'view-all' ? null : (nodes[id] ??= {
+    id, value: '', hidden: false, disabled: false, innerHTML: '', textContent: '',
+    querySelectorAll: () => [], addEventListener: () => {},
+  });
+  context.document = { getElementById: stub, querySelectorAll: () => [] };
+  run('state.catalog = fixture; state.filter = "all"; state.catalogPage = 2; renderCards()');
+  assert.equal((nodes.cards.innerHTML.match(/<article /g) || []).length, 4);
+  assert.match(nodes['catalog-pager'].innerHTML, /11–14 of 14 · Page 2 \/ 2/);
+  const factoryCss = readFileSync(new URL('../app/factory.css', import.meta.url), 'utf8');
+  const labCss = readFileSync(new URL('../app/style.css', import.meta.url), 'utf8');
+  assert.match(factoryCss, /\[hidden\]\s*\{[^}]*display:\s*none\s*!important/);
+  assert.match(labCss, /\[hidden\]\s*\{[^}]*display:\s*none\s*!important/);
+});
+
+test('dependency reasons stay visible in All features and lab/cockpit HTML shells guard hidden state', () => {
+  const { context, run } = client();
+  context.fixture = [
+    { id: '001', title: 'Base', phase: 'P0', sequence: 1, availability: { state: 'implemented', selectable: false, reason: 'already_implemented' } },
+    { id: '004', title: 'Register', phase: 'P0', sequence: 2, availability: { state: 'blocked', selectable: false, reason: 'dependency_missing', missing_dependencies: ['002', '003'] } },
+  ];
+  const nodes = {};
+  const stub = (id) => id === 'view-all' ? null : (nodes[id] ??= {
+    id, value: '', hidden: false, disabled: false, innerHTML: '', textContent: '',
+    querySelectorAll: () => [], addEventListener: () => {},
+  });
+  context.document = { getElementById: stub, querySelectorAll: () => [] };
+  run('state.catalog = fixture; state.filter = "all"; state.catalogPage = 1; renderCards()');
+  assert.match(nodes.cards.innerHTML, /Waiting for features 002, 003 to be integrated\./);
+  assert.doesNotMatch(nodes.cards.innerHTML, /Implemented and locked/);
+  const factoryHtml = readFileSync(new URL('../app/factory.html', import.meta.url), 'utf8');
+  assert.match(factoryHtml, /<nav\b[^>]*\bid="workspace-tabs"[^>]*\bhidden\b/);
+  const indexHtml = readFileSync(new URL('../app/index.html', import.meta.url), 'utf8');
+  assert.ok(indexHtml.indexOf('id="message"') < indexHtml.indexOf('data-lab-panel="sessions"'));
+});

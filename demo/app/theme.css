@@ -1,45 +1,129 @@
-/* Spec: knowledge/policies/ui-ux.md — every colour token for both pages, light and dark sets. */
-:root{color-scheme:light;
-  --bg:#f7f4ec;--panel:#fffdf7;--soft:#eef0e7;--sidebar:#eef0e8;--topbar:#fafaf5;--field:#ffffff;
-  --ink:#1f362d;--muted:#5e6862;--line:#dde1d5;--line-soft:#eceee5;
-  --accent:#9a5330;--green:#2f5e4b;--amber:#7f5a24;--red:#9b4532;--focus:#6d43a4;
-  --on-ink:#fffdf7;--ink-hover:#345245;--on-ink-soft:#c3d2c6;
-  --ok-bg:#e8f0e3;--ok-ink:#3c5c3f;--ok-line:#c8d5c8;
-  --info-bg:#e8eeed;--info-ink:#3d5c55;
-  --warn-bg:#f3ead9;--warn-ink:#7f5a24;--warn-line:#e3cfb3;
-  --bad-bg:#f5e9df;--bad-ink:#9b4532;
-  --accent-tint:#9a533010;--accent-line:#9a533045;
-  --ok-tint:#5f826812;--ok-dot:#5f8268;--dot:#a5afa6;
-  --selected-row:#f0f5ec;--locked-row:#fafbf5;--bar:#718469;
-  --chart-grid:#d5d7c9;--chart-axis:#aab5a5;--pass-fill:#25382e;--fail-fill:#c79270;--chart-ring:#fffcf5;
-  --shadow:#1f362d14;--backdrop:#18332b70;--art-blend:multiply;--art-filter:none}
-:root[data-theme=dark]{color-scheme:dark;
-  --bg:#111714;--panel:#18201c;--soft:#202a25;--sidebar:#151d19;--topbar:#141b17;--field:#111714;
-  --ink:#e6ebe4;--muted:#a2aca5;--line:#313d37;--line-soft:#26302b;
-  --accent:#e39a74;--green:#8fc6a6;--amber:#dcb36d;--red:#f09a85;--focus:#c7a3ff;
-  --on-ink:#111714;--ink-hover:#cdd8cf;--on-ink-soft:#31463b;
-  --ok-bg:#1f3227;--ok-ink:#a9d7b9;--ok-line:#35523f;
-  --info-bg:#1d2e2c;--info-ink:#a6cfc6;
-  --warn-bg:#33291a;--warn-ink:#e3c084;--warn-line:#5a4524;
-  --bad-bg:#3a221c;--bad-ink:#f3a894;
-  --accent-tint:#e39a7414;--accent-line:#e39a7455;
-  --ok-tint:#8fc6a614;--ok-dot:#8fc6a6;--dot:#5c6862;
-  --selected-row:#1f2c25;--locked-row:#151c18;--bar:#8fc6a6;
-  --chart-grid:#2c3732;--chart-axis:#4a5952;--pass-fill:#8fc6a6;--fail-fill:#e39a74;--chart-ring:#18201c;
-  --shadow:#00000059;--backdrop:#000000a6;--art-blend:screen;--art-filter:invert(1) hue-rotate(180deg) brightness(.9)}
-@media(prefers-color-scheme:dark){:root:not([data-theme=light]){color-scheme:dark;
-  --bg:#111714;--panel:#18201c;--soft:#202a25;--sidebar:#151d19;--topbar:#141b17;--field:#111714;
-  --ink:#e6ebe4;--muted:#a2aca5;--line:#313d37;--line-soft:#26302b;
-  --accent:#e39a74;--green:#8fc6a6;--amber:#dcb36d;--red:#f09a85;--focus:#c7a3ff;
-  --on-ink:#111714;--ink-hover:#cdd8cf;--on-ink-soft:#31463b;
-  --ok-bg:#1f3227;--ok-ink:#a9d7b9;--ok-line:#35523f;
-  --info-bg:#1d2e2c;--info-ink:#a6cfc6;
-  --warn-bg:#33291a;--warn-ink:#e3c084;--warn-line:#5a4524;
-  --bad-bg:#3a221c;--bad-ink:#f3a894;
-  --accent-tint:#e39a7414;--accent-line:#e39a7455;
-  --ok-tint:#8fc6a614;--ok-dot:#8fc6a6;--dot:#5c6862;
-  --selected-row:#1f2c25;--locked-row:#151c18;--bar:#8fc6a6;
-  --chart-grid:#2c3732;--chart-axis:#4a5952;--pass-fill:#8fc6a6;--fail-fill:#e39a74;--chart-ring:#18201c;
-  --shadow:#00000059;--backdrop:#000000a6;--art-blend:screen;--art-filter:invert(1) hue-rotate(180deg) brightness(.9)}}
-.theme-toggle{display:inline-flex;align-items:center;gap:7px;min-height:32px;padding:6px 11px;border:1px solid var(--line);border-radius:20px;background:var(--panel);color:var(--ink);font-size:11px;cursor:pointer}
-.theme-toggle:hover{border-color:var(--accent-line)}.theme-toggle b{font-weight:600}
+/* Spec: knowledge/policies/ui-ux.md */
+/* Monochrome paper & ink tokens (aligned with Æion Spec).
+   Two core surfaces (alabaster canvas + pure white panel), solid black/white ink,
+   and semantic status tones used only when state requires attention. */
+
+:root,
+html[data-theme="light"] {
+  color-scheme: light;
+
+  --bg: #f8f8f7;
+  --bg-soft: #f1f1ef;
+  --surface: #ffffff;
+  --surface-strong: #e6e6e3;
+
+  --ink: #0d0d10;
+  --ink-soft: #3f3f46;
+  --muted: #65656f;
+
+  --line: rgba(13, 13, 16, 0.09);
+  --line-strong: rgba(13, 13, 16, 0.18);
+
+  --primary-bg: #0d0d10;
+  --primary-ink: #ffffff;
+  --accent: #172554;
+  --accent-soft: rgba(23, 37, 84, 0.07);
+
+  --ok: #14532d;
+  --ok-soft: #eaf6ee;
+  --warn: #7c3b12;
+  --warn-soft: #fdf1e6;
+  --bad: #991b1b;
+  --bad-soft: #fdecec;
+  --info: #172554;
+  --info-soft: #eef1f7;
+
+  --shadow: 0 1px 3px rgba(13, 13, 16, 0.04);
+  --radius: 10px;
+  --radius-sm: 6px;
+
+  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+  --mono: "SF Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: #0b0b0d;
+  --bg-soft: #18181c;
+  --surface: #121215;
+  --surface-strong: #232329;
+
+  --ink: #f4f4f6;
+  --ink-soft: #c4c4cc;
+  --muted: #9494a0;
+
+  --line: rgba(255, 255, 255, 0.09);
+  --line-strong: rgba(255, 255, 255, 0.18);
+
+  --primary-bg: #f4f4f6;
+  --primary-ink: #0b0b0d;
+  --accent: #93b4ef;
+  --accent-soft: rgba(147, 180, 239, 0.12);
+
+  --ok: #7ee2a8;
+  --ok-soft: rgba(34, 197, 94, 0.14);
+  --warn: #f3b574;
+  --warn-soft: rgba(217, 119, 87, 0.14);
+  --bad: #fca5a5;
+  --bad-soft: rgba(239, 68, 68, 0.15);
+  --info: #c2d0ea;
+  --info-soft: rgba(30, 41, 59, 0.65);
+
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0b0b0d;
+    --bg-soft: #18181c;
+    --surface: #121215;
+    --surface-strong: #232329;
+    --ink: #f4f4f6;
+    --ink-soft: #c4c4cc;
+    --muted: #9494a0;
+    --line: rgba(255, 255, 255, 0.09);
+    --line-strong: rgba(255, 255, 255, 0.18);
+    --primary-bg: #f4f4f6;
+    --primary-ink: #0b0b0d;
+    --accent: #93b4ef;
+    --accent-soft: rgba(147, 180, 239, 0.12);
+    --ok: #7ee2a8;
+    --ok-soft: rgba(34, 197, 94, 0.14);
+    --warn: #f3b574;
+    --warn-soft: rgba(217, 119, 87, 0.14);
+    --bad: #fca5a5;
+    --bad-soft: rgba(239, 68, 68, 0.15);
+    --info: #c2d0ea;
+    --info-soft: rgba(30, 41, 59, 0.65);
+    --shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  }
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.theme-toggle:hover {
+  background: var(--bg-soft);
+}

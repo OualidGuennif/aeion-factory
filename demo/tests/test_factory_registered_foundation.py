@@ -85,7 +85,8 @@ class RegisteredFoundationTests(unittest.TestCase):
     def test_modified_md_cannot_reuse_the_old_registered_oracle(self):
         self.spec.write_text(self.spec.read_text()+'\nAdditional acceptance: authenticated health.\n')
         with self.assertRaisesRegex(PreparationError,'runtime_mismatch'):self.prepare()
-        self.assertEqual(len(self.role.calls),1)
+        self.assertGreaterEqual(len(self.role.calls),2)
+        self.assertEqual(len({c[0] for c in self.role.calls}),len(self.role.calls))
         self.assertTrue((self.root/'prepared/proposed-acceptance.json').is_file())
 
     def select_transition(self,feature):

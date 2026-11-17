@@ -3,13 +3,13 @@
 Updated 2026-11-17. Current facts only; historical evidence is in HANDOVER.md and validation.md.
 No final operational Go or actual product feature merge is claimed.
 
-## Monochrome Cockpit & Lab UI Revamp + Humanized Docs — PENDING RELEASE
+## Feature 004 preparation validation & shape retry — RESOLVED
 
-- Owner decision: redesign `/` and `/lab` around Æion Spec's monochrome light/dark palette with single-section sidebar navigation, 10-feature and 5-run/build pagination, and humanized documentation across the repo.
-- State: `/` (`Catalog`, `Builds`, `Budget & mode`, `Environments & logs`) and `/lab` (`Run a task`, `Run history`, `Models`, `Memory`, `Architecture`) switched to monochrome `theme.css` + `[hidden] { display: none !important; }` + pagers (`10` features, `5` builds/runs/checkpoints); `impeccable detect` clean (`0` findings); `375px`/`1440px` browser checks clean (`0` overflow/console/CSP errors); docs humanized and stale `claude-mem` notes fixed.
-- Next: review `develop`, merge PR to `main`, and owner runs Compose reset if still using `aeion-observability-demo` containers (`demo/.local/stack.env` protected by `guard-bash.py`).
-- Blocker: `guard-bash.py` blocks agent shell access to `stack.env`.
-- Evidence: [validation](validation.md); [cockpit spec](../knowledge/components/operator-cockpit.md); [UI policy](../knowledge/policies/ui-ux.md).
+- Owner decision: fix why Feature `004` correction round `c9c2c290b5b2` stalled in `held / preparation_unavailable`, add regression coverage, requalify native admission, and keep the live Cockpit ready.
+- State: `validate_acceptance` (`demo/factory/product_checks.py`) now strips JS comments/strings and resolves destructured/named `node:assert/strict` bindings; `TaskPreparer.prepare()` (`demo/factory/preparation.py`) clears the attempt dir and retries `preparation_acceptance_*` shape failures with `_contract_retry_note`; docs (`factory-flue.md`, `factory-architecture.md`, `feature-authoring.md`), tests, and live daemon updated.
+- Next: owner clicks Cancel request on `c9c2c290b5b2` in Cockpit Builds and relaunches Feature `004` cleanly (who: owner).
+- Blocker: none.
+- Evidence: [validation](validation.md); [factory-flue](../knowledge/components/factory-flue.md); [feature authoring](../knowledge/operations/feature-authoring.md).
 
 ## Feature 003 Live Completion, Authoring Playbook & Catalog Alignment — COMPLETED
 

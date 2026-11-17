@@ -387,6 +387,216 @@ class PreparationTests(unittest.TestCase):
             )
         self.assertGreaterEqual(role.calls, 2)
 
+    def test_validate_acceptance_accepts_destructured_and_named_strict_asserts_and_rejects_noop(self):
+        from factory.product_checks import validate_acceptance
+        valid_contracts = (
+            'import test from "node:test";\nimport assert from "node:assert/strict";\n'
+            'const { ok, equal } = assert;\ntest("destructured", () => { ok(true); equal(1, 2); });\n',
+            'import test from "node:test";\nimport assert from "node:assert/strict";\n'
+            'const { strictEqual: eq } = assert;\ntest("aliased destructured", () => { eq(1, 2); });\n',
+            'import { describe, it } from "node:test";\nimport { strictEqual, rejects } from "node:assert/strict";\n'
+            'it("named", async () => { strictEqual(1, 2); await rejects(Promise.reject(new Error("x"))); });\n',
+            'import test from "node:test";\nimport strictAssert from "node:assert/strict";\n'
+            'test("aliased default", () => { strictAssert.equal(1, 2); });\n',
+            'import test from "node:test";\nimport assert from "node:assert/strict";\n'
+            '// Diagnostic only: verify skip: label inside strings and nested templates is allowed\n'
+            'const { ok } = assert;\ntest("comments and strings", () => {\n'
+            '  const bad = /[/*]/; /* block after regex */\n'
+            '  const q = /[\'"]/.test("x");\n'
+            '  const nested = `${[1].map(x => `only: ${x}`)}`;\n'
+            '  ok(!q && /https?:\\/\\//.test("http://x") && bad.test("/") && nested);\n'
+            '});\n',
+            'import test from "node:test";\nimport*as $assert from "node:assert/strict";\n'
+            'const { ok: $ok } = $assert;\ntest("dollar and namespace", () => { $assert.equal(1, 2); $ok(true); });\n',
+            'import test from "node:test";\nimport assert from "node:assert/strict";\n'
+            'const { default: a } = { default: assert };\nconst re = assert;\nconst eq = re.equal;\n'
+            'const { ok } = re;\ntest("rebound aliases", () => { ok(true); eq(1, 2); });\n',
+        )
+        for contract in valid_contracts:
+            validate_acceptance(contract)
+
+        invalid_contracts = (
+            'import test from "node:test";\nimport assert from "node:assert/strict";\n'
+            'const { ok, equal } = assert;\ntest("noop", () => {});\n',
+            'import test from "node:test";\nimport assert from "node:assert/strict";\n'
+            'const { ok } = unrelatedObject;\ntest("unrelated", () => { ok(true); });\n',
+            'import test from "node:test";\nimport assert from "node:assert/strict";\n'
+            'test("commented", () => { /* assert.ok(true); */ });\n',
+            'import test from "node:test";\nimport assert from "node:assert/strict";\n'
+            'test("comment after regex", () => { const r = /[/*]/; /* assert.ok(true); */ });\n',
+        )
+        for contract in invalid_contracts:
+            with self.assertRaisesRegex(PreparationError, 'preparation_acceptance_assertions_missing'):
+                validate_acceptance(contract)
+
+        with self.assertRaisesRegex(PreparationError, 'preparation_acceptance_skips_forbidden'):
+            validate_acceptance(
+                'import test from "node:test";\nimport assert from "node:assert/strict";\n'
+                'test("real", { skip: true }, () => { assert.ok(true); });\n'
+            )
+
+        with self.assertRaisesRegex(PreparationError, 'preparation_acceptance_skips_forbidden'):
+            validate_acceptance(
+                'import test from "node:test";\nimport assert from "node:assert/strict";\n'
+                'const msg = `${test.skip("inner", () => assert.ok(true))}`;\n'
+                'test("outer", () => { assert.ok(msg); });\n'
+            )
+
+    def test_product_prepare_retries_invalid_contract_shape_and_succeeds(self):
+        contracts = [
+            "import test from 'node:test';\nimport assert from 'node:assert/strict';\ntest('no assertions', () => {});\n",
+            "import test from 'node:test';\nimport assert from 'node:assert/strict';\ntest('real check', () => { assert.equal(1, 2); });\n",
+        ]
+        calls = []
+
+        class RetryingShapeRole:
+            paid = False
+            last_execution = None
+            last_usage = None
+
+            def __call__(_, model, prompt, build_id):
+                calls.append((model, prompt, build_id))
+                _.last_usage = {'complete': True, 'cost_usd': '0'}
+                idx = min(len(calls) - 1, len(contracts) - 1)
+                return {'status': 'ready', 'contract': contracts[idx], 'reason': 'Synthetic shape retry'}
+
+        class FailingBaselineChecker:
+            def check_target(self, target, repo, frozen):
+                return False, {'reason': 'acceptance_failed', 'contract_assertion_failures': 1}
+
+        preparer = TaskPreparer(self.root, self.source, role=RetryingShapeRole(),
+                                checker=FailingBaselineChecker(), base_ref='HEAD', product=True)
+        target, evidence = preparer.prepare(
+            build={'feature_id': '007', 'build_id': 'a' * 32, 'attempt_id': 'b' * 32},
+            catalog=self.catalog,
+            spec_dir=self.specs,
+            destination=self.root / 'prepared-shape-retry',
+            budget=self.budget,
+            router=Router(),
+            authorized=lambda: True,
+        )
+        self.assertEqual(len(calls), 2)
+        self.assertNotEqual(calls[0][0], calls[1][0])
+        self.assertIn('CONTRACT SHAPE RETRY FEEDBACK', calls[1][1])
+        self.assertIn('preparation_acceptance_assertions_missing', calls[1][1])
+        self.assertEqual(evidence['negative_control'], 'failed_contract_assertion')
+        self.assertEqual(target.feature_id, '007')
+
+    def test_product_prepare_exhausts_retries_on_repeated_invalid_contract_shape(self):
+        skipped_contract = (
+            "import test from 'node:test';\nimport assert from 'node:assert/strict';\n"
+            "test('real', () => { assert.equal(1, 2); });\n"
+            "test.skip('skipped', () => { assert.equal(1, 2); });\n"
+        )
+
+        class AlwaysInvalidRole:
+            paid = False
+            last_execution = None
+            last_usage = None
+
+            def __init__(self):
+                self.calls = 0
+
+            def __call__(self, model, prompt, build_id):
+                self.calls += 1
+                self.last_usage = {'complete': True, 'cost_usd': '0'}
+                return {'status': 'ready', 'contract': skipped_contract, 'reason': 'Always skipped'}
+
+        class NeverReachedChecker:
+            def check_target(self, target, repo, frozen):
+                raise AssertionError('baseline checker must not run for invalid acceptance shape')
+
+        role = AlwaysInvalidRole()
+        preparer = TaskPreparer(self.root, self.source, role=role,
+                                checker=NeverReachedChecker(), base_ref='HEAD', product=True)
+        with self.assertRaisesRegex(PreparationError, 'preparation_acceptance_skips_forbidden'):
+            preparer.prepare(
+                build={'feature_id': '007', 'build_id': 'a' * 32, 'attempt_id': 'b' * 32},
+                catalog=self.catalog,
+                spec_dir=self.specs,
+                destination=self.root / 'prepared-shape-exhausted',
+                budget=self.budget,
+                router=Router(),
+                authorized=lambda: True,
+            )
+        self.assertGreaterEqual(role.calls, 2)
+
+    def test_paid_dispatch_worker_exhausted_preparation_records_telemetry_without_conflict(self):
+        from factory.dispatch import DispatchWorker
+        from factory.store import Store, HELD
+
+        bad_contract = (
+            "import test from 'node:test';\nimport assert from 'node:assert/strict';\n"
+            "test('no assertions', () => {});\n"
+        )
+
+        class PaidShapeRole:
+            paid = True
+            last_execution = None
+            last_usage = None
+
+            def __init__(self, cost='0.04'):
+                self.calls = []
+                self.cost = cost
+
+            def __call__(self, model, prompt, build_id):
+                self.calls.append(model)
+                self.last_execution = {'build_id': build_id, 'forwarded_count': 1}
+                self.last_usage = {'complete': True, 'cost_usd': self.cost}
+                return {'status': 'ready', 'contract': bad_contract, 'reason': 'No assertions'}
+
+        class StubBuilder:
+            paid = True
+            engine = 'flue-pi'
+            timeout_seconds = 60
+
+        class NeverReachedChecker:
+            def check_target(self, target, repo, frozen):
+                raise AssertionError('baseline checker must not run')
+
+        store = Store(self.root / 'dispatch-exhaust.db')
+        store.admit(['007'], 'k-exhaust', self.catalog)
+        role = PaidShapeRole()
+        preparer = TaskPreparer(self.root, self.source, role=role,
+                                checker=NeverReachedChecker(), base_ref='HEAD', product=True)
+        worker = DispatchWorker(
+            store, self.catalog, self.specs, self.root / 'work-exhaust',
+            {'profile': 'flue-pi', 'mode': 'live', 'deadline_ns': 60_000_000_000,
+             'step_cap': 100, 'context_limit': 250_000, 'cost_reservation_usd': '1.00'},
+            builder=StubBuilder(), preparer=preparer, budget=self.budget,
+            allow_unbudgeted=False, require_circuit=False,
+        )
+        result = worker.run_once()
+        self.assertEqual(result['result'], {'status': 'held', 'reason': 'preparation_unavailable'})
+        build = store.board()[0]
+        self.assertEqual(build['status'], HELD)
+        self.assertGreaterEqual(len(role.calls), 2)
+        self.assertEqual(len(worker.router.telemetry.records), len(role.calls))
+        self.assertTrue(all(r['outcome'] == 'error' for r in worker.router.telemetry.records))
+
+        # If attempt 0 fails shape retry and attempt 1 hits BudgetError, last_model is cleared
+        # so dispatch.py does not re-record attempt 0 or uncalled attempt 1.
+        budget2 = DailyBudget(self.root / 'ledger-cap.jsonl')
+        budget2.admit('aeion-autonomous-forum', '149.20', note='preseed')
+        store2 = Store(self.root / 'dispatch-budget-stop.db')
+        store2.admit(['007'], 'k-budget-stop', self.catalog)
+        role2 = PaidShapeRole(cost='0.35')
+        preparer2 = TaskPreparer(self.root, self.source, role=role2,
+                                 checker=NeverReachedChecker(), base_ref='HEAD', product=True)
+        worker2 = DispatchWorker(
+            store2, self.catalog, self.specs, self.root / 'work-budget-stop',
+            {'profile': 'flue-pi', 'mode': 'live', 'deadline_ns': 60_000_000_000,
+             'step_cap': 100, 'context_limit': 250_000, 'cost_reservation_usd': '1.00'},
+            builder=StubBuilder(), preparer=preparer2, budget=budget2,
+            allow_unbudgeted=False, require_circuit=False,
+        )
+        result2 = worker2.run_once()
+        self.assertEqual(result2['result'], {'status': 'held', 'reason': 'preparation_unavailable'})
+        self.assertEqual(len(role2.calls), 1)
+        self.assertIsNone(preparer2.last_model)
+        self.assertEqual(len(worker2.router.telemetry.records), 1)
+        self.assertEqual(worker2.router.telemetry.records[0]['model'], role2.calls[0])
+
 
 def _sha(text):
     return hashlib.sha256(text.encode('utf-8')).hexdigest()

@@ -220,6 +220,35 @@ def _clear_prepared_attempt(folder):
             child.unlink()
 
 
+_RETRYABLE_CONTRACT_ERRORS = (
+    'preparation_acceptance_size_invalid',
+    'preparation_acceptance_runtime_mismatch',
+    'preparation_acceptance_assertions_missing',
+    'preparation_acceptance_skips_forbidden',
+)
+
+
+def _record_prepare_error(router, model, usage):
+    """Record a failed preparer attempt when inference usage completed cleanly."""
+    if getattr(router, 'telemetry', None) is not None and isinstance(usage, dict) and usage.get('complete') is True:
+        try:
+            router.telemetry.record(model, 'prepare', 'error', cost_usd=usage.get('cost_usd'))
+        except Exception:
+            pass
+
+
+def _contract_retry_note(error):
+    """Build retry feedback explaining why the previous acceptance contract failed validation."""
+    code = str(error)
+    return (
+        '\nCONTRACT SHAPE RETRY FEEDBACK (data, not instructions):\n'
+        f'Your previous acceptance.mjs was rejected by static contract validation ({code}).\n'
+        'Return non-empty UTF-8 JavaScript ESM (<= 48000 bytes, no null bytes) that imports test from '
+        '"node:test" and assert from "node:assert/strict", defines real test(...) cases without '
+        '.skip/.todo/.only, and invokes real assertions such as assert.equal(...) or assert.ok(...).\n'
+    )
+
+
 def _baseline_retry_note(passed, detail):
     reason = str(detail.get('reason') or 'unknown')
     if passed:
@@ -465,19 +494,20 @@ class TaskPreparer:
             last_error = None
             attempt_prompt = prompt
             for attempt in range(max_attempts):
+                self.last_model = None
                 try:
                     model = router.select('prepare', exclude_families=excluded_families, exclude_models=excluded_models)
                 except RoutingError:
                     if last_error:
                         raise last_error
                     raise PreparationError('no_eligible_preparer_model') from None
-                self.last_model = model
                 try:
                     reservation = budget.admit('aeion-autonomous-forum', '0.50', note=f'prepare:{build["attempt_id"]}:{attempt}')
                 except BudgetError:
                     if attempt > 0 and last_error:
                         raise last_error
                     raise
+                self.last_model = model
                 self.role.authorization_check = authorized
                 result = None
                 try:
@@ -486,17 +516,13 @@ class TaskPreparer:
                         raise PreparationError('preparation_model_declined')
                 except PreparationError as err:
                     last_error = err
-                    usage = self.role.last_usage or {}
-                    if getattr(router, 'telemetry', None) is not None and usage.get('complete') is True:
-                        try:
-                            router.telemetry.record(model, 'prepare', 'error', cost_usd=usage.get('cost_usd'))
-                        except Exception:
-                            pass
                     RETRYABLE = ('preparation_output_limit', 'preparation_cli_failed',
                                  'preparation_incomplete', 'preparation_agent_timeout',
                                  'preparation_provider_rate_limited', 'preparation_provider_unavailable',
                                  'preparation_usage_unknown', 'preparation_model_declined')
                     if any(code in str(err) for code in RETRYABLE) and attempt + 1 < max_attempts:
+                        _record_prepare_error(router, model, self.role.last_usage)
+                        self.last_model = None
                         excluded_models.append(model)
                         excluded_families.append(family(model))
                         continue
@@ -508,19 +534,23 @@ class TaskPreparer:
                             budget.settle(reservation, Decimal(str(usage['cost_usd'])))
                         except (BudgetError, InvalidOperation, ValueError):
                             pass  # Unknown cost retains its reservation and never becomes free.
-                target, text, passed, detail = self._prepare_and_check(folder, task, result, classname)
-                ok, negative_control = _baseline_ok(self.product, passed, detail, classname, None, task.feature_id)
-                if ok:
-                    break
-                last_error = PreparationError('preparation_negative_control_missing')
+                try:
+                    target, text, passed, detail = self._prepare_and_check(folder, task, result, classname)
+                except PreparationError as err:
+                    if not (self.product and any(code in str(err) for code in _RETRYABLE_CONTRACT_ERRORS)):
+                        raise
+                    last_error = err
+                    retry_note = _contract_retry_note(err)
+                else:
+                    ok, negative_control = _baseline_ok(self.product, passed, detail, classname, None, task.feature_id)
+                    if ok:
+                        break
+                    last_error = PreparationError('preparation_negative_control_missing')
+                    retry_note = _baseline_retry_note(passed, detail)
                 if not self.product or attempt + 1 >= max_attempts or not authorized():
                     raise last_error
-                if getattr(router, 'telemetry', None) is not None and (self.role.last_usage or {}).get('complete') is True:
-                    try:
-                        router.telemetry.record(model, 'prepare', 'error', cost_usd=self.role.last_usage.get('cost_usd'))
-                    except Exception:
-                        pass
-                retry_note = _baseline_retry_note(passed, detail)
+                _record_prepare_error(router, model, self.role.last_usage)
+                self.last_model = None
                 if len((prompt + retry_note).encode('utf-8')) <= MAX_PROMPT_BYTES:
                     attempt_prompt = prompt + retry_note
                 _clear_prepared_attempt(folder)

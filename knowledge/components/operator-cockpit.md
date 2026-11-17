@@ -4,12 +4,12 @@ title: "Local feature cockpit"
 description: "One administrator workspace for truthful feature availability, build activity and private traces."
 status: draft
 verified:
+  - at: 2026-11-17
+    what: "impeccable detect on demo/app and live / and /lab (0 anti-patterns); node test_cockpit_client (31 pass); browser checks at 1440px and 375px light/dark (0 overflow/console/CSP errors); 10/5 pagination"
   - at: 2026-11-16
     what: "node cockpit client (29 pass) and browser visual checks at 1440px and 375px light/dark on / and 4-section /lab with zero console/CSP errors or viewport overflow"
   - at: 2026-11-11
     what: "unittest factory dispatch and store: correction rounds reuse frozen contracts, and live context provider is integrated"
-  - at: 2026-11-09
-    what: "unittest kpis and selection: lab autonomy requires explicit zero human intervention and complete maturity; lab copy matches 150/50/1 ceilings and context policy"
 sources:
   - resource: ../../demo/app/factory.html
     title: "Cockpit markup"
@@ -19,6 +19,8 @@ sources:
     title: "Model lab markup"
   - resource: ../../demo/app/style.css
     title: "Model lab layout"
+  - resource: ../../demo/app/app.js
+    title: "Model lab client"
   - resource: ../../demo/factory/live_status.py
     title: "Read-only live status names"
   - resource: ../../demo/app/factory.css
@@ -42,21 +44,25 @@ sources:
 ## Intent
 
 Make the default local page useful for selecting admitted product work and observing its actual
-outcome. Completed features cannot be selected or submitted again. The page opens with the owner's
-next step, then three status blocks (factory mode, today's budget, environments), then the catalog
-and build activity; recent workspace events sit in a collapsed diagnostics drawer. The model lab
-at `/lab` is organized into four sections (how it works — architecture, four-step flow, and a
-collapsed live system-status drawer; live playground; model comparison; and continuity memory),
-labelled as not needed to build features; its summary cards match the enforced $150/day,
-$50/author and $1/review ceilings and context policy, and its autonomy KPI counts only
-passed-check runs with explicit zero human intervention (`autonomy_basis: passed_checks_no_reported_intervention`).
-Both pages take every colour from `demo/app/theme.css` (light and dark sets), keep a calm
-paper-editorial typography scale with zero decorative numeric steppers or repetitive kickers, and
-offer an Auto/Light/Dark toggle (`demo/app/theme.js`, remembered per browser). The lab's memory
-room recalls Hindsight with a bounded question (`/api/memory?q=`, at most 160 printable
-characters) and reads back only checkpoints this observer wrote (`/api/memory/checkpoint/<id>`,
-metadata fields only); these helpers live in `demo/app/server.py` because `demo/app/memory.py` is
-protocol-hashed.
+outcome without visual overload. Completed features cannot be selected or submitted again. Both
+pages follow the monochrome Æion Spec palette in [UI and UX](../policies/ui-ux.md) (`demo/app/theme.css`,
+light and dark sets) and use a left sidebar so only one focused section appears on screen at a
+time:
+
+- `/` and `/factory` open the feature cockpit (`demo/app/factory.html`, `factory.css`, `factory.js`)
+  with a top next-step banner and four sidebar sections: **Catalog** (paginated at 10 features per
+  page via `#catalog-pager`), **Builds** (active builds and historical attempts paginated at 5 per
+  page via `#builds-pager` and `#history-pager`), **Budget & mode**, and **Environments & logs**.
+- `/lab` opens the model lab (`demo/app/index.html`, `style.css`, `app.js`) with five sidebar
+  sections: **Run a task**, **Run history** (paginated at 5 runs per page via `#runs-pager`),
+  **Models**, **Memory** (local checkpoints paginated at 5 per page via `#checkpoints-pager`, plus
+  Hindsight recall), and **Architecture**. Its summary cards match the enforced $150/day,
+  $50/author and $1/review ceilings and context policy, and its autonomy KPI counts only
+  passed-check runs with explicit zero human intervention (`autonomy_basis: passed_checks_no_reported_intervention`).
+  The lab's memory room recalls Hindsight with a bounded question (`/api/memory?q=`, at most 160
+  printable characters) and reads back only checkpoints this observer wrote (`/api/memory/checkpoint/<id>`,
+  metadata fields only); these helpers live in `demo/app/server.py` because `demo/app/memory.py` is
+  protocol-hashed.
 
 ## Data sources
 

@@ -1,162 +1,92 @@
-# Trust model — what a rogue agent can and cannot do
+# Trust model: what a rogue agent can and cannot do
 
-Written after the owner asked what happens if the language model behind an agent "goes rogue and
-wants to destroy everything". The answer is a list of properties, each tied to the code that
-enforces it. Where a property is not enforced, it says so.
+This document summarizes the mechanical limits placed on coding agents if the underlying model tries to act outside its task. Every boundary maps directly to enforcing code, along with explicit notes on what those checks do not guarantee.
 
-## The one-line rule
+## The core rule
 
-**The model produces data, never authority.** It can propose a diff; it cannot run code on the
-host, cannot publish, cannot merge, cannot widen its own scope, and cannot judge its own work.
+Model outputs are always treated as untrusted data rather than authority. An agent can write source code inside its sandbox, but it cannot execute generated code on the host, bypass protected tests, widen its write scope, approve its own PR, or trigger a merge.
 
-## 1. Generated code never runs on the host
+## 1. Generated code stays inside OpenShell
 
-- All execution is inside OpenShell: `landlock=hard_requirement`, dedicated UID (10001), no
-  network (`NetworkMode=none`), no Docker socket, read-only image paths.
-- The host process only reads files and compares digests. `digest()` refuses symlinks, devices
-  and anything over 32 KiB before it looks at the content.
-- The acceptance checker runs in a **fresh** sandbox (`role="check"`) where no agent process has
-  ever existed, and reads the artifact seeded into that sandbox — never the agent's workspace.
+- Build tools run in OpenShell with `landlock=hard_requirement`, unprivileged UID (`10001`), `NetworkMode=none`, no Docker socket, and read-only system paths.
+- Host Python processes only inspect files and compute hashes. `digest()` rejects symlinks, device nodes, and files above 32 KiB before reading contents.
+- Protected acceptance checks run in a fresh sandbox (`role="check"`) seeded cleanly from the validated artifact rather than the author agent's container.
 
-## 2. The diff is validated as data, not as a claim
+## 2. Diffs are validated structurally
 
-`demo/factory/artifact.py` enumerates the real Git diff and rejects, as a whole:
+`demo/factory/artifact.py` inspects the actual `git diff` and rejects the entire batch if any path leaves declared literal write scopes, uses absolute paths or `..`, touches `.git` metadata, introduces symlinks or non-regular files, or renames out of scope. Partial acceptance is never used.
 
-- any path outside the frozen literal write scopes;
-- absolute paths, `..`, backslashes, `.git` metadata, symlinks, non-regular files;
-- renames where either endpoint escapes scope.
+## 3. File transport copies bytes only
 
-A mixed diff is rejected entirely — there is no partial accept that could smuggle one bad file.
+`collect()` streams directory entries over the sandbox exec channel and `materialize()` writes plain files on the host, rejecting path traversal, backslashes, and locked targets (`SANDBOX_SYNC_TARGET_LOCKED`) without executing anything.
 
-## 3. The transport moves bytes; it does not grant execution
+## 4. Protected checks stay unreachable
 
-`collect()` reads a sandbox directory over the exec channel and `materialize()` writes those bytes
-on the host, refusing absolute paths, `..` and backslashes, skipping unchanged files, and failing
-closed (`SANDBOX_SYNC_TARGET_LOCKED`) when a file cannot be replaced. Copying a file is not
-running it.
+`demo/factory/checks.py` runs acceptance tests chosen by the host controller from a directory outside agent reach. Any missing required check returns `qualification_missing` rather than passing silently.
 
-## 4. The judge is not the candidate
+## 5. Deterministic rule checks run before LLM reviews
 
-`demo/factory/checks.py` runs the protected checks the **host** chose, from a registry the
-candidate cannot reach. A required check that is missing yields `qualification_missing`, never a
-green result.
-
-## 5. The reviewer is rules, not another model
-
-This is the direct answer to "un autre agent reviewer analysera". **A second LLM would be
-untrusted input too** — a rogue reviewer approves a rogue diff. So `demo/factory/review.py` is a
-deterministic rule engine over the bounded diff:
+Even a second LLM produces untrusted output, so `demo/factory/review.py` applies deterministic rules over the bounded diff before any model reviewer runs:
 
 | Finding | Decision |
 | --- | --- |
-| path outside the accepted diff, empty diff, rejected artifact | **refused** |
-| credential-shaped string (`ghp_`, `sk-`, `AKIA`, private key header, Slack token) | held |
-| `rm -rf /`, `curl … \| sh`, `chmod 777`, `sudo`, `git push --force`, `npm publish` | held |
-| dependency manifest change (`package.json`, lockfiles, `requirements.txt`, …) | held |
-| binary content, file > 256 KiB, > 50 files, diff > 512 KiB | held |
+| Out-of-scope path, empty diff, or invalid artifact | Refused |
+| Credential patterns (`ghp_`, `sk-`, `AKIA`, private keys, Slack tokens) | Held |
+| Destructive commands (`rm -rf /`, `curl ... \| sh`, `chmod 777`, `sudo`, `git push --force`, `npm publish`) | Held |
+| Dependency manifest edits (`package.json`, lockfiles, `requirements.txt`) | Held |
+| Binary files, file > 256 KiB, > 50 changed files, or total diff > 512 KiB | Held |
 
-Same input → same verdict and same `digest` (content-addressed, so a different diff can never
-reuse an approval). Holds go to `owner_review_required`; the reviewer can never publish, and its
-verdict is bound into the receipt.
+Rules are deterministic and bind a content digest so edits cannot reuse an older approval. Holds set `owner_review_required` and never publish.
 
-## 6. The build agent stops on its own branch
+## 6. Build agents stop on a local branch
 
-`demo/factory/boundary.py` is the written contract every build agent receives, and the coder
-system prompt in `demo/flue/src/agents/coder.ts` carries the same five rules (`test_factory_boundary.py`
-fails when the two copies drift):
+`demo/factory/boundary.py` and the agent prompt in `demo/flue/src/agents/coder.ts` share the exact same five rules (verified by `test_factory_boundary.py`):
 
-1. work only inside the workspace and the declared write scope;
-2. commit to your own branch only — push nothing, open no pull request, merge nothing;
-3. never review your own work;
-4. stop when the checks pass or when you cannot continue, and say why in `HANDOVER.md`;
-5. do not wait for a reviewer, do not poll for one, never merge on anyone's behalf.
+1. Work only inside the assigned workspace and declared write paths.
+2. Commit only on your branch; push nothing, open no PR, merge nothing.
+3. Never review your own changes.
+4. Stop cleanly once checks pass or report blockers in `HANDOVER.md`.
+5. Never poll for reviewers or merge on anyone's behalf.
 
-The brief is written to `TASK.md` outside the clone, so it can never become part of the artifact.
-Stopping is then *enforced*: the freeze digest pins the branch contents, the publisher re-verifies
-that digest before pushing, and a commit after the freeze invalidates the receipt. An agent that
-ignored the instruction would produce a request the publisher refuses.
+Task instructions live in `TASK.md` outside the repository checkout. Freezing computes a tree digest verified again at push time so late commits after the freeze invalidate the receipt.
 
-## 7. Two other model families must agree
+## 7. Two independent model families must approve
 
-`demo/factory/review_circuit.py` is the answer to "the agent that codes must not cast the first
-review vote, and the second vote must not come from either of the first two models":
+`demo/factory/review_circuit.py` enforces model diversity across the author and two reviewers:
 
-- the author model **and its family** are excluded from the draw;
-- vote 1 comes from a second family, vote 2 from a third — `models.py` enforces distinct families,
-  not just distinct names;
-- any reject, any transport error and any malformed answer yields `held`; there is no retry that
-  turns a failure into an approval. A reject, a failed gate, or a required CI check that finished
-  without success starts at most two supervisor correction rounds by the same model, then at most
-  two further attempts on models not yet used in the launch: each new author build gets the reasons,
-  the CI check names and a short redacted agent note as bounded, labelled untrusted data, plus the
-  exact previous candidate, then faces the full gate and two new votes. The failed pull request is
-  not merged. An unreadable or pending check stays held. A crashed
-  author's validated files carry to the next attempt the same way, never unjudged to a vote;
-- the complete changed bytes must fit the 24000-character review envelope. If they do not, the
-  circuit holds (`review_input_too_large`) instead of sending an excerpt: a voter that never
-  received the tail cannot approve the artifact. An unknown author holds before any vote because
-  its family cannot be excluded;
-- an approval records whole-file coverage and a content digest alongside the two votes; the
-  answer is parsed as data (fenced JSON), never executed;
-- the votes and their digests are bound into the receipt.
+- Both the author model and its provider family are excluded from review selection (`models.py`).
+- Reviewer 1 and Reviewer 2 come from two distinct remaining families.
+- Timeouts, HTTP errors, malformed replies, or rejections hold the run cleanly. Failures, rejected builds, or failing CI checks trigger at most two correction rounds on the original model (with bounded, sanitized feedback labels) followed by up to two attempts on fresh models before pausing for the owner.
+- Complete changed diffs must fit within the 24,000-character review payload limit (`review_input_too_large`), preventing partial-excerpt approvals. Unknown author models pause before voting.
+- Approvals bind whole-file coverage, tree digests, and parsed JSON verdicts directly into the build receipt.
 
-A trace id is not a delivery receipt. The exporter reports `exported_unconfirmed` after the
-local transport accepts the span, `export_failed` when it refuses or raises, and never
-`confirmed` without a Langfuse read-back.
+Trace export checks stay strict as well: `Telemetry` reports `exported_unconfirmed` after collector handoff and reaches `confirmed` only after reading the trace back from Langfuse. Before pushing, `demo/factory/publisher.py::verified_receipt` re-verifies the passed gate, approved deterministic review, two approved circuit votes, and matching base and artifact digests.
 
-`demo/factory/publisher.py::verified_receipt` refuses a receipt whose gate is not passed, whose
-review is not approved, whose circuit is missing, unapproved or carries fewer than two votes, or
-whose artifact or base digest differs from the queued request.
+## 8. Publishing is narrow and isolated
 
-## 8. Publishing is a separate, narrow authority
+`demo/factory/publish.py` blocks forged issuers, mismatched repositories, cancelled builds, altered digests, or out-of-scope edits, and holds for manual approval whenever the diff touches sensitive paths (`auth`, `migrations`, `security`, `moderation`, `rules`, `runtime`, `deploy`, `permission`, or dependency files). Remote writes stay dry-run by default and require explicit `allow_merge` and `merge` flags once CI confirms the exact PR head.
 
-`demo/factory/publish.py` refuses a forged issuer, a target repo other than the pinned one, a
-cancelled build, a forged artifact digest, and any path outside the write scopes. It **holds**
-when no approved review is attached, when the base or head moved, or when the path is sensitive
-(`auth`, `migrations`, `security`, `moderation`, `rules`, `runtime`, `deploy`, `permission`, any
-dependency file). The real forge is dry-run by default; merging needs `allow_merge` **and**
-`merge`; a stale or uncertain result is reconciled, never re-published.
-
-The worker never holds the publish key: it writes a request to `demo/factory/queue.py` and exits.
-`demo/factory/publisher.py` is the only process that loads `GH_API_KEY`, and it proves at start-up
-that no inference and no release credential is present. One key per capability:
+Build workers never touch `GH_API_KEY`. Only `demo/factory/publisher.py` loads publish permissions after asserting that inference and release credentials are absent:
 
 | Key | Role | GitHub permissions | Can it merge `main`? |
 | --- | --- | --- | --- |
-| `GH_BUILD_KEY` | build | `contents:read`, `pull_requests:read` | no |
-| `GH_API_KEY` | publish | `contents:write`, `pull_requests:write` | its isolated process refuses merges; PAT scopes alone cannot prevent them |
-| `GH_RELEASE_KEY` | release | `contents:write`, `pull_requests:write`, `administration:read` | isolated deterministic release process after required evidence |
-| `OPENCODE_API_KEY` | inference | none | no |
+| `GH_BUILD_KEY` | Build | `contents:read`, `pull_requests:read` | No |
+| `GH_API_KEY` | Publish | `contents:write`, `pull_requests:write` | Isolated publisher refuses merges |
+| `GH_RELEASE_KEY` | Release | `contents:write`, `pull_requests:write`, `administration:read` | Isolated release process only after required evidence |
+| `OPENCODE_API_KEY` | Inference | None | No |
 
-`keys.py` owns the table, `assert_only()` refuses a role the process does not need,
-`assert_worker_isolated()` refuses publish or release keys next to a worker, and
-`demo/app/settings.py` scrubs every publish-class key at start-up. The root `.env.example` states
-the same contract for the owner, and `test_factory_keys.py` fails when the two drift.
+`demo/factory/keys.py` enforces these role assertions (`assert_only()`, `assert_worker_isolated()`), `demo/app/settings.py` scrubs publish keys on startup, and `test_factory_keys.py` checks agreement with `.env.example`. Independently, branch protection on GitHub `main` and `develop` enforces pull requests, linear history, resolved review threads, and green checks (`Knowledge, links and repository health`, `Product artifacts`, `secret-scan`, `dependency-scan`, `sast-scan`), blocking direct pushes even from admins.
 
-Branch protection is the second lock, independent of every process above: `main` and `develop`
-require a pull request, a green required check (`Knowledge, links and repository health`,
-`Product artifacts`, `secret-scan`, `dependency-scan`, `sast-scan`), linear history and resolved
-conversations, with force-pushes and deletions refused and admins included. A probe push was
-rejected on both branches on 2026-11-01.
+## 9. Hard payload bounds
 
-## 9. Everything is bounded
+Diffs cannot exceed 512 KiB, 50 files, or 256 KiB per file. Sandbox bridge payloads stop at 1 MiB and directory syncs at 8 MiB. Audit logs accept only allowlisted short scalar attributes (`INVALID_AUDIT_EVENT` on free-form text) and omit prompts, source code, and model responses.
 
-Diff ≤ 512 KiB, ≤ 50 files, ≤ 256 KiB per file; bridge operations ≤ 1 MiB; sync ≤ 8 MiB; audit
-attributes are an allowlist of short scalars (free-form text is rejected — the audit layer raises
-`INVALID_AUDIT_EVENT` rather than storing it); no prompt, body or provider text is logged.
+## 10. Where human sign-off stays mandatory
 
-## 10. Where the human stays
+- Sensitive paths, dependency manifests, and credential-shaped changes.
+- All merges to protected branches, releases, and deployments.
+- Every candidate reaches `main` only through an isolated branch and a reviewed pull request.
 
-- Sensitive paths, dependency manifests, credential-shaped content.
-- Any merge, any release, any deployment.
-- The pull request itself is the human boundary: the agent's branch is isolated, and nothing
-  reaches `main` except through a reviewed PR.
+## Explicit limits
 
-## What is *not* guaranteed
-
-Rules catch known-bad shapes, not semantics. A rogue model can still write malicious *code* that
-no rule flags. The design does not pretend otherwise: that is exactly why nothing is auto-merged,
-why the diff is bounded and content-addressed, and why the final decision is a human reviewing a
-pull request on a branch. Claiming "the reviewer makes agent output safe" would be false; the
-claim is "no agent output can reach `main` without a human, and every automated stage fails
-closed".
+Deterministic rules catch dangerous patterns rather than arbitrary semantic bugs. A misbehaving model could still craft subtle buggy code that passes static filters, which is why branches stay isolated, protected tests are decoupled from the workspace, diffs stay small and content-addressed, and human owners retain control over pull requests and merges.

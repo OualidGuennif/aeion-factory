@@ -5,70 +5,42 @@ Try the bundled calculation with Python 3.9+ and no provider account:
 ```sh
 python3 examples/compare_cohorts.py
 python3 examples/validate_fixtures.py
+python3 -m unittest discover -s tests -v
 ```
 
-This prints fictional cohort results. The tool includes failed/assisted costs, preserves unknown
-quality, and returns an undefined ratio when no autonomous task succeeds. It never controls a
-session or proves a model is better. See the regression checks under `tests/`.
+`compare_cohorts.py` prints fictional cohort summaries. It includes failed and assisted costs, keeps unknown quality explicit, and returns an undefined ratio when zero autonomous tasks succeed. It never controls a session or ranks real models. See the regression tests under `tests/`.
 
-The fixture validator rejects duplicate JSON object keys, non-finite numbers and inconsistent
-policy, task/run, artifact/check or charge references. It preserves the example's disabled
-observe/shadow controls and deduplicates identical deliveries by producer/boot/event identity;
-conflicting duplicates fail. It only validates these bundled fictional scenarios, not arbitrary
-production events, provider compatibility, privacy enforcement or actual task success.
+`validate_fixtures.py` rejects duplicate JSON object keys, non-finite numbers, and mismatched policy, task/run, artifact/check, or charge references. It preserves the example's disabled observe/shadow controls and deduplicates identical redeliveries by producer, boot ID, and event ID, while rejecting conflicting duplicates. It covers only these fictional fixtures rather than production events, provider behavior, privacy enforcement, or real task runs.
 
-Every record here is fictional, marked `example_only=true`, and uses proposed Æion contracts.
-There are no live credentials, captured prompts, production task IDs or executed provider results.
-Repeated hexadecimal digests illustrate identity binding; they do not hash real source/artifacts.
-No formal production JSON Schema or runtime validator is implemented by these examples.
+Every record here is synthetic, marked `example_only: true`, and uses proposed Æion contracts. There are no live credentials, captured prompts, production task IDs, or executed provider results. Repeated hexadecimal digests show identity binding cleanly without hashing real source files.
 
 | File | Purpose |
 | --- | --- |
-| [Run manifest](run-manifest.json) | One observe-only evaluation run, fixed baseline and explicit capture/limit scope |
-| [Routing policy](routing-policy.json) | Shadow-only catalog, both API and subscription design paths, actuation disabled |
-| [Session events](session-events.jsonl) | Retry, duplicate delivery, missing usage, late reconciliation and verified outcome |
-| [Task outcome](task-outcome.json) | Artifact-bound acceptance with intervention coverage; inference-only cost scope |
-| [Provider request fragments](provider-requests.json) | Actual API field shapes with unresolved model/provider placeholders |
-| [Cohort comparison](cohort-comparison.json) | Worked cost/time/autonomy arithmetic on ten fictional tasks per policy |
+| [Run manifest](run-manifest.json) | One observe-only evaluation run, fixed baseline, and capture/limit scope |
+| [Routing policy](routing-policy.json) | Shadow-only catalog covering API and subscription paths with actuation off |
+| [Session events](session-events.jsonl) | Retry, duplicate delivery, missing usage, late reconciliation, and verified outcome |
+| [Task outcome](task-outcome.json) | Artifact-bound acceptance with intervention coverage and inference-only cost scope |
+| [Provider request fragments](provider-requests.json) | API field shapes with unresolved model and provider placeholders |
+| [Cohort comparison](cohort-comparison.json) | Worked cost, duration, and autonomy arithmetic across ten fictional tasks per policy |
 
-The policy intentionally has no live-qualified profiles, configured quality floor or exploration.
-It is not a ready-to-enable controller configuration. A synthetic recommendation has no authority
-to modify the manifest's externally chosen baseline.
+The routing policy has no live-qualified profiles, quality floor, or exploration enabled, and nothing in a synthetic policy can alter the manifest's chosen baseline.
 
-## Session/accounting example
+## Session and accounting example
 
-The first inference attempt times out without final usage. Its exposure remains held. A second,
-separately identifiable attempt succeeds. Event `e07` is delivered twice to illustrate transport
-deduplication. The first attempt later reconciles with its own charge.
+The first inference attempt times out before reporting final usage, keeping exposure held. A second attempt with its own ID succeeds, while event `e07` arrives twice to test transport deduplication. When the first attempt reconciles later, inference spending adds up cleanly to `0.02 + 0.03 = 0.05 USD`: two charges rather than one combined call or `0.08 USD` from double-counting the duplicate. Before reconciliation completes, total cost stays unknown. That `0.05` figure covers inference only, not total task cost or provider billing guarantees.
 
-Correct inference accounting is `0.02 + 0.03 = 0.05 USD`: two charges, not one logical-call charge,
-and not `0.08` from counting the duplicate. Before reconciliation, the complete amount is unknown.
-The `0.05` is **inference only**, not a complete all-in task cost or a provider API compatibility claim.
-
-For the second attempt, normalized input is 100 tokens, of which 60 are cached. Output is 20,
-of which five are reasoning. Input is not 160 and output is not 25. Unknown cache-write usage
-remains null rather than being guessed as zero.
-
-The acceptance events bind to the same fictional artifact and explicit complete intervention
-coverage. Their assertions exercise the proposed format; no real tests, isolation checks or
-human-observation channel ran to establish them.
+On the second attempt, normalized input is 100 tokens (including 60 cached), and output is 20 tokens (including 5 reasoning). Subsets are not summed into totals (100, not 160; 20, not 25), and unknown cache-write counts stay `null` rather than guessing zero.
 
 ## Why the cheapest call can lose
 
-The two policies process the same ten synthetic task identities in separate imagined executions.
-All costs/outcomes are declared complete for this arithmetic fixture. Human wage costs are
-excluded; corrective minutes are reported separately. Request counts include fictional retries.
-The p95 uses the nearest-rank definition, not interpolation.
+Both policies in [`cohort-comparison.json`](cohort-comparison.json) run against the same ten fictional task IDs (`synthetic-01` through `synthetic-10`) with complete cost and outcome records. Human wages are excluded and corrective minutes stay separate. Request counts include retries, and p95 wall time uses nearest-rank ordering.
 
-The calculation rejects policies with missing, extra or replaced task IDs; task order may
-differ. Absent maturity or intervention-coverage fields keep quality and the cost/success ratio
-unknown. This paired-example contract is not a requirement that all real randomized experiments
-assign identical task identities to every treatment group.
+The calculation rejects cohorts with missing, extra, or swapped task IDs. Absent maturity or intervention-coverage fields keep quality and cost per success unknown.
 
 | Measure | Cheap profile | Balanced profile |
 | --- | --- | --- |
 | Inference requests | 800 | 400 |
-| Mean inference cost/request | $0.05 | $0.15 |
+| Mean inference cost per request | $0.05 | $0.15 |
 | Total inference | $40 | $60 |
 | Sandbox | $20 | $12 |
 | Evaluation | $10 | $8 |
@@ -79,14 +51,11 @@ assign identical task identities to every treatment group.
 | Failures | 2/10 | 1/10 |
 | Corrective human minutes | 20 | 0 |
 | p95 task wall time | 1,800 s | 600 s |
-| Cost/autonomous success | $12.00 | $9.11 |
+| Cost per autonomous success | $12.00 | $9.11 |
 
-The balanced profile spends more per request and more on the cohort, yet spends less per
-autonomous successful task in this fixture. This illustrates the denominator choice; it does
-not establish that a particular model is better, an expected saving, or a statistically reliable
-quality floor. Ten fictional tasks cannot qualify a deployment.
+The balanced profile pays more per request and more overall (`$82` vs `$72`), yet costs less per autonomous pass (`$9.11` vs `$12.00`). This shows why the denominator matters; ten fictional tasks do not establish model quality or real savings.
 
-Recompute from the Æion Observability project root with standard Python:
+Recompute from the Æion Factory root using standard Python:
 
 ```sh
 python3 - <<'PY'
@@ -116,14 +85,8 @@ for policy in data['policies']:
 PY
 ```
 
-## Request-fragment limitations
+## Request fragment limits
 
-The OpenRouter/DeepInfra bodies use documented Chat Completions field names. Every model,
-provider slug and optional variant needs exact capability/price/privacy qualification. No
-authentication header is supplied. The optional variant metadata is not a second API schema;
-only its explicit body patch belongs in a qualified request.
+The OpenRouter and DeepInfra examples in [`provider-requests.json`](provider-requests.json) use documented Chat Completions field names with no authentication headers. Model slugs, pricing, and optional settings require separate qualification against a live endpoint.
 
-`reasoning.exclude` in the OpenRouter fragment limits returned content; it does not disable
-reasoning cost. DeepInfra's optional tier/cache settings are not universal model capabilities.
-Do not send these fragments unchanged through Claude Code's Anthropic-compatible endpoint.
-See the [capability matrix](../knowledge/references/provider-capabilities.md).
+`reasoning.exclude` in the OpenRouter fragment filters returned text without removing reasoning cost, and DeepInfra's optional cache or tier flags are not universal model capabilities. Do not forward these fragments unchanged to an Anthropic-compatible endpoint; see the [capability matrix](../knowledge/references/provider-capabilities.md).

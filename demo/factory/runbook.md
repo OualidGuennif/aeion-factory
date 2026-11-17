@@ -1,119 +1,80 @@
-# Factory local VPS runbook — S4
+# Factory local VPS runbook (S4)
 
-Scope: run the Æion cockpit and the Agora factory board on one small VPS, locally, with fake
-inference. Nothing here authorises paid inference, a remote push/PR/merge or a product
-deployment. The default worker still simulates builds; the one pinned target profile below
-runs the real Quarkus forum and its real Gradle check without a model call.
+This runbook covers running the Æion Feature Cockpit and Agora factory controller on a small host or local VPS with fake inference. Nothing here authorizes paid inference, remote merges, or production deployment without explicit gates. The default worker simulates builds; the pinned target profile runs the real Quarkus forum and Gradle checks locally without calling a model.
 
-Honest limit: the backup/restore drill below qualifies the **factory state store** (SQLite).
-It does **not** qualify a future product Postgres restore, which needs the real product schema.
+The backup and restore drill below validates only the factory SQLite state store (`demo/.local/factory/factory.db`). Restoring the separate product PostgreSQL database requires its own schema procedure.
 
 ## 1. What runs
 
-One Python process serves two surfaces on loopback:
+One Python server on loopback exposes both interfaces and API routes:
 
 | Surface | Path | Purpose |
 | --- | --- | --- |
-| Cockpit | `/` | read-only task cockpit |
-| Factory board | `/factory` | administrator board: login, catalog, queue, cancel, live events |
+| Feature cockpit | `/` | Paginated feature catalog, build status, budget caps, and events (alias: `/factory`) |
+| Model lab | `/lab` | Sandbox task runner, paginated run history, model comparison, checkpoints, and stack health |
 
-The factory owns a SQLite database (WAL) and a disposable work tree. Both live under
-`demo/.local/`, which is ignored by Git and never inside the product output scope.
+The controller writes an owner-only SQLite WAL database and temporary worktrees inside `demo/.local/`, which stays ignored by Git and outside product outputs.
 
 ## 2. Prerequisites
 
-- Python 3.13+ (the demo venv runs 3.15), `git` on `PATH`.
-- No inference provider is contacted by the board. The GitHub publisher exists but stays in
-  dry-run unless `--for-real` is passed and `GH_API_KEY` is present; the token is read at call
-  time and never printed.
+- Python 3.13+ (`demo/.local/venv` runs Python 3.15 here) and `git` on `PATH`.
+- Fake inference requires no API provider. GitHub publishing stays dry-run unless `--for-real` is passed with `GH_API_KEY` set; tokens are read at request time and never logged.
 - A dedicated unprivileged user owns the checkout and `demo/.local/`.
 
-## 3. Harness prerequisite: the Pi extension
+## 3. Pi extension requirement
 
-Agents must be started with the template extension, or **the skills and the hooks never load**:
+Start Pi agents with the template extension loaded so skills and hooks initialize properly:
 
 ```bash
 pi -e .pi/extensions/template/index.js
 ```
 
-`flue run` (2.3.0) exposes no `-e`/`--extension` option, so the flag belongs to the Pi
-invocation that Flue drives, not to the Flue command line. Ensure every prepared agent
-workspace carries `.pi/extensions/template/index.js` before launching; running without the
-extension runs the agent without its skills and hooks.
+`flue run` (2.3.0) accepts no `-e` flag itself, so keep `.pi/extensions/template/index.js` present inside every prepared agent workspace before launching Flue.
 
 ## 4. Trust boundary
 
-Read `trust-model.md` before granting any new capability. Short version: the model produces data,
-never authority. Generated code runs only inside OpenShell, the diff is validated as data, the
-protected checks and the deterministic reviewer are outside the candidate's control, and the
-publisher refuses anything unreviewed. Nothing auto-merges.
+Review [`trust-model.md`](trust-model.md) before enabling any new capability. Model outputs are treated strictly as untrusted data: generated code runs inside OpenShell, diffs undergo strict path validation, protected checks and deterministic rules run outside agent reach, and the publisher refuses unreviewed artifacts. Nothing merges without passing required checks and two independent reviews.
 
-## 5. Configuration (allowlist only)
+## 5. Configuration allowlist
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `AEION_COCKPIT_PORT` | `8088` | loopback port |
-| `AEION_LOCAL_DIR` | `demo/.local` | owner-only state root (mode `0700`) |
-| `AEION_DATA_DIR` | `demo/.local/data` | cockpit data |
-| `AEION_WORK_DIR` | `demo/.local/work` | >= disposable work trees |
-| `AEION_DAILY_LIMIT_USD`, `AEION_AUTHOR_MAX_USD`, `AEION_REVIEW_MAX_USD` | from `demo/budget.conf` (150, 50, 1) | spending bounds, never above $150/day, $50/execution, $1/vote |
+| `AEION_COCKPIT_PORT` | `8088` | Loopback listen port |
+| `AEION_LOCAL_DIR` | `demo/.local` | Owner-only state directory (`0700`) |
+| `AEION_DATA_DIR` | `demo/.local/data` | Cockpit and lab metrics store |
+| `AEION_WORK_DIR` | `demo/.local/work` | Disposable sandbox workspaces |
+| `AEION_DAILY_LIMIT_USD`, `AEION_AUTHOR_MAX_USD`, `AEION_REVIEW_MAX_USD` | From `demo/budget.conf` (`150`, `50`, `1`) | Hard spending ceilings (`$150/day`, `$50/execution`, `$1/vote`) |
 
-Never pass a secret on the command line or in a unit file. The factory prints nothing from the
-environment. The first start writes `demo/.local/factory/admin.token` (mode `0600`); that token is
-rotated on every successful login.
+Never pass secrets on the command line or inside service unit files. First startup generates `demo/.local/factory/admin.token` (`0600`), rotating the bootstrap token on every login.
 
-### 5.1 The credentials, one key per capability
+### 5.1 Credentials: one key per role
 
-Start from the committed root template `.env.example` and fill it locally. Three GitHub keys,
-never one:
+Copy the committed root [`.env.example`](../../.env.example) locally and issue three separate GitHub fine-grained tokens scoped solely to `OualidGuennif/aeion-autonomous-forum` with explicit expiration dates:
 
-| Key | Role | Fine-grained permissions | Held by |
+| Key | Role | Fine-grained permissions | Process owner |
 | --- | --- | --- | --- |
-| `GH_BUILD_KEY` | build | Contents read-only, Pull requests read-only | trusted source synchronizer; never a model worker |
-| `GH_API_KEY` | publish | Contents read/write, Pull requests read/write | the publisher process, for one publish |
-| `GH_RELEASE_KEY` | release | Contents read/write, Pull requests read/write, Administration read-only | isolated deterministic release process |
+| `GH_BUILD_KEY` | Build | Contents read-only, Pull requests read-only | Trusted source sync only; never an agent |
+| `GH_API_KEY` | Publish | Contents read/write, Pull requests read/write | Isolated publisher for a single PR |
+| `GH_RELEASE_KEY` | Release | Contents read/write, Pull requests read/write, Administration read-only | Isolated release process |
 
-Scope each key to `OualidGuennif/aeion-autonomous-forum` only, give it an expiry, and never export
-it to an agent, a worker, the review circuit or CI. `demo/factory/keys.py` enforces the roles and
-`demo/app/settings.py` scrubs the publish class at start-up; a missing key fails closed.
+`demo/factory/keys.py` enforces role isolation and `demo/app/settings.py` scrubs publish credentials at startup. Missing keys fail closed.
 
-The separately reviewed maintainer bootstrap imports CI as well as the exact committed backend.
-Its publisher temporarily needs **Workflows read/write** on this product repository; ordinary
-workers remain forbidden from changing `.github/`. Remove that temporary permission after the
-bootstrap completes. GitHub refused the current bootstrap at tree creation with HTTP403, before
-any branch or PR existed. The owner will activate the permission later: do not retry until the
-owner confirms activation. The two complete approvals remain valid for the unchanged bundle.
+The maintainer bootstrap imports GitHub Actions workflows alongside the product backend and temporarily needs **Workflows read/write** permission on that repository, after which that permission should be removed. If GitHub returns HTTP 403 before creating a branch or PR, re-arm the permission and run `bootstrap.py resume-publication --state <bootstrap-state>` in the publisher environment rather than repeating model reviews or forcing a new author attempt.
 
-After that confirmation, run `bootstrap.py resume-publication --state <bootstrap-state>` in the
-isolated publisher environment. This phase only reads GitHub and rearms local state after checking
-the frozen main, absence of the deterministic branch/PR, exact stored request and the known
-effect-free403. Then use `publish` and the separate `release` environment; changed/uncertain
-remote state holds for reconciliation. Do not repeat model reviews or bypass required CI.
+### 5.2 Branch protection and required status checks
 
-### 5.2 Branch protection and the required checks
-
-Both `main` and `develop` require a pull request and these status checks, which the Æion Factory
-CI produces: `Knowledge, links and repository health`, `Product artifacts`, `secret-scan`,
-`dependency-scan`, `sast-scan`. Linear history, resolved conversations, no force-push, no deletion,
-admins included. `main` also requires the branch to be up to date before merging; `develop` does
-not, so parallel builds can merge without a rebase race.
-
-`Product artifacts` runs `.github/scripts/check_product.py`, which is deliberately independent of
-the factory's own reviewer: a worker that approved its own output still faces a second opinion.
+Both `main` and `develop` require pull requests, linear history, resolved conversations, no force-pushes or branch deletions (admins included), and all five CI checks: `Knowledge, links and repository health`, `Product artifacts`, `secret-scan`, `dependency-scan`, and `sast-scan`. `main` also enforces up-to-date branches before merge, whereas `develop` allows parallel merges without constant rebasing. `Product artifacts` runs `.github/scripts/check_product.py` independently of factory reviewers.
 
 ## 6. Start and stop
 
-Foreground (manual, easiest to watch):
+Foreground startup from the checkout directory:
 
 ```bash
 cd /srv/aeion-factory
 python3 demo/run.py
 ```
 
-The launcher re-executes `demo/.local/venv/bin/python`, so `jinja2` resolves. Run it once to
-create the venv if it is missing.
-
-`systemd` unit (Linux VPS), adapted paths and user:
+The launcher re-executes inside `demo/.local/venv/bin/python` automatically (or falls back smoothly if you run `demo/install.py` first). Example `systemd` unit for Linux hosts:
 
 ```ini
 [Unit]
@@ -140,26 +101,23 @@ WantedBy=multi-user.target
 
 ```bash
 sudo systemctl daemon-reload && sudo systemctl enable --now aeion-factory
-curl -fsS http://127.0.0.1:8088/api/health     # {"status":"ok"}
+curl -fsS http://127.0.0.1:8088/api/health
 ```
 
-Stop with `sudo systemctl stop aeion-factory`. The service binds loopback; the board refuses a
-foreign `Host` or a mismatched `Origin`, so a tunnel or proxy must preserve both.
+Stop with `sudo systemctl stop aeion-factory`. Because the server binds loopback and validates `Host` and `Origin` headers, any SSH tunnel or reverse proxy must preserve both.
 
-## 7. Health and inspection
+## 7. Health checks
 
 ```bash
-curl -fsS http://127.0.0.1:8088/api/health          # cockpit health
-curl -fsS -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8088/factory   # 200
+curl -fsS http://127.0.0.1:8088/api/health
+curl -fsS -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8088/factory
 ```
 
-The board itself requires an administrator session; `/api/factory/board` without a cookie returns
-`401`. Read the admin token from the file as the owner — never copy it into a ticket, a chat or a
-log.
+Unauthenticated requests to `/api/factory/board` return `401`. Read the admin token directly from `demo/.local/factory/admin.token` in your editor and avoid pasting it into logs, tickets, or chat.
 
-## 8. Backup (verified, not assumed)
+## 8. Verified backups
 
-The drill uses SQLite's online backup API, safe while WAL is live, then re-verifies the copy:
+Take live SQLite backups safely during WAL activity and immediately run integrity verification:
 
 ```bash
 cd /srv/aeion-factory/demo
@@ -168,111 +126,79 @@ cd /srv/aeion-factory/demo
   /var/backups/aeion/factory-$(date -u +%Y%m%dT%H%M%SZ).db
 ```
 
-It prints a JSON receipt and exits non-zero when the copy is unusable (`source_missing`,
-`not_a_database`, `integrity:…`, `missing_tables:…`). A backup **without** that receipt is not a
-backup. Retention: keep the last 14 daily files plus the first of each month; the store is small.
+The command prints a JSON receipt and exits non-zero if validation fails (`source_missing`, `not_a_database`, `integrity:...`, or `missing_tables:...`). Keep 14 daily backups plus the first backup of each month, and fail cron/timer jobs on any non-zero exit.
 
-Schedule it from `systemd` timers or cron, and fail the job on a non-zero exit.
+## 9. Restore procedure
 
-## 9. Restore (drill and real)
-
-1. Stop the service so no writer is live.
-2. Verify the backup **before** touching the live file:
+1. Stop the controller process so no writer remains active.
+2. Verify the candidate backup file before touching live state:
    ```bash
    cd /srv/aeion-factory/demo
    .local/venv/bin/python -c \
      "from factory.restore import verify_db; import json; print(json.dumps(verify_db('/var/backups/aeion/factory-XXXX.db')))"
    ```
-3. Move the current database aside (never delete it):
-   `mv demo/.local/factory/factory.db demo/.local/factory/factory.db.pre-restore`
-   and the same for any `-wal` / `-shm` siblings.
-4. Copy the verified backup into place and `chmod 0600` it.
-5. Start the service, then confirm: `/api/health` is `ok`, `/factory` is `200`, and the board
-   lists the expected builds (a restored `simulated_complete` build keeps its receipt).
-6. Only after a successful verification, remove the `.pre-restore` files.
+3. Move `demo/.local/factory/factory.db` (plus any `-wal` and `-shm` files) to `.pre-restore` rather than deleting them.
+4. Copy the verified backup into place and enforce `chmod 0600`.
+5. Start the controller and check `/api/health`, `/factory`, and build records.
+6. Remove `.pre-restore` files only after verifying the restored board.
 
-The factory's `Store` reconciles expired leases at startup into `held/reconciliation_needed`,
-preserving the attempt identity. A crash does not prove that a paid call or forge action had no
-effect. Inspect the evidence and budget liability, then explicitly cancel the old request before
-admitting a retry. No automatic paid retry occurs. The worker's lease covers the longest target
-check deadline, three model call timeouts and a 60-second teardown allowance.
+On startup, `Store` moves any expired leases into `held/reconciliation_needed` and preserves attempt IDs. Always inspect costs and remote forge state before cancelling an interrupted attempt and retrying, since a crash does not prove an external call had no effect.
 
 ## 10. Rollback
 
-Code and state are separate. To roll back a bad run: stop the service, restore the last verified
-backup, start the service, and confirm the board and health as in §7. Roll back the checkout with
-Git only after the state is consistent; never restore a database under a different schema version
-without a migration.
+Keep code and SQLite state decoupled. To roll back a broken release, stop the controller, restore the latest verified database backup, restart the service, verify health endpoints, and check out the previous Git revision once state matches its schema version.
 
-## 11. Failure modes the runbook assumes
+## 11. Common holds and actions
 
 | Symptom | Meaning | Action |
 | --- | --- | --- |
-| build held `dependency_missing` | a prerequisite is not merged | admit the prerequisite first |
-| build held `qualification_missing` | frozen spec or bound missing | fix the spec/bounds, re-admit |
-| build held `owner_review_required` | the diff touches a sensitive scope | owner reviews, then re-admits |
-| build held `reconciliation_needed` | a stale base/head was refused | reconcile before retrying |
-| publisher `uncertain` | forge effect unknown | the publisher reconciles; never re-publish |
-| build `failed` with `correction.round` 0 or 1 | a reject, a failed gate or a failed required CI check queued the next correction round | nothing: it runs next; a red pull request is not merged |
-| build held `ci_failed` with `correction.exhausted` | required CI failed and the correction rounds are used | read the check names in Build evidence, then cancel to free the feature |
-| build held `reviewer_rejected` after round 2, or `correction_unchanged` | automatic corrections exhausted or made no change | read the reasons; cancel, then fix the MD or relaunch |
-| build held `reviewer_rejected` (old v1 envelope) | reviewed without the base diff | once: `python -m factory.review_context BUILD_ID` from `demo/` |
-| build held `reviewer_failed`, vote `REVIEW_RESULT_MISSING` | no typed verdict, no rejection | once: add `--retry-failed-review`; a second failure stays held |
+| Held `dependency_missing` | A prerequisite feature has not merged yet | Build and merge the prerequisite first |
+| Held `qualification_missing` | Frozen contract or sandbox bound missing | Restore qualification before queueing |
+| Held `owner_review_required` | Diff touches sensitive paths or rules | Review the diff locally before proceeding |
+| Held `reconciliation_needed` | Interrupted attempt or moved base commit | Reconcile remote/budget state before retrying |
+| Publisher `uncertain` | Unknown GitHub PR/merge state | Let publisher reconcile; do not re-publish |
+| `failed` at `correction.round` 0 or 1 | Refusal or CI failure triggered next round | Wait for the automatic retry or inspect evidence |
+| Held `ci_failed` (`correction.exhausted`) | Required CI stayed red across rounds | Read failing check names in evidence, then cancel |
+| Held `reviewer_rejected` / `correction_unchanged` | Reviewers rejected diff or retry changed nothing | Read reviewer feedback, cancel, and adjust spec |
+| Held `reviewer_rejected` (legacy v1) | Older envelope lacked base diff | Run `python -m factory.review_context BUILD_ID` once from `demo/` |
+| Held `reviewer_failed` (`REVIEW_RESULT_MISSING`) | Reviewer timed out or returned untyped reply | Retry failed votes once (`--retry-failed-review`) |
 
-## 12. What this runbook does not qualify
+## 12. Limits of this local runbook
 
-- Real tier-3 sandbox containment (the macOS transport is still unqualified, handoff §6).
-- The GitHub publisher: `GH_API_KEY` is not loaded, no branch, PR or merge is created.
-- The product forum, its Postgres schema, its restore, its moderation or its telemetry.
-- Any paid model call, any deployment, any external exposure of the board.
+- Tier 3 OpenShell sandboxing in local Docker Desktop is dev isolation, not a hostile-code microVM boundary.
+- Without `--for-real` and `GH_API_KEY`, no remote GitHub branch, PR, or merge executes.
+- Product PostgreSQL migrations, schema backups, live deployments, and external hosting remain separate operations.
 
-## 13. Release plane
+## 13. Release API
 
-Start the cockpit and open `http://127.0.0.1:8088/factory`. The **Release test environment** panel
-is collapsed below build activity and loaded only when opened.
+The controller provides programmatic release endpoints (`GET /api/factory/releases`, `POST /api/factory/release`), while the browser cockpit intentionally omits synthetic canary buttons and shows Staging/Production as `Not deployed yet` until verified deployments exist.
 
-| Action | Endpoint | What it does |
+| Action | Payload on `POST /api/factory/release` | Effect |
 | --- | --- | --- |
-| Stage | `POST /api/factory/release {"action":"stage","features":[…]}` | creates the release and serves it on the **staging** slot only |
-| Validate | `{"action":"validate"}` | promotes it to production at **25%** |
-| Advance | `{"action":"advance"}` | next step, only when the dwell is over **and** the canary gate says `continue` |
-| Immediate full deploy | `{"action":"deploy_now"}` | 100% now, recorded as `immediate_full_deploy` |
-| Rollback | `{"action":"rollback","reason":"…"}` | 0%, state `rolled_back` |
-| Flag | `{"action":"flag","name":"dark_mode","enabled":true}` | recorded in the release history |
+| Stage | `{"action":"stage","features":[...]}` | Creates a staged release record |
+| Validate | `{"action":"validate"}` | Moves canary share to 25% |
+| Advance | `{"action":"advance"}` | Advances after dwell completes and gate passes |
+| Immediate full deploy | `{"action":"deploy_now"}` | Sets 100% (`immediate_full_deploy`) |
+| Rollback | `{"action":"rollback","reason":"..."}` | Drops share to 0% (`rolled_back`) |
+| Flag | `{"action":"flag","name":"dark_mode","enabled":true}` | Records a release flag change |
 
-`AEION_RELEASE_SCALE` compresses the 6 h/12 h dwells for a local drill and is stored on the release;
-`AEION_REDIS_URL` selects the real cache (otherwise the file fallback is named in the response).
-A real Redis for the playground:
+`AEION_RELEASE_SCALE` shortens 6 h / 12 h dwell timers during local drills, and `AEION_REDIS_URL` enables Redis instead of the file fallback:
 
 ```bash
 docker run -d --name aeion-redis -p 6399:6379 redis:7-alpine
 AEION_REDIS_URL=redis://127.0.0.1:6399 python3 demo/run.py
 ```
 
-Agent sessions (workers, never forum users) are issued and revoked through
-`POST /api/factory/session` with `{"action":"issue","agent_id":"…","build_id":"…"}`. The token is
-shown once; the gateway stores only its digest and every call lands in `gateway-audit.jsonl`.
+Worker session tokens issue and revoke via `POST /api/factory/session` (`{"action":"issue","agent_id":"...","build_id":"..."}`); tokens appear once, with only digests and audit events stored locally (`gateway-audit.jsonl`).
 
-## 14. Pinned forum target (offline)
+## 14. Pinned offline forum check (`013`)
 
-The default worker writes a simulated Markdown diff. A target profile binds one catalog
-feature to the runnable Quarkus forum instead: an exact base commit, two literal source
-scopes, an adapted brief, and a protected Gradle check whose contract test lives outside both
-scopes. The first profile is feature 013 in
-`demo/forum/targets/forum-app-013.json`; the 100-feature plan is untouched.
+A target profile can bind a catalog item to the Quarkus forum snapshot using an exact base commit, write scopes, and an external Gradle acceptance test. Run the offline Feature 013 drill with fake inference:
 
 ```bash
 demo/.local/venv/bin/python demo/tests/qualify_forum_build.py
-# or, without the Collector/Langfuse export:
+# Or skip telemetry export:
 demo/.local/venv/bin/python demo/tests/qualify_forum_build.py --no-telemetry
 ```
 
-It clones the product repository at `37417ab` (`demo/.local/factory/agents/aeion-autonomous-forum`),
-runs an injected fake-model builder (no inference, no cost), validates the artifact, runs the real
-`gradle test --offline` suite with the external contract copied in, takes two fake review votes,
-records the fake-forge PR shape and emits one metadata-only `factory.build` span. The script then
-reads the trace back from Langfuse and fails if the build, feature, attempt, artifact or session
-identity differs. The build appears on `/factory`; its receipt shows the four ids and links the
-trace. This is an offline qualification: it does not authorise a paid model run, a real pull
-request or a deployment. The local Docker image is documented in the product repository at
-`demo/forum-app/DOCKER.md`.
+The script checks out commit `37417ab` in `demo/.local/factory/agents/aeion-autonomous-forum`, runs an injected fake-model builder, executes `gradle test --offline` with external acceptance tests, simulates two review votes, and verifies the resulting `factory.build` span in Langfuse. This confirms the pipeline offline without spending inference quota, opening a remote PR, or deploying code. See `demo/forum-app/DOCKER.md` in the product repo for container build instructions.

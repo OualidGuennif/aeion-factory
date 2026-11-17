@@ -10,368 +10,293 @@
   <script src="/app.js" defer></script>
 </head>
 <body>
-  <header class="topbar">
-    <a class="brand" href="/">Æion <span>Factory · Lab</span></a>
-    <nav aria-label="Main">
-      <a href="#architecture">How it works</a>
-      <a href="#sessions">Playground</a>
-      <a href="#models">Models</a>
-      <a href="#memory">Memory</a>
-      <a href="/factory">Feature cockpit ↗</a>
-    </nav>
-    <div class="topbar-tools">
-      <button type="button" class="theme-toggle" data-theme-toggle>Theme</button>
-      <span class="connection"><i id="system-dot"></i><span id="system-status">Checking services</span></span>
-    </div>
-  </header>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="sidebar-top">
+        <a class="brand" href="/">
+          <span class="brand-glyph" aria-hidden="true"></span>
+          <span>Æion Lab</span>
+        </a>
 
-  <main>
-    <aside class="lab-note" aria-label="About this page">
-      <strong>Sandbox and model lab</strong> — not needed to build product features. For Agora builds and releases, open the <a href="/factory">Feature cockpit →</a>
+        <nav class="side-nav" aria-label="Model lab sections">
+          <button type="button" class="side-link is-active" data-lab-tab="sessions" aria-pressed="true">
+            <span>Run a task</span>
+          </button>
+          <button type="button" class="side-link" data-lab-tab="runs" aria-pressed="false">
+            <span>Run history</span>
+          </button>
+          <button type="button" class="side-link" data-lab-tab="models" aria-pressed="false">
+            <span>Models</span>
+          </button>
+          <button type="button" class="side-link" data-lab-tab="memory" aria-pressed="false">
+            <span>Memory</span>
+          </button>
+          <button type="button" class="side-link" data-lab-tab="architecture" aria-pressed="false">
+            <span>Architecture</span>
+          </button>
+        </nav>
+      </div>
+
+      <div class="sidebar-bottom">
+        <div class="side-links-ext">
+          <button id="tour" type="button" class="ext-button">Replay 250k handover</button>
+          <a class="ext-link" href="/factory">Feature cockpit ↗</a>
+        </div>
+        <div class="sidebar-footer">
+          <span class="connection"><i id="system-dot"></i><span id="system-status">Checking</span></span>
+          <button type="button" class="theme-toggle" data-theme-toggle>Theme</button>
+        </div>
+      </div>
     </aside>
 
-    <section class="hero">
-      <div class="hero-copy">
-        <h1>Agent work.<br><em>Measured clearly.</em></h1>
-        <p class="intro">Run small coding tasks inside an isolated OpenShell sandbox, meter every model call, and keep only verified passes without human help.</p>
-        <div class="hero-actions">
-          <a class="primary" href="#sessions">Open playground <span>↓</span></a>
-          <a class="secondary" href="/factory">Feature cockpit ↗</a>
-          <button id="tour" type="button" class="quiet">Replay 250k handover</button>
+    <main class="main-area">
+      <p id="message" class="lab-status-msg" role="status"></p>
+
+      <!-- SECTION 1: RUN A TASK -->
+      <section class="section" id="sessions" data-lab-panel="sessions">
+        <header class="section-head">
+          <div>
+            <h1>Run a sandbox task</h1>
+            <p class="section-sub">Execute a small JavaScript exercise inside OpenShell or replay the 250k context handover.</p>
+          </div>
+          <span id="execution-status" class="tag">Ready</span>
+        </header>
+
+        <div class="lab-layout">
+          <div class="surface-block">
+            <h2 id="task-title">Cart totals</h2>
+            <p class="fineprint">Choose a runtime tier, task scenario, and model profile.</p>
+
+            <label for="runtime">Execution tier</label>
+            <select id="runtime">
+              <option value="flue-openshell">3 · Autonomous coding · OpenShell</option>
+              <option value="flue-local">2 · Local assistant · restricted folder</option>
+              <option value="flue-just-bash">1 · Triage · just-bash</option>
+            </select>
+
+            <label for="scenario">Task scenario</label>
+            <select id="scenario">
+              <option value="pricing-js-v1">Cart totals</option>
+              <option value="shipping-js-v1">Shipping rules</option>
+              <option value="discounts-js-v1">Exact discount arithmetic</option>
+              <option value="cart-js-v1">Normalize and merge a cart</option>
+            </select>
+
+            <label for="objective">Selection objective</label>
+            <select id="objective">
+              <option value="balanced">Balance cost and elapsed time</option>
+              <option value="cost">Lowest observed cost</option>
+              <option value="speed">Shortest observed time</option>
+            </select>
+
+            <label for="profile">Go subscription model</label>
+            <select id="profile">
+              <option value="auto">Auto · best observed for this task</option>
+              <option value="glm">GLM 5.3 Flash</option>
+              <option value="deepseek">DeepSeek V4.1 Flash</option>
+              <option value="glm-full">GLM 5.3</option>
+              <option value="glm52">GLM 5.2</option>
+              <option value="minimax">MiniMax M3.1 Flash</option>
+            </select>
+
+            <div class="action-stack">
+              <button id="live" type="button" class="primary full" disabled>Run Flue build <span>→</span></button>
+              <button id="simulate" type="button" class="secondary full">Replay 250k handover</button>
+              <button id="benchmark" type="button" class="secondary full" disabled>Compare all tasks &amp; models</button>
+            </div>
+
+            <p id="sandbox-status" class="fineprint">OpenShell required · vendor telemetry off</p>
+            <div id="campaign-status" class="fineprint"></div>
+          </div>
+
+          <div class="surface-block execution-panel">
+            <h2>Active session</h2>
+
+            <div class="flow">
+              <div><b>01</b><strong>Build</strong><small>Flue + Pi</small></div>
+              <div><b>02</b><strong>Verify</strong><small>Deno checks</small></div>
+              <div><b>03</b><strong>Observe</strong><small>Langfuse</small></div>
+              <div><b>04</b><strong>Remember</strong><small>Checkpoint</small></div>
+            </div>
+
+            <div class="context-heading">
+              <span>Input context (<span id="metric">Active input context</span>)</span>
+              <strong id="context-value">0 / 250,000</strong>
+            </div>
+            <div class="context-track"><div id="context-fill"></div><span class="gate-marker"></span></div>
+            <p class="fineprint">Ceiling: <strong id="limit">250,000 <small>tokens</small></strong></p>
+
+            <div id="active-detail" class="active-detail">
+              <p>Start a live build or replay the 250k handover. Runtime state, test verdicts, and memory confirmations appear here.</p>
+            </div>
+          </div>
         </div>
-      </div>
-      <div class="hero-art">
-        <img src="/assets/agent-atelier.png" alt="Illustration of isolated agent workstations connected through a deterministic check gate to memory archives">
-      </div>
-    </section>
+      </section>
 
-    <section class="section" id="architecture">
-      <div class="section-heading">
-        <div>
-          <h2>How it works</h2>
-          <p class="section-sub">Every run stays within spend, sandbox, and context bounds before protected checks decide the outcome.</p>
+      <!-- SECTION 2: RUN HISTORY -->
+      <section class="section" id="runs-view" data-lab-panel="runs" hidden>
+        <header class="section-head">
+          <div>
+            <h1>Run history &amp; metrics</h1>
+            <p class="section-sub">Summary metrics and individual traces for the selected task.</p>
+          </div>
+          <div class="evidence-tabs" role="group" aria-label="Evidence filter">
+            <button type="button" data-filter="real" class="selected" aria-pressed="true">Real runs</button>
+            <button type="button" data-filter="synthetic" aria-pressed="false">Simulation</button>
+          </div>
+        </header>
+
+        <div id="kpi-cards" class="kpi-grid"></div>
+        <div id="runs" class="run-list" aria-live="polite"></div>
+        <nav id="runs-pager" class="pager" aria-label="Run history pagination" hidden></nav>
+      </section>
+
+      <!-- SECTION 3: MODELS -->
+      <section class="section" id="models" data-lab-panel="models" hidden>
+        <header class="section-head">
+          <div>
+            <h1>Model comparison</h1>
+            <p class="section-sub">Measured cost and elapsed time on unassisted passes across comparable sandbox runs.</p>
+          </div>
+          <span class="tag" id="chart-count">Waiting for runs</span>
+        </header>
+
+        <div class="surface-block">
+          <div id="decision" class="decision">Collect comparable real runs before choosing a model.</div>
+          <svg id="pareto" viewBox="0 0 600 300" role="img" aria-label="Model comparison: elapsed time versus estimated cost per unassisted pass"></svg>
+          <p class="fineprint">Lower left is cheaper and faster. Filled dots represent clean passes without human help.</p>
         </div>
-      </div>
 
-      <div class="guards">
-        <div>
-          <span class="rule-label">Bounded spend</span>
-          <strong>$150 / day</strong>
-          <small>per repository purse · author ≤ $50 · review ≤ $1 · <code>demo/budget.conf</code></small>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Model / evidence</th>
+                <th>Tasks</th>
+                <th>Autonomous</th>
+                <th>Median time</th>
+                <th>Input / output</th>
+                <th>Cost / success*</th>
+              </tr>
+            </thead>
+            <tbody id="model-rows"></tbody>
+          </table>
         </div>
-        <div>
-          <span class="rule-label">Bounded context</span>
-          <strong>250k → handover</strong>
-          <small>handover brief prepared at 230k · fresh session at 250k · 300k cap</small>
+      </section>
+
+      <!-- SECTION 4: MEMORY -->
+      <section class="section" id="memory" data-lab-panel="memory" hidden>
+        <header class="section-head">
+          <div>
+            <h1>Continuity &amp; memory</h1>
+            <p class="section-sub">Local SHA-256 handover checkpoints and Hindsight session notes.</p>
+          </div>
+          <span class="tag"><i data-service="hindsight"></i>Hindsight 1.2</span>
+        </header>
+
+        <div class="memory-grid">
+          <article class="surface-block memory-panel">
+            <h2>Local checkpoints</h2>
+            <p class="fineprint">Verify that any saved handover checkpoint still matches its run artifact on disk.</p>
+            <div id="checkpoints" class="memory-items" aria-live="polite"><p class="muted">Loading checkpoints…</p></div>
+            <nav id="checkpoints-pager" class="pager" aria-label="Checkpoints pagination" hidden></nav>
+          </article>
+
+          <article class="surface-block memory-panel">
+            <h2>Session recall</h2>
+            <div class="evidence-tabs bank-tabs" role="group" aria-label="Memory bank">
+              <button type="button" data-bank="real" class="selected" aria-pressed="true">Real sessions</button>
+              <button type="button" data-bank="synthetic" aria-pressed="false">Synthetic replays</button>
+            </div>
+            <form id="recall-form" class="recall-form">
+              <label for="recall-query">Search session summaries</label>
+              <div class="recall-row">
+                <input id="recall-query" type="search" maxlength="160" autocomplete="off" placeholder="Which runs needed a handover?">
+                <button id="recall" type="submit" class="primary">Recall</button>
+              </div>
+              <div class="recall-presets" aria-label="Example questions">
+                <button type="button" data-query="Which runs passed every check without human help?">Passed alone</button>
+                <button type="button" data-query="Which runs needed a context handover?">Handovers</button>
+                <button type="button" data-query="Which runs failed and why?">Failures</button>
+                <button type="button" data-query="Cost and tokens per model">Cost per model</button>
+              </div>
+            </form>
+            <p id="recall-summary" class="fineprint" role="status"></p>
+            <div id="recalled" class="memory-items" aria-live="polite"><p class="muted">Ask a question or pick a preset above.</p></div>
+          </article>
         </div>
-        <div>
-          <span class="rule-label">Fail closed</span>
-          <strong>Unknown means no</strong>
-          <small>unreported usage holds · missing or edited protocol revokes admission</small>
-        </div>
-      </div>
+      </section>
 
-      <figure class="arch-wrap">
-        <svg class="arch" viewBox="0 0 1100 535" role="img" aria-labelledby="arch-title arch-desc">
-          <title id="arch-title">Æion Factory architecture</title>
-          <desc id="arch-desc">The owner selects a feature in the cockpit. The Python controller starts a Flue and Pi agent session whose tools run in an OpenShell sandbox and whose model calls pass through a counting relay to the provider. The candidate goes through a protected gate, two independent reviewers, a product pull request with CI, and main. Every lane emits metadata-only spans to OpenTelemetry and Langfuse; local checkpoints and Hindsight preserve session knowledge.</desc>
-          <defs>
-            <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-              <path class="arrow-head" d="M0 0L10 5L0 10z"/>
-            </marker>
-          </defs>
-          <rect class="lane" x="0" y="10" width="1100" height="116" rx="10"/>
-          <rect class="lane" x="0" y="140" width="1100" height="126" rx="10"/>
-          <rect class="lane" x="0" y="280" width="1100" height="116" rx="10"/>
-          <rect class="lane" x="0" y="410" width="1100" height="116" rx="10"/>
-          <text class="lane-label" x="18" y="72">CONTROL</text>
-          <text class="lane-label" x="18" y="207">EXECUTION</text>
-          <text class="lane-label" x="18" y="342">ACCEPTANCE</text>
-          <text class="lane-label" x="18" y="472">EVIDENCE</text>
-          <path class="edge bus" d="M128 68V473"/>
-          <path class="edge bus" d="M128 68H150"/>
-          <path class="edge bus" d="M128 203H150"/>
-          <path class="edge bus" d="M128 343H150"/>
-          <path class="edge" d="M128 473H148"/>
-          <text class="edge-label" x="134" y="292" transform="rotate(-90 134 292)">spans</text>
-
-          <g class="node"><rect x="150" y="28" width="230" height="80" rx="8"/><text class="t" x="166" y="58">Owner</text><text class="s" x="166" y="79">selects a feature MD</text><text class="s" x="166" y="95">in the Feature cockpit</text></g>
-          <g class="node key"><rect x="430" y="28" width="300" height="80" rx="8"/><text class="t" x="446" y="58">Python controller</text><text class="s" x="446" y="79">queue · admission · publication</text><text class="s" x="446" y="95">127.0.0.1:8088</text></g>
-          <g class="node"><rect x="790" y="28" width="290" height="80" rx="8"/><text class="t" x="806" y="58">Spend ledger</text><text class="s" x="806" y="79">reserve before a paid call, settle after</text><text class="s" x="806" y="95">$150/day · $50 author · $1 vote</text></g>
-          <path class="edge" d="M380 68H428"/><path class="edge" d="M730 68H788"/>
-
-          <g class="node"><rect x="150" y="163" width="230" height="80" rx="8"/><text class="t" x="166" y="193">OpenShell sandbox</text><text class="s" x="166" y="214">agent tools run here</text><text class="s" x="166" y="230">no host mount · network · key</text></g>
-          <g class="node key"><rect x="430" y="163" width="300" height="80" rx="8"/><text class="t" x="446" y="193">Flue 2.3 + Pi 1.4</text><text class="s" x="446" y="214">agent harness on the host</text><text class="s" x="446" y="230">Pi drives the model and tool loop</text></g>
-          <g class="node"><rect x="790" y="163" width="130" height="80" rx="8"/><text class="t" x="804" y="193">Counting relay</text><text class="s" x="804" y="214">tokens · cost</text><text class="s" x="804" y="230">300 s idle bound</text></g>
-          <g class="node"><rect x="950" y="163" width="130" height="80" rx="8"/><text class="t" x="964" y="193">Model provider</text><text class="s" x="964" y="214">OpenCode Go</text><text class="s" x="964" y="230">or API</text></g>
-          <path class="edge" d="M580 108V161"/><text class="edge-label" x="588" y="140">starts a session</text>
-          <path class="edge" d="M430 203H382"/><text class="edge-label" x="386" y="196">tools</text>
-          <path class="edge" d="M730 203H788"/><text class="edge-label" x="736" y="196">model calls</text>
-          <path class="edge" d="M920 203H948"/>
-
-          <g class="node"><rect x="150" y="303" width="230" height="80" rx="8"/><text class="t" x="166" y="333">Protected gate</text><text class="s" x="166" y="354">Docker · --network none</text><text class="s" x="166" y="370">JUnit · PostgreSQL · React</text></g>
-          <g class="node key"><rect x="430" y="303" width="300" height="80" rx="8"/><text class="t" x="446" y="333">Two independent reviewers</text><text class="s" x="446" y="354">different model families, not the author</text><text class="s" x="446" y="370">same artifact · typed verdict</text></g>
-          <g class="node"><rect x="790" y="303" width="130" height="80" rx="8"/><text class="t" x="804" y="333">Product PR</text><text class="s" x="804" y="354">exact-head</text><text class="s" x="804" y="370">required CI</text></g>
-          <g class="node"><rect x="950" y="303" width="130" height="80" rx="8"/><text class="t" x="964" y="333">main</text><text class="s" x="964" y="354">confirmed</text><text class="s" x="964" y="370">merge</text></g>
-          <path class="edge" d="M265 243V301"/><text class="edge-label" x="273" y="276">candidate</text>
-          <path class="edge" d="M380 343H428"/><path class="edge" d="M730 343H788"/><path class="edge" d="M920 343H948"/>
-
-          <g class="node"><rect x="150" y="433" width="230" height="80" rx="8"/><text class="t" x="166" y="463">OpenTelemetry</text><text class="s" x="166" y="484">collector · OTLP</text><text class="s" x="166" y="500">metadata-only spans</text></g>
-          <g class="node key"><rect x="430" y="433" width="300" height="80" rx="8"/><text class="t" x="446" y="463">Langfuse 4.75</text><text class="s" x="446" y="484">traces · cost details · scores</text><text class="s" x="446" y="500">localhost:3300</text></g>
-          <g class="node"><rect x="790" y="433" width="130" height="80" rx="8"/><text class="t" x="804" y="463">Checkpoint</text><text class="s" x="804" y="484">local</text><text class="s" x="804" y="500">verified</text></g>
-          <g class="node"><rect x="950" y="433" width="130" height="80" rx="8"/><text class="t" x="964" y="463">Hindsight</text><text class="s" x="964" y="484">session</text><text class="s" x="964" y="500">knowledge</text></g>
-          <path class="edge" d="M380 473H428"/>
-        </svg>
-        <figcaption class="fineprint">Scroll horizontally on small screens. Arrows show control flow; the dashed bus sends metadata spans to Langfuse.</figcaption>
-      </figure>
-
-      <ol class="circuit">
-        <li>
-          <strong>1. Prepare &amp; isolate</strong>
-          <p>Freeze the contract and verify the baseline fails; run tools inside OpenShell without host mounts or network access.</p>
-        </li>
-        <li>
-          <strong>2. Meter &amp; bound</strong>
-          <p>Route every model request through the counting relay, capping budget and idling at 300 seconds.</p>
-        </li>
-        <li>
-          <strong>3. Gate &amp; review</strong>
-          <p>Run protected checks the author cannot alter, then collect typed approvals from two distinct model families.</p>
-        </li>
-        <li>
-          <strong>4. Checkpoint &amp; ship</strong>
-          <p>Confirm exact-head CI before merging to main, while saving verified handover hashes and advisory memory notes.</p>
-        </li>
-      </ol>
-
-      <details class="stack-drawer">
-        <summary>
-          <div class="drawer-title">
-            <strong>System components &amp; live health</strong>
-            <span class="fineprint">Expand to inspect host runtime, sandbox, and telemetry adapters</span>
+      <!-- SECTION 5: ARCHITECTURE -->
+      <section class="section" id="architecture" data-lab-panel="architecture" hidden>
+        <header class="section-head">
+          <div>
+            <h1>Architecture &amp; live stack</h1>
+            <p class="section-sub">Spend bounds, 250k context handover, and local service health.</p>
           </div>
           <div class="service-pills">
-            <span><i data-service="otel"></i>OpenTelemetry</span>
+            <span><i data-service="otel"></i>OTel</span>
             <span><i data-service="langfuse"></i>Langfuse</span>
-            <span><i data-service="hindsight"></i>Hindsight 1.2</span>
+            <span><i data-service="hindsight"></i>Hindsight</span>
           </div>
-        </summary>
-        <div class="stack-grid">
-          <article class="stack-card" data-stack="controller">
-            <div class="stack-top"><h3>Controller &amp; cockpit</h3><span class="stack-state">Probing</span></div>
-            <p>Python server on <code>127.0.0.1:8088</code> handling queues, admission, budget ledger, and publication.</p>
-          </article>
-          <article class="stack-card" data-stack="flue">
-            <div class="stack-top"><h3>Flue 2.3.0 + Pi 1.4.0</h3><span class="stack-state">Probing</span></div>
-            <p>Runs agent tool loops across three tiers (in-memory triage, confined folder, or OpenShell) and emits metadata spans.</p>
-          </article>
-          <article class="stack-card" data-stack="sandbox">
-            <div class="stack-top"><h3>OpenShell 0.1.8</h3><span class="stack-state">Probing</span></div>
-            <p>Disposable sandboxes over a private mTLS gateway. No host mounts, Docker socket, network, or provider keys; NVIDIA telemetry disabled.</p>
-          </article>
-          <article class="stack-card" data-stack="otel">
-            <div class="stack-top"><h3>OpenTelemetry collector</h3><span class="stack-state">Probing</span></div>
-            <p>Strips prompts, code, and hidden reasoning so only timing, token usage, and event metadata reach storage.</p>
-          </article>
-          <article class="stack-card" data-stack="langfuse">
-            <div class="stack-top"><h3>Langfuse 4.75.0</h3><span class="stack-state">Probing</span></div>
-            <p>Trace explorer at <a href="http://localhost:3300" target="_blank" rel="noreferrer">localhost:3300 ↗</a> recording session costs and autonomy scores.</p>
-          </article>
-          <article class="stack-card" data-stack="hindsight">
-            <div class="stack-top"><h3>Hindsight 1.2.0</h3><span class="stack-state">Probing</span></div>
-            <p>Semantic recall banks at <a href="http://localhost:9999" target="_blank" rel="noreferrer">localhost:9999 ↗</a> separating real runs from synthetic replays.</p>
-          </article>
-        </div>
-      </details>
-    </section>
+        </header>
 
-    <section class="section" id="sessions">
-      <div class="section-heading">
-        <div>
-          <h2>Playground</h2>
-          <p class="section-sub">Frozen JavaScript exercises with protected Deno checks — fast way to observe sandboxes, relays, and handovers.</p>
-        </div>
-        <div class="evidence-tabs" role="group" aria-label="Evidence filter">
-          <button type="button" data-filter="real" class="selected" aria-pressed="true">Real runs</button>
-          <button type="button" data-filter="synthetic" aria-pressed="false">Simulation</button>
-        </div>
-      </div>
-
-      <div class="lab-layout">
-        <div class="control-panel">
-          <h3 id="task-title">Cart totals</h3>
-          <p class="panel-intro">Pick an execution tier, synthetic task, and model profile. Up to 40 runs cap at $2 in native estimates.</p>
-
-          <label for="runtime">Execution tier</label>
-          <select id="runtime">
-            <option value="flue-openshell">3 · Autonomous coding · OpenShell</option>
-            <option value="flue-local">2 · Local assistant · restricted folder</option>
-            <option value="flue-just-bash">1 · Triage · just-bash</option>
-          </select>
-
-          <label for="scenario">Task scenario</label>
-          <select id="scenario">
-            <option value="pricing-js-v1">Cart totals</option>
-            <option value="shipping-js-v1">Shipping rules</option>
-            <option value="discounts-js-v1">Exact discount arithmetic</option>
-            <option value="cart-js-v1">Normalize and merge a cart</option>
-          </select>
-
-          <label for="objective">Selection objective</label>
-          <select id="objective">
-            <option value="balanced">Balance cost and elapsed time</option>
-            <option value="cost">Lowest observed cost</option>
-            <option value="speed">Shortest observed time</option>
-          </select>
-
-          <label for="profile">Go subscription model</label>
-          <select id="profile">
-            <option value="auto">Auto · best observed for this task</option>
-            <option value="glm">GLM 5.3 Flash</option>
-            <option value="deepseek">DeepSeek V4.1 Flash</option>
-            <option value="glm-full">GLM 5.3</option>
-            <option value="glm52">GLM 5.2</option>
-            <option value="minimax">MiniMax M3.1 Flash</option>
-          </select>
-
-          <button id="live" type="button" class="primary full" disabled>Run Flue build <span>→</span></button>
-          <button id="simulate" type="button" class="secondary full">Replay 250k handover</button>
-          <button id="benchmark" type="button" class="secondary full" disabled>Compare all tasks &amp; models</button>
-
-          <p id="sandbox-status" class="fineprint status-note">OpenShell required · NVIDIA telemetry disabled</p>
-          <div id="campaign-status" class="fineprint"></div>
-
-          <div class="gate-label">
-            <span class="rule-label">Context ceiling</span>
-            <strong id="limit">250,000 <small>tokens</small></strong>
-            <span id="metric">Active input context · cache included</span>
+        <div class="guards">
+          <div class="surface-block">
+            <span class="rule-label">Bounded spend</span>
+            <strong>$150 / day</strong>
+            <p class="fineprint">Author ≤ $50 · review ≤ $1 · <code>demo/budget.conf</code></p>
+          </div>
+          <div class="surface-block">
+            <span class="rule-label">Bounded context</span>
+            <strong>250k → handover</strong>
+            <p class="fineprint">Brief prepared at 230k · fresh session at 250k</p>
+          </div>
+          <div class="surface-block">
+            <span class="rule-label">Fail closed</span>
+            <strong>Unknown means no</strong>
+            <p class="fineprint">Missing usage or stale proof pauses admission</p>
           </div>
         </div>
 
-        <div class="execution-panel">
-          <div class="panel-top">
-            <h3>Session lifecycle</h3>
-            <span id="execution-status" class="tag">Ready</span>
-          </div>
-
+        <div class="surface-block">
+          <h2>Execution pipeline</h2>
           <div class="flow">
-            <div><b>01</b><strong>Build</strong><small>Flue + Pi</small></div>
-            <span class="flow-line"></span>
-            <div><b>02</b><strong>Verify</strong><small>Deno checks</small></div>
-            <span class="flow-line"></span>
-            <div><b>03</b><strong>Observe</strong><small>OTel → Langfuse</small></div>
-            <span class="flow-line"></span>
-            <div><b>04</b><strong>Remember</strong><small>Hindsight + local</small></div>
+            <div><b>01 · Control</b><strong>Python controller</strong><small>Queue, admission &amp; $150/day ledger on 127.0.0.1:8088</small></div>
+            <div><b>02 · Execution</b><strong>Flue + Pi in OpenShell</strong><small>Isolated worktree, counting relay &amp; 300s idle bound</small></div>
+            <div><b>03 · Acceptance</b><strong>Protected gate &amp; review</strong><small>Offline checks plus two independent model reviewers</small></div>
+            <div><b>04 · Evidence</b><strong>OTel, Langfuse &amp; memory</strong><small>Metadata-only spans, SHA-256 checkpoints &amp; Hindsight</small></div>
           </div>
-
-          <div class="context-heading">
-            <span>Peak input context in this task</span>
-            <strong id="context-value">0 / 250,000</strong>
-          </div>
-          <div class="context-track"><div id="context-fill"></div><span class="gate-marker"></span></div>
-
-          <div id="active-detail" class="active-detail">
-            <p>Start a live build or replay the 250k handover. Runtime state, test verdicts, and memory confirmations appear here.</p>
-          </div>
-          <p id="message" role="status"></p>
-        </div>
-      </div>
-
-      <div id="kpi-cards" class="kpi-grid"></div>
-      <div id="runs" class="run-list" aria-live="polite"></div>
-    </section>
-
-    <section class="section" id="models">
-      <div class="section-heading">
-        <div>
-          <h2>Model comparison</h2>
-          <p class="section-sub">Measured cost and latency on unassisted passes across comparable sandbox runs.</p>
-        </div>
-        <span class="tag">Cost × speed × zero human help</span>
-      </div>
-
-      <div class="model-layout">
-        <div class="chart-panel">
-          <div class="panel-top">
-            <h3>Cost vs. elapsed time</h3>
-            <span class="subtle" id="chart-count">Waiting for runs</span>
-          </div>
-          <svg id="pareto" viewBox="0 0 600 300" role="img" aria-label="Model comparison: elapsed time versus estimated cost per unassisted pass"></svg>
-          <p class="fineprint">Lower left is cheaper and faster. Filled dots represent clean passes without human help; this sample stays exploratory.</p>
         </div>
 
-        <div class="principle-panel">
-          <h3>Correct first. <em>Then efficient.</em></h3>
-          <p>A fast answer with failing checks or manual rescue does not win. CLI costs are estimated token usage, separate from subscription quotas.</p>
-          <div class="decision" id="decision">Collect comparable real runs before choosing a model.</div>
+        <div class="stack-grid">
+          <article class="surface-block stack-card" data-stack="controller">
+            <div class="stack-top"><h2>Controller &amp; cockpit</h2><span class="stack-state">Probing</span></div>
+            <p class="fineprint">Python server on <code>127.0.0.1:8088</code> handling queues, admission, budget ledger, and publication.</p>
+          </article>
+          <article class="surface-block stack-card" data-stack="flue">
+            <div class="stack-top"><h2>Flue 2.3.0 + Pi 1.4.0</h2><span class="stack-state">Probing</span></div>
+            <p class="fineprint">Runs agent tool loops across three tiers and emits metadata spans.</p>
+          </article>
+          <article class="surface-block stack-card" data-stack="sandbox">
+            <div class="stack-top"><h2>OpenShell 0.1.8</h2><span class="stack-state">Probing</span></div>
+            <p class="fineprint">Disposable sandboxes over mTLS with no host mounts, network, or provider keys.</p>
+          </article>
+          <article class="surface-block stack-card" data-stack="otel">
+            <div class="stack-top"><h2>OpenTelemetry</h2><span class="stack-state">Probing</span></div>
+            <p class="fineprint">Strips prompts and code so only timing, token usage, and metadata reach storage.</p>
+          </article>
+          <article class="surface-block stack-card" data-stack="langfuse">
+            <div class="stack-top"><h2>Langfuse 4.75.0</h2><span class="stack-state">Probing</span></div>
+            <p class="fineprint">Trace explorer at <a href="http://localhost:3300" target="_blank" rel="noreferrer">localhost:3300 ↗</a>.</p>
+          </article>
+          <article class="surface-block stack-card" data-stack="hindsight">
+            <div class="stack-top"><h2>Hindsight 1.2.0</h2><span class="stack-state">Probing</span></div>
+            <p class="fineprint">Semantic recall banks at <a href="http://localhost:9999" target="_blank" rel="noreferrer">localhost:9999 ↗</a>.</p>
+          </article>
         </div>
-      </div>
-
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Model / evidence</th>
-              <th>Tasks</th>
-              <th>Autonomous</th>
-              <th>Median time</th>
-              <th>Input / output</th>
-              <th>Cost / success*</th>
-            </tr>
-          </thead>
-          <tbody id="model-rows"></tbody>
-        </table>
-      </div>
-    </section>
-
-    <section class="section" id="memory">
-      <div class="section-heading">
-        <div>
-          <h2>Continuity &amp; memory</h2>
-          <p class="section-sub">Handovers store verified SHA-256 checkpoints on disk; Hindsight keeps descriptive session notes for advisory search.</p>
-        </div>
-        <span class="memory-pill"><i data-service="hindsight"></i>Hindsight 1.2</span>
-      </div>
-
-      <div class="memory-grid">
-        <article class="memory-panel">
-          <h3>Local checkpoints</h3>
-          <p>Read any saved handover checkpoint back from disk to check whether its digest still matches the run artifact.</p>
-          <div id="checkpoints" class="memory-items" aria-live="polite"><p class="muted">Loading checkpoints…</p></div>
-          <span class="memory-note">Metadata only · never overrides checks or gates.</span>
-        </article>
-
-        <article class="memory-panel">
-          <h3>Session recall</h3>
-          <div class="evidence-tabs bank-tabs" role="group" aria-label="Memory bank">
-            <button type="button" data-bank="real" class="selected" aria-pressed="true">Real sessions</button>
-            <button type="button" data-bank="synthetic" aria-pressed="false">Synthetic replays</button>
-          </div>
-          <form id="recall-form" class="recall-form">
-            <label for="recall-query">Search session summaries</label>
-            <div class="recall-row">
-              <input id="recall-query" type="search" maxlength="160" autocomplete="off" placeholder="Which runs needed a handover?">
-              <button id="recall" type="submit" class="primary">Recall <span>→</span></button>
-            </div>
-            <div class="recall-presets" aria-label="Example questions">
-              <button type="button" data-query="Which runs passed every check without human help?">Passed alone</button>
-              <button type="button" data-query="Which runs needed a context handover?">Handovers</button>
-              <button type="button" data-query="Which runs failed and why?">Failures</button>
-              <button type="button" data-query="Cost and tokens per model">Cost per model</button>
-            </div>
-          </form>
-          <p id="recall-summary" class="fineprint" role="status"></p>
-          <div id="recalled" class="memory-items" aria-live="polite"><p class="muted">Ask a question or pick a preset above.</p></div>
-          <span class="memory-note">Advisory recall · deterministic policy stays in charge.</span>
-        </article>
-      </div>
-    </section>
-
-    <footer>
-      <a class="brand" href="/">Æion <span>Factory</span></a>
-      <p>Flue + Pi · OpenShell · OpenTelemetry + Langfuse · Hindsight 1.2</p>
-      <a href="/factory">Feature cockpit ↗</a>
-    </footer>
-  </main>
+      </section>
+    </main>
+  </div>
 </body>
 </html>

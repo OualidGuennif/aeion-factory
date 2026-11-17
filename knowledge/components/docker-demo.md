@@ -4,12 +4,12 @@ title: "Local agent observability and memory showcase"
 description: "Flue + Pi agents in three execution tiers (in-memory triage, folder-confined local assistant, autonomous coding in OpenShell), a host-native cockpit with a counting relay, Markdown handover and four observation/memory tools."
 status: draft
 verified:
-  - at: 2026-11-07
-    what: "unittest live status: the report prints phase names and supervisor CI lines, and leaves reviewer prose out"
-  - at: 2026-11-10
-    what: "unittest stack and memory: claude-mem decommissioned in favor of deterministic local verified checkpoints, Hindsight 1.2.0 upgraded with reranking and PR evaluation post-mortems"
+  - at: 2026-11-17
+    what: "unittest stack + UI refresh: 8 Compose observation services (claude-mem retired for SHA-256 checkpoints), Hindsight 1.2.0, monochrome cockpit/lab with 10/5 pagination"
   - at: 2026-11-12
     what: "factory modernization: OpenShell 0.1.8 qualification and bridge caching, Langfuse v5.2 enterprise prompt management and multi-dimensional scores, Hindsight 1.2.1 SDK reflection fallback"
+  - at: 2026-11-10
+    what: "unittest stack and memory: claude-mem decommissioned in favor of deterministic local verified checkpoints, Hindsight 1.2.0 upgraded with reranking and PR evaluation post-mortems"
 sources:
   - id: framework
     resource: observability.md
@@ -36,7 +36,7 @@ share every gate, memory and telemetry path:
 Model calls leave from the host through the supervisor's counting relay. It tolerates up to 300s
 of upstream silence before reporting `PROVIDER_TIMEOUT`; other socket failures are
 `TRANSPORT_ERROR` and both are recognized run failures. The product under test is
-the **Agora forum** (`demo/forum-app/`, Quarkus/Java). Nine observation services use Docker; a
+the **Agora forum** (`demo/forum-app/`, Quarkus/Java). Eight observation services run in Docker; a
 private native mTLS gateway owns OpenShell sandboxes through its Docker compute driver. This is an
 explicitly authorized local pilot, not a production OPS boundary or general model benchmark.
 OpenShell is pinned at v0.1.8 with v0.1.7 compatibility (binaries, SDK and the sandbox/supervisor images by digest; read

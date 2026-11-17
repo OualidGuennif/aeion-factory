@@ -1,75 +1,31 @@
-# Æion Factory — cockpit and model lab
+# Æion Factory cockpit and model lab
 
-A local showcase connecting **OpenTelemetry, Langfuse, Hindsight and claude-mem** around real
-**Flue + Pi** agent sessions. The cockpit/supervisor is Python and runs **natively on the
-host**; the agent harness is **Flue 2.3.0 on Pi 1.4.0** in [three execution tiers](#three-execution-tiers):
-triage in an emulated in-memory shell, a guided local assistant with folder-confined file tools,
-and autonomous coding whose every tool call runs inside **NVIDIA OpenShell 0.1.8**. Generated
-code from both coding tiers is checked in OpenShell. The product under test is the **Agora
-forum** (Quarkus/Java); the old Deno/Hono playground is gone. The canonical product source is the
-separate `aeion-autonomous-forum` checkout at
-`demo/.local/factory/agents/aeion-autonomous-forum`; `demo/forum-app/` is a read-only snapshot of
-that repository at the commit pinned in `demo/forum/source.json`, with every file digest in
-`demo/forum/source.lock.json`. `python3 demo/forum/source.py --check` refuses a hand edit or an
-extra tracked file, and `--refresh --product <checkout>` re-copies the pinned commit; product
-changes belong in the product repository. The
-interface uses Æion's ivory, forest-green and copper palette, locally bundled fonts and a native
-GPT Image illustration.
+This local pilot connects OpenTelemetry, Langfuse, Hindsight 1.2.0, and local SHA-256 checkpoints around Flue + Pi agent sessions. The cockpit and controller are Python processes running directly on the host. The agent harness uses Flue 2.3.0 on Pi 1.4.0 across [three execution tiers](#three-execution-tiers): in-memory triage in an emulated shell, a guided local assistant with folder-confined file tools, and autonomous coding whose tool calls run inside NVIDIA OpenShell 0.1.8. Generated code from both coding tiers is verified in OpenShell.
 
-Completed/in-progress features are disabled and duplicate admission is rejected. The current
-100-MD catalog targets Quarkus/PostgreSQL/React web. A dependency unlocks only after integration
-of its current contract on product main. Successful results for older MDs remain historical;
-they do not certify rewritten contracts. Live mode prepares acceptance automatically. Read
-[current work](../work/current.md) for actual delivery, pauses and unverified transitions.
+The product under test is the Agora forum (Quarkus/Java); the older Deno/Hono playground is gone. The canonical product source lives in the separate `aeion-autonomous-forum` checkout at `demo/.local/factory/agents/aeion-autonomous-forum`. Meanwhile, `demo/forum-app/` holds a read-only snapshot of that repository at the commit pinned in `demo/forum/source.json`, with file digests recorded in `demo/forum/source.lock.json`. Running `python3 demo/forum/source.py --check` rejects hand edits or extra tracked files, and `--refresh --product <checkout>` re-copies the pinned commit. All UI views follow Æion Spec's monochrome palette (`demo/app/theme.css`) using system typography, paginate long lists (10 features per page in the catalog, 5 runs or builds per page), and separate controls cleanly with a left sidebar.
 
-### Start a feature from the cockpit
+Completed and in-progress features stay disabled so duplicate launches are blocked. The 100-spec catalog targets Quarkus, PostgreSQL, and React web. Dependencies unlock only after their current contract reaches the product `main` branch, while historical results from older spec revisions remain visible for reference without certifying newer specs. Live mode prepares acceptance contracts automatically. Read [current work](../work/current.md) for current delivery state, holds, and open transitions.
 
-1. Open [Feature cockpit](http://127.0.0.1:8088/factory) and sign in with the private local token.
-2. Select a **Ready** MD, read its scope and queue the implementation.
-3. Follow **Prepare → Build → Check → Review → PR/CI → Main** in Build activity. Expand evidence
-   for a failure code, protected check, independent vote or exact PR/CI/main result. Open its
-   Langfuse session for role/request/tool metadata, duration, usage and error status.
-4. Select newly unlocked MDs after confirmed main integration. **Waiting for prerequisites**
-   names the missing dependency IDs; it does not always mean the immediately preceding MD.
+## Start a feature from the cockpit
 
-A global execution pause is separate from a dependency wait. The supervisor owns task freezing,
-native isolation qualification, acceptance and publication. A failed build retains history;
-unknown costs/remote effects require reconciliation. Do not clear checks or mark features done
-merely to enable selection. Product demo links require a verified deployment; a merged backend
-change alone does not prove a running demo.
+1. Open [Feature cockpit](http://127.0.0.1:8088/) (also served at `/factory`) and unlock it with the private local token in `demo/.local/factory/admin.token`.
+2. Switch filters or pages in the Catalog section, tick one **Ready** specification, inspect its Markdown if needed, and click **Build selected**.
+3. Switch to the **Builds** section to follow the stages (`Prepare -> Build -> Check -> Review -> PR / CI -> Main`), inspect build evidence (failure codes, protected check results, review votes, and PR/CI links), or open the metadata-only session in Langfuse.
+4. Pick newly unlocked specifications once their prerequisites reach `main`. The badge **Waiting for prerequisites** lists the missing dependency IDs cleanly rather than assuming strict numeric order.
+
+A global execution pause is separate from a dependency wait. The controller owns task freezing, sandbox qualification, acceptance preparation, and publication. Failed attempts keep their trace and file history, and unknown costs or remote side effects pause for reconciliation rather than retrying automatically. Do not clear checks or mark features done just to unlock selection. Product demo URLs stay `Not deployed yet` until an actual deployment verification runs against `main`.
 
 ## Agora factory planning
 
-The [Agora product plan](forum/PLAN.md), [factory contract](forum/ECOSYSTEM.md) and
-[100 feature specs](forum/features/README.md) are revised designs. The [DeepSeek
-handoff](forum/DEEPSEEK_HANDOFF.md) defines the local implementation sequence; [validation](forum/VALIDATION.md)
-separates catalog checks from runtime qualification. This existing cockpit and its Flue harness
-remain trusted infrastructure. Fake inference is the default and live/remote gates remain explicit.
+The [Agora product plan](forum/PLAN.md), [factory contract](forum/ECOSYSTEM.md), and [100 feature specs](forum/features/README.md) define the target application. The [DeepSeek handoff](forum/DEEPSEEK_HANDOFF.md) lays out the build sequence, and [validation](forum/VALIDATION.md) separates catalog validation from runtime qualification. Fake inference stays the default so live runs and remote publishing remain explicit opt-ins.
 
-The historical read-only product snapshot is a **Quarkus 3.40.1 / Java
-25.0.4** service built with Gradle, carrying features 001-003 (skeleton and settings, migration
-runner, test harness), the accounts and sessions ahead of their turn, and threads with a Kafka
-producer and consumer behind a transactional outbox, CSRF tokens on every mutation, with 47 JUnit tests.
-`demo/forum-db/` is the guardian service for its SQLite file: WAL, `VACUUM INTO` snapshots, a
-restore drill and one-writer leasing. `demo/forum-mobile/` is the front on React Native 0.88.1
-through Expo SDK 58: it typechecks, bundles for iOS (619 modules) and its API client passes a
-12-step smoke test against the live service, though no simulator has run it. The same client also
-renders in a browser through `react-native-web`. That mobile snapshot is not the current React
-DOM web roadmap and its old completion labels do not certify the revised MDs. A real Kafka broker
-(`apache/kafka-native` in Docker) carried the event drill.
+The historical product snapshot is a Quarkus 3.40.1 / Java 25.0.4 service built with Gradle, carrying features 001 through 003 (skeleton and settings, migration runner, test harness), accounts, sessions, and threads backed by Kafka behind a transactional outbox, CSRF tokens on mutations, and 47 JUnit tests. `demo/forum-db/` wraps SQLite WAL backups (`VACUUM INTO`), restore verification, and single-writer leasing. `demo/forum-mobile/` contains an earlier Expo SDK 58 / React Native 0.88.1 client that typechecks and bundles 619 iOS modules; it is kept only as a historical mobile snapshot and does not reflect the current React DOM web roadmap.
 
-For a **local-only** container, the product repository now carries a multi-stage Dockerfile and
-Compose service (`demo/forum-app/DOCKER.md` in that checkout). It publishes only
-`127.0.0.1:8081`, stores SQLite in a named volume and refuses to start without an ephemeral
-`AGORA_SESSION_SECRET`; health and feature-013 security headers are verified on a success and a
-404. The image is never pushed; a VPS or any remote publication remains a separate owner decision.
+For local container runs, the product repository includes a multi-stage Dockerfile and Compose definition (`demo/forum-app/DOCKER.md`). It binds only `127.0.0.1:8081`, stores SQLite in a named volume, and refuses to start without an ephemeral `AGORA_SESSION_SECRET`. The image is never pushed automatically; remote hosting stays a separate decision.
 
-## Start and show
+## Start and inspect
 
-From the repository root, with Docker running, Python 3.11+ and Node.js 22.19+. The native
-gateway bootstrap supports macOS arm64 and Linux x86_64/arm64. Reserve memory for the nine
-observation services plus transient sandboxes; the local machine used an 8 GB Docker
-VM shared with other projects, which caused startup delays under load:
+Run these commands from the repository root with Docker running, Python 3.11+, and Node.js 22.19+. The native OpenShell gateway bootstrap supports macOS arm64 and Linux x86_64/arm64. Ensure your Docker VM has enough memory for the eight observation containers plus transient sandboxes (an 8 GB shared Docker VM can slow down under heavy load).
 
 ```sh
 python3 demo/setup.py --opencode-env /absolute/path/to/AEion/.env
@@ -80,287 +36,95 @@ demo/.local/venv/bin/python demo/tests/qualify_flue.py
 python3 demo/run.py
 ```
 
-Omit `--opencode-env` for simulation only. Setup copies **OPENCODE_API_KEY only**, without
-mounting the original dotenv or displaying its contents. It refuses to overwrite existing
-credentials. The ignored `demo/.local/stack.env` is owner-only; do not print/commit/share it
-or use `docker compose config` without `--quiet`. `install.py` creates the controller venv,
-fetches the pinned tokenizers and runs `npm ci` for the locked Flue harness.
+Omit `--opencode-env` when running simulation mode only. Setup copies `OPENCODE_API_KEY` into `demo/.local/stack.env` (owner-only permissions) without mounting your original `.env` or printing secrets, and refuses to overwrite existing credentials. Never print or commit `demo/.local/stack.env`, and never run `docker compose config` without `--quiet`. Running `install.py` builds the Python venv, fetches pinned tokenizers, and runs `npm ci` for the locked Flue harness.
 
-The factory's GitHub keys are described, with the exact permissions to attach, in the committed
-root [`.env.example`](../.env.example) and in [runbook §5.1](factory/runbook.md#51-the-credentials-one-key-per-capability).
-One key per capability: build, publish and release are three different keys, and no agent process
-may hold more than the one it needs.
+GitHub credentials follow [`../.env.example`](../.env.example) and [runbook §5.1](factory/runbook.md#51-credentials-one-key-per-role): build, publish, and release are separate tokens, and no agent process ever holds more than its own scope.
 
 | View | Local address | Purpose |
 | --- | --- | --- |
-| Operator cockpit | [localhost:8088](http://localhost:8088) | Ready/blocked/completed features, build activity, budget and trace evidence |
-| Advanced model lab | [localhost:8088/lab](http://localhost:8088/lab) | Historical scenario sessions, context, model KPIs, memory and handovers |
-| Feature factory | [localhost:8088/factory](http://localhost:8088/factory) | Select, queue and watch forum feature builds |
-| Product demo | Shown only after deployment verification | Separate product repository; backend and React DOM web roadmap |
-| Langfuse | [localhost:3300](http://localhost:3300) | Real traces, generations, usage, estimated cost and boolean scores |
+| Feature cockpit | [localhost:8088](http://localhost:8088) | Paginated catalog, active and historical builds, daily budget, and environments |
+| Model lab | [localhost:8088/lab](http://localhost:8088/lab) | Sandbox runner, paginated run history, model comparison, checkpoints, and stack health |
+| Feature factory alias | [localhost:8088/factory](http://localhost:8088/factory) | Direct route to the Feature cockpit |
+| Product demo | Shown only after deploy checks | Separate product checkout and deployment verification |
+| Langfuse | [localhost:3300](http://localhost:3300) | Metadata traces, generations, usage estimates, and boolean scores |
 | Hindsight | [localhost:9999](http://localhost:9999) | Session-analysis memory banks and semantic recall |
 
-Langfuse login: the address in `LANGFUSE_EMAIL` and its generated password in `LANGFUSE_PASSWORD`,
-both in the private configuration (`demo/.local/stack.env`, written by `python3 demo/setup.py`).
-Open it locally in an editor; never paste the password into chat/logs.
-claude-mem and the OTel collector publish on loopback only for the native controller.
-The first build downloads upstream runtimes and Hindsight's bundled local models, not model
-weights for coding inference. Compose runs only the observation services; the forum, the
-feature factory and the Flue harness run on the host.
-The cockpit, counting relay and Flue harness run on the host; there is no controller container,
-agent CLI image or Docker socket in this code path. A private native mTLS gateway owns OpenShell's
-Docker compute driver. No user repository, host transcript or global agent setting is mounted.
+To sign in to Langfuse, read `LANGFUSE_EMAIL` and `LANGFUSE_PASSWORD` locally from `demo/.local/stack.env` in your editor; never paste credentials into chat or logs. The OTel collector binds loopback only for the host controller. Compose launches the eight observation services, while the forum build tools, feature controller, and Flue harness run on the host without exposing any repository folder or Docker socket to sandboxes.
 
-Factory execution is explicit. The default `simulator` keeps the fake Markdown builder and says so
-on the board. `AEION_FACTORY_EXECUTION=offline` loads the pinned forum profile and the shared
-deterministic offline builder (real base, real write scopes, real protected check, no model call).
-`AEION_FACTORY_EXECUTION=live` loads automatic task preparation, the shared model catalog and the
-Flue/Pi tier3 builder. The provider credential is consumed by its named role loader and its absence
-holds the build as `provider_unconfigured` instead of simulating. The owner authorized the four
-workers (`glm-5.3-flash`, `qwen-3.8-flash`, `deepseek-4.1-flash`, `claude-haiku-5.5`) on 2026-11-02
-and added `gpt-6-luna` on 2026-11-06. On 2026-11-08 `minimax-m3.1-flash` replaced
-`mistral-large-4`. Display ids are translated to canonical wire ids before every request.
+Execution mode is explicit. The default `simulator` simulates build diffs and labels them as synthetic in the UI. `AEION_FACTORY_EXECUTION=offline` runs the pinned forum profile against deterministic offline fixtures (real base, real write scopes, real protected check, zero model calls). `AEION_FACTORY_EXECUTION=live` enables automatic acceptance preparation, the shared model catalog, and the Flue/Pi tier 3 builder. Missing provider credentials halt builds as `provider_unconfigured` rather than silently simulating. Workers authorized on the shared router are `glm-5.3-flash`, `qwen-3.8-flash`, `deepseek-4.1-flash`, `claude-haiku-5.5` (2026-11-02), `gpt-6-luna` (2026-11-06), and `minimax-m3.1-flash` replacing `mistral-large-4` (2026-11-08). Display IDs translate to canonical wire IDs before every request.
 
-Legacy pinned Java candidate checks run in a disposable Docker container: no network, no Docker socket, no
-host home and no controller mount, only the candidate tree and read-only toolchain caches, with a
-fixed environment, dropped capabilities and CPU/memory/PID limits. A probe records the image digest
-and denied network before a build; a missing image or failed probe holds the build as
-`sandbox_unqualified`. `demo/factory/baseline.py` verifies features already present at the pinned
-base with hashed paths and the isolated base test suite, so feature 013 can queue against a
-verified 001 baseline without a simulated merge receipt. A pinned target refuses any other feature
-with `target_feature_mismatch`.
+Legacy Java candidate checks run inside a disposable Docker container with `--network none`, no Docker socket, no host home mount, and only the candidate tree plus read-only toolchain caches. A pre-flight probe records the image digest and confirms network isolation before running tests; missing images or failed probes hold with `sandbox_unqualified`. `demo/factory/baseline.py` verifies existing baseline features against hashed paths and an isolated test run so dependent features can unlock without synthetic receipts. Pinned targets reject unrelated features with `target_feature_mismatch`.
 
-Current product checks compile production before candidate unit tests, put those tests in a
-separate workspace and grade HTTP/browser acceptance outside the app's PID/filesystem. Owned
-disposable PostgreSQL fixtures provide the private loopback network; the verifier receives no
-application code or database credentials. Frozen dependency transitions, migrations/import/restore
-and React production assets require their own qualification. See the
-[execution contract](../knowledge/components/factory-flue.md).
+Current product checks compile production sources before running candidate unit tests in a separate workspace and grade HTTP/browser acceptance outside the app's PID and filesystem namespaces. Ephemeral PostgreSQL instances provide an isolated loopback database without sharing source code or database credentials with the verifier. Schema transitions, migrations, and React bundles use dedicated qualifications documented in the [execution contract](../knowledge/components/factory-flue.md).
 
-A useful presentation sequence:
+A standard walkthrough in `/lab`:
 
-1. **Play the handover demo**: synthetic usage crosses 230k/250k, a Markdown checkpoint appears,
-   a fresh agent continues, and the four real local services capture/remember the task.
-2. **Run Flue build**: choose an execution tier, then Auto or one of five paid Go profiles.
-   Coding tiers edit `src/pricing.js` (through OpenShell in tier 3); 12 or 14 protected Deno
-   checks run for the selected task in a fresh sandbox, then the supervisor records the result.
-   Triage submits one labeled result per event, checked by the supervisor.
-3. Compare the **same tier, task, gate and method version** in the model lab. Read cost/latency/autonomy
-   together; declare human assistance when applicable rather than inferring independence.
-4. **Recall session analyses**; inspect the checkpoint, correlated JSONL logs and Langfuse trace.
+1. Replay the 250k handover from the sidebar or Run a task section: synthetic usage crosses 230k/250k, writes `HANDOVER.md`, launches a fresh agent, and records telemetry across the local stack.
+2. Run a Flue build by selecting an execution tier, a JavaScript exercise, and either Auto or one of five Go profiles. Coding tiers edit `src/pricing.js` (inside OpenShell on tier 3) and run 12 or 14 Deno checks in a fresh sandbox.
+3. Compare models under identical tier, task, gate, and method versions in the Models section, declaring any manual help explicitly.
+4. Inspect saved SHA-256 checkpoints, correlated JSONL logs, Hindsight notes, and Langfuse traces.
 
-The replay is explicitly synthetic and does not call a paid model or pretend to be a harness
-execution. The separate harness qualification below exercises the real Flue CLI against local
-fake inference. Real provider runs and synthetic rows/banks are kept distinct.
+The synthetic replay never calls a model API or pretends to build real code, while `qualify_flue.py` tests the live CLI harness against local fake inference. Real runs and synthetic rows stay strictly separated.
 
 ## Execution boundary
 
 | Layer | Where it runs | What it may do |
 | --- | --- | --- |
-| Cockpit, supervisor, relay | Host process, loopback only | Owns the Go key, counts and admits requests, writes MD/audit |
-| Flue + Pi harness (`demo/flue`) | Host child process, scrubbed environment | Holds only per-session relay (and, in tier 3, bridge) tokens |
-| Sandbox bridge (tier 3) | Host loopback, per-session token | Forwards nine file/shell verbs as fixed argv commands into one sandbox |
-| OpenShell sandbox | Docker driver, Landlock, network `none` | Agent UID; one run subpath of the labeled work volume; writes only `src/`; no egress |
+| Cockpit, controller, relay | Host process on loopback | Owns API keys, accounts tokens and spend, writes MDs and audit logs |
+| Flue + Pi harness (`demo/flue`) | Host child process with clean env | Holds only session-scoped relay and bridge tokens |
+| Sandbox bridge (tier 3) | Host loopback with per-session token | Forwards nine fixed-argv file and shell commands into one sandbox |
+| OpenShell sandbox | Docker driver, Landlock, network `none` | Unprivileged UID, single subpath mount, writes only `src/`, zero egress |
 
-The harness's model calls leave from the host through the relay, so sandboxes need no network.
-Flue's `local()` sandbox is unused in every tier: its documentation states it has no isolation
-and its commands are real host processes. The adapter in `demo/flue/src/sandboxes/openshell.ts`
-follows Flue's sandbox-adapter contract; OpenShell is not wired into the harness itself.
+Model calls leave from the host through the counting relay, so sandboxes never need outbound network access. Flue's `local()` sandbox is never used because it provides no process or filesystem isolation. The adapter in `demo/flue/src/sandboxes/openshell.ts` follows Flue's sandbox-adapter interface cleanly without coupling OpenShell into upstream harness code.
 
 ## Three execution tiers
 
-| Tier (`runtime`) | Flue sandbox and tools | Tasks | Acceptance |
+| Tier (`runtime`) | Tools and isolation | Tasks | Acceptance |
 | --- | --- | --- | --- |
-| 1 · Triage (`flue-just-bash`) | Flue `bash()` over just-bash 3.6.0: emulated shell, in-memory files, no network configured, `hardened` limits; plus `submit_triage` | `webhook-triage-v1` (8 synthetic events) | Supervisor compares each submitted result with frozen answers; no sandbox |
-| 2 · Local assistant (`flue-local`) | `restricted-local`: read/write/edit on the run workspace only, writes only under `src/`, symbolic links refused; no shell, grep or glob; strict `local-change` skill | The four coding contracts | Protected Deno checks in OpenShell, final verdict in a fresh sandbox |
-| 3 · Autonomous coding (`flue-openshell`) | OpenShell adapter: bash/read/write/edit/grep/glob in the sandbox through the bridge | The four coding contracts | Same as tier 2 |
+| 1 Triage (`flue-just-bash`) | Emulated in-memory shell via just-bash 3.6.0 with hardened limits and `submit_triage`; no network | `webhook-triage-v1` (8 synthetic events) | Controller compares submitted labels against frozen answers |
+| 2 Local assistant (`flue-local`) | Read/write/edit confined to the run workspace under `src/`, symlinks refused, no shell, strict `local-change` skill | Four frozen JS contracts | Protected Deno checks in OpenShell; final check in a fresh sandbox |
+| 3 Autonomous coding (`flue-openshell`) | OpenShell adapter providing bash/read/write/edit/grep/glob inside the container via the bridge | Same four JS contracts | Same as tier 2 |
 
-All tiers share the relay, 230k/250k/300k gates, handover MD, observer, audit, telemetry and
-memories. Tier 2 restricts the **model-facing tools, not the operating system**: the harness
-process keeps the host user's privileges, so use tier 3 for unattended code changes. Tier 1's
-harness receives only the events and label vocabulary; expected answers stay in the supervisor.
-`submit_triage` accepts only known ids and labels, refuses an incomplete submission without
-writing, and atomically replaces `result.json`, which the supervisor validates as untrusted input.
-Flue documents just-bash as isolated from host files, processes and environment variables, with
-network opt-in; none is configured, and the emulated shell has no `curl` (observed).
-KPIs and Auto selection key cohorts by tier as well as task, so tiers are never pooled.
-Comparison campaigns stay on tier 3.
+All three tiers share the relay, 230k/250k/300k context limits, `HANDOVER.md`, metadata observer, JSONL audit, OTLP telemetry, and memory adapters. Tier 2 limits only the model-facing tools rather than host OS privileges, so use tier 3 for untrusted coding work. In tier 1, `submit_triage` validates IDs and labels atomically into `result.json` before controller validation, and `just-bash` provides an isolated in-memory shell without `curl`. Auto selection and KPIs shard cohorts by both tier and task; benchmark campaigns run exclusively on tier 3.
 
-## Four tools, four responsibilities
+## Observation and memory stack
 
-- **OpenTelemetry** transports explicit metadata spans and logs. Deno HTTP spans join the
-  supervisor's task trace through W3C `traceparent`. Flue's own OpenTelemetry adapter is not used:
-  it exports prompts, tool payloads and stacks by default. A metadata-only `observe()` subscriber
-  feeds the supervisor instead.
-- **Langfuse 4.75.0** receives OTLP/HTTP with the v4 ingestion header. Harness USD estimates
-  are mapped to generation cost details; correctness and autonomous completion are published
-  as boolean API scores. Scores can have upstream processing delay; the cockpit's canonical
-  outcome is immediate.
-- **claude-mem 15.2.0**, source pinned at `93c82aac6ce14e1cbda02dff9aa4c16e0edfce57`, stores
-  working checkpoints through its explicit save/read API, with `platformSource: "pi"`. A fingerprint
-  deduplicates replay. This is harness-independent: no generation provider, transcript capture,
-  cloud sync, Chroma or OpenCode key is involved, and claude-mem's Pi extension (automatic prompt
-  capture) is not installed. The Bun base image is digest-pinned; that commit has no root lockfile,
-  so its semver-ranged packages resolve at build time.
-- **Hindsight 1.1.0** retains deterministic session analyses in separate real/synthetic banks.
-  `chunks` extraction, local embeddings and disabled automatic consolidation avoid duplicate
-  LLM work. Its LLM provider is `none`; semantic/keyword fusion uses RRF without an additional
-  neural reranker. This small metadata corpus does not justify that extra model's CPU and
-  startup cost. Semantic recall works without further Go spending. A 40-second shutdown grace
-  lets the embedded PostgreSQL complete its documented shutdown before Docker forces termination.
-  Memory remains advisory and never rewrites gate policy, credentials or permissions.
+- **OpenTelemetry (`0.163.2`)** ships explicit allowlisted metadata spans and canonicalized log bodies, linking Deno HTTP verification spans via W3C `traceparent`. Flue's built-in OTel exporter is left disabled because it captures prompts and tool payloads; instead a metadata-only `observe()` subscriber feeds the controller.
+- **Langfuse (`4.75.0`)** ingests OTLP/HTTP spans, maps harness USD estimates to generation costs, and records autonomous completion and check pass status as boolean scores. Cockpit verdicts update immediately even if async score ingestion lags.
+- **Local SHA-256 checkpoints** replaced the retired `claude-mem` service (`work/validation.md`). Handovers persist verified checkpoint metadata on disk with digest deduplication and explicit `/api/memory/checkpoint/<id>` readback checks.
+- **Hindsight (`1.2.0`)** stores descriptive run summaries in separate real and synthetic banks using local chunk extraction and RRF reranking with `HINDSIGHT_API_LLM_PROVIDER=none`, avoiding redundant model spending. Semantic recall remains purely advisory and never modifies policies, credentials, or gates.
 
 ## Model choice and cost accounting
 
-The harness pins **Flue 2.3.0 (`@flue/runtime`, `@flue/cli`) and Pi `@earendil-works/pi-ai`
-1.4.0**, with an exact `package-lock.json`, and five paid Go profiles: GLM 5.3 Flash, DeepSeek
-V4.1 Flash, GLM 5.3, GLM 5.2 and MiniMax M3.1 Flash. A custom Pi provider points at the
-supervisor's relay, never at Go directly. Models declare `reasoning: true` without an effort
-parameter and `supportsDeveloperRole: false`, matching the previously qualified request shape.
-Pi is a client the [Go documentation](https://opencode.ai/docs/go/) lists as validated. It sends
-its own `User-Agent` and a stable `x-opencode-session`, which the relay forwards unchanged.
-The broader catalog is intentionally restricted to profiles with a pinned official
-tokenizer/template. Go lists no training and zero-day retention for these profiles (checked
-2026-10-27). DeepSeek's current agreement expires October 31; that profile is refused afterward
-pending requalification. Region/account restrictions remain enforced upstream. The lab never
-changes privacy, Extra Usage or subscription settings.
+The harness pins Flue 2.3.0 (`@flue/runtime`, `@flue/cli`), Pi `@earendil-works/pi-ai` 1.4.0, and an exact `package-lock.json` covering five paid Go profiles: GLM 5.3 Flash, DeepSeek V4.1 Flash, GLM 5.3, GLM 5.2, and MiniMax M3.1 Flash. Requests pass through a custom Pi provider targeting the local relay (`User-Agent` and `x-opencode-session` forwarded verbatim as required by OpenCode Go) with pinned official tokenizers and chat templates.
 
-Four versioned contracts cover cart totals (12 checks), shipping rules, exact discount arithmetic
-and cart normalization (14 checks each). They exercise validation, safe integers, boundaries,
-aggregation, sorting and input mutation. They remain small synthetic coding tasks. Tier 1 has
-one separate frozen contract: eight synthetic webhook events, each labeled with severity,
-component, route and duplicate reference (one check per event).
+The four coding exercises test cart totals (12 checks), shipping rules, exact discount arithmetic, and cart normalization (14 checks each). **Compare all tasks & models** runs available profiles across all 4 tasks with 2 repetitions (40 runs across 5 profiles), rotating order and stopping at a `$2` campaign ceiling (`$0.10` per task) or any unknown usage, context overflow, or sandbox failure.
 
-**Compare all tasks & models** runs every available profile × 4 tasks × 2 repetitions (40 runs
-while all five profiles are qualified), sequentially with rotated model order. Expired profiles
-are neither run nor counted in the planned total. A $2 native-estimate monitor stops subsequent
-runs; a per-task $0.10 budget also applies. Unknown usage, context violations or sandbox failure
-stop the campaign. Unavailable/quota-restricted profiles are preserved as failures and skipped
-thereafter.
+Auto model selection considers only comparable tier 3 evidence under `flue-openshell-v1` and the 250k active-context rule, requiring at least two completed runs, 100% autonomous pass rate, and complete positive cost/latency records. Interrupted or manual-rescue runs disqualify a cohort; GLM 5.3 Flash serves as the provisional default until enough comparable runs accrue. Cost figures use Go model rates and represent local harness estimates rather than provider invoices.
 
-Auto selection compares only real Flue evidence with the same execution tier, task, method
-version (`flue-openshell-v1`) and 250k active-context gate. Earlier `openshell-go-v5` OpenCode cohorts
-remain historical evidence and never influence it. Eligibility requires at least two completed
-runs, 100% recorded autonomous success and complete positive cost/latency evidence. A run
-interrupted by a controller restart keeps unknown usage, so its cohort stays ineligible; KPIs
-report it as `interrupted`. Cost and speed objectives select one dimension; balanced equally
-weights cost and time normalized to the best observed value. Ties use model ID. GLM Flash is
-explicitly provisional when no cohort qualifies. This selects the best **observed** candidate for
-a task, with run IDs, not a general quality winner or a statistically significant result. Failed
-and assisted attempts disqualify that cohort. Campaign decisions and their evidence are retained
-in Hindsight as advisory snapshots.
+### Daily purses (`$150.00` max per scope)
 
-Per agent: 360 seconds, at most 12 forwarded requests, 4,096 maximum output tokens; at most three
-agents/task and one active task. Recovery from failure is deterministic and bounded: a fresh agent
-receives the supervisor's MD and the preserved files, never a self-modified harness. Before every
-forward, the relay waits until the supervisor has accounted the previous response, then refuses
-if the $0.10 estimate budget or the native context gate is reached. Estimates use the profile's Go
-rates (DeepSeek at its peak rate) and are not invoices. Go quota and Extra Usage are
-provider-account settings; the demo does not change them. Missing native usage/cost remains
-unresolved, never a zero-cost winner. Failed attempts count. Infrastructure and memory CPU costs
-are not included in the model estimate. The four small contracts support exploratory comparisons only.
+`demo/factory/budget.py` maintains an append-only JSONL journal at `demo/.local/budget/ledger.jsonl` (`0600`) across two isolated scopes (`aeion-factory` and `aeion-autonomous-forum`). Each Europe/Paris day enforces `DAILY_LIMIT_USD` from [`demo/budget.conf`](budget.conf) (capped at `$150.00`), reserving exposure before calling a model and settling actual usage afterward. Corrupted, missing, or over-limit ledgers fail closed (`budget_unavailable` or `budget_config_invalid`).
 
-### Two independent daily purses (at most $150.00 each)
-
-`demo/factory/budget.py` keeps one append-only JSONL journal with two scopes. The cockpit's live
-runs spend from `aeion-factory`; the forum workers spend from `aeion-autonomous-forum`.
-Each scope is capped per Europe/Paris day by `DAILY_LIMIT_USD` in [`demo/budget.conf`](budget.conf)
-(at most **$150.00**), and one scope can never borrow from the other.
-A run journals a reservation before it can call a model, then settles the actual cost; an open
-reservation counts against the day, so two runs cannot spend the same last dollar. A missing,
-corrupt or unreadable journal fails closed. The cockpit stops a live run with `BUDGET_STOP` and
-the factory holds a build with `budget_unavailable` before opening a session or builder.
-
-`demo/budget.conf` also bounds one author agent execution (`AUTHOR_MAX_USD`, at most $50.00,
-reserved up front and enforced by the relay) and one review vote (`REVIEW_MAX_USD`, at most
-$1.00), plus the author's wall-clock window (`AUTHOR_TIMEOUT_MINUTES`, whole minutes from 5
-to 180, default 30; the shipped file sets 180 minutes and a $50.00 author cap). Costs are
-counted at the Go allowance draw, a measured multiple of the list price per model. The file is not secret and the owner may edit it; the code ceilings can only be lowered.
-An exported `AEION_<KEY>` overrides a line. An unknown key, a non-positive amount, a value above
-its ceiling, an author window outside 5..180 minutes, or an author cap plus two votes exceeding the day refuses the whole file: new
-builds hold as `budget_config_invalid` and the purses admit no spending. A change applies to
-builds admitted after a cockpit restart; an admitted build keeps its frozen reservation.
-
-The default journal is `demo/.local/budget/ledger.jsonl` (mode `0600`); `AEION_BUDGET_LEDGER`
-overrides it. Inspect the current day without spending:
+`demo/budget.conf` also bounds each author execution (`AUTHOR_MAX_USD` <= `$50.00`), each review vote (`REVIEW_MAX_USD` <= `$1.00`), and author wall-clock time (`AUTHOR_TIMEOUT_MINUTES` between 5 and 180). Overrides via `AEION_<KEY>` follow the same code ceilings, and active admitted builds retain their frozen reservation across restarts. Inspect today's spend without making any model call:
 
 ```bash
 python3 -m demo.factory.budget --ledger demo/.local/budget/ledger.jsonl
 ```
 
-Only scope, day, USD amount, an opaque reservation id and a bounded note are stored: no prompt,
-source, credential or provider response. The $150.00 limits are an owner decision (2026-11-07); this ledger
-does not grant permission for paid inference, and no paid call may run without a new explicit
-owner approval.
+## Context handover: 230k to 250k to 300k
 
-## Markdown before reset: 230k → 250k → 300k
+1. At 230k active input tokens (local count or native report), the controller writes and fsyncs `HANDOVER.md` with task state, artifact SHA-256, check status, and next steps before admitting another model request.
+2. At 250k tokens, the relay refreshes `HANDOVER.md` and blocks forwarding. The harness exits, OpenShell deletes and reaps the sandbox, the controller verifies the Markdown digest, and a new Flue conversation starts from scratch (`compaction` disabled) with the handover file in its opening message.
+3. The relay counts complete requests with pinned tokenizers (`tokenizers.json`), reserves output plus `20,000` framing tokens, and rejects >300k allocations before forwarding. Closed-tokenizer models (`qwen`, `haiku`) reserve cost bounds before launch and gate continuation from complete native API usage including cache reads/writes.
 
-1. **Prepare at 230k:** the supervisor writes `HANDOVER.md` with task, artifact SHA-256,
-   current checks and next action. It flushes/fsyncs the file and directory before admitting
-   the next request. The trigger is either the relay's local count or the previous native report.
-2. **Close at 250k:** before forwarding, the relay refreshes the MD and refuses the request
-   (local count ≥ 250k, or a native report ≥ 250k accounted by the admission barrier). The harness
-   exits; the supervisor asks OpenShell to delete and reap the whole sandbox, waits for confirmed
-   deletion, verifies the MD hash and starts a **new Flue conversation** (fresh id, in-memory
-   store, compaction disabled) with the MD in its first message. The new agent reads the preserved
-   artifact.
-3. **Independent 300k admission budget:** the credential-owning relay counts the complete
-   request using official tokenizer/chat-template revisions in `tokenizers.json`. It reserves
-   output plus **20,000 tokens for provider framing**, refuses unknown/multimodal/stateful input
-   and blocks proposals beyond the allocation **before forwarding**. The normal preflight
-   also hands over at 250k, leaving additional headroom below 300k.
-
-Qwen and Haiku have no pinned exact local tokenizer in this integration. Their byte estimate
-reserves cost only; it does not reject a launch as a context count. These profiles admit bounded
-inputs and use complete API usage, including cache reads/writes, to gate the next request.
-Unknown usage stops continuation; native250k hands over and native input+output above300k fails.
-Their first request has no independent300k preflight guarantee; provider context enforcement and
-the measured gate apply. Pinned-tokenizer profiles retain the pre-request allocation checks.
-
-The harness has only a session-local relay token; the real Go key stays in the supervisor. The
-relay validates model/output limits, serializes requests, does not retry or follow redirects,
-and forwards only the client identity headers. Conversations live in an in-memory database and
-the harness's stdout/stderr (which carry model text) are discarded. Flue compaction is disabled
-and a compaction event fails the task. No subagent is declared: Flue still lists its `task` tool,
-but every delegation is refused (verified) and the attempt is audited.
-
-The default active input measure is native uncached input + cache read + cache write. It is
-not cumulative spend. Both native reports and local preflight counts are logged with their
-basis. Local tokenizer/template parity and the provider-framing reserve are qualification
-assumptions, not a guarantee about undisclosed provider internals or invoices. A native
-context >300k or a pinned-tokenizer count discrepancy >20k fails the task and blocks future live runs via
-`demo/.local/data/context.blocked`; investigate/requalify before clearing it. The crossing native
-report can exceed 250k, but no subsequent request is admitted.
+Only a session-scoped relay token reaches the harness while `OPENCODE_API_KEY` stays in the host controller. Harness stdout/stderr are discarded, Flue compaction errors halt the run, and subagent delegation via `task` is refused and audited. Exceeding 300k native context or diverging by >20k from local token counts fails the run and pauses live runs via `demo/.local/data/context.blocked` pending investigation.
 
 ## OpenShell qualification and protected checks
 
-OpenShell admits mounts only by operator labels on a Docker volume, never a raw host path.
-Bootstrap therefore creates the labeled `aeion-openshell-work` volume backed by `demo/.local/work`
-(`enable_bind_mounts` allows that backing); each sandbox mounts only its run's subpath. An older
-plain volume with that name is refused with removal instructions rather than deleted. OpenShell
-qualification checks the configured agent UID, denied system writes, a read-only workspace with
-writable `src/`, an invisible sibling folder of the same volume, denied outbound network,
-workload network mode `none`, no Docker socket and propagated NVIDIA telemetry=false. On Linux
-the agent UID is the host user (never root), so host-backed run folders stay owned by it; macOS
-keeps UID 10001 under Docker Desktop's ownership mapping. The image holds only the file helper,
-the check runner, Deno, Node, Python, ripgrep and git: no harness, model catalog or expected
-results. Check cases travel to Deno on stdin. The authoritative verdict runs in a **fresh sandbox**
-where no agent process ever ran; the MD's interim check uses the live sandbox and is labeled as such.
+OpenShell allows volume mounts only via labeled Docker volumes (`aeion-openshell-work` backed by `demo/.local/work`), never arbitrary host paths. Setup verifies the agent UID (host user on Linux, `10001` under Docker Desktop on macOS), read-only root/workspace outside `src/`, hidden sibling run directories, `NetworkMode=none`, absent Docker socket, and `OPENSHELL_TELEMETRY_ENABLED=false`. Check cases reach Deno over stdin inside a fresh sandbox where no author agent ever ran.
 
-Security qualification expires in 24 hours. A separate harness qualification
-(`demo/tests/qualify_flue.py`) binds the exact immutable agent image, agent UID and the
-relay/bridge/runner/harness sources plus `package-lock.json`; live execution is blocked without
-it. Rerun bootstrap and harness qualification after changes/expiry. Cleanup failure writes
-`demo/.local/data/sandbox.blocked`; verify owned sandbox deletion and requalify before clearing it.
-
-### Automatic renewal of OpenShell security proof
-
-When the cockpit server runs in live mode (`AEION_FACTORY_EXECUTION=live`), `ensure_openshell_security()`
-automatically invokes `demo/openshell/qualify.py` when less than 1 hour remains on the 24-hour lease,
-atomically replacing `demo/.local/openshell/qualification/security.json` without downtime.
-
-To maintain qualification continuously 24/7 even when the cockpit server is shut down, schedule an
-optional background crontab entry (e.g. every 6 hours):
+Security leases expire every 24 hours; live mode invokes `ensure_openshell_security()` automatically within the final hour (`demo/openshell/qualify.py`). For continuous renewal while the controller is stopped, you can add a 6-hour cron entry:
 
 ```bash
 crontab -e
@@ -370,61 +134,24 @@ crontab -e
 0 */6 * * * cd /path/to/aeion-factory && demo/.local/venv/bin/python -c 'import sys; from pathlib import Path; sys.path.insert(0, "demo/app"); import settings; from sandbox import connection; connection()' >/dev/null 2>&1
 ```
 
-*Note: The wrapper checks `needs_refresh()`. If more than 1 hour remains, it exits immediately without
-running a probe. If the proof is inside the 1-hour margin or expired, it reruns `qualify.py` to reset the 24-hour window.*
-A killed qualification or a gateway restart can leave an OpenShell supervisor/sandbox pair running
-with nothing tracking it. `demo/openshell/reap.py --older-than 3600` is a dry run of the cleanup;
-add `--execute` to remove only containers carrying both OpenShell labels after that safety window,
-and only while no factory build lease is active: the reaper reads `demo/.local/factory/factory.db`
-read-only and holds the sweep when a dispatched lease is still live or when the store cannot be
-read, because a long build's sandbox may outlive the window and an unreadable store is not proof
-that nothing runs. Bootstrap also runs that sweep automatically, so a stale pair cannot survive
-the next install.
-The gateway, Docker daemon and supervisor are trusted. OpenShell's local container driver is not
-a microVM boundary or a production hostile-code qualification. After acceptance, the supervisor
-keeps the checked artifact under `demo/.local/work/published/` as evidence; nothing serves it as
-a second application, and that directory is not an OpenShell boundary.
+If a gateway restart leaves orphaned sandboxes behind, `demo/openshell/reap.py --older-than 3600` performs a dry run and `--execute` cleans expired OpenShell containers only when `demo/.local/factory/factory.db` confirms no active build lease exists. Running `qualify_flue.py` binds the immutable agent image, UID, relay, bridge, and harness hashes (`package-lock.json`), blocking live execution whenever any of those files change.
 
-## Evidence and logs
+## Evidence, verification, and logs
 
-Each run preserves source, `HANDOVER.md` when required, verification and metadata reports.
-The supervisor writes an owner-only, fsynced, sequenced JSONL audit before exporting events.
-It includes trace/run identity, process lifecycle, token counts, preflight decisions, MD
-preparation, checks and memory results. The cockpit links the MD and audit. Raw prompts,
-source, completions, hidden reasoning, tool payloads, headers and arbitrary exceptions are
-excluded; the harness observer copies only usage numbers, finish labels, known tool names and
-outcomes. Collector attributes are allowlisted and log bodies canonicalized. OTLP logs
-additionally rotate in `otel-logs` (5 MB × three files); Docker logs are bounded.
-
-The local audit survives a backend outage. Collector export queues are bounded in memory;
-this pilot does not guarantee complete trace delivery or exactly-once accounting through
-crashes. Do not claim runtime qualification merely from green health checks.
+Every run keeps an owner-only, fsynced audit log before exporting spans, omitting raw prompts, code, completions, hidden reasoning, and headers. `otel-logs` rotates up to 5 MB across 3 files, and collector export queues remain bounded in memory so local audits survive backend outages.
 
 ```sh
 demo/.local/venv/bin/python -m unittest discover -s demo/tests -v
 (cd demo/flue && npm test)
 demo/.local/venv/bin/python demo/tests/qualify_scenarios.py
 demo/.local/venv/bin/python demo/tests/qualify_flue.py
-python3 demo/verify_backend.py                       # latest successful real run
-python3 demo/verify_backend.py --synthetic           # latest successful replay
+python3 demo/verify_backend.py
+python3 demo/verify_backend.py --synthetic
 ```
 
-`qualify_flue.py` runs the real Flue CLI and Pi against local fake inference through the real
-relay, once per tier. Tier 3 (bridge, tools and checks in OpenShell): glob/grep/read/write in the
-sandbox, the MD before the refused request at a native 250k report, preserved partial work, two
-fresh conversations and 12/12. Tier 2: no shell/grep/glob offered, the strict skill loads, a write
-outside `src/` is refused back to the model and leaves no file, then 12/12 in OpenShell. Tier 1:
-`jq` sees the supplied events, host `/etc/passwd` is invisible, an incomplete submission is refused
-without writing, then 8/8 with no sandbox event. Every tier asserts complete usage, no compaction,
-no persisted conversation store and no prompt text in events; the marker requires all three. `--local-sandbox` runs the same chain with a host stand-in for
-development and never writes the qualification marker. The admission test refuses a >300k
-proposal without contacting an upstream, including concurrent requests while the MD callback is
-held. Neither fixture spends model quota. Do not spend 250k tokens just to animate a showcase.
+## Live status without opening receipts
 
-## Live status
-
-Read the running factory without opening its store and without printing a receipt, a prompt or a
-credential. From `demo/`:
+Inspect an active feature build safely from `demo/` without exposing prompts, receipts, or secrets:
 
 ```sh
 python3 -m factory.live_status --feature 001
@@ -432,34 +159,12 @@ python3 -m factory.live_status --feature 001 --feedback
 python3 -m factory.live_status --protection
 ```
 
-The first command prints whether something is listening on `127.0.0.1:8088`, whether that process
-is the cockpit server in live mode, the latest rows for the feature, and the recent progress
-phase names. `--feedback` adds the correction round and only the supervisor lines that name the
-failed CI check. Other feedback lines are counted and not printed. `--protection` loads the
-release credential inside that process and prints the HTTP status plus the required check names.
+The default command confirms whether the loopback controller is listening, lists recent status phases, `--feedback` adds correction round counts and failed CI check names (counting other feedback without printing reviewer prose), and `--protection` reports GitHub branch protection checks via the isolated release role.
 
-A cockpit stage column that says Build during a model step is the stage summary. Any progress
-phase other than preparing, building, checking or reviewing counts as Build once a preparation
-exists. The sentence under the stages still names the step, such as Agent working or Independent
-review. `demo/tests/test_factory_live_status.py` checks that reviewer prose cannot appear in the
-report.
-
-## Stop and preserve
+## Stop cleanly and keep state
 
 ```sh
 docker compose --env-file demo/.local/stack.env -f demo/compose.yaml down
 ```
 
-Stop the cockpit with Ctrl-C after any active task finishes. Data persists in `demo/.local/data`
-and `demo/.local/work`; one hundred tasks is the demo's report limit. Interrupted tasks are not
-retried against a provider. Use `--volumes` only when deliberately discarding this demo's service
-databases. Never delete/recreate the private configuration while retaining the initialized
-database volumes: credential rotation is a separate migration.
-
-The native gateway is private to `demo/.local/openshell`; bootstrap verifies official release
-checksums and pins runtime/supervisor digests. It uses `OPENSHELL_TELEMETRY_ENABLED=false` for
-both the gateway and SDK probes. On Linux, mTLS binds to the Docker bridge address; on macOS it
-publishes on loopback. Do not expose the trusted gateway to a LAN. The gateway log rotates at
-bootstrap; no agent stdout is persisted there. For shutdown, first finish/retire any active task,
-then stop the cockpit and the Compose stack and send SIGTERM to the exact project gateway PID
-recorded in the private state directory. Never prune unrelated containers.
+Wait for active runs to finish before stopping the cockpit with `Ctrl-C`. State remains under `demo/.local/data` and `demo/.local/work` (capped at 100 stored lab runs). Use `down --volumes` only when intentionally wiping local databases; never regenerate `stack.env` while keeping old database volumes. Shut down the native OpenShell gateway via SIGTERM to the PID recorded in `demo/.local/openshell/` rather than pruning unrelated containers.

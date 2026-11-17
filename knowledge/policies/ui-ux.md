@@ -1,41 +1,38 @@
 ---
 type: Policy
 title: "UI and UX"
-description: "Sober interfaces: tokens in one file with light and dark sets, AA contrast, phone first, shared blocks, unknown never reads as fine, a visual yes before shipping."
+description: "Monochrome interfaces aligned with Æion Spec: tokens in one file with light and dark sets, AA contrast, sidebar section switching, bounded pagination, and zero decorative clutter."
 status: stable
 generated:
-  by: aeion-factory/1.0
-  at: 2026-10-20T00:00:00Z
+  by: aeion-template/4.0.3
+  at: 2026-11-17T00:00:00Z
 sources:
-  - resource: ../../demo/app/theme.css
-    title: "Demo colour tokens"
-  - resource: ../../demo/app/theme.js
-    title: "Demo theme toggle"
+  - id: tokens
+    resource: ../../demo/app/theme.css
+    title: "Monochrome light and dark colour tokens"
+  - id: theme
+    resource: ../../demo/app/theme.js
+    title: "Theme toggle with localStorage persistence"
 ---
 
 # UI and UX
 
-Sober and exact rather than decorative.
+Interfaces stay sober, fast to scan, and free of decorative clutter.
 
 ## Tokens
 
-- Every colour, radius, font size and spacing value is a token in one file, with a light and a
-  dark set (system preference and an explicit choice). A hard-coded colour is a dark-mode bug.
-- Text meets WCAG AA (4.5:1). One primary colour and one accent; amber and red only for meaning.
-- A spacing scale (for example 4, 8, 12, 16, 20, 28, 44 px) and a type scale; tabular figures for
-  amounts and times.
+- Every colour, radius, font, and shadow lives in [`demo/app/theme.css`](../../demo/app/theme.css), with both light and dark sets (`html[data-theme="light"]`, `html[data-theme="dark"]`, and system `prefers-color-scheme: dark`).
+- The palette follows Æion Spec's monochrome approach: an alabaster canvas (`#f8f8f7` light / `#0b0b0d` dark), crisp white or charcoal panels (`#ffffff` / `#121215`), solid black/white primary actions (`#0d0d10` / `#f4f4f6`), and midnight blue (`#172554` / `#93b4ef`) for links and focus rings. Semantic green, amber, and red appear only when a status requires attention.
+- Body text meets WCAG AA (4.5:1) and stays at `>= 14px`. Amounts, counts, and timers use monospace or tabular figures.
 
 ## Layout and behaviour
 
-- Phone first: every changed screen checked at 375 px and 1440 px, light and dark. Tables stack
-  into cards on small screens; touch targets are at least 44 px; a bottom tab bar on phones when
-  there are a few destinations.
-- Shared building blocks before new components: page header, section, stat, meter, list, card.
-- No inline styles (a strict content security policy will drop them).
-- Motion only to show a change of state (140–220 ms), none under reduced motion.
-- A plain wordmark; no ornament that carries no information; no caption that says nothing.
+- **One section on screen at a time**: both `/` and `/lab` use a left sidebar that switches between focused sections (`Catalog`, `Builds`, `Budget & mode`, `Environments & logs` on `/`; `Run a task`, `Run history`, `Models`, `Memory`, `Architecture` on `/lab`).
+- **Bounded lists with pagers**: long lists never dump 100 items on one scrollable page. The feature catalog shows 10 items per page (`#catalog-pager`), and build queues, build history, lab runs, and checkpoints show 5 items per page with `← Prev`, numbered pages, `Page X / Y`, and `Next →`.
+- **Responsive**: checked at 375 px and 1440 px in both light and dark modes.
+- **Strict CSP**: no inline `style=` attributes or inline scripts (`style-src 'self'`).
 
 ## Truthfulness
 
-- An unknown or missing value reads "unknown", never "fine"; a blank is not zero.
-- A visual change gets a human's visual yes before it ships.
+- Unknown or missing values read `"unknown"` or `"unavailable"`, never `"fine"` or zero.
+- Simulation and offline modes state plainly that no paid model call, pull request, or `main` merge occurs.

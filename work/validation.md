@@ -1,3 +1,10 @@
+## Flue 2.3.1 & Pi 1.5.2 harness upgrade — 2026-11-18
+
+- Context: Flue `2.3.1` (`withastro/flue@129c679`, released 2026-11-18) declares `typebox` directly (fixing the removed `@earendil-works/pi-ai` `Type` re-export since Pi `1.5.0`) and updates `@earendil-works/pi-ai` and `@earendil-works/pi-agent-core` to `^1.5.0` (`1.5.2`, matching installed CLI `pi` `1.5.2`).
+- Changes: upgraded `demo/flue/package.json` & regenerated `demo/flue/package-lock.json` (`@flue/cli@2.3.1`, `@flue/runtime@2.3.1`, `@flue/vite@2.3.1`, `@earendil-works/pi-ai@1.5.2`, `@earendil-works/pi-agent-core@1.5.2`), added `registerProvider`/version check in `demo/flue/tests/provider.test.mjs`, and updated `demo/app/index.html`, `demo/README.md`, `README.md`, `CREDITS.md`, `demo/factory/runbook.md`, `knowledge/components/docker-demo.md`, and `knowledge/components/factory-architecture.md` (preserving historical dated 1.4.0/2.3.0 measurements).
+- Verified upstream Pi `1.5.2` compat behavior on `packages/ai/src/api/openai-completions.ts` and `anthropic-messages.ts`: custom `opencode-go` loopback relay keeps `supportsDeveloperRole: false`, `thinkingFormat` (`zai`, `deepseek`, `openai`), `forceAdaptiveThinking`, and `supportsMessageThreads: false` (defaulting to full message payloads off `api.anthropic.com`).
+- Verification: `demo/flue` (`npm ci --ignore-scripts && npm test` `31/31` pass), `qualify_flue.py --local-sandbox` PASS (3/3 tiers: `flue-openshell` 12/12 in 2 sessions with 250k handover, `flue-local` 12/12, `flue-just-bash` 8/8), `qualify_factory_preparation.py` PASS (`simulated_complete`, `prepared_gradle` Docker gate + 2-vote review). `npm audit --package-lock-only` in `demo/flue/` reports 13 pre-existing transitive advisories (1 low, 4 moderate, 8 high in `just-bash`/`undici`, `@flue/*` transitive deps).
+
 ## Factory blind-spot hardening & Feature 005 CsrfGuard alignment — 2026-11-18
 
 - Root cause on Feature `005` builds (`b4c1e5bcb189` -> `538f9e91c10f` -> `dc132bbfe0ee`):

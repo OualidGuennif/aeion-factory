@@ -40,8 +40,8 @@ as a measured Æion result.
   shared state) are adapted in our own words; no ub-mode text is copied.
   [Repository](https://github.com/unclebob/ub-mode).
 - **Flue (withastro) and Pi (earendil-works) contributors** — the pinned agent harness
-  (`@flue/runtime`/`@flue/cli` 2.3.0, Apache-2.0) and its model/agent core (`@earendil-works/pi-ai`
-  1.4.0, MIT) used by the local showcase. [Flue](https://github.com/withastro/flue),
+  (`@flue/runtime`/`@flue/cli` 2.3.1, Apache-2.0) and its model/agent core (`@earendil-works/pi-ai`
+  1.5.2, MIT) used by the local showcase. [Flue](https://github.com/withastro/flue),
   [Pi](https://www.npmjs.com/package/@earendil-works/pi-ai).
 - **just-bash (vercel-labs) and Valibot contributors** — the emulated in-memory shell behind the
   triage tier (`just-bash` 3.6.0, Apache-2.0) and the schema library for its submission tool

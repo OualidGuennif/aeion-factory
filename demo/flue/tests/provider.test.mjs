@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { modelFromEnv } from '../src/provider.ts';
+import { readFileSync } from 'node:fs';
+import { modelFromEnv, registerProvider } from '../src/provider.ts';
 
 const env = {
   AEION_RELAY_URL: 'http://127.0.0.1:43210/v1', AEION_RELAY_TOKEN: 'relay-only',
@@ -70,4 +71,17 @@ test('GPT-6 Luna sends OpenAI reasoning_effort at max and MiniMax sends none', (
   const mini = modelFromEnv({ ...env, AEION_MODEL_JSON: JSON.stringify({ ...meta, id: 'minimax-m3.1-flash' }) });
   assert.deepEqual(mini.thinkingLevelMap, {});
   assert.equal(mini.compat.supportsReasoningEffort, false);
+});
+
+test('registerProvider binds Pi 1.5.2 lazy APIs and matches pinned Flue 2.3.1 / Pi 1.5.2 package versions', () => {
+  const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+  assert.equal(pkg.dependencies['@flue/cli'], '2.3.1');
+  assert.equal(pkg.dependencies['@flue/runtime'], '2.3.1');
+  assert.equal(pkg.dependencies['@earendil-works/pi-ai'], '1.5.2');
+  assert.equal(registerProvider(env), 'opencode-go/glm-5.3-flash');
+  assert.equal(registerProvider({
+    ...env,
+    AEION_CONVERSATION_ID: 'fixture-register-1',
+    AEION_MODEL_JSON: JSON.stringify({ id: 'qwen3.8-flash', name: 'Qwen', context: 1000000, api: 'anthropic-messages', input: 0.15, output: 0.47, cacheRead: 0.016, cacheWrite: 0.2 }),
+  }), 'opencode-go/qwen3.8-flash');
 });

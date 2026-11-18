@@ -160,8 +160,7 @@ While no build lease is active, the live controller removes an OpenShell sandbox
 9. Claim, completion, cancellation, hold and recovery preconditions are serialized across Store instances. The worker lease covers configured preparation, author, protected-check and two-review deadlines plus teardown. An expired attempt with no evidence the agent was still working holds as reconciliation_needed, preserves attempt identity, and does not start another paid action (test_factory_recovery). An expired attempt whose tool or model progress shows it was still working, and that has no publication job, is queued again for the same model at most three times (test_factory_connectivity). A live paid controller that cannot reach the provider twice holds the build as network_unavailable and starts no author; the cockpit says to wait rather than relaunch (test_cockpit_client).
 10. Compiler failures expose bounded filenames, line numbers and identifiers, never source lines,
     values or complete compiler output (test_factory_target_check and test_cockpit_client).
-11. Independent review receives all changed files within the bounded complete-review envelope; larger
-    input still holds before any vote and no excerpt can approve an artifact (test_factory_modelfarm).
+11. Independent review receives all changed files within the bounded complete-review envelope, plus bounded read-only unchanged committed base files (`baseline_context`, e.g. HTTP filters and auth guards) when they fit inside remaining envelope headroom; larger candidate input still holds before any vote and no excerpt can approve an artifact (`test_factory_modelfarm`, `test_factory_review_circuit`).
 12. Optional target context names at most eight public main Java files. Only regular blobs
     from the exact pinned commit are read, never working-tree changes, symlinks, configuration
     or credentials. Each file is bounded to 24000 UTF-8 bytes and the full labeled context to

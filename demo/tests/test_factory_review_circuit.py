@@ -212,6 +212,97 @@ class CircuitTelemetryTests(unittest.TestCase):
         self.assertEqual(stats["n"], 1)
         self.assertEqual(stats["success_rate"], 0.0)
 
+    def test_baseline_context_includes_unchanged_security_and_resource_files_within_budget(self):
+        from factory.review_circuit import baseline_diff, baseline_context
+        with tempfile.TemporaryDirectory() as folder:
+            repo = Path(folder)
+            def git(*args):
+                return subprocess.check_output(['git', '-C', folder, *args], text=True).strip()
+            git('init', '-q')
+            src_main = repo / 'demo/forum-app/src/main/java/local/aeion/forum'
+            src_test = repo / 'demo/forum-app/src/test/java/local/aeion/forum'
+            src_main.mkdir(parents=True)
+            src_test.mkdir(parents=True)
+            (src_main / 'AuthResource.java').write_text('@Path("/api/auth") class AuthResource {}\n')
+            (src_main / 'CsrfGuard.java').write_text('@Provider class CsrfGuard { /* COMMITTED_CSRF_GUARD */ }\n')
+            (src_test / 'AuthResourceTest.java').write_text('class AuthResourceTest { /* EXISTING_COOKIE_TEST */ }\n')
+            (repo / 'demo/forum-app/src/main/resources').mkdir(parents=True)
+            (repo / 'demo/forum-app/src/main/resources/.env').write_text('GH_API_KEY=secret1234567890\n')
+            git('add', '-A')
+            git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-qm', 'base')
+            base = git('rev-parse', 'HEAD')
+            # Dirty worktree change must be ignored by baseline_context.
+            (src_main / 'CsrfGuard.java').write_text('@Provider class CsrfGuard { /* DIRTY_WORKTREE */ }\n')
+
+            changed = {'demo/forum-app/src/main/java/local/aeion/forum/AuthResource.java': '@Path("/api/auth") class AuthResource { void logoutAll() {} }\n'}
+            diff = baseline_diff(repo, base, changed)
+            ctx = baseline_context(repo, base, changed)
+            self.assertNotIn('demo/forum-app/src/main/java/local/aeion/forum/AuthResource.java', ctx)
+            self.assertNotIn('demo/forum-app/src/main/resources/.env', ctx)
+            self.assertIn('COMMITTED_CSRF_GUARD', ctx['demo/forum-app/src/main/java/local/aeion/forum/CsrfGuard.java'])
+            self.assertNotIn('DIRTY_WORKTREE', ctx['demo/forum-app/src/main/java/local/aeion/forum/CsrfGuard.java'])
+            self.assertIn('EXISTING_COOKIE_TEST', ctx['demo/forum-app/src/test/java/local/aeion/forum/AuthResourceTest.java'])
+
+            seen = []
+            res = two_vote_review('glm-5.3-flash', '005', changed, Router(Telemetry()),
+                                  lambda m, p: seen.append(p) or {'verdict': 'approve', 'reason': 'ok'},
+                                  baseline=diff, base_sha=base, base_context=ctx)
+            self.assertEqual(res['status'], 'approved')
+            self.assertEqual(res['coverage']['files'], sorted(changed))
+            self.assertTrue(all('UNCHANGED BASE CONTEXT' in p and 'COMMITTED_CSRF_GUARD' in p for p in seen))
+            # Core size enforcement still rejects oversized artifacts even when base_context is supplied.
+            over = two_vote_review('glm-5.3-flash', '005', {'src/Big.java': 'x' * (MAX_PROMPT_CHARS + 1)},
+                                   Router(Telemetry()), lambda *_: {'verdict': 'approve'},
+                                   base_context=ctx)
+            self.assertEqual(over['reason'], 'review_input_too_large')
+
+    def test_baseline_context_skips_non_utf8_and_preserves_priority_order(self):
+        import subprocess
+        import tempfile
+        from pathlib import Path
+        from factory.review_circuit import _review_input, baseline_context
+
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp) / 'repo'
+            (repo / 'demo/forum-app/src/main/java/local/aeion/forum').mkdir(parents=True)
+            (repo / 'demo/forum-app/src/main/resources/db/migration').mkdir(parents=True)
+            bad_props = repo / 'demo/forum-app/src/main/resources/application.properties'
+            bad_props.write_bytes(b'# non-utf8 comment \xff\xfe\nquarkus.http.port=8081\n')
+            aaa = repo / 'demo/forum-app/src/main/java/local/aeion/forum/AaaHelper.java'
+            aaa.write_text('package local.aeion.forum;\npublic class AaaHelper {}\n', encoding='utf-8')
+            mig = repo / 'demo/forum-app/src/main/resources/db/migration/V1__init.sql'
+            mig.write_text('CREATE TABLE sessions (id BIGINT PRIMARY KEY);\n', encoding='utf-8')
+            changed = repo / 'demo/forum-app/src/main/java/local/aeion/forum/Changed.java'
+            changed.write_text('package local.aeion.forum;\npublic class Changed {}\n', encoding='utf-8')
+
+            for args in (['init', '-q'], ['config', 'user.name', 'Test'],
+                         ['config', 'user.email', 'test@example.invalid'], ['add', '.'],
+                         ['commit', '-qm', 'base']):
+                subprocess.run(['git', '-C', str(repo), *args], check=True, capture_output=True)
+            base_sha = subprocess.run(
+                ['git', '-C', str(repo), 'rev-parse', 'HEAD'],
+                check=True, capture_output=True, text=True,
+            ).stdout.strip()
+
+            files = {'demo/forum-app/src/main/java/local/aeion/forum/Changed.java': changed.read_text()}
+            ctx = baseline_context(repo, base_sha, files)
+            mig_rel = 'demo/forum-app/src/main/resources/db/migration/V1__init.sql'
+            aaa_rel = 'demo/forum-app/src/main/java/local/aeion/forum/AaaHelper.java'
+            self.assertEqual(list(ctx.keys()), [mig_rel, aaa_rel])
+            self.assertNotIn('demo/forum-app/src/main/resources/application.properties', ctx)
+
+            core_prompt, core_cov = _review_input('005', files, base_sha=base_sha)
+            header = (
+                '\nUNCHANGED BASE CONTEXT (read-only committed files from frozen base SHA; '
+                'do not require edits unless changed code introduces or exposes a defect):'
+            )
+            mig_block = f"\n--- {mig_rel} (unchanged base) ---\n{ctx[mig_rel]}"
+            tight_limit = core_cov['bytes'] + len(header.encode('utf-8')) + len(mig_block.encode('utf-8'))
+            prompt, cov = _review_input('005', files, max_chars=tight_limit, base_sha=base_sha, base_context=ctx)
+            self.assertTrue(cov['complete'])
+            self.assertIn(mig_rel, prompt)
+            self.assertNotIn(aaa_rel, prompt)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -212,6 +212,54 @@ class FluePreparation:
                 runtime.end_span(span,run,error)
 
 
+def _previous_build_row(root, store, prev_id):
+    """Read (receipt_dict, status) for prev_id from store when supplied, else local factory DB."""
+    if store is not None and hasattr(store, 'build'):
+        row = store.build(prev_id)
+        if not row or not row.get('receipt'):
+            return None, None
+        return json.loads(row['receipt']), row.get('status')
+    db_path = Path(root) / 'demo/.local/factory/factory.db'
+    if db_path.is_file():
+        import contextlib
+        import sqlite3
+        with contextlib.closing(sqlite3.connect(str(db_path))) as conn:
+            row = conn.execute("SELECT receipt, status FROM builds WHERE build_id = ?", (prev_id,)).fetchone()
+            if row and row[0]:
+                return json.loads(row[0]), row[1]
+    return None, None
+
+
+def _select_planned_author(router, store, build):
+    """Select the author model matching FlueBuilder's continuation pinning or chain exclusions."""
+    exclude_models = []
+    if store is not None and hasattr(store, 'correction_of'):
+        link = store.correction_of(build['build_id'])
+        if link:
+            if link.get('round', 0) > 0:
+                prev = store.build(link['previous_build_id'])
+                prev_receipt = json.loads(prev['receipt']) if prev and prev.get('receipt') else {}
+                pinned = prev_receipt.get('author_model')
+                if isinstance(pinned, str) and pinned in getattr(router, 'models', {}):
+                    exclude_models = [m for m in router.models if m != pinned]
+            else:
+                cur = build['build_id']
+                for _ in range(12):
+                    cur_link = store.correction_of(cur)
+                    cur_prev = store.build(cur_link['previous_build_id']) if cur_link else None
+                    if cur_prev is None:
+                        break
+                    r = json.loads(cur_prev['receipt']) if cur_prev.get('receipt') else {}
+                    m = r.get('author_model')
+                    if isinstance(m, str) and m not in exclude_models:
+                        exclude_models.append(m)
+                    cur = cur_prev['build_id']
+    try:
+        return router.select('author', require_role='author', exclude_models=exclude_models)
+    except RoutingError:
+        raise PreparationError('no_eligible_author_model') from None
+
+
 def _clear_prepared_attempt(folder):
     for child in folder.iterdir():
         if child.is_dir():
@@ -353,7 +401,7 @@ class TaskPreparer:
         listing = _git(['-C', str(self.source), 'ls-tree', '-r', base, '--', JAVA_MAIN])
         if listing.returncode:
             raise PreparationError('preparation_source_unavailable')
-        parts = []
+        prioritized = {'primary': [], 'services': []}
         for entry in listing.stdout.splitlines():
             metadata, path = entry.split('\t', 1)
             if not path.endswith('.java'):
@@ -366,23 +414,27 @@ class TaskPreparer:
             blob = _git(['-C', str(self.source), 'show', base + ':' + path])
             if blob.returncode:
                 raise PreparationError('preparation_source_unavailable')
-            if not re.search(r'@(?:(?:jakarta|javax)\.ws\.rs\.)?Path\s*\(',blob.stdout):
+            has_http = bool(re.search(r'@(?:(?:jakarta|javax)\.ws\.rs\.(?:ext\.)?)?(?:Path\s*\(|Provider\b)', blob.stdout))
+            has_service = self.product and bool(re.search(r'@ApplicationScoped\b', blob.stdout))
+            if not (has_http or has_service):
                 continue
-            if (not self.product and len(parts)>=8) or len(blob.stdout.encode())>100000:
+            if (not self.product and len(prioritized['primary']) >= 8) or len(blob.stdout.encode()) > 100000:
                 raise PreparationError('preparation_source_unsafe_or_too_large')
             if any(pattern.search(blob.stdout) for pattern in SECRET_PATTERNS):
                 raise PreparationError('preparation_source_unavailable')
-            parts.append('FILE: ' + path + '\n' + blob.stdout + '\nEND FILE\n')
+            bucket = 'primary' if has_http else 'services'
+            prioritized[bucket].append('FILE: ' + path + '\n' + blob.stdout + '\nEND FILE\n')
+        parts = prioritized['primary'] + prioritized['services']
         context = '\n'.join(parts)
         if self.product and len(context.encode('utf-8')) > 120000:
-            # Explicit declaration index, never represented as a parsed OpenAPI document.
+            # Explicit declaration index preserving static final validation constants cleanly.
             context = '\n'.join(line for line in context.splitlines() if re.search(
-                r'^FILE:|^END FILE|@|\b(public|record|class|interface|enum)\b', line))
+                r'^FILE:|^END FILE|@|\b(public|record|class|interface|enum)\b|\bstatic\s+final\b', line))
         if len(context.encode('utf-8')) > (160000 if self.product else 48000):
             raise PreparationError('preparation_source_unsafe_or_too_large')
         return context
 
-    def prepare(self, *, build, catalog, spec_dir, destination, budget, router, authorized):
+    def prepare(self, *, build, catalog, spec_dir, destination, budget, router, authorized, store=None):
         self.last_model = None
         self.role.last_execution = None
         from .budget import BudgetError
@@ -424,23 +476,23 @@ class TaskPreparer:
             reprepare_needed = (prev_dir / 'reprepare_needed').is_file()
             if not reprepare_needed:
                 try:
-                    db_path = Path(self.root) / 'demo/.local/factory/factory.db'
-                    if db_path.is_file():
-                        import contextlib
-                        import sqlite3
-                        with contextlib.closing(sqlite3.connect(str(db_path))) as conn:
-                            row = conn.execute("SELECT receipt, status FROM builds WHERE build_id = ?", (prev_id,)).fetchone()
-                            if row and row[0]:
-                                r = json.loads(row[0])
-                                reason = r.get('reason') or row[1]
-                                votes = (r.get('circuit') or {}).get('votes') or []
-                                has_reject = any(v.get('verdict') == 'reject' for v in votes)
-                                author_fb = str((r.get('feedback') or {}).get('author') or '')
-                                if (reason in ('reviewer_rejected', 'correction_unchanged')
-                                        or has_reject
-                                        or 'forced by the frozen acceptance' in author_fb
-                                        or 'out-of-scope' in author_fb.lower()):
-                                    reprepare_needed = True
+                    r, prev_status = _previous_build_row(self.root, store, prev_id)
+                    if r is not None:
+                        reason = r.get('reason') or prev_status
+                        votes = (r.get('circuit') or {}).get('votes') or []
+                        has_reject = any(v.get('verdict') == 'reject' for v in votes)
+                        author_fb = str((r.get('feedback') or {}).get('author') or '')
+                        gate_status = str(((r.get('gate') or {}).get('status') or '')).lower()
+                        lower_fb = author_fb.lower()
+                        conflict_markers = ('frozen acceptance', 'read-only acceptance',
+                                            'protected fixture', 'password policy')
+                        if (reason in ('reviewer_rejected', 'correction_unchanged')
+                                or has_reject
+                                or 'forced by the frozen acceptance' in author_fb
+                                or 'out-of-scope' in lower_fb
+                                or (self.product and gate_status == 'failed'
+                                    and any(tok in lower_fb for tok in conflict_markers))):
+                            reprepare_needed = True
                 except Exception:
                     pass
             if not reprepare_needed and (prev_dir / 'task.json').is_file() and (prev_dir / 'acceptance.mjs').is_file():
@@ -487,7 +539,7 @@ class TaskPreparer:
         else:
             if budget is None:
                 raise PreparationError('preparation_budget_unavailable')
-            planned_author = router.select('author', require_role='author')
+            planned_author = _select_planned_author(router, store, build)
             excluded_families = [family(planned_author)]
             excluded_models = []
             max_attempts = 3

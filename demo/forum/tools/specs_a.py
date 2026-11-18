@@ -156,12 +156,12 @@ SPECS = [
         "goal": "Issue short-lived HttpOnly sessions whose identifier is rotated on login and privilege change, so a stolen cookie has a bounded life and a visible history.",
         "scope": [
             "Signed `agora_session` cookie keeping the existing `AuthResource`/`AuthResourceTest` contract: `HttpOnly`, `Path=/`, `SameSite=Strict`, and `Secure` only over HTTPS (omitted over plain loopback HTTP).",
-            "Server-side session rows with expiry (keeping `SESSION_SECONDS=900` defaults intact), rotating and revoking any valid incoming `agora_session` cookie presented on `POST /api/auth/login` (supplying that session's `X-CSRF-Token` per `CsrfGuard`) without revoking unrelated sessions, plus CSRF-protected `POST /api/auth/logout-all` (`401` unauthenticated, `403` without `X-CSRF-Token`) revoking all sessions for the current account.",
+            "Server-side session rows with expiry (keeping `SESSION_SECONDS=900` defaults and 12-character registration password rules intact), rotating and revoking any valid incoming `agora_session` cookie presented on `POST /api/auth/login` (supplying its `X-CSRF-Token` per stateless `CsrfGuard`, which continues refusing any HMAC-valid cookie lacking `X-CSRF-Token` with `403` without DB changes) without revoking unrelated sessions, plus CSRF-protected `POST /api/auth/logout-all` (`401` unauthenticated, `403` without `X-CSRF-Token`) revoking all sessions for the current account.",
             "Configurable idle timeout and absolute lifetime enforced in JUnit/service checks via `ForumClock`, plus optional secondary env verification keys preserving `SessionSecret` refusal codes and `<token>.<hmac>` signing.",
         ],
         "out": [
             "OAuth, OIDC or a third-party identity provider.",
-            "Remember-me cookies beyond the absolute lifetime, React/browser UI (added in 014), or global frozen clocks across live HTTP requests.",
+            "Remember-me cookies beyond the absolute lifetime, React/browser UI (added in 014), DB-stateful rewrites to stateless `CsrfGuard` (handled/scoped separately in 006), or global frozen clocks across live HTTP requests.",
         ],
         "accept": [
             "The `Set-Cookie` on `POST /api/auth/login` emits `HttpOnly`, `Path=/`, and `SameSite=Strict`; `POST /api/auth/logout` and CSRF-protected `POST /api/auth/logout-all` invalidate active sessions (`GET /api/auth/me` returns 401; `logout-all` returns 401 without a session and 403 without `X-CSRF-Token`).",

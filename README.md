@@ -20,7 +20,7 @@ Start at the [knowledge index](knowledge/index.md) and the [observability specif
 | [`knowledge/components/observability.md`](knowledge/components/observability.md) | Event contract, privacy tiers, cost accounting, and routing rules |
 | [`knowledge/components/operator-cockpit.md`](knowledge/components/operator-cockpit.md) | Feature Cockpit (`/`) and Model Lab (`/lab`) specification |
 | [`knowledge/components/factory-flue.md`](knowledge/components/factory-flue.md) | End-to-end feature execution, two-reviewer circuit, and PR publication |
-| [`demo/README.md`](demo/README.md) | Local pilot runbook: OpenShell 0.1.8, Flue 2.3 + Pi 1.4, Langfuse, and Hindsight |
+| [`demo/README.md`](demo/README.md) | Local pilot runbook: OpenShell 0.1.8, Flue 2.3.1 + Pi 1.5.2, Langfuse, and Hindsight |
 | [`examples/README.md`](examples/README.md) | Offline synthetic fixtures, cohort comparisons, and deterministic guards |
 | [`docs/architecture/high-level.md`](docs/architecture/high-level.md) | High-level system and data-flow diagrams |
 | [`work/validation.md`](work/validation.md) | Dated verification records and test evidence |

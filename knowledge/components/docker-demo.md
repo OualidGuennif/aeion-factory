@@ -4,12 +4,12 @@ title: "Local agent observability and memory showcase"
 description: "Flue + Pi agents in three execution tiers (in-memory triage, folder-confined local assistant, autonomous coding in OpenShell), a host-native cockpit with a counting relay, Markdown handover and four observation/memory tools."
 status: draft
 verified:
+  - at: 2026-11-18
+    what: "npm test (31/31), qualify_flue --local-sandbox (all 3 tiers), qualify_factory_preparation, and full suite after upgrading @flue/cli & @flue/runtime to 2.3.1 and @earendil-works/pi-ai to 1.5.2"
   - at: 2026-11-17
     what: "unittest stack + UI refresh: 8 Compose observation services (claude-mem retired for SHA-256 checkpoints), Hindsight 1.2.0, monochrome cockpit/lab with 10/5 pagination"
   - at: 2026-11-12
     what: "factory modernization: OpenShell 0.1.8 qualification and bridge caching, Langfuse v5.2 enterprise prompt management and multi-dimensional scores, Hindsight 1.2.1 SDK reflection fallback"
-  - at: 2026-11-10
-    what: "unittest stack and memory: claude-mem decommissioned in favor of deterministic local verified checkpoints, Hindsight 1.2.0 upgraded with reranking and PR evaluation post-mortems"
 sources:
   - id: framework
     resource: observability.md
@@ -24,7 +24,7 @@ sources:
 ## Intent
 
 Make small agent workflows observable, verifiable and resumable. The host-native Python
-cockpit/supervisor runs **Flue 2.3.0 + Pi 1.4.0** agent sessions in three execution tiers that
+cockpit/supervisor runs **Flue 2.3.1 + Pi 1.5.2** agent sessions in three execution tiers that
 share every gate, memory and telemetry path:
 
 | Tier (`runtime`) | Tools | Tasks | Verdict |
@@ -98,7 +98,8 @@ Flue runtime events reduced to a metadata-only stream, independent Deno checks, 
 SHA-256, supervisor process events, official pinned tokenizer/chat-template files and Deno native
 HTTP traces. Primary integration references, checked 2026-10-27:
 
-- Flue at [`deee93b`](https://github.com/withastro/flue/tree/deee93b40d275ecc9a50c50af2158f20089d54bc) (v2.3.0):
+- Flue at [`129c679`](https://github.com/withastro/flue/tree/129c6796fca8ea9b64fcfc86211b0dff5cfe05df) (v2.3.1,
+  checked 2026-11-18; guides checked at [`deee93b`](https://github.com/withastro/flue/tree/deee93b40d275ecc9a50c50af2158f20089d54bc) / v2.3.0):
   [sandboxes](https://github.com/withastro/flue/blob/deee93b40d275ecc9a50c50af2158f20089d54bc/apps/docs/src/content/docs/guide/sandboxes.md)
   (`local()` has no isolation by design; the just-bash virtual sandbox is isolated from host
   files, processes and environment variables, with network opt-in),
@@ -108,12 +109,15 @@ HTTP traces. Primary integration references, checked 2026-10-27:
   [models and Pi providers](https://github.com/withastro/flue/blob/deee93b40d275ecc9a50c50af2158f20089d54bc/apps/docs/src/content/docs/guide/models.md),
   [runtime events](https://github.com/withastro/flue/blob/deee93b40d275ecc9a50c50af2158f20089d54bc/apps/docs/src/content/docs/guide/observability.md)
   and its [OpenTelemetry adapter](https://github.com/withastro/flue/blob/deee93b40d275ecc9a50c50af2158f20089d54bc/apps/docs/src/content/docs/ecosystem/tooling/opentelemetry.md)
-  (content on by default, therefore unused).
+  (content on by default, therefore unused). Flue `2.3.1` drops `@earendil-works/pi-ai` TypeBox
+  re-exports by depending directly on `typebox` and requiring Pi `^1.5.0`.
 - [just-bash 3.6.0](https://www.npmjs.com/package/just-bash/v/3.6.0) (Apache-2.0): emulated
   commands including `jq`; without a network option `curl` is absent (observed).
-- Pi [`@earendil-works/pi-ai` 1.4.0](https://www.npmjs.com/package/@earendil-works/pi-ai/v/1.4.0)
-  OpenAI-completions compatibility flags (`supportsDeveloperRole`, `maxTokensField`,
-  `supportsReasoningEffort`), observed on the wire with a local fake server.
+- Pi [`@earendil-works/pi-ai` 1.5.2](https://www.npmjs.com/package/@earendil-works/pi-ai/v/1.5.2)
+  (checked 2026-11-18): preserves OpenAI-completions compatibility flags (`supportsDeveloperRole`,
+  `maxTokensField`, `supportsReasoningEffort`, `thinkingFormat`) and `forceAdaptiveThinking`, omits
+  empty `"tools": []`, and keeps Anthropic message threads (`supportsMessageThreads`) off outside
+  `anthropic` + `api.anthropic.com` so the local relay continues receiving full message histories.
 - [OpenCode Go](https://github.com/anomalyco/opencode/blob/caebbcc0807e630629725f320f35a09aa4a427be/services/www/src/docs/content/console/go.mdx)
   client requirements (own user agent, stable `x-opencode-session`; Pi validated) and prices.
 - [OpenShell telemetry](https://docs.nvidia.com/openshell/v0.1.7/observability/telemetry/),

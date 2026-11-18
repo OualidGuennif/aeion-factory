@@ -6,7 +6,7 @@ No final operational Go or actual product feature merge is claimed.
 ## Factory blind-spot hardening & Feature 005 unblock — READY
 
 - Owner decision: fix the three structural blind spots revealed by Feature `005` (`b4c1e5bcb189` / `538f9e91c10f` / `dc132bbfe0ee`), align `005` on stateless `CsrfGuard`, merge to `main`, and unblock `005` relaunch.
-- State: `_public_interfaces` exposes `@Provider`/`@ApplicationScoped` committed contracts; `acceptance_prompt` enforces `>= 12`-char dummy passwords (never `***`); `two_vote_review` attaches priority-ordered, non-UTF-8-safe `baseline_context` under `MAX_PROMPT_CHARS`; `TaskPreparer` reads `Store` receipts/corrections to re-prepare `gate=failed` frozen-contract conflicts and align preparer family exclusion with pinned/chain authors; `005` keeps stateless `CsrfGuard` unchanged (`dispatch.py` stays `1500` lines).
+- State: Flue `2.3.1` + Pi `1.5.2` upgraded and verified across all 3 tiers (`demo/flue` + `qualify_flue.py` + `qualify_factory_preparation.py`); `_public_interfaces` exposes `@Provider`/`@ApplicationScoped` committed contracts; `acceptance_prompt` enforces `>= 12`-char dummy passwords (never `***`); `two_vote_review` attaches priority-ordered, non-UTF-8-safe `baseline_context` under `MAX_PROMPT_CHARS`; `TaskPreparer` reads `Store` receipts/corrections for policy-conflict reprepare & pinned-author alignment; `005` keeps stateless `CsrfGuard` unchanged (`dispatch.py` 1500 lines).
 - Next: cancel `dc132bbfe0ee` (`held / owner_review_required`) in Cockpit Builds and relaunch Feature `005` from Catalog once merged and requalified (who: owner).
 - Blocker: none.
 - Evidence: [validation](validation.md); [execution contract](../knowledge/components/factory-flue.md); [feature authoring](../knowledge/operations/feature-authoring.md).
@@ -73,14 +73,6 @@ No final operational Go or actual product feature merge is claimed.
 - Next: catalog refresh for next features (002, 003, 013) now that 001 is integrated on main.
 - Blocker: none for Feature 001.
 - Evidence: [validation](validation.md); [execution contract](../knowledge/components/factory-flue.md); https://github.com/OualidGuennif/aeion-autonomous-forum/pull/17 .
-
-## Ghost PR evaluation archive, claude-mem decommission, Hindsight 1.2.0, Arbiter & Live Context — COMPLETED
-
-- Owner decision: safely archive open ghost PRs into Hindsight as failure evaluations, delete remote branches, decommission redundant claude-mem in favor of deterministic local verified checkpoints, upgrade Hindsight to 1.2.0 with RRF reranking, implement an intelligent Model Arbiter & Re-ranker via Flue-Pi Tier 1 (`flue-just-bash` in-memory), and create a sanitized Live Context loop injecting failure constraints into builder prompts.
-- State: PRs #7–#14 archived into bank `aeion-demo-real` (tags `postmortem`, `failure-eval`) and closed with branches deleted (0 open PRs, only main/develop remain). `claude-mem` removed; working checkpoints verified locally. Hindsight 1.2.0 active with RRF reranker. `demo/factory/arbiter.py` arbitrates model selection with empirical scoring and Tier-1 classification, failing closed. `demo/factory/live_context.py` injects bounded sanitized constraints. Full demo test suite (868/868) and repo health pass.
-- Next: catalog refresh and admission of Feature 002.
-- Blocker: none.
-- Evidence: [validation](validation.md); [docker demo](../knowledge/components/docker-demo.md); [arbiter](../demo/factory/arbiter.py); [live context](../demo/factory/live_context.py).
 
 ## Trusted product CI and PostgreSQL/React — PARTIAL
 

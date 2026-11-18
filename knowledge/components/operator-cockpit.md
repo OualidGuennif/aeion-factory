@@ -4,12 +4,12 @@ title: "Local feature cockpit"
 description: "One administrator workspace for truthful feature availability, build activity and private traces."
 status: draft
 verified:
+  - at: 2026-11-18
+    what: "node test_cockpit_client (31 pass) and demo/tests (896 OK): Architecture card aligned to Flue 2.3.1 + Pi 1.5.2 without changing controls or layout"
   - at: 2026-11-17
     what: "impeccable detect on demo/app and live / and /lab (0 anti-patterns); node test_cockpit_client (31 pass); browser checks at 1440px and 375px light/dark (0 overflow/console/CSP errors); 10/5 pagination"
   - at: 2026-11-16
     what: "node cockpit client (29 pass) and browser visual checks at 1440px and 375px light/dark on / and 4-section /lab with zero console/CSP errors or viewport overflow"
-  - at: 2026-11-11
-    what: "unittest factory dispatch and store: correction rounds reuse frozen contracts, and live context provider is integrated"
 sources:
   - resource: ../../demo/app/factory.html
     title: "Cockpit markup"

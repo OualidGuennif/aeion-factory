@@ -29,7 +29,7 @@ Start Pi agents with the template extension loaded so skills and hooks initializ
 pi -e .pi/extensions/template/index.js
 ```
 
-`flue run` (2.3.0) accepts no `-e` flag itself, so keep `.pi/extensions/template/index.js` present inside every prepared agent workspace before launching Flue.
+`flue run` (2.3.1) accepts no `-e` flag itself, so keep `.pi/extensions/template/index.js` present inside every prepared agent workspace before launching Flue.
 
 ## 4. Trust boundary
 

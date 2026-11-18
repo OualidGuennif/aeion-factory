@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Upgraded the demo agent harness in `demo/flue/` to Flue `2.3.1` (`@flue/cli`, `@flue/runtime`,
+  `@flue/vite`) and Pi `1.5.2` (`@earendil-works/pi-ai`, `@earendil-works/pi-agent-core`, resolving
+  TypeBox directly via Flue `2.3.1`), adding a `registerProvider` wire/version regression test in
+  `demo/flue/tests/provider.test.mjs` and aligning UI/docs/credits (`demo/app/index.html`,
+  `demo/README.md`, `demo/factory/runbook.md`, `knowledge/components/docker-demo.md`).
+
 - Hardened preparation, review context, and recovery against baseline/filter blind spots:
   - `TaskPreparer._public_interfaces` (`demo/factory/preparation.py`) now includes `@Provider`
     HTTP filters (such as `CsrfGuard`, `RequestValidationFilter`) and, for product runs,

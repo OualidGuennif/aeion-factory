@@ -1,3 +1,9 @@
+## Feature 005 spec alignment — 2026-11-18
+
+- Verified product `main` (`39c8336fd4f8d4f5affbcd69b8980a70a7c4727f`, Feature `004` integrated): `AuthResourceTest.setsAHardenedCookie` asserts `SameSite=Strict`, `AuthServiceTest.expiresASessionAfterFifteenMinutes` asserts `SESSION_SECONDS = 900`, `SessionSecretTest` pins key-refusal codes and stable `<token>.<hmac>`, `POST /api/auth/logout-all` is absent on baseline, and `demo/forum-web/` does not exist yet before `014`.
+- Updated `demo/forum/tools/specs_a.py` (`id: 5`) to require `X-CSRF-Token` on cookie-bearing `POST /api/auth/login` rotation (per `CsrfGuard.java`), keep `SameSite=Strict`, `SESSION_SECONDS=900`, `ForumClock` JUnit-only expiry, and backend+docs `write_paths`, and regenerated `demo/forum/features/005-sessions-with-signed-cookies.md` and `MANIFEST.json`.
+- Verification: `generate_features.py --check` (`PASS 100 features`), `demo/forum/tools` (`21/21` OK), factory catalog/contract/target/preparation/foundation tests (`65/65` OK), `examples/` (`compare_cohorts` + `validate_fixtures` PASS), `tests/` (`33/33` OK), `knowledge-check`, `doc-links --diff origin/develop --worktree`, `repo-health`, `test_cockpit_client.mjs` (`31/31`), `admission_ready=True` (protocol hash unchanged).
+
 ## Feature 004 preparation validation & shape retry — 2026-11-17
 
 - Root cause on build `c9c2c290b5b2` (Feature `004` correction round 1, `held / preparation_unavailable`):

@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Aligned Feature `005` (`demo/forum/tools/specs_a.py`,
+  `demo/forum/features/005-sessions-with-signed-cookies.md`, `MANIFEST.json`) with the
+  integrated Feature `004` baseline (`39c8336`): preserved `SameSite=Strict` (`AuthResourceTest`)
+  and `SESSION_SECONDS=900` defaults, clarified HTTPS-only `Secure`, incoming-cookie rotation
+  on login (with its `X-CSRF-Token` per `CsrfGuard`) without revoking separate sessions before
+  `POST /api/auth/logout-all` (`401`/`403` CSRF bounds), `ForumClock` JUnit-only expiry checks,
+  and backend+docs `write_paths` (removing nonexistent `demo/forum-web/` before `014`).
+
 - Fixed `validate_acceptance` (`demo/factory/product_checks.py`) rejecting valid
   `node:assert/strict` contracts that destructure or import assertion helpers
   (such as `const { ok, equal } = assert;` or named imports) or contain comments

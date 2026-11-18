@@ -7,7 +7,7 @@ size: M
 parallel: false
 phase: P0
 tier: 3
-write_paths: ["demo/forum-app/", "demo/forum-web/", "knowledge/components/agora-product.md", "knowledge/components/factory-architecture.md"]
+write_paths: ["demo/forum-app/", "knowledge/components/agora-product.md", "knowledge/components/factory-architecture.md"]
 depends_on: [004]
 owner: builder
 status: proposed
@@ -38,9 +38,9 @@ Content and model output are untrusted. Canonical definition: `tools/specs_a.py`
 
 **Scope:**
 
-- Signed session cookie with Secure (when HTTPS), HttpOnly and SameSite=Lax.
-- Server-side session rows with expiry, rotation on login, and a CSRF-protected `POST /api/auth/logout-all` endpoint revoking all sessions for the current account.
-- Idle timeout and absolute lifetime, both configurable.
+- Signed `agora_session` cookie keeping the existing `AuthResource`/`AuthResourceTest` contract: `HttpOnly`, `Path=/`, `SameSite=Strict`, and `Secure` only over HTTPS (omitted over plain loopback HTTP).
+- Server-side session rows with expiry (keeping `SESSION_SECONDS=900` defaults intact), rotating and revoking any valid incoming `agora_session` cookie presented on `POST /api/auth/login` (supplying that session's `X-CSRF-Token` per `CsrfGuard`) without revoking unrelated sessions, plus CSRF-protected `POST /api/auth/logout-all` (`401` unauthenticated, `403` without `X-CSRF-Token`) revoking all sessions for the current account.
+- Configurable idle timeout and absolute lifetime enforced in JUnit/service checks via `ForumClock`, plus optional secondary env verification keys preserving `SessionSecret` refusal codes and `<token>.<hmac>` signing.
 
 ## Outputs
 
@@ -51,7 +51,7 @@ production build. A previous SQLite/Expo receipt does not qualify this architect
 
 ## Invariants
 
-Signing keys come from the environment and rotate without invalidating every session at once.
+Primary and verification signing keys come from environment configuration, are never logged, and rotate without invalidating every live session at once.
 
 This invariant and the acceptance cases belong to planned protected check `agora-005`.
 The supervisor freezes external acceptance before implementation; candidate code cannot change the verifier.
@@ -63,13 +63,13 @@ artifacts remain untrusted until checked; no model output grants runtime authori
 
 ## Acceptance checks
 
-- [ ] The cookie value is HttpOnly and rejected (401 on `/api/auth/me`) after `POST /api/auth/logout` or `POST /api/auth/logout-all`.
-- [ ] Logging in rotates the identifier and invalidates the previous session row when reused.
-- [ ] An expired session in JUnit/service checks answers 401 without a redirect loop.
+- [ ] The `Set-Cookie` on `POST /api/auth/login` emits `HttpOnly`, `Path=/`, and `SameSite=Strict`; `POST /api/auth/logout` and CSRF-protected `POST /api/auth/logout-all` invalidate active sessions (`GET /api/auth/me` returns 401; `logout-all` returns 401 without a session and 403 without `X-CSRF-Token`).
+- [ ] Calling `POST /api/auth/login` with an existing valid `agora_session` cookie and its matching `X-CSRF-Token` header issues a rotated cookie with its new CSRF token and revokes only that presented cookie (reusing it fails with 401), leaving separate unpresented sessions valid until `POST /api/auth/logout-all`.
+- [ ] Idle and absolute expiry answer empty/401 without redirect loops in JUnit/service checks with frozen `ForumClock`, and rotated verification keys keep authenticating prior sessions without breaking `SessionSecretTest`.
 
-**Test scenario:** Log in twice, verify `POST /api/auth/logout-all` revokes all cookies and old rotated cookies return 401; verify idle/absolute expiry in JUnit with frozen clock.
+**Test scenario:** Open two independent logins without sharing the first cookie, verify `POST /api/auth/logout-all` (with `X-CSRF-Token`) revokes both while logging in with an active cookie and its `X-CSRF-Token` rotates and invalidates only that old cookie; verify idle/absolute expiry in JUnit with frozen `ForumClock` and verification key rotation.
 
 ## Out of scope
 
 - OAuth, OIDC or a third-party identity provider.
-- Remember-me cookies beyond the absolute lifetime.
+- Remember-me cookies beyond the absolute lifetime, React/browser UI (added in 014), or global frozen clocks across live HTTP requests.

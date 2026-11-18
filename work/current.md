@@ -3,11 +3,19 @@
 Updated 2026-11-17. Current facts only; historical evidence is in HANDOVER.md and validation.md.
 No final operational Go or actual product feature merge is claimed.
 
-## Feature 004 preparation validation & shape retry — RESOLVED
+## Feature 005 catalog alignment against product main — RESOLVED
+
+- Owner decision: align Feature `005` (`specs_a.py`, `005-sessions-with-signed-cookies.md`, `MANIFEST.json`) with committed `39c8336` product auth contracts before launch.
+- State: Feature `004` (`4290876ad345`) merged on product `main` (`39c8336`); `005` updated to keep `SameSite=Strict` (`AuthResourceTest`), `SESSION_SECONDS=900` / `SessionSecret` compatibility, incoming-cookie login rotation separate from multi-session `POST /api/auth/logout-all` (`401`/`403` CSRF), `ForumClock` JUnit-only expiry, and backend+docs `write_paths`; `generate_features.py --check` (`100`), catalog tests (`21/21`), and factory suites passed.
+- Next: owner launches Feature `005` in Cockpit (`http://127.0.0.1:8088/`) once merged to `main` (who: owner).
+- Blocker: none.
+- Evidence: [validation](validation.md); [feature authoring](../knowledge/operations/feature-authoring.md); [005 spec](../demo/forum/features/005-sessions-with-signed-cookies.md).
+
+## Feature 004 preparation validation & shape retry — MERGED (PR #50)
 
 - Owner decision: fix why Feature `004` correction round `c9c2c290b5b2` stalled in `held / preparation_unavailable`, add regression coverage, requalify native admission, and keep the live Cockpit ready.
-- State: `validate_acceptance` (`demo/factory/product_checks.py`) now strips JS comments/strings and resolves destructured/named `node:assert/strict` bindings; `TaskPreparer.prepare()` (`demo/factory/preparation.py`) clears the attempt dir and retries `preparation_acceptance_*` shape failures with `_contract_retry_note`; docs (`factory-flue.md`, `factory-architecture.md`, `feature-authoring.md`), tests, and live daemon updated.
-- Next: owner clicks Cancel request on `c9c2c290b5b2` in Cockpit Builds and relaunches Feature `004` cleanly (who: owner).
+- State: merged to `main` in `8b7314c` (PR #50); Feature `004` completed end-to-end (`4290876ad345`, `39c8336`).
+- Next: tracked by Feature `005` above (who: owner).
 - Blocker: none.
 - Evidence: [validation](validation.md); [factory-flue](../knowledge/components/factory-flue.md); [feature authoring](../knowledge/operations/feature-authoring.md).
 

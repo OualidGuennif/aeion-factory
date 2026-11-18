@@ -29,7 +29,7 @@ from .routing import OutcomeTelemetry, cohort_for
 from .agent_files import BuilderError
 from .publish import FakeForge, Publisher
 from .review import SECRET_PATTERNS, content_digest, review
-from .review_circuit import two_vote_review, baseline_diff, CircuitError, MAX_SUBSTITUTIONS
+from .review_circuit import two_vote_review, baseline_diff, baseline_context, CircuitError, MAX_SUBSTITUTIONS
 from .store import (FAILED, HELD, LIVE_COMPLETE, MAX_ATTEMPTS, MAX_CORRECTION_ROUNDS, QUEUED,
                     SIMULATED_COMPLETE, StoreError, continuation_step)
 from .target import TargetError
@@ -653,7 +653,7 @@ class DispatchWorker:
                     loaded = self.preparer.prepare(
                         build=build,catalog=self.catalog,spec_dir=self.spec_dir,
                         destination=self.work_root / build['build_id'] / 'prepared',budget=self.budget,
-                        router=self.router,authorized=lambda:self._attempt_authorized(build))
+                        router=self.router,authorized=lambda:self._attempt_authorized(build),store=self.store)
                 prepared_target,self.preparation_evidence=loaded
                 if not self.store.record_preparation(build['attempt_id'],build['attempt_generation'],self.preparation_evidence):
                     return {'build_id':build['build_id'],'result':{'status':'stale_attempt'}}
@@ -1375,7 +1375,7 @@ class DispatchWorker:
                 return {"build_id": build["build_id"], "result": {
                     "status": "held", "reason": "review_circuit_unconfigured"}}
             try:
-                diff=baseline_diff(repo,frozen.base_sha,files)
+                diff, base_ctx = baseline_diff(repo, frozen.base_sha, files), baseline_context(repo, frozen.base_sha, files)
             except CircuitError as error:
                 self.store.hold_dispatched(build['build_id'],'owner_review_required',receipt={
                     **self._identity(build,feature,frozen,base_sha,verdict),'gate':gate,'review':review_verdict,
@@ -1391,7 +1391,7 @@ class DispatchWorker:
                                       specification=(repo.parent / 'BRIEF.md').read_bytes().decode('utf-8'),
                                       preparer_model=(self.preparation_evidence or {}).get('preparer_model'),
                                       acceptance=target.protected_check.contract_test.read_bytes().decode('utf-8') if target else '',
-                                      baseline=diff,base_sha=frozen.base_sha,first_reviewer=first_reviewer)
+                                      baseline=diff, base_sha=frozen.base_sha, first_reviewer=first_reviewer, base_context=base_ctx)
             if circuit["status"] != "approved":
                 held = {**self._identity(build, feature, frozen, base_sha, verdict),
                     "gate": gate, "review": review_verdict, "circuit": circuit,

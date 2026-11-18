@@ -3,13 +3,13 @@
 Updated 2026-11-17. Current facts only; historical evidence is in HANDOVER.md and validation.md.
 No final operational Go or actual product feature merge is claimed.
 
-## Feature 005 catalog alignment against product main — RESOLVED
+## Factory blind-spot hardening & Feature 005 unblock — READY
 
-- Owner decision: align Feature `005` (`specs_a.py`, `005-sessions-with-signed-cookies.md`, `MANIFEST.json`) with committed `39c8336` product auth contracts before launch.
-- State: Feature `004` (`4290876ad345`) merged on product `main` (`39c8336`); `005` updated to keep `SameSite=Strict` (`AuthResourceTest`), `SESSION_SECONDS=900` / `SessionSecret` compatibility, incoming-cookie login rotation separate from multi-session `POST /api/auth/logout-all` (`401`/`403` CSRF), `ForumClock` JUnit-only expiry, and backend+docs `write_paths`; `generate_features.py --check` (`100`), catalog tests (`21/21`), and factory suites passed.
-- Next: owner launches Feature `005` in Cockpit (`http://127.0.0.1:8088/`) once merged to `main` (who: owner).
+- Owner decision: fix the three structural blind spots revealed by Feature `005` (`b4c1e5bcb189` / `538f9e91c10f` / `dc132bbfe0ee`), align `005` on stateless `CsrfGuard`, merge to `main`, and unblock `005` relaunch.
+- State: `_public_interfaces` exposes `@Provider`/`@ApplicationScoped` committed contracts; `acceptance_prompt` enforces `>= 12`-char dummy passwords (never `***`); `two_vote_review` attaches priority-ordered, non-UTF-8-safe `baseline_context` under `MAX_PROMPT_CHARS`; `TaskPreparer` reads `Store` receipts/corrections to re-prepare `gate=failed` frozen-contract conflicts and align preparer family exclusion with pinned/chain authors; `005` keeps stateless `CsrfGuard` unchanged (`dispatch.py` stays `1500` lines).
+- Next: cancel `dc132bbfe0ee` (`held / owner_review_required`) in Cockpit Builds and relaunch Feature `005` from Catalog once merged and requalified (who: owner).
 - Blocker: none.
-- Evidence: [validation](validation.md); [feature authoring](../knowledge/operations/feature-authoring.md); [005 spec](../demo/forum/features/005-sessions-with-signed-cookies.md).
+- Evidence: [validation](validation.md); [execution contract](../knowledge/components/factory-flue.md); [feature authoring](../knowledge/operations/feature-authoring.md).
 
 ## Feature 004 preparation validation & shape retry — MERGED (PR #50)
 

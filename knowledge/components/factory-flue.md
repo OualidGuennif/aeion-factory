@@ -4,12 +4,12 @@ title: "Flue factory execution"
 description: "Deterministic supervision of untrusted Flue/Pi workers, isolated tools and protected publication."
 status: draft
 verified:
-  - at: 2026-11-10
-    what: "unittest budget and dispatch: open_reservations lists unsettled entries, unconditional settlement clears reservations on incomplete usage, orphan reservations are reconciled at startup"
   - at: 2026-11-12
     what: "factory modernization: bridge read/stat caching with mutating invalidation, OpenShell 0.1.8 qualification, persistent author state with passed-check guidance, Langfuse v5.2 enterprise prompt management and multi-dimensional scores, Hindsight 1.2.1 reflection fallback"
   - at: 2026-11-17
     what: "unittest preparation and full suite: validate_acceptance scans JS comments, strings, templates and regex literals while resolving destructured/named node:assert/strict bindings, and TaskPreparer retries preparation_acceptance_* without double-recording telemetry"
+  - at: 2026-11-18
+    what: "full suite (896/896 demo, 33/33 repo, 30/30 flue, 21/21 catalog, 31/31 cockpit, template-tests): @Provider/@ApplicationScoped + >=12-char pass + pinned correction family exclusion; priority/UTF-8-safe baseline_context; conflict reprepare"
 sources:
   - resource: ../../demo/factory/review_context.py
     title: "One-time operator repair of the old review envelope"
@@ -149,10 +149,15 @@ The registered002/003/014 untouched baseline must lack their operator, test-harn
 guarantees, or browser source; compiler failure
 or a missing checker reason cannot stand in for that absence. Positive candidates still need the
 full migration/import/restore, protected JUnit harness, or production browser checks. These adapters do not implement the product.
-Automatic preparation carries committed security and validation rules (mandatory X-CSRF-Token on
-session mutations, 422 validation response codes) and incorporates structured prior attempt findings
-from previous receipts into the acceptance prompt (`previous_feature_feedback`), preventing acceptance
-generators from hallucinating contradictory assertions against committed security guards.
+Automatic preparation carries committed security and validation rules (mandatory `X-CSRF-Token` on
+session mutations, `422` validation response codes, and dummy test passwords `>= 12` characters rather
+than `***` placeholders), includes committed `@Path`, `@Provider` HTTP filters and product `@ApplicationScoped`
+service interfaces/constants in `COMMITTED PUBLIC INTERFACES`, and incorporates structured prior attempt
+findings from previous receipts (`previous_feature_feedback`), preventing acceptance generators from
+hallucinating contradictory assertions against committed security or validation guards. When a live gate fails
+with explicit author feedback naming a frozen-contract policy conflict (`reprepare_needed`), the correction round
+independently re-prepares from `Store` receipts (aligning preparer family exclusion with the round's pinned author
+or correction chain) rather than replaying an impossible fixture (`test_factory_preparation`).
 In the OpenShell sandbox, workspace seeding supplies `BRIEF.md` both adjacent to and inside the workdir,
 and provisions pristine base copies under `workspace/.base/` when an attempt starts from an inherited
 candidate to allow diff inspection. Sandbox collection (`scoped_changes`) safely excludes `BRIEF.md`,
@@ -284,8 +289,11 @@ revocation and export/removal failures refuse recovery. A slow trace or OTLP log
 remains authoritative when telemetry delivery fails.
 
 Review envelope v2 includes a unified diff from the frozen Git base and the complete changed
-files, MD and protected acceptance. Inherited code is distinguished from new work; future MDs
-are not requirements for this incremental feature. Baseline blobs must be bounded, regular,
+files, MD and protected acceptance, plus bounded read-only unchanged base context (`baseline_context`,
+preserving priority order across committed filters, resources, services, migrations and existing tests while
+skipping non-UTF-8 blobs within remaining byte headroom below the `600000`-byte cap without changing
+`content_digest` or `coverage.files`). Inherited code
+is distinguished from new work; future MDs are not requirements for this incremental feature. Baseline blobs must be bounded, regular,
 public UTF-8 files without credential-shaped values. Coverage and approvals bind base/diff
 hashes; missing context holds before inference. Routing v5 preserves but excludes incomparable
 old envelope outcomes. An explicit operator-only v1→v2 reassessment may reuse a known-cost

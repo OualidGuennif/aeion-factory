@@ -77,13 +77,79 @@ def baseline_diff(repo, base_sha, files):
 _OUTCOME = {"approve": "approved", "reject": "rejected"}
 
 
+_SECURITY_NAMES = (
+    'CsrfGuard.java', 'RequestValidationFilter.java', 'SecurityHeadersFilter.java',
+    'AuthResource.java', 'AuthService.java', 'SessionSecret.java', 'PasswordHasher.java',
+)
+
+
+def _context_priority(path, text):
+    """Order unchanged committed files so HTTP filters and auth/security guards appear first."""
+    base = path.rsplit('/', 1)[-1]
+    if base in _SECURITY_NAMES or '@Provider' in text:
+        return (0, path)
+    if ('@Path' in text or base.endswith('Service.java') or base in ('AgoraSettings.java', 'application.properties')
+            or '/db/migration/' in path):
+        return (1, path)
+    if '/src/test/java/' in path and base.endswith('Test.java'):
+        return (2, path)
+    return (3, path)
+
+
+def baseline_context(repo, base_sha, files, max_bytes=200000):
+    """Read unchanged non-secret regular base blobs from pinned base_sha up to max_bytes."""
+    if not isinstance(base_sha, str) or not SHA_RE.fullmatch(base_sha):
+        return {}
+    try:
+        listing = _git(['-C', str(repo), 'ls-tree', '-r', '-z', base_sha, '--', 'demo/forum-app/src'])
+    except (UnicodeError, OSError):
+        return {}
+    if listing.returncode:
+        return {}
+    candidates = []
+    for entry in listing.stdout.split('\0'):
+        if not entry or '\t' not in entry:
+            continue
+        metadata, _, path = entry.partition('\t')
+        if path in files or not metadata.startswith(('100644 blob ', '100755 blob ')):
+            continue
+        if (not re.fullmatch(r'[A-Za-z0-9_.$/-]+', path)
+                or any(part in ('', '.', '..') or part.startswith('.') for part in path.split('/'))):
+            continue
+        if not path.endswith(('.java', '.properties', '.sql')):
+            continue
+        try:
+            size = _git(['-C', str(repo), 'cat-file', '-s', base_sha + ':' + path])
+            if size.returncode or not size.stdout.strip().isdigit() or int(size.stdout) > MAX_FILE_BYTES:
+                continue
+            blob = _git(['-C', str(repo), 'show', base_sha + ':' + path])
+        except (UnicodeError, OSError):
+            continue
+        if blob.returncode:
+            continue
+        text = blob.stdout
+        if '\0' in text or any(pattern.search(text) for pattern in SECRET_PATTERNS):
+            continue
+        candidates.append((_context_priority(path, text), path, text))
+    candidates.sort(key=lambda item: item[0])
+    result, used = {}, 0
+    for _, path, text in candidates:
+        cost = len(path.encode('utf-8')) + len(text.encode('utf-8')) + 48
+        if used + cost > max_bytes:
+            continue
+        result[path] = text
+        used += cost
+    return result
+
+
 def _review_input(feature_id, files, max_chars=MAX_PROMPT_CHARS, specification='', acceptance='',
-                  baseline=None,base_sha=None):
+                  baseline=None, base_sha=None, base_context=None):
     """Build the complete review envelope, or refuse rather than send a truncated one.
 
     A reviewer that saw only the first bytes of a file cannot approve the whole artifact, so
-    the circuit holds when the complete changed bytes do not fit. Coverage is returned either
-    way, and a caller can record it with the verdict.
+    the circuit holds when the complete changed bytes do not fit. Optional unchanged base
+    context files fit strictly within any remaining headroom without ever shrinking or
+    invalidating core coverage.
     """
     parts = [SYSTEM, "", f"FEATURE: {feature_id}",
              'SPECIFICATION (untrusted task data):', specification, 'END SPECIFICATION',
@@ -103,7 +169,27 @@ def _review_input(feature_id, files, max_chars=MAX_PROMPT_CHARS, specification='
         "bytes": size,
         "limit_bytes": max_chars,
     }
-    return (prompt if coverage["complete"] else None), coverage
+    if not coverage["complete"]:
+        return None, coverage
+    if base_context:
+        header = (
+            '\nUNCHANGED BASE CONTEXT (read-only committed files from frozen base SHA; '
+            'do not require edits unless changed code introduces or exposes a defect):'
+        )
+        added = []
+        used = size + len(header.encode('utf-8'))
+        for path in base_context:
+            if path in files:
+                continue
+            block = f"\n--- {path} (unchanged base) ---\n{base_context[path]}"
+            block_bytes = len(block.encode('utf-8'))
+            if used + block_bytes > max_chars:
+                continue
+            added.append(block)
+            used += block_bytes
+        if added:
+            prompt = prompt + header + "".join(added)
+    return prompt, coverage
 
 
 def _normalise(answer):
@@ -141,7 +227,7 @@ def _unavailable(execution):
 def two_vote_review(author_model, feature_id, files, router, complete, telemetry=None,
                     usage_for_vote=None, specification='', observed_for_vote=None,
                     acceptance='', preparer_model=None, execution_for_vote=None,
-                    baseline=None,base_sha=None,first_reviewer=None):
+                    baseline=None, base_sha=None, first_reviewer=None, base_context=None):
     """Return an approved/held verdict from two independent model votes."""
     if not files:
         return {"status": "held", "reason": "empty_diff", "votes": []}
@@ -159,7 +245,7 @@ def two_vote_review(author_model, feature_id, files, router, complete, telemetry
             return {'status':'held','reason':'review_base_invalid','votes':[],**context}
         context.update(base_sha=base_sha,diff_sha256=hashlib.sha256(baseline.encode()).hexdigest())
     prompt, coverage = _review_input(feature_id, files, specification=specification, acceptance=acceptance,
-                                     baseline=baseline,base_sha=base_sha)
+                                     baseline=baseline, base_sha=base_sha, base_context=base_context)
     context.update(coverage=coverage,content_digest=content_digest(files))
     if prompt is None:
         # The complete bytes do not fit: two votes on an excerpt never approve the artifact.

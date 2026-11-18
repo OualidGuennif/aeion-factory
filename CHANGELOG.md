@@ -2,13 +2,28 @@
 
 ## Unreleased
 
-- Aligned Feature `005` (`demo/forum/tools/specs_a.py`,
-  `demo/forum/features/005-sessions-with-signed-cookies.md`, `MANIFEST.json`) with the
-  integrated Feature `004` baseline (`39c8336`): preserved `SameSite=Strict` (`AuthResourceTest`)
-  and `SESSION_SECONDS=900` defaults, clarified HTTPS-only `Secure`, incoming-cookie rotation
-  on login (with its `X-CSRF-Token` per `CsrfGuard`) without revoking separate sessions before
-  `POST /api/auth/logout-all` (`401`/`403` CSRF bounds), `ForumClock` JUnit-only expiry checks,
-  and backend+docs `write_paths` (removing nonexistent `demo/forum-web/` before `014`).
+- Hardened preparation, review context, and recovery against baseline/filter blind spots:
+  - `TaskPreparer._public_interfaces` (`demo/factory/preparation.py`) now includes `@Provider`
+    HTTP filters (such as `CsrfGuard`, `RequestValidationFilter`) and, for product runs,
+    `@ApplicationScoped` service interfaces/constants (such as `AuthService.MIN_PASSWORD = 12`,
+    preserved across `> 120 KB` declaration summaries) while keeping unannotated internal
+    classes excluded.
+  - `acceptance_prompt` (`demo/factory/product_checks.py`) enforces non-placeholder dummy
+    test passwords `>= 12` characters (never `***`) and points to `@Provider`/`@ApplicationScoped`
+    rules in `COMMITTED PUBLIC INTERFACES`.
+  - `baseline_context` + `two_vote_review` (`demo/factory/review_circuit.py`,
+    `demo/factory/dispatch.py`) include unchanged read-only committed files (`CsrfGuard.java`,
+    resources, services, migrations, tests) in priority order while skipping non-UTF-8 blobs,
+    strictly within remaining headroom under `MAX_PROMPT_CHARS` without altering
+    `content_digest`, `diff_sha256`, or `coverage.files`.
+  - `TaskPreparer.prepare` triggers `reprepare_needed` after a `gate=failed` round when
+    author feedback explicitly reports a frozen-contract/policy conflict (reading `Store`
+    receipts and aligning preparer family exclusion with `FlueBuilder`'s pinned round author or
+    correction chain), keeping ordinary `gate=failed` rounds on their unchanged contract.
+- Clarified Feature `005` (`demo/forum/tools/specs_a.py`,
+  `005-sessions-with-signed-cookies.md`): kept stateless `CsrfGuard` unchanged (and `>= 12`-char
+  registration rules) alongside the prior `SameSite=Strict`, `SESSION_SECONDS=900`,
+  `X-CSRF-Token`-on-cookie-login, and JUnit `ForumClock` alignments.
 
 - Fixed `validate_acceptance` (`demo/factory/product_checks.py`) rejecting valid
   `node:assert/strict` contracts that destructure or import assertion helpers

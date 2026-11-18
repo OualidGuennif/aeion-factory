@@ -597,6 +597,217 @@ class PreparationTests(unittest.TestCase):
         self.assertEqual(len(worker2.router.telemetry.records), 1)
         self.assertEqual(worker2.router.telemetry.records[0]['model'], role2.calls[0])
 
+    def test_product_preparer_sees_provider_filters_and_service_constants_from_pinned_base(self):
+        folder = self.source / 'demo/forum-app/src/main/java/local/aeion/forum'
+        folder.mkdir(parents=True)
+        (folder / 'AuthResource.java').write_text('@Path("/api/auth") class AuthResource { /* HTTP_ROUTE */ }\n')
+        (folder / 'CsrfGuard.java').write_text('@Provider public class CsrfGuard { /* PROVIDER_CSRF_FILTER */ }\n')
+        (folder / 'AuthService.java').write_text(
+            '@ApplicationScoped public class AuthService {\n'
+            '    private static final int MIN_PASSWORD = 12;\n'
+            '    /* SERVICE_CONSTANTS_MARKER */\n'
+            '}\n'
+        )
+        (folder / 'InternalHelper.java').write_text('class InternalHelper { /* EXCLUDED_HELPER */ }\n')
+        self.git('add', '.')
+        self.git('commit', '-qm', 'base interfaces and services')
+        (folder / 'CsrfGuard.java').write_text('@Provider public class CsrfGuard { /* UNCOMMITTED_GUARD */ }\n')
+
+        node_contract = "import test from 'node:test';\nimport assert from 'node:assert/strict';\ntest('x', () => { assert.equal(1, 2); });\n"
+        calls = []
+
+        class CapturingRole:
+            paid = False
+            last_execution = None
+            last_usage = None
+
+            def __call__(_, model, prompt, build_id):
+                calls.append(prompt)
+                _.last_usage = {'complete': True, 'cost_usd': '0'}
+                return {'status': 'ready', 'contract': node_contract, 'reason': 'Fixture'}
+
+        class FailingChecker:
+            def check_target(self, target, repo, frozen):
+                return False, {'reason': 'acceptance_failed', 'contract_assertion_failures': 1}
+
+        preparer = TaskPreparer(self.root, self.source, role=CapturingRole(), checker=FailingChecker(),
+                                base_ref='HEAD', product=True)
+        preparer.prepare(
+            build={'feature_id': '007', 'build_id': 'c' * 32, 'attempt_id': 'd' * 32},
+            catalog=self.catalog, spec_dir=self.specs, destination=self.root / 'prepared-prod-ifaces',
+            budget=self.budget, router=Router(), authorized=lambda: True,
+        )
+        prompt = calls[0]
+        self.assertIn('HTTP_ROUTE', prompt)
+        self.assertIn('PROVIDER_CSRF_FILTER', prompt)
+        self.assertIn('MIN_PASSWORD = 12', prompt)
+        self.assertIn('SERVICE_CONSTANTS_MARKER', prompt)
+        self.assertNotIn('EXCLUDED_HELPER', prompt)
+        self.assertNotIn('UNCOMMITTED_GUARD', prompt)
+
+    def test_acceptance_prompt_includes_twelve_char_password_rule(self):
+        from factory.product_checks import acceptance_prompt
+        from factory.preparation import Task
+        task = Task('005', 'cat_digest', 'Spec text', 'Arch text', 'base_sha', ['scope/'])
+        prompt = acceptance_prompt(task, 'INTERFACES')
+        self.assertIn('12', prompt)
+        self.assertIn('***', prompt)
+
+    def test_correction_after_gate_failure_reprepares_only_on_frozen_contract_conflict(self):
+        import sqlite3
+        node_contract = "import test from 'node:test';\nimport assert from 'node:assert/strict';\ntest('x', () => { assert.equal(1, 2); });\n"
+        new_contract = "import test from 'node:test';\nimport assert from 'node:assert/strict';\ntest('new', () => { assert.equal(2, 3); });\n"
+        calls = []
+
+        class RecordingRole:
+            paid = False
+            last_execution = None
+            last_usage = None
+
+            def __call__(_, model, prompt, build_id):
+                calls.append(prompt)
+                _.last_usage = {'complete': True, 'cost_usd': '0'}
+                return {'status': 'ready', 'contract': new_contract, 'reason': 'Reprepared'}
+
+        class FailingChecker:
+            def check_target(self, target, repo, frozen):
+                return False, {'reason': 'acceptance_failed', 'contract_assertion_failures': 1}
+
+        task = freeze_task(self.catalog, '007', self.specs, self.architecture, self.base, product=True)
+        evidence = {**task.identity(), 'task_digest': task.digest(), 'acceptance_digest': _sha(node_contract),
+                    'preparer_model': 'glm-5.3-flash', 'negative_control': 'failed_contract_assertion', 'synthetic': True}
+
+        db_dir = self.root / 'demo/.local/factory'
+        db_dir.mkdir(parents=True, exist_ok=True)
+        conn = sqlite3.connect(str(db_dir / 'factory.db'))
+        conn.execute('CREATE TABLE builds (build_id TEXT, feature_id TEXT, status TEXT, receipt TEXT, updated_ns INTEGER)')
+
+        def setup_prev(build_id, author_note):
+            prev_dir = self.root / 'work' / build_id / 'prepared'
+            prev_dir.mkdir(parents=True, exist_ok=True)
+            (prev_dir / 'task.json').write_text(json.dumps(evidence), encoding='utf-8')
+            (prev_dir / 'BRIEF.md').write_text(task.specification, encoding='utf-8')
+            (prev_dir / 'acceptance.mjs').write_text(node_contract, encoding='utf-8')
+            receipt = json.dumps({'gate': {'status': 'failed'}, 'feedback': {'author': author_note}})
+            conn.execute('INSERT INTO builds VALUES (?, ?, ?, ?, ?)', (build_id, '007', 'failed', receipt, 100))
+
+        setup_prev('prev_ordinary_fail', 'Fixed typo in Java handler; check failed on assertion.')
+        setup_prev('prev_policy_conflict', 'Still blocked: read-only acceptance password violates 12-character password policy.')
+        conn.commit()
+        conn.close()
+
+        preparer = TaskPreparer(self.root, self.source, role=RecordingRole(), checker=FailingChecker(),
+                                base_ref='HEAD', product=True)
+        _, reused_ev = preparer.prepare(
+            build={'feature_id': '007', 'build_id': 'c1' * 16, 'attempt_id': 'd1' * 16,
+                   'idempotency_key': 'factory-correction:prev_ordinary_fail'},
+            catalog=self.catalog, spec_dir=self.specs, destination=self.root / 'work/c1/prepared',
+            budget=self.budget, router=Router(), authorized=lambda: True,
+        )
+        self.assertEqual(len(calls), 0)
+        self.assertEqual(reused_ev['acceptance_digest'], _sha(node_contract))
+
+        _, rep_ev = preparer.prepare(
+            build={'feature_id': '007', 'build_id': 'c2' * 16, 'attempt_id': 'd2' * 16,
+                   'idempotency_key': 'factory-correction:prev_policy_conflict'},
+            catalog=self.catalog, spec_dir=self.specs, destination=self.root / 'work/c2/prepared',
+            budget=self.budget, router=Router(), authorized=lambda: True,
+        )
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(rep_ev['acceptance_digest'], _sha(new_contract))
+
+    def test_correction_reprepare_with_failed_first_author_pins_round_author_in_dispatch(self):
+        from factory.models import RoutingError, family
+        from factory.routing import OutcomeTelemetry, cohort_for
+        from factory.store import FAILED, Store
+
+        store = Store(self.root / 'factory.db')
+        cohort = cohort_for(self.catalog.by_id['007'], 'product')
+        telemetry = OutcomeTelemetry(store, cohort, 'prior-attempt', synthetic=False)
+        telemetry.record('glm-5.3-flash', 'author', 'failed', latency_ms=100, cost_usd='0.01')
+        router = Router(telemetry=telemetry)
+        self.assertEqual(router.select('author', require_role='author'), 'qwen-3.8-flash')
+
+        b1_id = store.admit(['007'], 'owner-launch-1', self.catalog)['build_ids'][0]
+        b1 = store.claim_next(self.catalog)
+        self.assertEqual(b1['build_id'], b1_id)
+
+        preparer = TaskPreparer(self.root, self.source, role=self.role, checker=self.checker, base_ref='HEAD')
+        b1_dir = self.root / 'work' / b1_id / 'prepared'
+        preparer.prepare(
+            build=b1, catalog=self.catalog, spec_dir=self.specs, destination=b1_dir,
+            budget=self.budget, router=router, authorized=lambda: True, store=store,
+        )
+        self.assertEqual(len(self.role.calls), 1)
+        self.assertFalse((b1_dir / 'reprepare_needed').exists())
+
+        done = store.complete_attempt(
+            b1['attempt_id'], b1['attempt_generation'],
+            receipt={
+                'author_model': 'glm-5.3-flash',
+                'gate': {'status': 'failed'},
+                'feedback': {'author': 'blocked: forced by the frozen acceptance contract'},
+            },
+            terminal=FAILED,
+        )
+        self.assertEqual(done['status'], 'completed')
+
+        b2_id = store.admit(
+            ['007'], f'factory-correction:{b1_id}', self.catalog,
+            actor='supervisor', correction={'previous_build_id': b1_id, 'attempt': 1, 'round': 1},
+        )['build_ids'][0]
+        b2 = store.claim_next(self.catalog)
+        self.assertEqual(b2['build_id'], b2_id)
+
+        b2_dir = self.root / 'work' / b2_id / 'prepared'
+        preparer.prepare(
+            build=b2, catalog=self.catalog, spec_dir=self.specs, destination=b2_dir,
+            budget=self.budget, router=router, authorized=lambda: True, store=store,
+        )
+        self.assertEqual(len(self.role.calls), 2)
+        self.assertNotEqual(family(preparer.last_model), 'zhipu')
+        # Match FlueBuilder continuation pinning: round > 0 must still allow glm-5.3-flash.
+        author_b2 = router.select(
+            'author', require_role='author',
+            exclude_models=[m for m in router.models if m != 'glm-5.3-flash'],
+            exclude_families=[family(preparer.last_model)],
+        )
+        self.assertEqual(author_b2, 'glm-5.3-flash')
+
+        # Also verify attempt 2 (round == 0) reads the correction chain and does not pick an excluded author's preparer conflict.
+        done2 = store.complete_attempt(
+            b2['attempt_id'], b2['attempt_generation'],
+            receipt={
+                'author_model': 'glm-5.3-flash',
+                'gate': {'status': 'failed'},
+                'feedback': {'author': 'forced by the frozen acceptance contract'},
+            },
+            terminal=FAILED,
+        )
+        self.assertEqual(done2['status'], 'completed')
+        b3_id = store.admit(
+            ['007'], f'factory-correction:{b2_id}', self.catalog,
+            actor='supervisor', correction={'previous_build_id': b2_id, 'attempt': 2, 'round': 0},
+        )['build_ids'][0]
+        b3 = store.claim_next(self.catalog)
+        self.assertEqual(b3['build_id'], b3_id)
+        preparer.prepare(
+            build=b3, catalog=self.catalog, spec_dir=self.specs,
+            destination=self.root / 'work' / b3_id / 'prepared',
+            budget=self.budget, router=router, authorized=lambda: True, store=store,
+        )
+        self.assertEqual(len(self.role.calls), 3)
+        self.assertNotEqual(family(preparer.last_model), 'qwen')
+        try:
+            author_b3 = router.select(
+                'author', require_role='author',
+                exclude_models=['glm-5.3-flash'],
+                exclude_families=[family(preparer.last_model)],
+            )
+        except RoutingError as err:
+            self.fail(f'Unexpected RoutingError after round=0 reprepare: {err}')
+        self.assertEqual(author_b3, 'qwen-3.8-flash')
+
 
 def _sha(text):
     return hashlib.sha256(text.encode('utf-8')).hexdigest()

@@ -101,10 +101,15 @@ def _scan_regex_literal(text, start):
     return n
 
 
-def _scan_js(text):
+_MASKED_LITERAL_RE = re.compile(r'\*{3,}|[A-Za-z0-9_-]…[A-Za-z0-9_!@#$%^&*-]')
+_ERROR_TYPE_RE = re.compile(r'[A-Za-z][A-Za-z0-9_]{0,31}')
+
+
+def _scan_js(text, literals=None):
     """Return (comments_stripped, code_only) preserving ES template expressions and regexes cleanly."""
     stripped, code = [], []
     tmpl_depths = []
+    tmpl_chunks = []
     in_template = False
     expr_end = False
     i, n = 0, len(text)
@@ -112,13 +117,23 @@ def _scan_js(text):
         ch = text[i]
         if in_template:
             if ch == '\\' and i + 1 < n:
-                stripped.append(text[i:i + 2]); code.append(' '); i += 2
+                stripped.append(text[i:i + 2]); code.append(' ')
+                if tmpl_chunks:
+                    tmpl_chunks[-1].append(text[i:i + 2])
+                i += 2
             elif ch == '$' and i + 1 < n and text[i + 1] == '{':
+                if literals is not None and tmpl_chunks:
+                    literals.append(''.join(tmpl_chunks[-1])); tmpl_chunks[-1].clear()
                 stripped.append('${'); code.append('${'); tmpl_depths.append(0); in_template = False; expr_end = False; i += 2
             elif ch == '`':
+                if literals is not None and tmpl_chunks:
+                    literals.append(''.join(tmpl_chunks.pop()))
                 stripped.append('`'); code.append('`'); in_template = False; expr_end = True; i += 1
             else:
-                stripped.append(ch); code.append('\n' if ch == '\n' else ' '); i += 1
+                stripped.append(ch); code.append('\n' if ch == '\n' else ' ')
+                if tmpl_chunks:
+                    tmpl_chunks[-1].append(ch)
+                i += 1
             continue
         nxt = text[i + 1] if i + 1 < n else ''
         if ch == '/' and nxt == '/':
@@ -133,8 +148,13 @@ def _scan_js(text):
             stripped.append(sep); code.append(sep)
         elif ch in ("'", '"'):
             end = _scan_quoted_literal(text, i)
-            stripped.append(text[i:end]); code.append(ch * 2); expr_end = True; i = end
+            raw = text[i:end]
+            if literals is not None:
+                literals.append(raw[1:-1] if len(raw) >= 2 and raw[-1] == ch else raw[1:])
+            stripped.append(raw); code.append(ch * 2); expr_end = True; i = end
         elif ch == '`':
+            if literals is not None:
+                tmpl_chunks.append([])
             stripped.append('`'); code.append('`'); in_template = True; i += 1
         elif ch == '/' and not expr_end:
             end = _scan_regex_literal(text, i)
@@ -218,11 +238,25 @@ def validate_acceptance(text):
         raise PreparationError('preparation_acceptance_size_invalid')
     if 'node:test' not in text or 'node:assert/strict' not in text:
         raise PreparationError('preparation_acceptance_runtime_mismatch')
-    comments_stripped, code_only = _scan_js(text)
+    literals = []
+    comments_stripped, code_only = _scan_js(text, literals=literals)
     if not re.search(r'(?<![A-Za-z0-9_$])(?:test|it)\s*\(', code_only) or not _has_strict_assertions(comments_stripped, code_only):
         raise PreparationError('preparation_acceptance_assertions_missing')
     if re.search(r'\.(?:skip|todo|only)\s*\(|\b(?:skip|todo|only)\s*:', code_only):
         raise PreparationError('preparation_acceptance_skips_forbidden')
+    if any(_MASKED_LITERAL_RE.search(lit) for lit in literals):
+        raise PreparationError('preparation_acceptance_masked_literal')
+    node = shutil.which('node')
+    if node is not None:
+        with tempfile.NamedTemporaryFile('w', suffix='.mjs', encoding='utf-8', delete=True) as handle:
+            handle.write(text)
+            handle.flush()
+            try:
+                syntax = subprocess.run([node, '--check', handle.name], capture_output=True, text=True, timeout=10)
+            except (OSError, subprocess.TimeoutExpired):
+                syntax = None
+            if syntax is not None and syntax.returncode:
+                raise PreparationError('preparation_acceptance_syntax_invalid')
 
 
 def registered_acceptance(root, task):
@@ -261,7 +295,8 @@ def acceptance_prompt(task, interfaces, feedback=None):
         '- Test harness clock/database isolation is an internal JUnit/Quarkus fixture, NOT a live HTTP feature. NEVER assert that independent HTTP requests share identical timestamps (frozen clock).\n'
         'COMMITTED SECURITY & VALIDATION RULES:\n'
         '- Authenticated session mutations (POST/PUT/DELETE) that carry a session cookie MUST supply X-CSRF-Token (obtained from /api/auth/login response payload "csrf"). Do not send cookie mutations without this token.\n'
-        '- When registering or authenticating dummy test accounts, always use passwords >= 12 non-placeholder characters (for example "AgoraTestPass_001!"), NEVER masked tokens like "***" or short placeholders like "password"/"changeme".\n'
+        '- When registering or authenticating dummy test accounts, always use plain unmasked passwords >= 12 characters (for example "ForumUserPass01!"), NEVER masked tokens like "***" or ellipsis ("…") inside cookie names or password strings.\n'
+        '- Keep fetch/api helpers self-consistent: if api() returns a plain parsed object { status, body, text, cookies }, never read response.headers on that returned object inside downstream helpers; verify every test fails only via assert.* (ERR_ASSERTION) on untouched baseline, never via TypeError or ReferenceError.\n'
         '- HTTP filters (@Provider such as CsrfGuard/RequestValidationFilter) and service constraints (@ApplicationScoped such as AuthService/SessionSecret) appear in COMMITTED PUBLIC INTERFACES; match their committed status codes and bounds.\n'
         '- Payload validation failures return HTTP 422 with {"error": "validation_failed", "fields": [...]}, or 400 for bad request. Do not assert 400 when 422 is returned.\n'
         'FROZEN SPECIFICATION:\n' + task.specification + '\nAPPROVED ARCHITECTURE:\n' + task.architecture
@@ -427,12 +462,25 @@ class ProductCheckRunner(DockerCheckRunner):
                     raise ValueError()
             except (ValueError, TypeError):
                 return False, {'reason':'acceptance_report_missing'}
+            raw_test_errors=report.get('test_errors')
+            test_errors=raw_test_errors if type(raw_test_errors) is int and 0<=raw_test_errors<=10000 else max(0,report['failed']-report['assertions'])
             passed=result.returncode==0 and report['passed'] is True and report['tests']>0
-            # Do not trust exit zero alone or accept skipped tests.
-            passed &= all(report[key]==0 for key in ('failed','skipped','cancelled','todo'))
+            # Do not trust exit zero alone or accept skipped tests or hook failures.
+            passed &= all(report[key]==0 for key in ('failed','skipped','cancelled','todo')) and report['assertions']==0 and test_errors==0
+            errors=[]
+            for item in (report.get('errors') or [])[:20]:
+                if not isinstance(item,dict):
+                    continue
+                entry={'line':item.get('line') if type(item.get('line')) is int else 0,
+                       'code':item.get('code') if item.get('code') in ('assertion_failed','test_error') else 'test_error'}
+                et=item.get('error_type')
+                if isinstance(et,str) and _ERROR_TYPE_RE.fullmatch(et):
+                    entry['error_type']=et
+                errors.append(entry)
             return passed, {'returncode':result.returncode,'reason':'passed' if passed else 'acceptance_failed',
-                'contract_assertion_failures':report['assertions'], 'test_counts':{k:report[k] for k in
-                    ('tests','failed','skipped','cancelled','todo')}, 'failed_tests':report.get('errors',[])[:20]}
+                'contract_assertion_failures':report['assertions'],'test_errors':test_errors,
+                'test_counts':{k:report[k] for k in ('tests','failed','skipped','cancelled','todo')},
+                'failed_tests':errors}
         finally:
             self._kill(name)
 

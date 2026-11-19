@@ -23,4 +23,27 @@ class StartupDiagnosticsTests(unittest.TestCase):
             'failed_tests':['DatabaseLessBootTest > livenessAnswersWithoutADatabase() FAILED','bad\nname']})
         self.assertEqual(kept['failed_tests'],['DatabaseLessBootTest > livenessAnswersWithoutADatabase() FAILED'])
 
+    def test_check_evidence_retains_verifier_error_locations_and_counts(self):
+        kept=check_evidence({
+            'status':'failed',
+            'reason':'acceptance_failed',
+            'contract_assertion_failures':0,
+            'test_errors':6,
+            'failed_tests':[
+                {'line':134,'code':'test_error','error_type':'TypeError'},
+                {'line':150,'code':'assertion_failed','error_type':'AssertionError'},
+                {'line':160,'code':'test_error','error_type':'bad type\nignored'},
+                'not-a-valid\nline',
+            ],
+        })
+        self.assertEqual(kept,{
+            'status':'failed',
+            'reason':'acceptance_failed',
+            'contract_assertion_failures':0,
+            'test_errors':6,
+            'failed_tests':['line 134: test_error (TypeError)','line 150: assertion_failed (AssertionError)','line 160: test_error'],
+        })
+        bad_counts=check_evidence({'status':'failed','reason':'acceptance_failed','contract_assertion_failures':-1,'test_errors':'6'})
+        self.assertEqual(bad_counts,{'status':'failed','reason':'acceptance_failed'})
+
 if __name__=='__main__':unittest.main()

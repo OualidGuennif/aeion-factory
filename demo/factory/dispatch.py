@@ -1233,13 +1233,10 @@ class DispatchWorker:
                    and type(marker.get('round')) is int)
         crash = (marker.get('crash') if follows and marker.get('trigger') == 'crash'
                  and isinstance(marker.get('crash'), dict) else None)
-        empty = {'attempt': link['attempt'], 'round': link['round'], 'feedback': [], 'files': None,
-                 'scopes': list(frozen.write_scopes),
-                 'candidate_digest': None, 'trigger': marker.get('trigger') if follows else None,
-                 'crash': ({'failure': _token(crash.get('failure')), 'error_class': _token(crash.get('error_class'))}
-                           if crash else None),
-                 'model': (receipt.get('author_model') if link['round'] > 0
-                           and isinstance(receipt.get('author_model'), str) else None),
+        empty = {'attempt': link['attempt'], 'round': link['round'], 'feedback': [], 'files': None, 'scopes': list(frozen.write_scopes),
+                 'acceptance_digest': receipt.get('acceptance_digest') if follows else None, 'candidate_digest': None, 'trigger': marker.get('trigger') if follows else None,
+                 'crash': ({'failure': _token(crash.get('failure')), 'error_class': _token(crash.get('error_class'))} if crash else None),
+                 'model': (receipt.get('author_model') if link['round'] > 0 and isinstance(receipt.get('author_model'), str) else None),
                  'exclude_models': self._chain_models(build['build_id']) if link['round'] == 0 else []}
         if (previous is None or previous['status'] != FAILED or previous['feature_id'] != build['feature_id']
                 or receipt.get('spec_digest') != frozen.spec_digest or not follows):
@@ -1309,9 +1306,10 @@ class DispatchWorker:
             )
             return {"build_id": build["build_id"], "result": result}
 
-        if (self.correction is not None and self.correction.get('candidate_digest') and self.correction.get('trigger') != 'crash' and content_digest(files) == self.correction['candidate_digest']):
-            # No progress: the correction returned the refused candidate unchanged. Asking the
-            # same checks and reviewers again would only spend; mark reprepare_needed for next attempt.
+        prev_acc = self.correction.get('acceptance_digest') if self.correction is not None else None
+        cur_acc = (getattr(self, 'preparation_evidence', None) or {}).get('acceptance_digest') or frozen.acceptance_digest
+        if (self.correction is not None and self.correction.get('candidate_digest') and self.correction.get('trigger') != 'crash' and content_digest(files) == self.correction['candidate_digest'] and (not prev_acc or cur_acc == prev_acc)):
+            # Candidate and contract unchanged; hold and mark reprepare_needed for next attempt.
             try:(self.work_root / build['build_id'] / 'prepared' / 'reprepare_needed').touch(mode=0o600, exist_ok=True)
             except OSError:pass
             self.store.hold_dispatched(build['build_id'], 'owner_review_required', receipt={

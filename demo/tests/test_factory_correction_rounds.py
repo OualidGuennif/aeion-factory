@@ -694,6 +694,52 @@ class CorrectionRoundTests(unittest.TestCase):
             {"name": "Knowledge, links and repository health", "conclusion": "failure"}]}})
         self.assertTrue(any("revert that code file" in line and "Docs-Checked" not in line for line in lines))
 
+    def test_an_unchanged_candidate_proceeds_when_reprepare_updates_acceptance_contract(self):
+        import dataclasses
+        self.store.admit(["013"], "c-reprepare-unchanged", self.catalog)
+        first = self.builds()[0]
+        c1 = self.target.protected_check.contract_test.read_text()
+        c2_path = self.root / "contract-v2.txt"
+        c2_path.write_text(c1 + "// repr\n")
+        target2 = dataclasses.replace(
+            self.target,
+            protected_check=dataclasses.replace(self.target.protected_check, contract_test=c2_path),
+        )
+        ev1 = preparation_evidence(first, self.target.base_sha)
+        ev1 = {**ev1, "acceptance_digest": hashlib.sha256(c1.encode()).hexdigest()}
+        ev2 = {**ev1, "acceptance_digest": hashlib.sha256(c2_path.read_bytes()).hexdigest()}
+
+        class SwitchingPreparer:
+            timeout_seconds = 0
+            last_model = "glm-5.3-flash"
+
+            def __init__(self):
+                self.role = type("Role", (), {"paid": False, "last_execution": None, "last_usage": None})()
+
+            def prepare(self, *, build, **_kwargs):
+                return (self.t1, ev1) if build["build_id"] == first["build_id"] else (target2, ev2)
+
+        prep = SwitchingPreparer()
+        prep.t1 = self.target
+        author, reviews = Author(unchanged=True), Reviews(rejections=1)
+        DispatchWorker(
+            self.store, self.catalog, self.specs, self.root / "work", fixtures.config(),
+            target=self.target, builder=author, preparer=prep,
+            forge=FakeForge(), review_complete=reviews,
+            require_circuit=True, author_model="deepseek-4.1-flash", allow_unbudgeted=True,
+        ).run_once()
+        self.assertEqual(self.builds()[0]["status"], FAILED)
+
+        DispatchWorker(
+            self.store, self.catalog, self.specs, self.root / "work", fixtures.config(),
+            target=self.target, builder=author, preparer=prep,
+            forge=FakeForge(), review_complete=reviews,
+            require_circuit=True, author_model="deepseek-4.1-flash", allow_unbudgeted=True,
+        ).run_once()
+        second = self.builds()[1]
+        self.assertEqual(second["status"], SIMULATED_COMPLETE)
+        self.assertNotEqual(second.get("hold_reason"), "correction_unchanged")
+
 
 if __name__ == "__main__":
     unittest.main()

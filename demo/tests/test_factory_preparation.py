@@ -808,6 +808,215 @@ class PreparationTests(unittest.TestCase):
             self.fail(f'Unexpected RoutingError after round=0 reprepare: {err}')
         self.assertEqual(author_b3, 'qwen-3.8-flash')
 
+    def test_validate_acceptance_rejects_masked_literals_and_syntax_errors_and_retries(self):
+        from factory.preparation import PreparationError, TaskPreparer
+        from factory.product_checks import validate_acceptance
+
+        valid_js = (
+            "import test from 'node:test';\n"
+            "import assert from 'node:assert/strict';\n"
+            "const PW = 'ForumUserPass01!';\n"
+            "const note = (raw) => `${raw.slice(0, 240)}…`;\n"
+            "test('works', () => { assert.equal(PW.length >= 12, true); assert.ok(note('abc')); });\n"
+        )
+        self.assertIsNone(validate_acceptance(valid_js))
+
+        for bad_name, bad_js in (
+            ('star_cookie', valid_js.replace("'ForumUserPass01!'", "'***'")),
+            ('ellipsis_pw', valid_js.replace("'ForumUserPass01!'", "'Agora…ss_001!'")),
+        ):
+            with self.subTest(case=bad_name), self.assertRaisesRegex(PreparationError, 'preparation_acceptance_masked_literal'):
+                validate_acceptance(bad_js)
+
+        bad_syntax = valid_js.replace('});\n', '')
+        with self.assertRaisesRegex(PreparationError, 'preparation_acceptance_syntax_invalid'):
+            validate_acceptance(bad_syntax)
+
+        calls = []
+
+        class RetryingShapeRole:
+            paid = False
+            last_execution = None
+            last_usage = None
+
+            def __call__(_, model, prompt, build_id):
+                calls.append((model, prompt))
+                _.last_usage = {'complete': True, 'cost_usd': '0'}
+                contract = bad_syntax if len(calls) == 1 else valid_js
+                return {'status': 'ready', 'contract': contract, 'reason': 'Fixture'}
+
+        class FailingChecker:
+            def check_target(self, target, repo, frozen):
+                return False, {'reason': 'acceptance_failed', 'contract_assertion_failures': 1}
+
+        preparer = TaskPreparer(self.root, self.source, role=RetryingShapeRole(), checker=FailingChecker(),
+                                base_ref='HEAD', product=True)
+        preparer.prepare(
+            build={'feature_id': '007', 'build_id': '1' * 32, 'attempt_id': '2' * 32},
+            catalog=self.catalog, spec_dir=self.specs, destination=self.root / 'prepared-shape-retry',
+            budget=self.budget, router=Router(), authorized=lambda: True,
+        )
+        self.assertEqual(len(calls), 2)
+        self.assertNotEqual(calls[0][0], calls[1][0])
+        self.assertIn('preparation_acceptance_syntax_invalid', calls[1][1])
+
+    def test_product_baseline_rejects_test_error_even_with_failing_assertions_and_retries(self):
+        from factory.models import family
+        from factory.preparation import TaskPreparer, _baseline_ok
+
+        self.assertFalse(_baseline_ok(True, False, {
+            'reason': 'acceptance_failed', 'contract_assertion_failures': 1, 'test_errors': 0,
+            'test_counts': {'tests': 6, 'failed': 1, 'skipped': 1, 'cancelled': 0, 'todo': 0},
+        }, 'C', None, '005')[0])
+        self.assertFalse(_baseline_ok(True, False, {
+            'reason': 'acceptance_failed', 'contract_assertion_failures': 1,
+            'test_counts': {'tests': 6, 'failed': 6, 'skipped': 0, 'cancelled': 0, 'todo': 0},
+        }, 'C', None, '005')[0])
+        self.assertTrue(_baseline_ok(True, False, {
+            'reason': 'acceptance_failed', 'contract_assertion_failures': 1, 'test_errors': 0,
+            'test_counts': {'tests': 2, 'failed': 2, 'skipped': 0, 'cancelled': 0, 'todo': 0},
+            'failed_tests': [{'line': 4, 'code': 'assertion_failed', 'error_type': 'AssertionError'}],
+        }, 'C', None, '005')[0])
+
+        good_js = (
+            "import test from 'node:test';\nimport assert from 'node:assert/strict';\n"
+            "test('baseline', () => { assert.equal(404, 200); });\n"
+        )
+        calls = []
+
+        class BaselineRetryRole:
+            paid = False
+            last_execution = None
+            last_usage = None
+
+            def __call__(_, model, prompt, build_id):
+                calls.append((model, prompt))
+                _.last_usage = {'complete': True, 'cost_usd': '0'}
+                return {'status': 'ready', 'contract': good_js, 'reason': 'Fixture'}
+
+        class CheckerWithRuntimeCrashFirst:
+            def __init__(self):
+                self.n = 0
+
+            def check_target(self, target, repo, frozen):
+                self.n += 1
+                if self.n == 1:
+                    return False, {
+                        'reason': 'acceptance_failed', 'contract_assertion_failures': 1, 'test_errors': 5,
+                        'test_counts': {'tests': 6, 'failed': 6, 'skipped': 0, 'cancelled': 0, 'todo': 0},
+                        'failed_tests': [
+                            {'line': 60, 'code': 'test_error', 'error_type': 'TypeError'},
+                            {'line': 95, 'code': 'assertion_failed', 'error_type': 'AssertionError'},
+                        ],
+                    }
+                return False, {
+                    'reason': 'acceptance_failed', 'contract_assertion_failures': 1, 'test_errors': 0,
+                    'test_counts': {'tests': 6, 'failed': 1, 'skipped': 0, 'cancelled': 0, 'todo': 0},
+                    'failed_tests': [{'line': 95, 'code': 'assertion_failed', 'error_type': 'AssertionError'}],
+                }
+
+        preparer = TaskPreparer(self.root, self.source, role=BaselineRetryRole(),
+                                checker=CheckerWithRuntimeCrashFirst(), base_ref='HEAD', product=True)
+        preparer.prepare(
+            build={'feature_id': '007', 'build_id': '3' * 32, 'attempt_id': '4' * 32},
+            catalog=self.catalog, spec_dir=self.specs, destination=self.root / 'prepared-baseline-err',
+            budget=self.budget, router=Router(), authorized=lambda: True,
+        )
+        self.assertEqual(len(calls), 2)
+        self.assertNotEqual(family(calls[0][0]), family(calls[1][0]))
+        self.assertIn('5 test_error(s)', calls[1][1])
+        self.assertIn('line 60 (TypeError)', calls[1][1])
+
+    def test_reprepare_triggers_on_runtime_crash_and_passes_supervisor_feedback(self):
+        from factory.preparation import TaskPreparer, freeze_task
+        from factory.store import FAILED, Store
+
+        node_contract = (
+            "import test from 'node:test';\nimport assert from 'node:assert/strict';\n"
+            "test('x', () => { assert.equal(1, 2); });\n"
+        )
+        new_contract = (
+            "import test from 'node:test';\nimport assert from 'node:assert/strict';\n"
+            "test('fixed', () => { assert.equal(2, 3); });\n"
+        )
+        calls = []
+
+        class RecordingRole:
+            paid = False
+            last_execution = None
+            last_usage = None
+
+            def __call__(_, model, prompt, build_id):
+                calls.append(prompt)
+                _.last_usage = {'complete': True, 'cost_usd': '0'}
+                return {'status': 'ready', 'contract': new_contract, 'reason': 'Fixed'}
+
+        class FailingChecker:
+            def check_target(self, target, repo, frozen):
+                return False, {'reason': 'acceptance_failed', 'contract_assertion_failures': 1, 'test_errors': 0}
+
+        store = Store(self.root / 'reprepare.db')
+        task = freeze_task(self.catalog, '007', self.specs, self.architecture, self.base, product=True)
+        evidence = {**task.identity(), 'task_digest': task.digest(), 'acceptance_digest': _sha(node_contract),
+                    'preparer_model': 'glm-5.3-flash', 'negative_control': 'failed_contract_assertion', 'synthetic': True}
+
+        b1_id = store.admit(['007'], 'launch-crash-1', self.catalog)['build_ids'][0]
+        b1 = store.claim_next(self.catalog)
+        b1_dir = self.root / 'work' / b1_id / 'prepared'
+        b1_dir.mkdir(parents=True, exist_ok=True)
+        (b1_dir / 'task.json').write_text(json.dumps(evidence), encoding='utf-8')
+        (b1_dir / 'BRIEF.md').write_text(task.specification, encoding='utf-8')
+        (b1_dir / 'acceptance.mjs').write_text(node_contract, encoding='utf-8')
+        store.complete_attempt(
+            b1['attempt_id'], b1['attempt_generation'],
+            receipt={
+                'reason': 'builder_error',
+                'execution': {'check': {
+                    'status': 'failed', 'reason': 'acceptance_failed',
+                    'contract_assertion_failures': 0, 'test_errors': 6,
+                    'failed_tests': ['line 134: test_error (TypeError)'],
+                }},
+                'feedback': {'author': 'Repeated check failure'},
+            },
+            terminal=FAILED,
+        )
+
+        b2_id = store.admit(
+            ['007'], f'factory-correction:{b1_id}', self.catalog,
+            actor='supervisor', correction={'previous_build_id': b1_id, 'attempt': 1, 'round': 1},
+        )['build_ids'][0]
+        b2 = store.claim_next(self.catalog)
+        preparer = TaskPreparer(self.root, self.source, role=RecordingRole(), checker=FailingChecker(),
+                                base_ref='HEAD', product=True)
+        _, rep_ev = preparer.prepare(
+            build=b2, catalog=self.catalog, spec_dir=self.specs,
+            destination=self.root / 'work' / b2_id / 'prepared',
+            budget=self.budget, router=Router(), authorized=lambda: True, store=store,
+        )
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(rep_ev['acceptance_digest'], _sha(new_contract))
+        self.assertIn('Supervisor verifier: acceptance_failed with test_error (line 134: test_error (TypeError))', calls[0])
+
+        from factory.preparation import _extract_runtime_crash
+        self.assertIsNone(_extract_runtime_crash({
+            'gate': {'status': 'failed', 'results': {'prepared_product': {'status': 'failed', 'detail': {
+                'reason': 'acceptance_failed', 'contract_assertion_failures': 1, 'test_errors': 0,
+            }}}},
+            'execution': {'check': {
+                'status': 'failed', 'reason': 'acceptance_failed',
+                'contract_assertion_failures': 0, 'test_errors': 6,
+                'failed_tests': ['line 134: test_error (TypeError)'],
+            }},
+        }))
+        self.assertIsNone(_extract_runtime_crash({
+            'gate': {'status': 'passed'},
+            'execution': {'check': {
+                'status': 'failed', 'reason': 'acceptance_failed',
+                'contract_assertion_failures': 0, 'test_errors': 6,
+                'failed_tests': ['line 134: test_error (TypeError)'],
+            }},
+        }))
+
 
 def _sha(text):
     return hashlib.sha256(text.encode('utf-8')).hexdigest()

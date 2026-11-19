@@ -1,13 +1,17 @@
 # Current work
 
-Updated 2026-11-17. Current facts only; historical evidence is in HANDOVER.md and validation.md.
+Updated 2026-11-19. Current facts only; historical evidence is in HANDOVER.md and validation.md.
 No final operational Go or actual product feature merge is claimed.
 
-## Factory blind-spot hardening & Feature 005 unblock — READY
+## Contract validation, zero-test_error baseline & recovery hardening — READY
 
-- Owner decision: fix the three structural blind spots revealed by Feature `005` (`b4c1e5bcb189` / `538f9e91c10f` / `dc132bbfe0ee`), align `005` on stateless `CsrfGuard`, merge to `main`, and unblock `005` relaunch.
-- State: Flue `2.3.1` + Pi `1.5.2` upgraded and verified across all 3 tiers (`demo/flue` + `qualify_flue.py` + `qualify_factory_preparation.py`); `_public_interfaces` exposes `@Provider`/`@ApplicationScoped` committed contracts; `acceptance_prompt` enforces `>= 12`-char dummy passwords (never `***`); `two_vote_review` attaches priority-ordered, non-UTF-8-safe `baseline_context` under `MAX_PROMPT_CHARS`; `TaskPreparer` reads `Store` receipts/corrections for policy-conflict reprepare & pinned-author alignment; `005` keeps stateless `CsrfGuard` unchanged (`dispatch.py` 1500 lines).
-- Next: cancel `dc132bbfe0ee` (`held / owner_review_required`) in Cockpit Builds and relaunch Feature `005` from Catalog once merged and requalified (who: owner).
+- Owner decision: eliminate all four systemic contract preparation, verifier reporting, and correction-recovery blind spots exposed by Feature `005` (`5b44fcaa2386` -> `df7c23b47f56` -> `a92b48ae0302`), merge to `main`, requalify admission, and unblock `005` relaunch.
+- State:
+  - `validate_acceptance` (`demo/factory/product_checks.py`) rejects masked placeholder literals (`***`, inline `…`) via `preparation_acceptance_masked_literal` and validates JS ESM syntax with `node --check` (`preparation_acceptance_syntax_invalid`); `TaskPreparer` retries both across model families while `acceptance_prompt` warns against mismatched `response.headers` lookups on parsed `api()` helper objects.
+  - `run-acceptance.mjs` and `ProductCheckRunner._verify` skip structural `subtestsFailed`/`cancelledByParent` rollups and separate assertion failures from `test_errors` and bounded `error_type` tokens; `_baseline_ok` requires assertion-only baseline failures with zero `test_error` crashes, zero skipped/cancelled/todo tests, and `failed <= contract_assertion_failures` when explicit `test_errors` is absent (keeping registered `001`/`002`/`003`/`014` negative checks distinct), and `_baseline_retry_note` reports failing lines/`error_type`.
+  - `flue_session.check_evidence` and `flue_builder.py` retain bounded verifier `test_error` locations and counts; `previous_feature_feedback(..., store=store)` reads `Store` receipts and surfaces supervisor crash summaries; `TaskPreparer.prepare` triggers `reprepare_needed` on objective `0`-assertion `test_error` runtime crashes or normalized conflict tokens across both `gate=failed` and `builder_error`.
+  - `_correction_input` and `_judge_and_publish` (`demo/factory/dispatch.py`, `<= 1500` lines) check `acceptance_digest` so unchanged candidates are re-evaluated after `reprepare_needed` updates the contract instead of holding as `correction_unchanged`.
+- Next: merge PR to `main`, requalify native admission (`qualify_flue.py` + `factory.admission --activate`), restart Cockpit daemon, and let the owner cancel held build `a92b48ae0302` and relaunch Feature `005` from Catalog (who: agent, then owner).
 - Blocker: none.
 - Evidence: [validation](validation.md); [execution contract](../knowledge/components/factory-flue.md); [feature authoring](../knowledge/operations/feature-authoring.md).
 
@@ -57,22 +61,6 @@ No final operational Go or actual product feature merge is claimed.
 - Next: catalog refresh for next features on main (who: agent).
 - Blocker: none.
 - Evidence: [validation](validation.md); [execution contract](../knowledge/components/factory-flue.md); [docker demo](../knowledge/components/docker-demo.md).
-
-## Feature 002 PostgreSQL migration and SQLite cutover — MERGED
-
-- Owner decision: calibrate review output tokens to 32k for reasoning models within $1.00 USD cost cap, enforce concise review prompts, add test fixture attribution guardrails, fix SAST SQL format warnings in `DatabaseOperator`, and inject Optional datasource URL for databaseless boots.
-- State: Build `d47014cbfad44b5190ec3c8d1b5130e3` completed Docker product checks, passed review circuit (GLM-5.3-Flash and Minimax-M3.1-Flash approvals), opened PR #18 on `OualidGuennif/aeion-autonomous-forum`, passed all 6 GitHub Actions CI checks (`Product artifacts` with 89 tests on PostgreSQL 17, `sast-scan` with 0 findings, `Knowledge/links`, `dependency-scan`, `secret-scan`, and `Architecture refresh`), merged autonomously into `main` (commit `ae0bd57d00897e3145fb8e51da76725380e7409a`), and recorded integration in `feature_integrations` with status `merged`. Cockpit daemon active on port 8088.
-- Next: catalog refresh for next features (003 PostgreSQL testing fixture, 013, 014) on main.
-- Blocker: none for Feature 002.
-- Evidence: [validation](validation.md); https://github.com/OualidGuennif/aeion-autonomous-forum/pull/18 .
-
-## Builder check diagnostics, signature streak and round continuation — MERGED
-
-- Owner decision: make live builders see structured JUnit failure diagnostics, stop only on repeated identical failure signatures after baseline reproduction, use correction rounds on `repeated_check_failure`, seed the cleanest validated candidate on a relaunch of the same base and spec, enforce repo-health comment block bounds ($\le 20$ lines) locally before publication, include `Docs-Checked` architecture spec trailer in automated forge commits, and reconcile orphan budget reservations automatically.
-- State: `_junit_failures` enriches `failed_tests` from JUnit XML, `note_check_failure` tracks `(reason, failed_tests, compiler_errors)` with a 5-check streak after skipping untouched baseline reproduction, `next_step` advances through correction rounds on `repeated_check_failure`, `prior_candidate` seeds the cleanest validated candidate on same-base/same-spec relaunch, `run_protected_checks` and `review` deterministically refuse comment blocks over 20 lines (repo-health), `demo/factory/github.py` generates the `Docs-Checked` architecture trailer, DailyBudget settles reservations cleanly and reconciles orphan reservations on boot, native qualification is active (`Ready: True`), and Feature 001 build `a27fb24c324b` is merged autonomously into `main` (PR #17, commit `aebcc9be9c4728fc74e1f09e86318f6a677632b7`) with all 6 checks green.
-- Next: catalog refresh for next features (002, 003, 013) now that 001 is integrated on main.
-- Blocker: none for Feature 001.
-- Evidence: [validation](validation.md); [execution contract](../knowledge/components/factory-flue.md); https://github.com/OualidGuennif/aeion-autonomous-forum/pull/17 .
 
 ## Trusted product CI and PostgreSQL/React — PARTIAL
 

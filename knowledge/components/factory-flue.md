@@ -4,12 +4,12 @@ title: "Flue factory execution"
 description: "Deterministic supervision of untrusted Flue/Pi workers, isolated tools and protected publication."
 status: draft
 verified:
-  - at: 2026-11-12
-    what: "factory modernization: bridge read/stat caching with mutating invalidation, OpenShell 0.1.8 qualification, persistent author state with passed-check guidance, Langfuse v5.2 enterprise prompt management and multi-dimensional scores, Hindsight 1.2.1 reflection fallback"
   - at: 2026-11-17
     what: "unittest preparation and full suite: validate_acceptance scans JS comments, strings, templates and regex literals while resolving destructured/named node:assert/strict bindings, and TaskPreparer retries preparation_acceptance_* without double-recording telemetry"
   - at: 2026-11-18
     what: "full suite (896/896 demo, 33/33 repo, 30/30 flue, 21/21 catalog, 31/31 cockpit, template-tests): @Provider/@ApplicationScoped + >=12-char pass + pinned correction family exclusion; priority/UTF-8-safe baseline_context; conflict reprepare"
+  - at: 2026-11-19
+    what: "full suite (902/902 demo, 33/33 repo, 31/31 flue, 31/31 cockpit, 21/21 forum, template-tests): masked literal + node --check validation, zero-test_error baseline gate, check_evidence locs, runtime-crash reprepare, contract-aware correction_unchanged"
 sources:
   - resource: ../../demo/factory/review_context.py
     title: "One-time operator repair of the old review envelope"
@@ -144,20 +144,17 @@ external Node acceptance, never a command or policy; the historical Java profile
 The exact registered001/002/003/014 MDs and architecture use fixed supervisor acceptance with no model request or
 cost. A changed MD cannot reuse that oracle. Its untouched-baseline startup rejection is a
 registered negative; arbitrary compiler/toolchain failure never qualifies an acceptance contract.
-Ordinary contracts require actual failing external assertions on the untouched baseline (`validate_acceptance` uses a JS lexical scanner for comments, strings, regex literals, and template expressions before checking `test`/`it`, `.skip`/`.todo`/`.only`, and strict assertions including destructured, aliased, or named `node:assert/strict` bindings). If a live product contract fails static shape validation (`preparation_acceptance_*`), passes on the untouched baseline (`preparation_negative_control_missing`), or fails baseline report production, `TaskPreparer.prepare` clears the temporary contract directory, resets `last_model` when recording intermediate retry telemetry so `DispatchWorker` never double-records an outcome, and automatically retries with diagnostic feedback across up to three eligible preparer families before holding (`test_factory_preparation`).
+Ordinary contracts require actual failing external assertions on the untouched baseline (`validate_acceptance` uses a JS lexical scanner for comments, strings, regex literals, and template expressions before checking `test`/`it`, `.skip`/`.todo`/`.only`, and strict assertions including destructured, aliased, or named `node:assert/strict` bindings, then rejects masked placeholders like `***` or inline `…` in string/template literals and validates ESM syntax via `node --check`). `run-acceptance.mjs` and `ProductCheckRunner._verify` ignore structural `subtestsFailed`/`cancelledByParent` rollup events, require `event.data.success === true`, zero assertion failures, and zero `test_errors` for `passed` (catching `after()` / suite-hook failures even when `counts.failed == 0`), and separate `ERR_ASSERTION` failures from non-assertion `test_errors` while keeping only a bounded `error_type` token, and `_baseline_ok` requires at least one assertion failure with zero `test_error` crashes, zero skipped/cancelled/todo tests, and `failed <= contract_assertion_failures` when explicit `test_errors` is absent (for assertion-based baseline checks, keeping registered `001`/`002`/`003`/`014` negative checks distinct). If a live product contract fails static shape validation (`preparation_acceptance_*`), passes on the untouched baseline (`preparation_negative_control_missing`), or fails clean assertion-only baseline execution, `TaskPreparer.prepare` clears the temporary contract directory, resets `last_model` when recording intermediate retry telemetry so `DispatchWorker` never double-records an outcome, and automatically retries with diagnostic feedback (including `test_error` line numbers and `error_type`) across up to three eligible preparer families before holding (`test_factory_preparation`).
 The registered002/003/014 untouched baseline must lack their operator, test-harness SPI/role/host
 guarantees, or browser source; compiler failure
 or a missing checker reason cannot stand in for that absence. Positive candidates still need the
 full migration/import/restore, protected JUnit harness, or production browser checks. These adapters do not implement the product.
 Automatic preparation carries committed security and validation rules (mandatory `X-CSRF-Token` on
-session mutations, `422` validation response codes, and dummy test passwords `>= 12` characters rather
-than `***` placeholders), includes committed `@Path`, `@Provider` HTTP filters and product `@ApplicationScoped`
+session mutations, `422` validation response codes, dummy test passwords `>= 12` characters rather
+than `***` or ellipsis placeholders, and self-consistent `api()` response handling without reading `response.headers` on parsed helper objects), includes committed `@Path`, `@Provider` HTTP filters and product `@ApplicationScoped`
 service interfaces/constants in `COMMITTED PUBLIC INTERFACES`, and incorporates structured prior attempt
-findings from previous receipts (`previous_feature_feedback`), preventing acceptance generators from
-hallucinating contradictory assertions against committed security or validation guards. When a live gate fails
-with explicit author feedback naming a frozen-contract policy conflict (`reprepare_needed`), the correction round
-independently re-prepares from `Store` receipts (aligning preparer family exclusion with the round's pinned author
-or correction chain) rather than replaying an impossible fixture (`test_factory_preparation`).
+findings from previous receipts (`previous_feature_feedback(..., store=store)`, including objective supervisor verifier `test_error` summaries alongside author/reviewer findings), preventing acceptance generators from
+hallucinating contradictory assertions against committed security or validation guards. When `gate=failed` or `builder_error` exhibits an objective `0`-assertion `test_error` runtime crash (`check_evidence` and `FlueBuilder` preserve bounded `contract_assertion_failures`, `test_errors`, and formatted `failed_tests` locations) or normalized author conflict tokens (`frozen acceptance` / `FROZEN_ACCEPTANCE.mjs`, `read only acceptance`, `protected fixture`, `password policy`, `test error`, `typeerror`, `referenceerror`, `out of scope`), `TaskPreparer.prepare` triggers `reprepare_needed` from `Store` receipts (aligning preparer family exclusion with the round's pinned author or correction chain) rather than replaying an impossible or crashing fixture (`test_factory_preparation`).
 In the OpenShell sandbox, workspace seeding supplies `BRIEF.md` both adjacent to and inside the workdir,
 and provisions pristine base copies under `workspace/.base/` when an attempt starts from an inherited
 candidate to allow diff inspection. Sandbox collection (`scoped_changes`) safely excludes `BRIEF.md`,
@@ -242,8 +239,9 @@ log. A correction that returned the same bytes after every stored check name was
 `check` is queued once more after those names are replaced (`repair_blind_ci`). The open pull
 request is not merged and is not updated. Pending, unreadable and every other publication hold
 stay held. When no correction remains, the attempt stays held for the owner
-(`test_factory_publication_state`, `test_factory_github_atomic`). A correction that returns refused bytes unchanged is held
-`correction_unchanged` without checks or votes (never after a crash, whose files nobody judged yet);
+(`test_factory_publication_state`, `test_factory_github_atomic`). A correction that returns refused bytes unchanged under the same prepared `acceptance_digest` is held
+`correction_unchanged` without checks or votes (never after a crash, whose files nobody judged yet,
+and never when `reprepare_needed` updated `acceptance_digest`);
 after the third attempt the owner decides. The runner keeps one error-class token from the author
 CLI's stderr (`runner.error_class`: a CamelCase `…Error`/`…Exception`, `ERR_…` or a known POSIX
 code), read in memory and never stored as text; build 96f9ddef (2026-11-06) exited 1 with no cause.

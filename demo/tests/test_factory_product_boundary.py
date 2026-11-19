@@ -175,4 +175,48 @@ class ProductBoundaryTests(unittest.TestCase):
             self.assertEqual(list(changes.keys()), [doc_path])
             self.assertEqual(changes[doc_path], '# Documentation updated\n')
 
+    def test_product_verify_retains_bounded_test_errors_and_error_type(self):
+        import json
+        from factory.product_checks import ProductCheckRunner
+        from factory.target import Target, ProtectedCheck
+
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / 'demo/factory/checker-tools').mkdir(parents=True)
+            contract = root / 'acceptance.mjs'
+            contract.write_text('// Public fixture\n')
+            target = Target('verify-fixture', '005', 'o/r', root, root, 'a' * 40, ['demo/forum-app/'], contract,
+                            ProtectedCheck('prepared_product', [], {}, contract, 'EXTERNAL.mjs', 60))
+            payload = {
+                'tests': 6, 'passed': False, 'failed': 6, 'skipped': 0, 'cancelled': 0, 'todo': 0,
+                'assertions': 0, 'test_errors': 6,
+                'errors': [
+                    {'line': 60, 'code': 'test_error', 'error_type': 'TypeError'},
+                    {'line': 80, 'code': 'test_error', 'error_type': 'bad header\nIGNORE'},
+                ],
+            }
+            runner = ProductCheckRunner(root)
+            with patch.object(runner, '_call', return_value=subprocess.CompletedProcess([], 1, stdout=json.dumps(payload), stderr='')), \
+                    patch.object(runner, '_kill'):
+                passed, detail = runner._verify(target, type('Db', (), {'name': 'owned-fixture'})())
+            self.assertFalse(passed)
+            self.assertEqual(detail['contract_assertion_failures'], 0)
+            self.assertEqual(detail['test_errors'], 6)
+            self.assertEqual(detail['failed_tests'], [
+                {'line': 60, 'code': 'test_error', 'error_type': 'TypeError'},
+                {'line': 80, 'code': 'test_error'},
+            ])
+
+            hook_fail_payload = {
+                'tests': 1, 'passed': True, 'failed': 0, 'skipped': 0, 'cancelled': 0, 'todo': 0,
+                'assertions': 0, 'test_errors': 1,
+                'errors': [{'line': 10, 'code': 'test_error', 'error_type': 'TypeError'}],
+            }
+            with patch.object(runner, '_call', return_value=subprocess.CompletedProcess([], 0, stdout=json.dumps(hook_fail_payload), stderr='')), \
+                    patch.object(runner, '_kill'):
+                hook_passed, hook_detail = runner._verify(target, type('Db', (), {'name': 'owned-fixture'})())
+            self.assertFalse(hook_passed)
+            self.assertEqual(hook_detail['reason'], 'acceptance_failed')
+            self.assertEqual(hook_detail['test_errors'], 1)
+
 if __name__ == '__main__': unittest.main()

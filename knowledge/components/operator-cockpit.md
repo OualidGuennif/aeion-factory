@@ -114,7 +114,7 @@ build of the same feature appears in the queue without an owner launch. A requir
 uses that same sentence and names the failing checks; only the exhausted case stays on hold and
 asks the owner to cancel. Build evidence says the rounds are finished only in that exhausted
 case. A queued round says the check failed and the pull request was not merged. After the third attempt a
-rejection is held with its reasons; a correction that changed nothing is held
+rejection is held with its reasons; a correction whose candidate bytes and prepared `acceptance_digest` changed nothing is held
 `correction_unchanged` (test_factory_correction_rounds, test_cockpit_client). A round whose
 required check name was stored only as `check` is queued once more after the real name is written. Build evidence shows the attempt and
 round, the crashed author's error class and the agents' owner-only feedback as escaped text.

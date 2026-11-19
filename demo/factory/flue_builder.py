@@ -50,7 +50,9 @@ def previous_failure_text(previous, files=None, scopes=None):
                      'fix the failing tests without starting over.')
         lines += baseline_note(files, scopes)
     if previous.get('failed_tests'):
-        lines.append('Failing tests: ' + '; '.join(previous['failed_tests']) + '.')
+        formatted = [f"line {x.get('line', 0)}: {x.get('code', 'failed')}" if isinstance(x, dict) else str(x)
+                     for x in previous['failed_tests']]
+        lines.append('Failing tests: ' + '; '.join(formatted) + '.')
     if previous.get('compiler_errors'):
         lines.append('Compiler errors at: ' + '; '.join(previous['compiler_errors']) + '.')
     lines.append('Reproduce these first with run_protected_checks and make them pass before other work.')
@@ -515,7 +517,8 @@ class FlueBuilder:
                               'reason':detail.get('reason') if isinstance(detail.get('reason'),str)
                                 and re.fullmatch('[a-z][a-z0-9_]{1,95}',detail['reason']) else ('check_failed' if not passed else 'passed'),
                               'returncode': detail.get('returncode'), 'compiler_errors': detail.get('compiler_errors', []),
-                              'failed_tests': detail.get('failed_tests', [])}
+                              'failed_tests': detail.get('failed_tests', []),
+                              **{k: detail[k] for k in ('contract_assertion_failures', 'test_errors') if type(detail.get(k)) is int}}
                     cache[digest] = runtime.last_check = result
                     note_check_failure(run, result)
                     if progress:

@@ -23,6 +23,21 @@ MODEL_PROFILE = {'glm-5.3-flash': 'glm', 'deepseek-4.1-flash': 'deepseek',
 TEST_NAME = re.compile(r'[A-Za-z0-9_.$<>()\[\] ,:#-]{1,160}')
 
 
+def _format_failed_test(item):
+    if isinstance(item, str) and TEST_NAME.fullmatch(item):
+        return item
+    if isinstance(item, dict):
+        line = item.get('line') if type(item.get('line')) is int and 0 <= item.get('line') <= 100000 else 0
+        code = item.get('code') if item.get('code') in ('assertion_failed', 'test_error') else None
+        if code is None:
+            return None
+        err = item.get('error_type')
+        suffix = f" ({err})" if isinstance(err, str) and re.fullmatch(r'[A-Za-z][A-Za-z0-9_]{0,31}', err) else ''
+        text = f"line {line}: {code}{suffix}"
+        return text if TEST_NAME.fullmatch(text) else None
+    return None
+
+
 def check_evidence(check):
     """Keep fixed checker status, cause and bounded test names across later events."""
     result = {'status':check.get('status') if check.get('status') in {'passed','failed','held'} else 'not_run'}
@@ -32,8 +47,12 @@ def check_evidence(check):
     digest=check.get('artifact_digest')
     if isinstance(digest,str) and re.fullmatch('[a-f0-9]{64}',digest):
         result['artifact_digest']=digest
-    tests=[item for item in (check.get('failed_tests') or [])
-           if isinstance(item,str) and TEST_NAME.fullmatch(item)][:8]
+    for key in ('contract_assertion_failures', 'test_errors'):
+        value = check.get(key)
+        if type(value) is int and 0 <= value <= 10000:
+            result[key] = value
+    tests = [formatted for item in (check.get('failed_tests') or [])
+             if (formatted := _format_failed_test(item)) is not None][:8]
     if tests:
         result['failed_tests']=tests
     return result

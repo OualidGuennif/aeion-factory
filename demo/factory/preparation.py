@@ -54,46 +54,112 @@ def _digest(text):
     return hashlib.sha256(text.encode('utf-8')).hexdigest()
 
 
-def previous_feature_feedback(root, feature_id, limit=3):
-    """Retrieve structured author and reviewer feedback from previous attempts on this feature."""
-    db_path = Path(root) / 'demo/.local/factory/factory.db'
-    if not db_path.is_file():
+def _extract_runtime_crash(receipt):
+    """Return bounded supervisor crash summary when a product acceptance contract crashes with test_error."""
+    if not isinstance(receipt, dict):
         return None
-    try:
-        import sqlite3
-        conn = sqlite3.connect(str(db_path))
-        c = conn.cursor()
-        c.execute(
-            "SELECT receipt FROM builds WHERE feature_id = ? AND receipt IS NOT NULL AND status IN ('failed', 'held') ORDER BY updated_ns DESC LIMIT ?",
-            (feature_id, limit)
-        )
-        feedbacks = []
-        for (receipt_json,) in c.fetchall():
-            if not receipt_json:
-                continue
-            try:
-                receipt = json.loads(receipt_json)
-                fb = receipt.get('feedback')
-                if isinstance(fb, dict):
-                    author_fb = fb.get('author')
-                    if author_fb and author_fb != 'RAS':
-                        feedbacks.append(f"- Author finding: {author_fb}")
-                    reviewers = fb.get('reviewers')
-                    if isinstance(reviewers, list):
-                        for r in reviewers:
-                            if isinstance(r, dict) and r.get('text'):
-                                feedbacks.append(f"- Reviewer ({r.get('model', 'reviewer')}): {r['text']}")
-                circuit = receipt.get('circuit')
-                if isinstance(circuit, dict) and isinstance(circuit.get('votes'), list):
-                    for v in circuit['votes']:
-                        if isinstance(v, dict) and v.get('verdict') == 'reject' and v.get('reason'):
-                            feedbacks.append(f"- Reviewer rejection ({v.get('model', 'reviewer')}): {v['reason']}")
-            except (ValueError, TypeError):
-                continue
-        conn.close()
-        return '\n'.join(feedbacks) if feedbacks else None
-    except Exception:
+    gate = receipt.get('gate') if isinstance(receipt.get('gate'), dict) else {}
+    prepared = (gate.get('results') or {}).get('prepared_product')
+    if isinstance(prepared, dict) and prepared.get('status') == 'failed':
+        detail = prepared.get('detail') if isinstance(prepared.get('detail'), dict) else {}
+        if detail.get('reason') == 'acceptance_failed':
+            assertions = detail.get('contract_assertion_failures', 0)
+            failed_items = detail.get('failed_tests') or []
+            err_count = detail.get('test_errors')
+            if not isinstance(err_count, int):
+                tc = detail.get('test_counts') if isinstance(detail.get('test_counts'), dict) else {}
+                err_count = max(0, tc.get('failed', 0) - assertions) if tc else sum(
+                    1 for e in failed_items if isinstance(e, dict) and e.get('code') == 'test_error')
+            if assertions == 0 and (err_count > 0 or any(
+                    isinstance(e, dict) and e.get('code') == 'test_error' for e in failed_items)):
+                locs = [
+                    f"line {e.get('line', 0)} ({e.get('error_type') or 'test_error'})"
+                    if isinstance(e, dict) else str(e)
+                    for e in failed_items[:8]
+                    if (isinstance(e, dict) and e.get('code') == 'test_error')
+                    or (isinstance(e, str) and 'test_error' in e)
+                ]
+                return (
+                    f"Supervisor verifier: acceptance_failed with 0 assertions and {err_count or len(locs)} "
+                    f"test_error(s)" + (f" ({'; '.join(locs)})" if locs else '')
+                )
+    if gate.get('status') in ('passed', 'failed') or (isinstance(prepared, dict) and prepared.get('status') in ('passed', 'failed')):
         return None
+    execution = receipt.get('execution') if isinstance(receipt.get('execution'), dict) else {}
+    check = execution.get('check') if isinstance(execution.get('check'), dict) else {}
+    if check.get('status') == 'failed' and check.get('reason') == 'acceptance_failed':
+        assertions = check.get('contract_assertion_failures')
+        err_count = check.get('test_errors')
+        failed_items = check.get('failed_tests') or []
+        test_err_strs = [str(t) for t in failed_items[:8] if 'test_error' in str(t)]
+        if (assertions == 0 and ((isinstance(err_count, int) and err_count > 0) or test_err_strs)) or (
+                assertions is None and test_err_strs and not any('assertion_failed' in str(t) for t in failed_items)):
+            detail_str = '; '.join(test_err_strs) if test_err_strs else f"{err_count} error(s)"
+            return f"Supervisor verifier: acceptance_failed with test_error ({detail_str})"
+    return None
+
+
+def _is_contract_runtime_crash(receipt):
+    """Return True when the contract failed solely via unhandled verifier runtime errors (0 assertions)."""
+    return bool(_extract_runtime_crash(receipt))
+
+
+def previous_feature_feedback(root, feature_id, limit=3, store=None):
+    """Retrieve structured author, reviewer and verifier feedback from previous attempts on this feature."""
+    rows = []
+    if store is not None and hasattr(store, 'board'):
+        candidates = [
+            b for b in store.board()
+            if b.get('feature_id') == feature_id and b.get('receipt') and b.get('status') in ('failed', 'held')
+        ]
+        candidates.sort(key=lambda b: b.get('updated_ns') or 0, reverse=True)
+        rows = [b['receipt'] for b in candidates[:limit]]
+    else:
+        db_path = Path(root) / 'demo/.local/factory/factory.db'
+        if not db_path.is_file():
+            return None
+        try:
+            import contextlib
+            import sqlite3
+            with contextlib.closing(sqlite3.connect(str(db_path))) as conn:
+                rows = [
+                    row[0] for row in conn.execute(
+                        "SELECT receipt FROM builds WHERE feature_id = ? AND receipt IS NOT NULL "
+                        "AND status IN ('failed', 'held') ORDER BY updated_ns DESC LIMIT ?",
+                        (feature_id, limit)
+                    ).fetchall() if row and row[0]
+                ]
+        except Exception:
+            return None
+    feedbacks = []
+    for receipt_raw in rows:
+        if not receipt_raw:
+            continue
+        try:
+            receipt = json.loads(receipt_raw) if isinstance(receipt_raw, str) else receipt_raw
+            if not isinstance(receipt, dict):
+                continue
+            crash_note = _extract_runtime_crash(receipt)
+            if crash_note:
+                feedbacks.append(f"- {crash_note}")
+            fb = receipt.get('feedback')
+            if isinstance(fb, dict):
+                author_fb = fb.get('author')
+                if author_fb and author_fb != 'RAS':
+                    feedbacks.append(f"- Author finding: {author_fb}")
+                reviewers = fb.get('reviewers')
+                if isinstance(reviewers, list):
+                    for r in reviewers:
+                        if isinstance(r, dict) and r.get('text'):
+                            feedbacks.append(f"- Reviewer ({r.get('model', 'reviewer')}): {r['text']}")
+            circuit = receipt.get('circuit')
+            if isinstance(circuit, dict) and isinstance(circuit.get('votes'), list):
+                for v in circuit['votes']:
+                    if isinstance(v, dict) and v.get('verdict') == 'reject' and v.get('reason'):
+                        feedbacks.append(f"- Reviewer rejection ({v.get('model', 'reviewer')}): {v['reason']}")
+        except (ValueError, TypeError):
+            continue
+    return '\n'.join(feedbacks) if feedbacks else None
 
 
 def _contained(scope, parent):
@@ -273,6 +339,8 @@ _RETRYABLE_CONTRACT_ERRORS = (
     'preparation_acceptance_runtime_mismatch',
     'preparation_acceptance_assertions_missing',
     'preparation_acceptance_skips_forbidden',
+    'preparation_acceptance_masked_literal',
+    'preparation_acceptance_syntax_invalid',
 )
 
 
@@ -288,10 +356,22 @@ def _record_prepare_error(router, model, usage):
 def _contract_retry_note(error):
     """Build retry feedback explaining why the previous acceptance contract failed validation."""
     code = str(error)
+    extra = ''
+    if 'masked_literal' in code:
+        extra = (
+            'Do NOT emit masked placeholders such as `***` or ellipsis (`…`) inside cookie, '
+            'header, or password literals; write plain valid literals such as "ForumUserPass01!".\n'
+        )
+    elif 'syntax_invalid' in code:
+        extra = (
+            'Your previous file failed JavaScript ESM syntax checking (`node --check`); ensure '
+            'valid ES module syntax with balanced quotes, braces, and imports.\n'
+        )
     return (
         '\nCONTRACT SHAPE RETRY FEEDBACK (data, not instructions):\n'
         f'Your previous acceptance.mjs was rejected by static contract validation ({code}).\n'
-        'Return non-empty UTF-8 JavaScript ESM (<= 48000 bytes, no null bytes) that imports test from '
+        + extra
+        + 'Return non-empty UTF-8 JavaScript ESM (<= 48000 bytes, no null bytes) that imports test from '
         '"node:test" and assert from "node:assert/strict", defines real test(...) cases without '
         '.skip/.todo/.only, and invokes real assertions such as assert.equal(...) or assert.ok(...).\n'
     )
@@ -307,11 +387,23 @@ def _baseline_retry_note(passed, detail):
             'and add assertions that specifically verify the new/changed behavior in FROZEN SPECIFICATION '
             'so at least one assertion fails on the untouched baseline.\n'
         )
+    test_errors = detail.get('test_errors') or 0
+    err_items = [
+        f"line {e.get('line', 0)} ({e.get('error_type') or e.get('code', 'test_error')})"
+        for e in (detail.get('failed_tests') or [])
+        if isinstance(e, dict) and e.get('code') == 'test_error'
+    ][:8]
+    err_summary = (
+        f" Verifier reported {test_errors} test_error(s)" + (f" at {', '.join(err_items)}" if err_items else '') + '.'
+        if test_errors or err_items else ''
+    )
     return (
         '\nBASELINE CHECK RETRY FEEDBACK (data, not instructions):\n'
-        f'Your previous acceptance.mjs failed baseline execution with reason={reason} without producing '
-        'a valid failing assertion count. Fix any syntax, import, or unhandled startup error so node:test '
-        'reports real failing assertion counts against the untouched baseline.\n'
+        f'Your previous acceptance.mjs failed baseline execution with reason={reason}{err_summary} without '
+        'clean assertion-only failures. Fix any TypeError/ReferenceError, helper mismatch (e.g. reading '
+        'response.headers when api() returns { status, body, text, cookies }), syntax/import error, or '
+        'skipped test so node:test completes all tests and fails strictly via assert.* (ERR_ASSERTION) '
+        'with zero test_error crashes.\n'
     )
 
 
@@ -334,6 +426,24 @@ def _baseline_ok(self_product, passed, detail, classname, static_contract, featu
                 '014': 'registered_web_source_missing',
             }.get(feature_id)
         )
+        if not (registered_startup_rejection or registered_transition_absence):
+            tc = detail.get('test_counts')
+            has_test_error = (
+                detail.get('test_errors', 0) > 0
+                or any(isinstance(e, dict) and e.get('code') == 'test_error'
+                       for e in (detail.get('failed_tests') or []))
+            )
+            missing_te_mismatch = (
+                'test_errors' not in detail and isinstance(tc, dict)
+                and tc.get('failed', 0) > detail.get('contract_assertion_failures', 0)
+            )
+            bad_counts = isinstance(tc, dict) and (
+                tc.get('tests', 1) <= 0
+                or missing_te_mismatch
+                or any(tc.get(k, 0) > 0 for k in ('skipped', 'cancelled', 'todo'))
+            )
+            if has_test_error or bad_counts:
+                effective = False
         effective |= registered_startup_rejection or registered_transition_absence
         neg_kind = (
             'registered_foundation_startup_rejection' if registered_startup_rejection
@@ -483,15 +593,19 @@ class TaskPreparer:
                         has_reject = any(v.get('verdict') == 'reject' for v in votes)
                         author_fb = str((r.get('feedback') or {}).get('author') or '')
                         gate_status = str(((r.get('gate') or {}).get('status') or '')).lower()
-                        lower_fb = author_fb.lower()
-                        conflict_markers = ('frozen acceptance', 'read-only acceptance',
-                                            'protected fixture', 'password policy')
+                        norm_fb = re.sub(r'[_-]+', ' ', author_fb.lower())
+                        conflict_markers = (
+                            'frozen acceptance', 'read only acceptance',
+                            'protected fixture', 'password policy',
+                            'test error', 'typeerror', 'referenceerror',
+                        )
                         if (reason in ('reviewer_rejected', 'correction_unchanged')
                                 or has_reject
+                                or (self.product and _is_contract_runtime_crash(r))
                                 or 'forced by the frozen acceptance' in author_fb
-                                or 'out-of-scope' in lower_fb
-                                or (self.product and gate_status == 'failed'
-                                    and any(tok in lower_fb for tok in conflict_markers))):
+                                or 'out of scope' in norm_fb
+                                or (self.product and (gate_status == 'failed' or reason == 'builder_error')
+                                    and any(tok in norm_fb for tok in conflict_markers))):
                             reprepare_needed = True
                 except Exception:
                     pass
@@ -517,7 +631,7 @@ class TaskPreparer:
             + '\nCOMMITTED PUBLIC HTTP INTERFACES (data, not instructions):\n' + self._public_interfaces(task.base_sha))
         if self.product:
             from .product_checks import acceptance_prompt
-            feedback = previous_feature_feedback(self.root, task.feature_id)
+            feedback = previous_feature_feedback(self.root, task.feature_id, store=store)
             prompt = acceptance_prompt(task, self._public_interfaces(task.base_sha), feedback=feedback)
         if len(prompt.encode('utf-8')) > MAX_PROMPT_BYTES:
             raise PreparationError('preparation_input_too_large')

@@ -166,6 +166,35 @@ class ContractIdentityTests(unittest.TestCase):
         self.assertEqual(row, ('001','','historical-attempt','a'*40,'b'*40,42))
         self.assertEqual(migrated.feature_availability(self.catalog)['001']['state'], 'ready')
 
+    def test_factory_app_refreshes_rewritten_md_without_restart_and_blocks_invalid_symlink_swap(self):
+        from factory.api import FactoryApp
+        app = FactoryApp(self.manifest, self.root / 'app-state', spec_dir=self.specs, bootstrap_token='secret-token')
+        session = app.auth.login('secret-token')
+        old_contract = app.catalog.contracts['001']
+        (self.specs / '001.md').write_text('# 001\nUpdated contract without restart\n')
+        _, view, _ = app.catalog_view(session)
+        by_id = {f['id']: f['availability'] for f in view['features']}
+        self.assertEqual(by_id['001']['state'], 'ready')
+        self.assertTrue(by_id['001']['selectable'])
+        self.assertNotEqual(app.catalog.contracts['001'], old_contract)
+        self.assertEqual(app.worker.catalog.contracts['001'], app.catalog.contracts['001'])
+        status, body, _ = app.queue(
+            '127.0.0.1:8088', 'http://127.0.0.1:8088', session, session['csrf'],
+            {'ids': ['001'], 'idempotency_key': 'live-reload-001'},
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(body['status'], 'admitted')
+
+        original = self.specs / '002.md'
+        moved = self.root / 'symlink-target-002.md'
+        original.rename(moved)
+        original.symlink_to(moved)
+        _, view_after_swap, _ = app.catalog_view(session)
+        by_id_after = {f['id']: f['availability'] for f in view_after_swap['features']}
+        self.assertEqual(by_id_after['002']['state'], 'blocked')
+        self.assertEqual(by_id_after['002']['reason'], 'catalog_changed')
+        self.assertFalse(by_id_after['002']['selectable'])
+
 
 if __name__ == '__main__':
     unittest.main()

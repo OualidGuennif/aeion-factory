@@ -781,6 +781,8 @@ class TaskPreparer:
         with tempfile.TemporaryDirectory(prefix='baseline-', dir=folder) as temporary:
             repo = Path(temporary) / 'repo'
             target.materialize(repo)
+            if callable(getattr(self.role, 'progress', None)):
+                self.role.progress('protected_check.started', {'model': self.last_model, 'status': 'running'})
             passed, detail = target_check(target, work_root=temporary, sandbox=self.checker)(None, {'repo': str(repo)})
         if detail.get('reason') == 'isolation_unqualified':
             raise PreparationError('preparation_checker_unqualified')

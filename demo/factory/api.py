@@ -48,7 +48,8 @@ class FactoryApp:
                  config=None, budget=None, execution=None):
         self.state_dir = Path(state_dir)
         self.state_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
-        self.catalog = load_manifest(manifest_path, spec_dir=spec_dir)
+        self.manifest_path = Path(manifest_path)
+        self.catalog = load_manifest(self.manifest_path, spec_dir=spec_dir)
         self.store = Store(self.state_dir / "factory.db", active_concurrency=active_concurrency)
         self.hub = SseHub()
         spec_dir = Path(spec_dir) if spec_dir else Path(manifest_path).resolve().parent
@@ -159,6 +160,13 @@ class FactoryApp:
             raise ApiError(403, "csrf_denied")
 
     # ------------------------------------------------------------- endpoints
+    def _refresh_catalog(self):
+        try:
+            self.catalog = load_manifest(self.manifest_path, spec_dir=self.spec_dir)
+            self.worker.catalog = self.catalog
+        except (ManifestError, OSError, ValueError):
+            pass
+
     def _execution_blocker(self):
         check=self.execution.get('admission_check')
         if check is not None:
@@ -183,6 +191,7 @@ class FactoryApp:
         return 200, {"csrf": session["csrf"]}, {"Set-Cookie": self._set_cookie(session["session_id"])}
 
     def catalog_view(self, session):
+        self._refresh_catalog()
         target = self.execution.get('target')
         blocker=self._execution_blocker()
         availability = self.store.feature_availability(
@@ -260,6 +269,7 @@ class FactoryApp:
         if (not isinstance(ids, list) or any(not isinstance(fid, str) for fid in ids)
                 or not isinstance(key, str) or not key):
             raise ApiError(400, "invalid_request")
+        self._refresh_catalog()
         try:
             result = self.store.admit(ids, key, self.catalog, actor="owner")
         except StoreError as exc:
@@ -294,6 +304,7 @@ class FactoryApp:
 
     def tick(self):
         """Recheck freshness without consuming an unstarted queued attempt."""
+        self._refresh_catalog()
         self.worker.startup_hold=self._execution_blocker()
         # Freshness is temporary and must preserve an unstarted queued attempt.
         # Other explicit configuration holds retain their durable held receipt.

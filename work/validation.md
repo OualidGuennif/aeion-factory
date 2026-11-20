@@ -1,3 +1,11 @@
+## Cockpit catalog live refresh & preparation baseline progress — 2026-11-20
+
+- Root causes:
+  1. `FactoryApp.__init__` (`demo/factory/api.py`) loaded `self.catalog` once at server startup and passed the static instance to `DispatchWorker`; updating a feature `.md` on disk (such as PR #57 updating `007-content-sanitization-for-user-text.md`) caused `self.catalog.contract_current(fid)` to compare the new disk digest against the stale startup digest and mark the feature `blocked / catalog_changed` (*On hold*) until the server process was restarted.
+  2. When the preparer agent finished (`process.retired`), `TaskPreparer._prepare_and_check` (`demo/factory/preparation.py`) ran the ~2-minute untouched-baseline negative-control Docker verification without emitting a progress event, leaving the Cockpit UI on `Agent stopped · <model>` under `Prepare`.
+- Fixes: added fail-closed `FactoryApp._refresh_catalog` (`demo/factory/api.py`) called on `catalog_view`, `queue`, and `tick` (reloading `self.catalog` and `self.worker.catalog` when valid while retaining the prior catalog on `ManifestError` so symlink swaps or invalid files still block as `catalog_changed`), and emitted `protected_check.started` (`status: running`) before `target_check` in `TaskPreparer._prepare_and_check` (`demo/factory/preparation.py`).
+- Verification: `demo/tests` (`910/910` OK including `test_factory_app_refreshes_rewritten_md_without_restart_and_blocks_invalid_symlink_swap` and `test_prepare_emits_protected_check_started_before_baseline_verification`), `demo/flue` (`31/31` pass), `test_cockpit_client.mjs` (`31/31` pass), `examples/` PASS, `tests/` (`33/33` OK), `tools/template-tests` PASS (`2` skipped in `test_template_update.py`), `knowledge-check` (`0` problems), `doc-links --diff origin/develop --worktree` PASS (`163` links), and `repo-health` (`work/current.md` `91` lines).
+
 ## Feature 006 one-shot merge & Feature 007 spec alignment — 2026-11-20
 
 - Feature `006` (`8ea7259e64ab451a9106024d2e5f5b71`, Attempt 1 / Round 0) completed one-shot and merged to product `main` (`c8e5a372dcd1ca08bc623fc72900d59060fa277b`): prepared by `deepseek-4.1-flash`, authored by `glm-5.3-flash` (`39` requests), passed S3 gate, and approved by `qwen-3.8-flash` and `claude-haiku-5.5`.

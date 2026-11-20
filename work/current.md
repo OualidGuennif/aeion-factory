@@ -3,13 +3,22 @@
 Updated 2026-11-20. Current facts only; historical evidence is in HANDOVER.md and validation.md.
 No final operational Go or actual product feature merge is claimed.
 
-## Feature 006 one-shot merge & Feature 007 spec alignment — READY
+## Cockpit catalog live refresh, preparation baseline progress & Feature 007 — READY
+
+- Owner decision: fix `FactoryApp` holding updated `.md` specs as `catalog_changed` (*On hold*) until server restart, emit `protected_check.started` during `TaskPreparer` baseline negative-control verification so the Cockpit does not display `Agent stopped` for ~2 minutes, requalify live admission, and finish Feature `007` (`0e58124f1e624a5485990ebc55837a4d`).
+- State:
+  - `FactoryApp._refresh_catalog` (`demo/factory/api.py`) reloads `self.catalog` and `self.worker.catalog` on `catalog_view`, `queue`, and `tick` while failing closed on `ManifestError` (symlink/corrupted file keeps the prior catalog so `contract_current` blocks the feature as `catalog_changed`), verified in `test_factory_contract_identity.py`.
+  - `TaskPreparer._prepare_and_check` (`demo/factory/preparation.py`) emits `protected_check.started` (`status: running`) before running `target_check`, verified in `test_factory_preparation.py`.
+  - Feature `007` (`0e58124f1e624a5485990ebc55837a4d`, prepared by `qwen-3.8-flash`, authored by `deepseek-v4.1-flash`) passed all JUnit and external black-box acceptance checks (`gate: passed`, `artifact_digest: 1a9d6e9c0e755488b3904b8e69d23a5ed57182a6276b2c8a1f9038ceaecbc7c1`).
+- Next: merge to `main`, requalify `factory.admission --activate`, and run `--retry-failed-review` (or relaunch reusing the gate-passed `007` candidate) (who: agent, then owner).
+- Blocker: none.
+- Evidence: [validation](validation.md); [cockpit contract](../knowledge/components/operator-cockpit.md); [execution contract](../knowledge/components/factory-flue.md).
+
+## Feature 006 one-shot merge & Feature 007 spec alignment — MERGED (PR #57)
 
 - Owner decision: audit Feature `007` (`Content sanitization for user text`) against the merged `006` baseline (`c8e5a372`) and the feature-authoring matrix, align `specs_a.py` (`id: 7`) with the exact `ContentSanitizer` / `ThreadsResource` (`body_html`, `413 {"error": "content_too_large"}`) contract, and merge to `main` before launching `007`.
-- State:
-  - Feature `006` (`8ea7259e64ab451a9106024d2e5f5b71`, Attempt 1 / Round 0) completed one-shot (`preparer: deepseek-4.1-flash`, `author: glm-5.3-flash`, `39` forwards, S3 gate `passed`, approved by `qwen-3.8-flash` and `claude-haiku-5.5`) and merged to product `main` (`c8e5a372dcd1ca08bc623fc72900d59060fa277b`).
-  - Feature `007` (`demo/forum/tools/specs_a.py`, `demo/forum/features/007-content-sanitization-for-user-text.md`) now explicitly specifies `local.aeion.forum.ContentSanitizer.sanitize(String)` (`markdown()`, `html()`), `ContentTooLargeException` (`"content_too_large"` -> HTTP `413 {"error": "content_too_large"}` on `POST /api/threads` without outbox writes), NFC/CRLF/control/zero-width normalization, `4000` Unicode codepoint (including supplementary characters) and `32768`-UTF-8-byte HTML bounds, the attribute-free `p/strong/em/ul/ol/li/blockquote/pre/code` subset, and `"body"` + `"body_html"` on `POST /api/threads`, `GET /api/threads`, and `GET /api/threads/{id}` (no DB schema migration).
-- Next: review, merge to `main`, and launch Feature `007` in Cockpit (who: agent, then owner).
+- State: merged to `main` in `0e3aa9d` (PR #57); Feature `006` completed one-shot in `8ea7259e64ab451a9106024d2e5f5b71` (`c8e5a372`).
+- Next: tracked by Feature `007` above (who: owner).
 - Blocker: none.
 - Evidence: [validation](validation.md); [feature authoring](../knowledge/operations/feature-authoring.md).
 

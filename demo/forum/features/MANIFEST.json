@@ -123,7 +123,6 @@
       "tier": 3,
       "write_paths": [
         "demo/forum-app/",
-        "demo/forum-web/",
         "knowledge/components/agora-product.md",
         "knowledge/components/factory-architecture.md"
       ],

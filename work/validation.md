@@ -1,3 +1,13 @@
+## Cockpit review-stage stepper, Feature 005 merge & Feature 006 alignment — 2026-11-20
+
+- Feature `005` (`5b4422289e3d4a7dbd47978c8a6f9c80`, Attempt 2 / Round 0) completed end-to-end and merged to product `main` (`38243501a36cbbc538167897bdb07493b99f3c7f`, product PR #21): prepared by `glm-5.3-flash`, authored by `deepseek-4.1-flash` (`37` requests, `$0.0546`), passed S3 gate, and approved by `qwen-3.8-flash` (`$0.0854`) and `gpt-6-luna` (`$0.0849`).
+- Fixes:
+  - `Store.record_progress` (`demo/factory/store.py`, `1500` lines) carries the enclosing `stage` (`preparing`, `building`, `checking`, `reviewing`) across model/tool sub-events and only updates `author_started_ns` during `building`; `buildStage` and `agentClock` (`demo/app/factory.js`, `knowledge/components/operator-cockpit.md`) keep `Review` highlighted and hide the author clock during reviewer runs (`test_cockpit_client.mjs`, `test_factory_store.py`).
+  - Aligned root `.env.example` and `README.md` prose to `$5.00` / `5 USD` per review vote (`150, 50 and 5`).
+  - Recorded the three Feature `005` convergence rules in `knowledge/operations/feature-authoring.md` (eager `StartupChecks` validation of `@ApplicationScoped` config beans, binding emitted HTTP `Set-Cookie` `Max-Age`/`Secure` attributes to configured bounds and scheme, and leading `## Acceptance checks` with the new baseline-failing HTTP delta while excluding future-phase subsystems).
+  - Hardened Feature `006` (`demo/forum/tools/specs_a.py`, `demo/forum/features/006-csrf-protection-on-every-mutation.md`, `demo/forum/MANIFEST.json`): removed premature `demo/forum-web/` from `write_paths`, placed `GET /api/auth/csrf` (`401` unauthenticated/revoked, `200 {"csrf": "..."}` authenticated) first in `## Acceptance checks`, required URL query-token refusal (`403 {"error": "csrf_invalid"}`), and deferred React UI (`014`) and broker agent tokens (`053`) to `## Out of scope`.
+- Verification: `demo/tests` (`908/908` OK), `demo/flue` (`31/31` pass), `test_cockpit_client.mjs` (`31/31` pass), `demo/forum/tools` (`21/21` OK, `generate_features.py --check` `100` features), `examples/` PASS, `tests/` (`33/33` OK), `tools/template-tests` PASS (`2` skipped in `test_template_update.py`), `knowledge-check` (`0` problems), `doc-links --diff origin/develop --worktree` PASS (`163` links, `Docs-Checked: knowledge/decisions/ADR-001-start-from-aeion-template.md`), and `repo-health` (`dispatch.py` `1497`, `store.py` `1500`, `work/current.md` `76`).
+
 ## Review budget ($5.00), preflight fallback & prior-candidate reuse — 2026-11-20
 
 - Root cause on Feature `005` (`a2401f04477e4b408473354052acb139`):

@@ -202,6 +202,13 @@ test('active work shows a stable stage without certifying draft checks as the fi
   assert.match(run('stageProgress(build)'),/glm-5.3-flash/);
   context.build.receipt=JSON.stringify({progress:{phase:'checking'}});
   assert.equal(run('buildStage(build)'),'checking');
+  context.build.receipt=JSON.stringify({preparation:{preparer_model:'glm-5.3-flash'},
+    progress:{phase:'model.step.started',stage:'reviewing',detail:{model:'opencode-go/deepseek-v4.1-flash',runtime:'flue-just-bash'}}});
+  assert.equal(run('buildStage(build)'),'reviewing');
+  assert.match(run('stageProgress(build)'),/aria-current="step">Review/);
+  context.build.receipt=JSON.stringify({preparation:{preparer_model:'glm-5.3-flash'},
+    progress:{phase:'model.step.started',detail:{model:'opencode-go/deepseek-v4.1-flash',runtime:'flue-just-bash'}}});
+  assert.equal(run('buildStage(build)'),'reviewing');
   context.build.status='merged';
   assert.equal(run('buildStage(build)'),'main');
 });
@@ -318,6 +325,8 @@ test('agent clock appears only while the author runs', () => {
   assert.match(run('agentClock({status:"dispatched"}, receipt, 10800)'), /data-start="1000000000" data-last="3000000000" data-window="10800" data-failures="2"/);
   assert.equal(run('agentClock({status:"failed"}, receipt, 10800)'), '');
   context.receipt.progress.phase = 'process.retired';
+  assert.equal(run('agentClock({status:"dispatched"}, receipt, 10800)'), '');
+  context.receipt.progress = { phase: 'model.step.started', stage: 'reviewing', time_ns: 3e15 };
   assert.equal(run('agentClock({status:"dispatched"}, receipt, 10800)'), '');
   assert.equal(run('agentClock({status:"dispatched"}, {progress:{phase:"building"}}, 10800)'), '');
 });

@@ -3,15 +3,21 @@
 Updated 2026-11-20. Current facts only; historical evidence is in HANDOVER.md and validation.md.
 No final operational Go or actual product feature merge is claimed.
 
-## Cockpit review-stage stepper, Feature 005 lessons & Feature 006 spec alignment — READY
+## Feature 006 one-shot merge & Feature 007 spec alignment — READY
+
+- Owner decision: audit Feature `007` (`Content sanitization for user text`) against the merged `006` baseline (`c8e5a372`) and the feature-authoring matrix, align `specs_a.py` (`id: 7`) with the exact `ContentSanitizer` / `ThreadsResource` (`body_html`, `413 {"error": "content_too_large"}`) contract, and merge to `main` before launching `007`.
+- State:
+  - Feature `006` (`8ea7259e64ab451a9106024d2e5f5b71`, Attempt 1 / Round 0) completed one-shot (`preparer: deepseek-4.1-flash`, `author: glm-5.3-flash`, `39` forwards, S3 gate `passed`, approved by `qwen-3.8-flash` and `claude-haiku-5.5`) and merged to product `main` (`c8e5a372dcd1ca08bc623fc72900d59060fa277b`).
+  - Feature `007` (`demo/forum/tools/specs_a.py`, `demo/forum/features/007-content-sanitization-for-user-text.md`) now explicitly specifies `local.aeion.forum.ContentSanitizer.sanitize(String)` (`markdown()`, `html()`), `ContentTooLargeException` (`"content_too_large"` -> HTTP `413 {"error": "content_too_large"}` on `POST /api/threads` without outbox writes), NFC/CRLF/control/zero-width normalization, `4000` Unicode codepoint (including supplementary characters) and `32768`-UTF-8-byte HTML bounds, the attribute-free `p/strong/em/ul/ol/li/blockquote/pre/code` subset, and `"body"` + `"body_html"` on `POST /api/threads`, `GET /api/threads`, and `GET /api/threads/{id}` (no DB schema migration).
+- Next: review, merge to `main`, and launch Feature `007` in Cockpit (who: agent, then owner).
+- Blocker: none.
+- Evidence: [validation](validation.md); [feature authoring](../knowledge/operations/feature-authoring.md).
+
+## Cockpit review-stage stepper, Feature 005 lessons & Feature 006 spec alignment — MERGED (PR #56)
 
 - Owner decision: preserve `Review` stage in the Cockpit stepper across reviewer sub-events, align root `.env.example` and `README.md` with the `$5.00` review ceiling, record the three Feature `005` convergence lessons in `knowledge/operations/feature-authoring.md`, and harden Feature `006` (`specs_a.py` -> `006-csrf-protection-on-every-mutation.md` & `MANIFEST.json`) before launch.
-- State:
-  - `Store.record_progress` (`demo/factory/store.py`, `1500` lines) preserves the enclosing stage (`preparing`, `building`, `checking`, `reviewing`) across model/tool sub-events and only updates `author_started_ns` during `building`; `buildStage` and `agentClock` (`demo/app/factory.js`) keep `Review` highlighted and hide the author clock during reviewer runs (`test_cockpit_client.mjs`, `test_factory_store.py`).
-  - Root `.env.example` and `README.md` updated to `$5.00` / `5 USD` per review vote (`150, 50 and 5`).
-  - `knowledge/operations/feature-authoring.md` documents eager `StartupChecks` validation of `@ApplicationScoped` config beans, binding emitted HTTP cookie/header attributes (`Max-Age`, `Secure`) to configured bounds/scheme, and leading `## Acceptance checks` with the new baseline-failing HTTP delta while excluding future-phase subsystems (`demo/forum-web/` in `014`, broker agent tokens in `053`).
-  - Feature `006` (`demo/forum/tools/specs_a.py`, `demo/forum/features/006-csrf-protection-on-every-mutation.md`, `demo/forum/MANIFEST.json`) removes premature `demo/forum-web/` from `write_paths`, puts `GET /api/auth/csrf` (`401` unauthenticated/revoked, `200 {"csrf": "..."}` authenticated) first in `## Acceptance checks`, requires URL query-token refusal (`403 {"error": "csrf_invalid"}`), and defers React UI (`014`) and broker agent tokens (`053`) to `## Out of scope`.
-- Next: review, merge to `main`, requalify live admission, restart Cockpit daemon, and launch Feature `006` (who: agent, then owner).
+- State: merged to `main` in `0e9056f` (PR #56); Feature `006` completed one-shot in `8ea7259e64ab451a9106024d2e5f5b71` (`c8e5a372`).
+- Next: tracked by Feature `007` above (who: owner).
 - Blocker: none.
 - Evidence: [validation](validation.md); [cockpit contract](../knowledge/components/operator-cockpit.md); [feature authoring](../knowledge/operations/feature-authoring.md).
 

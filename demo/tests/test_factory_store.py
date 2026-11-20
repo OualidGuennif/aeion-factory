@@ -91,6 +91,16 @@ class StoreTests(unittest.TestCase):
         self.assertEqual(receipt['draft_failures'],2)
         self.assertEqual(receipt['draft_check']['failed_tests'],
                          ['DatabaseLessBootTest > livenessAnswersWithoutADatabase() FAILED'])
+        store.record_progress(a,g,'building',{})
+        store.record_progress(a,g,'process.started',{})
+        author_started=json.loads(store.board()[0]['receipt'])['author_started_ns']
+        store.record_progress(a,g,'reviewing',{})
+        store.record_progress(a,g,'process.started',{'model':'deepseek-4.1-flash','runtime':'flue-just-bash'})
+        store.record_progress(a,g,'model.step.started',{'model':'deepseek-4.1-flash','runtime':'flue-just-bash'})
+        rev_receipt=json.loads(store.board()[0]['receipt'])
+        self.assertEqual(rev_receipt['progress']['phase'],'model.step.started')
+        self.assertEqual(rev_receipt['progress']['stage'],'reviewing')
+        self.assertEqual(rev_receipt['author_started_ns'],author_started)
 
     def test_an_identical_finished_failure_counts_without_a_second_progress_event(self):
         store=self.store();store.admit(['f1'],'repeat-fail',self.catalog);build=store.claim_next(self.catalog)

@@ -8,7 +8,7 @@ Start at the [knowledge index](knowledge/index.md) and the [observability specif
 
 1. Verified work beats raw speed or price. A clean, unassisted pass that clears protected checks outranks a faster or cheaper run that fails checks or needs manual rescue.
 2. Default telemetry exports metadata only. Prompts, source code, hidden reasoning, tool payloads, and secrets stay out of OTLP spans and local audit logs.
-3. Spending and context are capped on the host. Each daily purse enforces `$150.00/day` (`$50.00` per author run, `$1.00` per review vote) in [`demo/budget.conf`](demo/budget.conf). Active input context hands over to a fresh agent session at `250,000` tokens (`300,000` hard cap).
+3. Spending and context are capped on the host. Each daily purse enforces `$150.00/day` (`$50.00` per author run, `$5.00` per review vote) in [`demo/budget.conf`](demo/budget.conf). Active input context hands over to a fresh agent session at `250,000` tokens (`300,000` hard cap).
 4. Checks and reviews run independently of the author. Candidate diffs are verified in a container with `--network none` and reviewed by two distinct model families before any pull request can merge.
 5. Unknown states fail closed. Missing usage data, stale sandbox proofs, or unqualified capabilities pause admission rather than guessing.
 

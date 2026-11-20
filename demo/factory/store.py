@@ -1001,12 +1001,12 @@ class Store:
                             conn.execute('UPDATE builds SET receipt=?, updated_ns=? WHERE build_id=?',
                                          (json.dumps(receipt), self._now(), row['build_id']))
                         return False
-                    now = self._now()
-                    progress = {'phase': phase, 'detail': clean, 'time_ns': now}
+                    now, stage = self._now(), (phase if phase in ('preparing', 'building', 'checking', 'reviewing') else previous.get('stage'))
+                    progress = {'phase': phase, 'detail': clean, 'time_ns': now, **({'stage': stage} if stage else {})}
                     receipt['progress'] = progress
                     if phase=='protected_check.finished':receipt['draft_check']=clean
                     # Timing metadata only, so the cockpit can show elapsed time and silence.
-                    if phase=='process.started':receipt['author_started_ns']=now
+                    if phase=='process.started' and stage in (None, 'building'):receipt['author_started_ns']=now
                     if phase in ('tool.finished','protected_check.finished'):receipt['last_tool_ns']=now
                     if phase=='protected_check.finished' and clean.get('status')=='failed':
                         receipt['draft_failures']=min(1000,int(receipt.get('draft_failures',0))+1)

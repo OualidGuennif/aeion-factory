@@ -418,8 +418,9 @@ function buildStage(build) {
   if (build.status === "merged") return "main";
   if (["pr_open", "gated", "approved"].includes(build.status)) return "publication";
   const phase = receipt.progress?.phase;
-  if (["preparing", "building", "checking", "reviewing"].includes(phase)) return phase;
-  if (phase) return receipt.preparation ? "building" : "preparing";
+  const stage = receipt.progress?.stage || phase;
+  if (["preparing", "building", "checking", "reviewing"].includes(stage)) return stage;
+  if (phase) return !receipt.preparation ? "preparing" : receipt.progress?.detail?.runtime === "flue-just-bash" ? "reviewing" : "building";
   return null;
 }
 // Ten minutes with no tool result or model step: likely a long command or a stalled agent.
@@ -427,7 +428,7 @@ const STALL_SECONDS = 600;
 function agentClock(build, receipt, windowSeconds) {
   const started = Number(receipt.author_started_ns);
   if (build.status !== "dispatched" || !Number.isFinite(started) || started <= 0) return "";
-  if (["process.retired", "checking", "reviewing", "publishing"].includes(receipt.progress?.phase)) return "";
+  if (["process.retired", "checking", "reviewing", "publishing"].includes(receipt.progress?.phase) || ["checking", "reviewing", "publishing"].includes(receipt.progress?.stage)) return "";
   const last = Math.max(started, Number(receipt.last_tool_ns) || 0, Number(receipt.progress?.time_ns) || 0);
   const failures = Number.isInteger(receipt.draft_failures) ? receipt.draft_failures : 0;
   const window = Number.isInteger(windowSeconds) && windowSeconds > 0 ? windowSeconds : 0;

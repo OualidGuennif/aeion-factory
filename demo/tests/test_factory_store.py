@@ -141,6 +141,29 @@ class StoreTests(unittest.TestCase):
             {'spec_digest':'e'*64,'gate':{'status':'passed','results':{}}},terminal=FAILED)
         self.assertIsNone(store.previous_check_failure('f1','e'*64))
 
+    def test_previous_check_failure_clears_on_passed_held_or_cancelled_gate_and_skips_nonfailed(self):
+        from factory.store import CANCELLED, FAILED, HELD
+        store = self.store()
+        store.admit(['f1'], 'old-fail', self.catalog); build = store.claim_next(self.catalog)
+        store.complete_attempt(build['attempt_id'], build['attempt_generation'],
+            {'spec_digest': 'f' * 64, 'gate': {'status': 'failed', 'results': {'prepared_product': {'detail': {
+                'reason': 'product_unit_tests_failed', 'failed_tests': ['OldFail > old() FAILED']}}}}},
+            terminal=FAILED)
+        self.assertEqual(store.previous_check_failure('f1', 'f' * 64)['failed_tests'], ['OldFail > old() FAILED'])
+        store.admit(['f1'], 'cancel-no-pass', self.catalog); build = store.claim_next(self.catalog)
+        store.complete_attempt(build['attempt_id'], build['attempt_generation'],
+            {'spec_digest': 'f' * 64, 'execution': {'check': {
+                'reason': 'cancelled_stale', 'failed_tests': ['IgnoreCancelled > stale() FAILED']}}},
+            terminal=CANCELLED)
+        self.assertEqual(store.previous_check_failure('f1', 'f' * 64)['failed_tests'], ['OldFail > old() FAILED'])
+        store.admit(['f1'], 'held-pass', self.catalog); build = store.claim_next(self.catalog)
+        store.hold_dispatched(build['build_id'], 'owner_review_required',
+            receipt={'spec_digest': 'f' * 64, 'gate': {'status': 'passed', 'results': {}}})
+        self.assertEqual(store.build(build['build_id'])['status'], HELD)
+        self.assertIsNone(store.previous_check_failure('f1', 'f' * 64))
+        store.cancel(build['build_id'])
+        self.assertIsNone(store.previous_check_failure('f1', 'f' * 64))
+
     def test_admit_root_is_queued(self):
         s = self.store()
         r = s.admit(["f1"], "k1", self.catalog)

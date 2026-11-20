@@ -28,10 +28,10 @@ SCOPES = ("aeion-factory", "aeion-autonomous-forum")
 BUDGET_ZONE = "Europe/Paris"
 _LEDGER_VERSION = 1
 CONFIG_PATH = Path(__file__).resolve().parents[1] / "budget.conf"
-# Owner-authorized maxima (2026-11-07). budget.conf or AEION_<KEY> may lower them, never raise them.
+# Owner-authorized maxima (2026-11-20: REVIEW_MAX_USD raised to 5.00). budget.conf or AEION_<KEY> may lower them, never raise them.
 CEILINGS = {"DAILY_LIMIT_USD": Decimal("150.00"), "AUTHOR_MAX_USD": Decimal("50.00"),
-            "REVIEW_MAX_USD": Decimal("1.00")}
-DEFAULTS = {"DAILY_LIMIT_USD": "150.00", "AUTHOR_MAX_USD": "50.00", "REVIEW_MAX_USD": "1.00"}
+            "REVIEW_MAX_USD": Decimal("5.00")}
+DEFAULTS = {"DAILY_LIMIT_USD": "150.00", "AUTHOR_MAX_USD": "50.00", "REVIEW_MAX_USD": "5.00"}
 # One author agent execution's wall-clock window, in whole minutes (owner-authorized 2026-11-05).
 TIME_LIMITS = {"AUTHOR_TIMEOUT_MINUTES": (5, 180)}
 TIME_DEFAULTS = {"AUTHOR_TIMEOUT_MINUTES": "30"}

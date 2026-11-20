@@ -206,20 +206,33 @@ def _normalise(answer):
 # without producing a typed verdict hands its vote once to the next eligible independent
 # reviewer. Measured 2026-11-05 (DeepSeek HTTP 429) and 2026-11-09 (DeepSeek CLI length/timeout).
 UNAVAILABLE_FAILURES = frozenset({'PROVIDER_RATE_LIMITED', 'PROVIDER_UNAVAILABLE', 'CLI_FAILED', 'AGENT_TIMEOUT', 'OUTPUT_LIMIT'})
+PREFLIGHT_UNAVAILABLE_FAILURES = frozenset({'BUDGET_STOP', 'CONTEXT_UNKNOWN', 'PROVIDER_CONTEXT_VIOLATION'})
 MAX_SUBSTITUTIONS = 1
 # A dropped connection is not a bad reviewer. Retry that same model before holding the vote.
 MAX_TRANSPORT_RETRIES = 3
 
 
+def is_zero_forward_preflight(execution):
+    """True when preflight blocked the call before any request was forwarded."""
+    if not isinstance(execution, dict) or execution.get('failure') not in PREFLIGHT_UNAVAILABLE_FAILURES:
+        return False
+    usage = execution.get('usage')
+    cost_zero = not isinstance(usage, dict) or str(usage.get('cost_usd') if usage.get('cost_usd') is not None else '0') in ('0', '0.0', '0.00')
+    no_output = not isinstance(usage, dict) or usage.get('output_tokens') in (None, 0)
+    return execution.get('forwarded_count') == 0 and cost_zero and no_output
+
+
 def _unavailable(execution):
-    """True for an infrastructure, provider, CLI or timeout failure where no verdict was produced."""
+    """True for an infrastructure, provider, CLI, timeout or zero-forward preflight refusal with no verdict."""
     if not isinstance(execution, dict):
         return False
+    if is_zero_forward_preflight(execution):
+        return True
     failure = execution.get('failure')
+    usage = execution.get('usage')
     if failure not in UNAVAILABLE_FAILURES:
         return False
     if failure in {'PROVIDER_RATE_LIMITED', 'PROVIDER_UNAVAILABLE'}:
-        usage = execution.get('usage')
         return isinstance(usage, dict) and usage.get('output_tokens') == 0
     return True
 
@@ -227,7 +240,8 @@ def _unavailable(execution):
 def two_vote_review(author_model, feature_id, files, router, complete, telemetry=None,
                     usage_for_vote=None, specification='', observed_for_vote=None,
                     acceptance='', preparer_model=None, execution_for_vote=None,
-                    baseline=None, base_sha=None, first_reviewer=None, base_context=None):
+                    baseline=None, base_sha=None, first_reviewer=None, base_context=None,
+                    exclude_models=()):
     """Return an approved/held verdict from two independent model votes."""
     if not files:
         return {"status": "held", "reason": "empty_diff", "votes": []}
@@ -263,7 +277,7 @@ def two_vote_review(author_model, feature_id, files, router, complete, telemetry
     transport_attempts = {}
     while index <= 2:
         try:
-            excluded=[*used_models,*(entry['model'] for entry in unavailable)]
+            excluded=[*used_models,*(m for m in exclude_models if isinstance(m,str)),*(entry['model'] for entry in unavailable)]
             if retry_model is not None:
                 from .models import MODELS
                 excluded=[*used_models,*(model for model in MODELS if model != retry_model)]

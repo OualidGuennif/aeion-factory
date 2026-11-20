@@ -50,7 +50,7 @@ function reasonText(info) {
     execution_unavailable: "The product repository or task preparation adapter is unavailable to the factory.",
     sandbox_unqualified: "The isolated checker needs qualification.",
     budget_unavailable: "The daily budget is unavailable or exhausted.",
-    budget_config_invalid: "demo/budget.conf is invalid or above its ceiling ($150/day, $50 per author execution, $1 per review vote). No paid work starts until it is fixed.",
+    budget_config_invalid: "demo/budget.conf is invalid or above its ceiling ($150/day, $50 per author execution, $5 per review vote). No paid work starts until it is fixed.",
     sandbox_qualification_stale: "The OpenShell security proof is missing or expired, and refreshing it failed. No new author was started. This same request resumes when the proof is fresh.",
     STEP_LIMIT: "The worker reached its allowed model-step limit. This attempt is preserved; the feature has not been implemented.",
     CLI_STARTUP_FAILED: "The agent CLI stopped before its first model request. The factory must repair its launcher; no implementation was started.",

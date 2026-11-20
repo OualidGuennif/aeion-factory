@@ -11,19 +11,21 @@ from factory.models import MODELS, Router, Telemetry, fits_budget, request_floor
 
 
 class BudgetFitTests(unittest.TestCase):
-    def test_haiku_at_four_times_list_price_cannot_review_or_prepare_but_can_author(self):
-        # (65536 x 2.50 + 16384 x 0.625) x 4 / 1e6 = 0.696 USD per review request; a vote is 1 USD.
+    def test_haiku_at_four_times_list_price_fits_five_dollar_review_but_refuses_one_dollar_or_prepare(self):
+        # (65536 x 2.50 + 16384 x 0.625) x 4 / 1e6 = 0.696 USD per review request.
         self.assertEqual(round(request_floor_usd('claude-haiku-5.5', 'review'), 3), Decimal('0.696'))
-        self.assertFalse(fits_budget('claude-haiku-5.5', 'review'))
+        self.assertTrue(fits_budget('claude-haiku-5.5', 'review'))
         self.assertFalse(fits_budget('claude-haiku-5.5', 'prepare'))
         self.assertTrue(fits_budget('claude-haiku-5.5', 'author'))
         for model in MODELS:
             if model != 'claude-haiku-5.5':
                 self.assertTrue(all(fits_budget(model, p) for p in ('author', 'review', 'prepare')), model)
-        router = Router(Telemetry())
-        others = [f for m, s in MODELS.items() for f in [s['family']] if m not in ('claude-haiku-5.5',)]
-        with self.assertRaises(models.RoutingError):
-            router.select('review', exclude_families=others)
+        with mock.patch.dict('os.environ', {'AEION_REVIEW_MAX_USD': '1.00'}):
+            self.assertFalse(fits_budget('claude-haiku-5.5', 'review'))
+            router = Router(Telemetry())
+            others = [f for m, s in MODELS.items() for f in [s['family']] if m not in ('claude-haiku-5.5',)]
+            with self.assertRaises(models.RoutingError):
+                router.select('review', exclude_families=others)
 
     def test_an_unknown_cap_or_multiple_fails_closed(self):
         with mock.patch('factory.budget.settings', side_effect=ValueError('budget_config_invalid')):

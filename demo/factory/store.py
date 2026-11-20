@@ -1377,9 +1377,7 @@ class Store:
         with self._lock:
             conn = self._connect()
             try:
-                rows = conn.execute(
-                    "SELECT receipt FROM builds WHERE feature_id=? AND status=? ORDER BY updated_ns DESC LIMIT 20",
-                    (feature_id, FAILED)).fetchall()
+                rows = conn.execute("SELECT status, receipt FROM builds WHERE feature_id=? AND status IN (?,?,?) ORDER BY updated_ns DESC LIMIT 20", (feature_id, FAILED, HELD, CANCELLED)).fetchall()
             finally:
                 conn.close()
         for row in rows:
@@ -1392,6 +1390,8 @@ class Store:
             gate = receipt.get('gate') if isinstance(receipt.get('gate'), dict) else {}
             if gate.get('status') == 'passed':
                 return None
+            if row['status'] != FAILED:
+                continue
             for result in (gate.get('results') or {}).values():
                 detail = result.get('detail') if isinstance(result, dict) else None
                 if not isinstance(detail, dict) or not isinstance(detail.get('reason'), str):

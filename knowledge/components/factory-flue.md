@@ -4,12 +4,12 @@ title: "Flue factory execution"
 description: "Deterministic supervision of untrusted Flue/Pi workers, isolated tools and protected publication."
 status: draft
 verified:
-  - at: 2026-11-17
-    what: "unittest preparation and full suite: validate_acceptance scans JS comments, strings, templates and regex literals while resolving destructured/named node:assert/strict bindings, and TaskPreparer retries preparation_acceptance_* without double-recording telemetry"
   - at: 2026-11-18
     what: "full suite (896/896 demo, 33/33 repo, 30/30 flue, 21/21 catalog, 31/31 cockpit, template-tests): @Provider/@ApplicationScoped + >=12-char pass + pinned correction family exclusion; priority/UTF-8-safe baseline_context; conflict reprepare"
   - at: 2026-11-19
     what: "full suite (902/902 demo, 33/33 repo, 31/31 flue, 31/31 cockpit, 21/21 forum, template-tests): masked literal + node --check validation, zero-test_error baseline gate, check_evidence locs, runtime-crash reprepare, contract-aware correction_unchanged"
+  - at: 2026-11-20
+    what: "full suite (908/908 demo, 33/33 repo, 31/31 flue, 31/31 cockpit, 21/21 forum, template-tests): REVIEW_MAX_USD 5.00 ceiling (full 200KB baseline_context + Haiku eligible), 0-forward preflight substitution/exclusion, gate-passed prior_candidate reuse"
 sources:
   - resource: ../../demo/factory/review_context.py
     title: "One-time operator repair of the old review envelope"
@@ -278,7 +278,7 @@ the brief does not ask for: build 80463a43 (2026-11-06) passed every check but w
 removing `/__release` and moving the default port.
 Explicit operator bounds remain. `demo/budget.conf` sets the daily purse (at most $150, owner
 decision 2026-11-07), one author execution (at most $50, reserved and relay-enforced) and one
-review vote (at most $1);
+review vote (at most $5, owner decision 2026-11-20);
 an invalid file holds builds as `budget_config_invalid` and admits no spending. A soft stop can retain a proposed candidate
 only after validated export, confirmed sandbox removal, complete known usage within the frozen
 reservation and a current authorization check. Its stopped-role failure remains visible. No check
@@ -438,8 +438,14 @@ and a profile without one cannot run. Build df71b061 (Haiku author) stopped at 1
 its allowance draw was four times the list estimate and the next request's byte bound did not
 fit. The router also skips a model whose single request (whole output window plus 16384 input
 tokens, at its multiple) exceeds half of its purpose's cap: Haiku at 0.70 USD per request does
-not review (1 USD vote) or prepare (0.50 USD) (test_factory_budget_fit,
-test_relay_budget_settlement). Missing
+not prepare (0.50 USD), while fitting the owner-raised 5.00 USD review vote ceiling (tightened
+1.00 USD overrides still exclude it) (test_factory_budget_fit, test_relay_budget_settlement). Two-vote
+review substitutes once (`MAX_SUBSTITUTIONS = 1`) on zero-forward preflight refusals (`BUDGET_STOP`,
+`CONTEXT_UNKNOWN`, `PROVIDER_CONTEXT_VIOLATION` with `forwarded_count == 0`, zero output tokens,
+zero cost), never on billed calls, and `reassess_review_context(..., retry_failed_review=True)`
+excludes instead of re-pinning any zero-forward preflight-refused reviewer while `prior_candidate`
+also seeds gate-passed `reviewer_failed` artifacts on same-base/same-spec relaunches (`test_factory_review_circuit`,
+`test_factory_review_reassessment`, `test_factory_work_limits`). Missing
 cost/output or unfinished streams retain their maximum liability; higher resource cost blocks
 later calls. A known closed bootstrap failure caused by cumulative unused reservations may be
 recovered once with the unchanged artifact and first approval, never unknown cost or a rejection

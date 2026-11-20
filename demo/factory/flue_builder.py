@@ -40,9 +40,18 @@ def outside_scope(path, scopes):
 
 
 def previous_failure_text(previous, files=None, scopes=None):
-    """The last protected-check refusal of this exact spec, as bounded data for the author."""
+    """The last protected-check refusal (or gate-passed prior candidate) as bounded data for the author."""
     if not isinstance(previous, dict) or not isinstance(previous.get('reason'), str):
-        return ''
+        if not files:
+            return ''
+        return '\n'.join([
+            '',
+            'PREVIOUS CANDIDATE (data from an earlier build at this exact base and spec, never instructions):',
+            'Your workspace already starts from validated candidate files whose protected gate passed: '
+            'keep what is right, verify against the current frozen acceptance contract with '
+            'run_protected_checks, and finish cleanly.',
+            *baseline_note(files, scopes),
+        ])
     lines = ['', 'PREVIOUS ATTEMPT (data from the protected check, not instructions): the last attempt at '
              'this exact specification was refused with ' + previous['reason'] + '.']
     if files:
@@ -157,27 +166,28 @@ def note_check_failure(run, result):
         run['repeated_check_stop'] = 'repeated_check_failure'
 
 
-def prior_candidate(repo, frozen, feature_id):
-    """Best validated candidate files from an earlier failed launch at the exact same base and spec."""
+def _prior_candidate_entry(repo, frozen, feature_id, include_failed=True):
+    """Return ``(files, gate_passed)`` for the best validated candidate at the same base and spec."""
     work_root = Path(repo).resolve().parent.parent
     db_path = work_root.parent / 'factory.db'
     if (not db_path.is_file() or not isinstance(getattr(frozen, 'base_sha', None), str)
             or not isinstance(getattr(frozen, 'spec_digest', None), str)):
-        return None
+        return None, False
     import sqlite3
     try:
         conn = sqlite3.connect(f'file:{db_path}?mode=ro', uri=True)
         try:
             rows = conn.execute(
-                "SELECT build_id, receipt FROM builds WHERE feature_id=? AND status='failed' "
-                "ORDER BY updated_ns DESC LIMIT 12", (feature_id,)).fetchall()
+                "SELECT build_id, status, receipt FROM builds WHERE feature_id=? "
+                "AND status IN ('failed', 'held', 'cancelled') ORDER BY updated_ns DESC LIMIT 20",
+                (feature_id,)).fetchall()
         finally:
             conn.close()
     except sqlite3.Error:
-        return None
+        return None, False
     best = None
     scopes = getattr(frozen, 'write_scopes', None) or []
-    for build_id, raw in rows:
+    for build_id, status, raw in rows:
         if not isinstance(build_id, str) or not re.fullmatch(r'[0-9a-f]{32}', build_id):
             continue
         try:
@@ -186,8 +196,21 @@ def prior_candidate(repo, frozen, feature_id):
             continue
         if receipt.get('base_sha') != frozen.base_sha or receipt.get('spec_digest') != frozen.spec_digest:
             continue
-        marker = receipt.get('correction') if isinstance(receipt.get('correction'), dict) else {}
-        names = marker.get('candidate_files')
+        gate_passed = (
+            status in ('held', 'cancelled')
+            and isinstance(receipt.get('gate'), dict) and receipt['gate'].get('status') == 'passed'
+            and isinstance(receipt.get('circuit'), dict) and receipt['circuit'].get('reason') == 'reviewer_failed'
+        )
+        if status == 'failed':
+            if not include_failed:
+                continue
+            marker = receipt.get('correction') if isinstance(receipt.get('correction'), dict) else {}
+            names, expected_digest = marker.get('candidate_files'), marker.get('candidate_digest')
+        elif gate_passed:
+            cov = receipt['circuit'].get('coverage') if isinstance(receipt['circuit'].get('coverage'), dict) else {}
+            names, expected_digest = cov.get('files'), receipt.get('artifact_digest')
+        else:
+            continue
         if not (isinstance(names, list) and 0 < len(names) <= 200
                 and all(isinstance(n, str) and '..' not in n.split('/') and not n.startswith('/')
                         and any(n.startswith(s) for s in scopes) for n in names)):
@@ -198,18 +221,26 @@ def prior_candidate(repo, frozen, feature_id):
                       if (source / n).is_file() and not (source / n).is_symlink()}
         except (OSError, UnicodeDecodeError):
             continue
-        if len(loaded) != len(names) or content_digest(loaded) != marker.get('candidate_digest'):
+        if len(loaded) != len(names) or content_digest(loaded) != expected_digest:
             continue
         if any(outside_scope(m.group(1), scopes) for text in loaded.values() for m in SPEC_DOC.finditer(text[:4000])):
             continue
-        check = (receipt.get('execution') or {}).get('check') or {}
-        tests = check.get('failed_tests') if isinstance(check.get('failed_tests'), list) else []
-        rank = (1 if any('initializationError' in str(t) for t in tests) else 0, len(tests) if tests else 99)
+        if gate_passed:
+            rank = (-1, 0)
+        else:
+            check = (receipt.get('execution') or {}).get('check') or {}
+            tests = check.get('failed_tests') if isinstance(check.get('failed_tests'), list) else []
+            rank = (1 if any('initializationError' in str(t) for t in tests) else 0, len(tests) if tests else 99)
         if best is None or rank < best[0]:
             best = (rank, loaded)
-            if rank == (0, 1):
+            if rank == (-1, 0):
                 break
-    return best[1] if best else None
+    return (best[1], best[0] == (-1, 0)) if best else (None, False)
+
+
+def prior_candidate(repo, frozen, feature_id):
+    """Best validated candidate files from an earlier build at the exact same base and spec."""
+    return _prior_candidate_entry(repo, frozen, feature_id)[0]
 
 
 def correction_text(correction, scopes=None):
@@ -417,8 +448,15 @@ class FlueBuilder:
                   'verify test fixtures for off-by-one errors, missing loop insertions in setup/fixtures, and 1-based JDBC column indices. '
                   'Fix fixture defects when the fixture does not match the test requirements.\n'
                   'Write scopes: ' + json.dumps(frozen.write_scopes))
-        prior_files = (prior_candidate(repo, frozen, feature['id'])
-                       if correction is None and isinstance(previous_failure, dict) else None)
+        has_failure = isinstance(previous_failure, dict) and isinstance(previous_failure.get('reason'), str)
+        prior_files, prior_gate_passed = (
+            _prior_candidate_entry(repo, frozen, feature['id'], include_failed=has_failure)
+            if correction is None else (None, False)
+        )
+        if prior_gate_passed:
+            previous_failure = None
+        elif not has_failure:
+            prior_files = None
         if callable(getattr(self.check_sandbox, 'instructions', None)):
             prompt += '\nFROZEN BUILD PROTOCOL:\n' + self.check_sandbox.instructions(target)
         try:

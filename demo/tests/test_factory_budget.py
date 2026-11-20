@@ -187,15 +187,15 @@ class BudgetSettingsTests(unittest.TestCase):
         bounds = budget_module.settings()
         self.assertEqual(bounds["DAILY_LIMIT_USD"], Decimal("150.00"))
         self.assertEqual(bounds["AUTHOR_MAX_USD"], Decimal("50.00"))
-        self.assertEqual(bounds["REVIEW_MAX_USD"], Decimal("1.00"))
+        self.assertEqual(bounds["REVIEW_MAX_USD"], Decimal("5.00"))
 
     def test_owner_values_up_to_each_ceiling_are_accepted(self):
-        bounds = self.settings("DAILY_LIMIT_USD=150.00\nAUTHOR_MAX_USD=50.00  # extreme case\nREVIEW_MAX_USD=0.50\n")
+        bounds = self.settings("DAILY_LIMIT_USD=150.00\nAUTHOR_MAX_USD=50.00  # extreme case\nREVIEW_MAX_USD=5.00\n")
         self.assertEqual(bounds["AUTHOR_MAX_USD"], Decimal("50.00"))
-        self.assertEqual(bounds["REVIEW_MAX_USD"], Decimal("0.50"))
+        self.assertEqual(bounds["REVIEW_MAX_USD"], Decimal("5.00"))
 
     def test_values_above_a_ceiling_unknown_keys_or_nonsense_are_refused_whole(self):
-        for text in ("AUTHOR_MAX_USD=50.01\n", "DAILY_LIMIT_USD=151\n", "REVIEW_MAX_USD=2\n",
+        for text in ("AUTHOR_MAX_USD=50.01\n", "DAILY_LIMIT_USD=151\n", "REVIEW_MAX_USD=5.01\n",
                      "AUTHOR_MAX_USD=0\n", "AUTHOR_MAX_USD=-1\n", "AUTHOR_MAX_USD=NaN\n",
                      "AUTHOR_MAX_USD=Infinity\n", "AUTHOR_MAX_USD=abc\n", "TASK_MAX=3\n", "AUTHOR_MAX_USD\n",
                      "DAILY_LIMIT_USD=2.00\nAUTHOR_MAX_USD=1.00\nREVIEW_MAX_USD=0.60\n"):

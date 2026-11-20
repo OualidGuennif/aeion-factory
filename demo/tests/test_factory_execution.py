@@ -146,7 +146,7 @@ class ResolveTests(unittest.TestCase):
         self.assertTrue(execution["builder"].paid)
         self.assertIsNotNone(execution["check_sandbox"])
         self.assertEqual(execution["cost_reservation_usd"], "50.00")
-        self.assertEqual(execution["review_complete"].cost_limit, "1.00")
+        self.assertEqual(execution["review_complete"].cost_limit, "5.00")
         self.assertIs(execution['builder'].check_sandbox,execution['check_sandbox'])
         self.assertIs(execution['preparer'].checker,execution['check_sandbox'])
         with mock.patch("factory.execution.provider_available", return_value=True), \

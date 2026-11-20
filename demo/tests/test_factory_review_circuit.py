@@ -50,7 +50,7 @@ class CircuitTelemetryTests(unittest.TestCase):
         self.assertTrue(independent_circuit(result))
 
     def test_only_one_substitution_and_never_for_a_refusal_or_a_billed_answer(self):
-        result,calls=self.busy_circuit({'deepseek-4.1-flash','gpt-6-luna'},failure='PROVIDER_UNAVAILABLE')
+        result,calls=self.busy_circuit({'deepseek-4.1-flash','claude-haiku-5.5'},failure='PROVIDER_UNAVAILABLE')
         self.assertEqual((result['status'],result['reason'],len(calls)),('held','reviewer_failed',3))
         self.assertEqual(len(result['unavailable_reviewers']),1)
         self.assertEqual(result['votes'][-1]['verdict'],'error')
@@ -155,9 +155,50 @@ class CircuitTelemetryTests(unittest.TestCase):
         result=two_vote_review('glm-5.3-flash','007',FILES,Router(Telemetry()),vote,
             acceptance='class IndependentContract {}',preparer_model='qwen-3.8-flash')
         self.assertEqual(result['status'],'approved')
-        self.assertEqual({model for model,_ in seen},{'deepseek-4.1-flash','gpt-6-luna'})
+        self.assertEqual({model for model,_ in seen},{'deepseek-4.1-flash','claude-haiku-5.5'})
         self.assertTrue(all('class IndependentContract {}' in prompt for _,prompt in seen))
         self.assertEqual(result['acceptance_digest'],hashlib.sha256(b'class IndependentContract {}').hexdigest())
+
+    def test_zero_forward_preflight_budget_stop_substitutes_but_billed_budget_stop_holds(self):
+        calls = []
+        state = {}
+
+        def preflight_stop(model, _prompt):
+            calls.append(model)
+            if model == 'claude-haiku-5.5':
+                state['execution'] = {
+                    'failure': 'BUDGET_STOP', 'forwarded_count': 0,
+                    'usage': {'complete': True, 'cost_usd': '0', 'output_tokens': 0},
+                }
+                raise ValueError('BUDGET_STOP')
+            state['execution'] = {'failure': None, 'forwarded_count': 1, 'usage': {'complete': True, 'output_tokens': 5}}
+            return {'verdict': 'approve', 'reason': 'ok'}
+
+        res = two_vote_review('glm-5.3-flash', '005', FILES, Router(Telemetry()), preflight_stop,
+                              execution_for_vote=lambda: state['execution'], preparer_model='qwen-3.8-flash')
+        self.assertEqual(res['status'], 'approved')
+        self.assertIn('claude-haiku-5.5', [u['model'] for u in res['unavailable_reviewers']])
+        self.assertEqual([v['model'] for v in res['votes']], ['deepseek-4.1-flash', 'gpt-6-luna'])
+
+        def billed_stop(model, _prompt):
+            if model == 'claude-haiku-5.5':
+                state['execution'] = {
+                    'failure': 'BUDGET_STOP', 'forwarded_count': 1,
+                    'usage': {'complete': True, 'cost_usd': '0.15', 'output_tokens': 0},
+                }
+                raise ValueError('BUDGET_STOP')
+            state['execution'] = {'failure': None, 'forwarded_count': 1, 'usage': {'complete': True, 'output_tokens': 5}}
+            return {'verdict': 'approve', 'reason': 'ok'}
+
+        held = two_vote_review('glm-5.3-flash', '005', FILES, Router(Telemetry()), billed_stop,
+                               execution_for_vote=lambda: state['execution'], preparer_model='qwen-3.8-flash')
+        self.assertEqual((held['status'], held['reason']), ('held', 'reviewer_failed'))
+        self.assertNotIn('unavailable_reviewers', held)
+
+        ex_res = two_vote_review('glm-5.3-flash', '005', FILES, Router(Telemetry()),
+                                 lambda m, p: {'verdict': 'approve', 'reason': 'ok'},
+                                 preparer_model='qwen-3.8-flash', exclude_models=('claude-haiku-5.5',))
+        self.assertEqual([v['model'] for v in ex_res['votes']], ['deepseek-4.1-flash', 'gpt-6-luna'])
     def test_budget_or_local_preflight_rejection_does_not_become_a_model_failure(self):
         telemetry=Telemetry()
         def fail_before_transport(*_):raise ValueError('budget unavailable')

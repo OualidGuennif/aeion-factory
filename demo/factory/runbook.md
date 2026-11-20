@@ -43,7 +43,7 @@ Review [`trust-model.md`](trust-model.md) before enabling any new capability. Mo
 | `AEION_LOCAL_DIR` | `demo/.local` | Owner-only state directory (`0700`) |
 | `AEION_DATA_DIR` | `demo/.local/data` | Cockpit and lab metrics store |
 | `AEION_WORK_DIR` | `demo/.local/work` | Disposable sandbox workspaces |
-| `AEION_DAILY_LIMIT_USD`, `AEION_AUTHOR_MAX_USD`, `AEION_REVIEW_MAX_USD` | From `demo/budget.conf` (`150`, `50`, `1`) | Hard spending ceilings (`$150/day`, `$50/execution`, `$1/vote`) |
+| `AEION_DAILY_LIMIT_USD`, `AEION_AUTHOR_MAX_USD`, `AEION_REVIEW_MAX_USD` | From `demo/budget.conf` (`150`, `50`, `5`) | Hard spending ceilings (`$150/day`, `$50/execution`, `$5/vote`) |
 
 Never pass secrets on the command line or inside service unit files. First startup generates `demo/.local/factory/admin.token` (`0600`), rotating the bootstrap token on every login.
 

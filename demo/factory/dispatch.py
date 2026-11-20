@@ -29,7 +29,7 @@ from .routing import OutcomeTelemetry, cohort_for
 from .agent_files import BuilderError
 from .publish import FakeForge, Publisher
 from .review import SECRET_PATTERNS, content_digest, review
-from .review_circuit import two_vote_review, baseline_diff, baseline_context, CircuitError, MAX_SUBSTITUTIONS
+from .review_circuit import two_vote_review, baseline_diff, baseline_context, CircuitError, MAX_SUBSTITUTIONS, is_zero_forward_preflight
 from .store import (FAILED, HELD, LIVE_COMPLETE, MAX_ATTEMPTS, MAX_CORRECTION_ROUNDS, QUEUED,
                     SIMULATED_COMPLETE, StoreError, continuation_step)
 from .target import TargetError
@@ -848,11 +848,20 @@ class DispatchWorker:
                 or hashlib.sha256(acceptance.encode()).hexdigest()!=preparation.get('acceptance_digest')
                 or _read(repo.parent/'BRIEF.md',12000)!=task.specification):
             raise CircuitError('review_context_artifact_changed')
-        previous_votes=(prior.get('circuit') or {}).get('votes') or []
+        circuit=(prior.get('circuit') or {})
+        previous_votes=circuit.get('votes') or []
         rejecting=next((v.get('model') for v in previous_votes
             if v.get('verdict')==('error' if retry_failed_review else 'reject')),None)
-        if rejecting is None and (prior.get('circuit') or {}).get('reason') != 'review_input_too_large':
+        if rejecting is None and circuit.get('reason') != 'review_input_too_large':
             raise CircuitError('review_context_not_eligible')
+        excluded_reviewers=()
+        if retry_failed_review:
+            entries=[*previous_votes, *(circuit.get('unavailable_reviewers') or [])]
+            excluded_reviewers=tuple(dict.fromkeys(
+                e['model'] for e in entries if isinstance(e.get('model'),str) and is_zero_forward_preflight(e.get('execution'))
+            ))
+            if rejecting in excluded_reviewers:
+                rejecting=None
         lease_ns=(target.protected_check.timeout_seconds
             +(2+MAX_SUBSTITUTIONS)*getattr(self.review_complete,'timeout_seconds',900)+60)*10**9
         build=self.store.claim_review_context(build_id,self.catalog,
@@ -873,7 +882,7 @@ class DispatchWorker:
         try:
             return self._judge_and_publish(build,None,repo,frozen,self.catalog.by_id[build['feature_id']],
                 target,base,ProtectedChecks(registered),[*DEFAULT_REQUIRED_CHECKS,target.protected_check.id],
-                first_reviewer=rejecting)
+                first_reviewer=rejecting,exclude_reviewers=excluded_reviewers)
         except Exception as error:
             self.store.hold_dispatched(build_id,'worker_error')
             return {'build_id':build_id,'result':{'status':'held','reason':'worker_error','error_type':type(error).__name__}}
@@ -1288,7 +1297,7 @@ class DispatchWorker:
             'attempt': step[0], 'round': step[1], **admitted}}}
 
     def _judge_and_publish(self,build,session,repo,frozen,feature,target,base_sha,checks,required_checks,
-                           first_reviewer=None):
+                           first_reviewer=None,exclude_reviewers=()):
         """One shared gate/review/publication path for fresh work and the bounded context repair."""
         progress=lambda phase,detail=None:self._progress(build,phase,detail)
         target_repo=target.target_repo if target is not None else self.target_repo
@@ -1377,37 +1386,27 @@ class DispatchWorker:
             except CircuitError as error:
                 self.store.hold_dispatched(build['build_id'],'owner_review_required',receipt={
                     **self._identity(build,feature,frozen,base_sha,verdict),'gate':gate,'review':review_verdict,
-                    'reason':str(error),'circuit':{'status':'held','reason':str(error),'votes':[],
-                        'review_input_version':2}})
+                    'reason':str(error),'circuit':{'status':'held','reason':str(error),'votes':[],'review_input_version':2}})
                 return {'build_id':build['build_id'],'result':{'status':'held','reason':str(error)}}
-            circuit = two_vote_review(self.author_model, feature["id"], files,
-                                      self.router, self._review_vote,
+            circuit = two_vote_review(self.author_model, feature["id"], files, self.router, self._review_vote,
                                       usage_for_vote=lambda: getattr(self.review_complete, 'last_usage', None),
                                       execution_for_vote=lambda: getattr(self.review_complete,'last_execution',None),
-                                      observed_for_vote=lambda: not getattr(self.review_complete, 'paid', False)
-                                        or bool((getattr(self.review_complete, 'last_execution', None) or {}).get('forwarded_count')),
+                                      observed_for_vote=lambda: not getattr(self.review_complete, 'paid', False) or bool((getattr(self.review_complete, 'last_execution', None) or {}).get('forwarded_count')),
                                       specification=(repo.parent / 'BRIEF.md').read_bytes().decode('utf-8'),
                                       preparer_model=(self.preparation_evidence or {}).get('preparer_model'),
                                       acceptance=target.protected_check.contract_test.read_bytes().decode('utf-8') if target else '',
-                                      baseline=diff, base_sha=frozen.base_sha, first_reviewer=first_reviewer, base_context=base_ctx)
+                                      baseline=diff, base_sha=frozen.base_sha, first_reviewer=first_reviewer, base_context=base_ctx, exclude_models=exclude_reviewers)
             if circuit["status"] != "approved":
                 held = {**self._identity(build, feature, frozen, base_sha, verdict),
-                    "gate": gate, "review": review_verdict, "circuit": circuit,
-                    "reason": circuit.get("reason", "review_circuit_held"),
-                    "telemetry": self._telemetry_evidence(
-                        build, feature, frozen, base_sha, verdict, gate, None)}
+                    "gate": gate, "review": review_verdict, "circuit": circuit, "reason": circuit.get("reason", "review_circuit_held"),
+                    "telemetry": self._telemetry_evidence(build, feature, frozen, base_sha, verdict, gate, None)}
                 link = self.store.correction_of(build['build_id'])
                 attempt, current = (link['attempt'], link['round']) if link else (1, 0)
-                if (circuit.get('reason') == 'reviewer_rejected' and first_reviewer is None
-                        and next_step(attempt, current) is not None):
-                    # A substantive rejection becomes the next author's input, not an owner chore.
+                if (circuit.get('reason') == 'reviewer_rejected' and first_reviewer is None and next_step(attempt, current) is not None):
                     return self._fail_or_correct(build, feature, held, files, 'reviewer_rejected')
                 self.store.hold_dispatched(build["build_id"], "owner_review_required", receipt={
-                    **held, **({'correction': {'attempt': attempt, 'round': current, 'exhausted': True}}
-                               if link else {})})
-                return {"build_id": build["build_id"], "result": {
-                    "status": "held", "reason": circuit.get("reason", "review_circuit_held"),
-                    "circuit": circuit}}
+                    **held, **({'correction': {'attempt': attempt, 'round': current, 'exhausted': True}} if link else {})})
+                return {"build_id": build["build_id"], "result": {"status": "held", "reason": circuit.get("reason", "review_circuit_held"), "circuit": circuit}}
 
         request = {
             "attempt_id": build["attempt_id"], "build_id": build["build_id"],

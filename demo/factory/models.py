@@ -121,7 +121,7 @@ class Telemetry:
 # One paid request reserves its whole output window plus a minimal input at the model's budget
 # rate (list price times the measured allowance multiple). A model whose single request already
 # costs more than half of its purpose's cap cannot finish within it: Claude Haiku 5.5 at 4x is
-# about 0.70 USD per 65536-token review request against a 1 USD vote. Such a model is not selected.
+# about 0.70 USD per 65536-token request (ineligible for 0.50 USD prepare; fits 5.00 USD review).
 PURPOSE_OUTPUT_TOKENS = {"author": 65536, "review": 65536, "prepare": 65536}
 PREPARE_CAP_USD = "0.50"
 

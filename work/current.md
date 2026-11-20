@@ -1,17 +1,24 @@
 # Current work
 
-Updated 2026-11-19. Current facts only; historical evidence is in HANDOVER.md and validation.md.
+Updated 2026-11-20. Current facts only; historical evidence is in HANDOVER.md and validation.md.
 No final operational Go or actual product feature merge is claimed.
 
-## Contract validation, zero-test_error baseline & recovery hardening — READY
+## Review cap ($5.00), preflight fallback & Feature 005 unblock — READY
 
-- Owner decision: eliminate all four systemic contract preparation, verifier reporting, and correction-recovery blind spots exposed by Feature `005` (`5b44fcaa2386` -> `df7c23b47f56` -> `a92b48ae0302`), merge to `main`, requalify admission, and unblock `005` relaunch.
+- Owner decision: keep full `baseline_context` review quality untouched, raise per-vote `REVIEW_MAX_USD` ceiling/default to `$5.00`, eliminate `0`-forward `BUDGET_STOP` review deadlocks (`a2401f04`), reuse gate-verified `reviewer_failed` artifacts on relaunch, merge to `main`, requalify, and relaunch Feature `005`.
 - State:
-  - `validate_acceptance` (`demo/factory/product_checks.py`) rejects masked placeholder literals (`***`, inline `…`) via `preparation_acceptance_masked_literal` and validates JS ESM syntax with `node --check` (`preparation_acceptance_syntax_invalid`); `TaskPreparer` retries both across model families while `acceptance_prompt` warns against mismatched `response.headers` lookups on parsed `api()` helper objects.
-  - `run-acceptance.mjs` and `ProductCheckRunner._verify` skip structural `subtestsFailed`/`cancelledByParent` rollups and separate assertion failures from `test_errors` and bounded `error_type` tokens; `_baseline_ok` requires assertion-only baseline failures with zero `test_error` crashes, zero skipped/cancelled/todo tests, and `failed <= contract_assertion_failures` when explicit `test_errors` is absent (keeping registered `001`/`002`/`003`/`014` negative checks distinct), and `_baseline_retry_note` reports failing lines/`error_type`.
-  - `flue_session.check_evidence` and `flue_builder.py` retain bounded verifier `test_error` locations and counts; `previous_feature_feedback(..., store=store)` reads `Store` receipts and surfaces supervisor crash summaries; `TaskPreparer.prepare` triggers `reprepare_needed` on objective `0`-assertion `test_error` runtime crashes or normalized conflict tokens across both `gate=failed` and `builder_error`.
-  - `_correction_input` and `_judge_and_publish` (`demo/factory/dispatch.py`, `<= 1500` lines) check `acceptance_digest` so unchanged candidates are re-evaluated after `reprepare_needed` updates the contract instead of holding as `correction_unchanged`.
-- Next: merge PR to `main`, requalify native admission (`qualify_flue.py` + `factory.admission --activate`), restart Cockpit daemon, and let the owner cancel held build `a92b48ae0302` and relaunch Feature `005` from Catalog (who: agent, then owner).
+  - Raised `REVIEW_MAX_USD` from `$1.00` to `$5.00` across `demo/budget.conf`, `demo/factory/budget.py`, `demo/factory/flue_review.py`, `demo/app/factory.js`, and docs (`baseline_context` `200 KB` / `600 KB` preserved unchanged; `claude-haiku-5.5` also eligible for review under `$5.00`).
+  - `review_circuit._unavailable` substitutes once on `0`-forward preflight refusals (`BUDGET_STOP`/`CONTEXT_UNKNOWN`/`PROVIDER_CONTEXT_VIOLATION`, `$0` cost/output); `reassess_review_context(..., retry_failed_review=True)` (`dispatch.py` `<= 1500` lines) excludes rather than re-pinning `0`-forward preflight failures.
+  - `flue_builder.prior_candidate` + `previous_failure_text` reuse gate-passed `reviewer_failed` candidates (`held`/`cancelled`) matching `base_sha`, `spec_digest`, `artifact_digest`, and write scopes (`a2401f04` `eadf3849...`).
+- Next: merge PR to `main`, requalify live admission (`qualify_flue.py` + `factory.admission --activate`), restart Cockpit daemon, cancel `a2401f04`, and relaunch Feature `005` (which starts from `a2401f04`'s gate-passed code).
+- Blocker: none.
+- Evidence: [validation](validation.md); [execution contract](../knowledge/components/factory-flue.md); [feature authoring](../knowledge/operations/feature-authoring.md).
+
+## Contract validation, zero-test_error baseline & recovery hardening — MERGED (PR #54)
+
+- Owner decision: eliminate the four contract preparation, verifier reporting, and correction-recovery blind spots exposed by Feature `005` (`5b44fcaa2386` -> `df7c23b47f56` -> `a92b48ae0302`).
+- State: merged to `main` in `f65b1f7` (PR #54); preparation and S3 gate passed cleanly on `a2401f04`.
+- Next: tracked by review-cap and recovery unblock above (who: agent, then owner).
 - Blocker: none.
 - Evidence: [validation](validation.md); [execution contract](../knowledge/components/factory-flue.md); [feature authoring](../knowledge/operations/feature-authoring.md).
 

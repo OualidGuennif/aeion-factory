@@ -106,7 +106,7 @@ Auto model selection considers only comparable tier 3 evidence under `flue-opens
 
 `demo/factory/budget.py` maintains an append-only JSONL journal at `demo/.local/budget/ledger.jsonl` (`0600`) across two isolated scopes (`aeion-factory` and `aeion-autonomous-forum`). Each Europe/Paris day enforces `DAILY_LIMIT_USD` from [`demo/budget.conf`](budget.conf) (capped at `$150.00`), reserving exposure before calling a model and settling actual usage afterward. Corrupted, missing, or over-limit ledgers fail closed (`budget_unavailable` or `budget_config_invalid`).
 
-`demo/budget.conf` also bounds each author execution (`AUTHOR_MAX_USD` <= `$50.00`), each review vote (`REVIEW_MAX_USD` <= `$1.00`), and author wall-clock time (`AUTHOR_TIMEOUT_MINUTES` between 5 and 180). Overrides via `AEION_<KEY>` follow the same code ceilings, and active admitted builds retain their frozen reservation across restarts. Inspect today's spend without making any model call:
+`demo/budget.conf` also bounds each author execution (`AUTHOR_MAX_USD` <= `$50.00`), each review vote (`REVIEW_MAX_USD` <= `$5.00`), and author wall-clock time (`AUTHOR_TIMEOUT_MINUTES` between 5 and 180). Overrides via `AEION_<KEY>` follow the same code ceilings, and active admitted builds retain their frozen reservation across restarts. Inspect today's spend without making any model call:
 
 ```bash
 python3 -m demo.factory.budget --ledger demo/.local/budget/ledger.jsonl

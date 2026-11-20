@@ -213,5 +213,126 @@ class ReviewContextDispatchTests(unittest.TestCase):
         self.worker.reassess_review_context(self.build['build_id'],retry_failed_review=True)
         self.assertEqual(str(self.budget.spent('aeion-autonomous-forum')),'0.13')
 
+    def test_retry_failed_review_excludes_zero_forward_budget_stop_model(self):
+        receipt=json.loads(self.store.board()[0]['receipt'])
+        receipt['circuit']={
+            **receipt['circuit'],
+            'review_input_version':2,
+            'status':'held','reason':'reviewer_failed',
+            'votes':[
+                {'vote':1,'model':'deepseek-4.1-flash','family':'deepseek','verdict':'approve','reason':'ok'},
+                {'vote':2,'model':'gpt-6-luna','family':'openai','verdict':'error','reason':'BUDGET_STOP',
+                 'execution':{'failure':'BUDGET_STOP','forwarded_count':0,
+                              'usage':{'complete':True,'cost_usd':'0','output_tokens':0}}},
+            ],
+        }
+        import sqlite3
+        conn=sqlite3.connect(self.store.path)
+        conn.execute('UPDATE builds SET receipt=? WHERE build_id=?',(json.dumps(receipt),self.build['build_id']))
+        conn.commit();conn.close()
+        self.failure_model='gpt-6-luna'
+        result=self.worker.reassess_review_context(self.build['build_id'],retry_failed_review=True)
+        self.assertEqual(result['result']['status'],'publication_queued')
+        self.assertNotIn('gpt-6-luna',[m for m,_ in self.votes])
+
+
+class RetryUnavailableReviewerTests(unittest.TestCase):
+    """Retrying a failed review preserves 0-forward exclusions across votes and unavailable_reviewers."""
+    def test_retry_excludes_zero_forward_unavailable_reviewers_alongside_votes(self):
+        from unittest.mock import patch
+        from factory.review import content_digest
+        cases = (
+            ('votes_zero_forward_budget_stop',
+             {'failure': 'BUDGET_STOP', 'forwarded_count': 0, 'usage': {'cost_usd': '0', 'output_tokens': 0}},
+             None),
+            ('votes_forwarded_timeout_keeps_first_reviewer',
+             {'failure': 'CLI_TIMEOUT', 'forwarded_count': 1, 'usage': {'cost_usd': '0.02', 'output_tokens': 5}},
+             'gpt-6-luna'),
+        )
+        for name, vote2_exec, expected_first in cases:
+            with self.subTest(case=name), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                arch = root / 'demo/forum/ARCHITECTURE.md'; arch.parent.mkdir(parents=True)
+                arch.write_text('Architecture.\n')
+                specs = root / 'specs'; specs.mkdir()
+                (specs / '001.md').write_text('# 001\n## Acceptance checks\n- [ ] Check.\n')
+                catalog = Catalog({'schema_version': 2, 'count': 1, 'features': [{
+                    'id': '001', 'title': 'Settings', 'area': 'foundation', 'size': 'S', 'phase': 'P0',
+                    'parallel': False, 'tier': 3, 'file': '001.md', 'write_paths': ['demo/forum-app/'],
+                    'depends_on': [], 'architecture_digest': hashlib.sha256(arch.read_bytes()).hexdigest()}]})
+                source = root / 'source'; rel = 'demo/forum-app/src/main/resources/settings.properties'
+                (source / rel).parent.mkdir(parents=True); (source / rel).write_text('k=1\n')
+                for args in (['init', '-q'], ['add', '.'], ['-c', 'user.name=T', '-c', 'user.email=t@e.invalid', 'commit', '-qm', 'base']):
+                    subprocess.run(['git', '-C', str(source), *args], capture_output=True, check=True)
+                base = subprocess.check_output(['git', '-C', str(source), 'rev-parse', 'HEAD'], text=True).strip()
+                store = Store(root / 'factory.db'); store.admit(['001'], 'fixture', catalog)
+                build = store.claim_next(catalog); folder = root / 'work' / build['build_id']
+                prepared = folder / 'prepared'; prepared.mkdir(parents=True)
+                task = freeze_task(catalog, '001', specs, arch, base, product=True)
+                target = prepared_target(root, source, task, prepared, 'Synthetic acceptance.\n')
+                target.materialize(folder / 'repo')
+                (folder / 'repo' / rel).write_text('k=2\n')
+                (folder / 'BRIEF.md').write_text(task.specification)
+                (prepared / 'acceptance.mjs').write_text('Synthetic acceptance.\n')
+                cfg = {'architecture': arch, 'profile': 'flue-pi', 'mode': 'live',
+                       'deadline_ns': 10 ** 12, 'step_cap': 50, 'context_limit': 250000,
+                       'cost_reservation_usd': '0.50'}
+                frozen = freeze_build(store.build(build['build_id']), catalog, specs, base,
+                    {**cfg, **({'dependency_changes': dict(target.dependency_changes)} if target.dependency_changes else {})},
+                    write_scopes=target.write_paths, spec_path=target.brief, acceptance_path=target.protected_check.contract_test)
+                artifact = validate_artifact(folder / 'repo', frozen.write_scopes)
+                spec_digest = hashlib.sha256(task.specification.encode('utf-8')).hexdigest()
+                acc_digest = hashlib.sha256('Synthetic acceptance.\n'.encode('utf-8')).hexdigest()
+                receipt = {
+                    'simulated': False, 'base_sha': base, 'task_digest': task.digest(),
+                    'frozen_digest': frozen.digest(), 'spec_digest': spec_digest, 'acceptance_digest': acc_digest,
+                    'architecture_digest': catalog.features[0]['architecture_digest'],
+                    'author_model': 'glm-5.3-flash', 'artifact_digest': artifact['digest'],
+                    'preparation': {**task.identity(), 'task_digest': task.digest(),
+                                    'acceptance_digest': acc_digest, 'preparer_model': 'qwen-3.8-flash', 'synthetic': False},
+                    'gate': {'status': 'passed', 'results': {}},
+                    'review': {'status': 'approved'},
+                    'execution': {'build_id': build['build_id'], 'role': 'author', 'engine': 'flue-pi',
+                                  'forwarded_count': 1, 'usage': {'complete': True, 'cost_usd': '0.10'}},
+                    'circuit': {
+                        'status': 'held', 'reason': 'reviewer_failed', 'review_input_version': 2,
+                        'coverage': {'files': [rel]},
+                        'unavailable_reviewers': [{
+                            'model': 'claude-haiku-5.5', 'verdict': 'error',
+                            'execution': {'failure': 'BUDGET_STOP', 'forwarded_count': 0,
+                                          'usage': {'cost_usd': '0', 'output_tokens': 0}},
+                        }],
+                        'votes': [
+                            {'vote': 1, 'model': 'deepseek-4.1-flash', 'verdict': 'approve'},
+                            {'vote': 2, 'model': 'gpt-6-luna', 'verdict': 'error', 'execution': vote2_exec},
+                        ],
+                    },
+                }
+                store.hold_dispatched(build['build_id'], 'owner_review_required', receipt=receipt)
+                seen = {}
+                def fake_two_vote(*_a, **kw):
+                    seen['first_reviewer'] = kw.get('first_reviewer')
+                    seen['exclude_models'] = kw.get('exclude_models')
+                    return {'status': 'approved', 'reason': 'approved',
+                            'votes': [{'vote': 1, 'model': 'deepseek-4.1-flash', 'verdict': 'approve'},
+                                      {'vote': 2, 'model': 'minimax-m2.7', 'verdict': 'approve'}],
+                            'spec_digest': spec_digest, 'acceptance_digest': acc_digest,
+                            'coverage': {'files': [rel]}}
+                worker = DispatchWorker(store, catalog, specs, root / 'work', target_repo=source,
+                    check_sandbox=SimpleNamespace(check_target=lambda _t, _r, _f: (True, {'check': 'prepared_product'})),
+                    review_complete=lambda *_a, **_k: None, require_circuit=True, config=cfg,
+                    budget=DailyBudget(root / 'budget.json'))
+                worker.paid = True
+                worker.preparer = TaskPreparer(root, source, synchronize=lambda: base, product=True)
+                worker.admission_check = lambda: True
+                with patch('factory.dispatch.two_vote_review', side_effect=fake_two_vote), \
+                        patch('factory.dispatch.baseline_context', return_value={}):
+                    worker.reassess_review_context(build['build_id'], retry_failed_review=True)
+                self.assertEqual(seen['first_reviewer'], expected_first)
+                if expected_first is None:
+                    self.assertEqual(seen['exclude_models'], ('gpt-6-luna', 'claude-haiku-5.5'))
+                else:
+                    self.assertEqual(seen['exclude_models'], ('claude-haiku-5.5',))
+
 
 if __name__=='__main__':unittest.main()

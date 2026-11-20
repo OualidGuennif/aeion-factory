@@ -19,7 +19,7 @@ class FlueReview:
         try:amount=Decimal(cost_limit)
         except (InvalidOperation,TypeError):raise ValueError('REVIEW_BOUNDS_INVALID') from None
         if (type(max_prompt_bytes) is not int or not 1 <= max_prompt_bytes <= MAX_COMPLETE_REVIEW_BYTES
-                or not amount.is_finite() or not Decimal('0') < amount <= Decimal('1.00')
+                or not amount.is_finite() or not Decimal('0') < amount <= Decimal('5.00')
                 or type(max_output_tokens) is not int or not 1 <= max_output_tokens <= 65536
                 or deepseek_effort not in ('low','max')):
             raise ValueError('REVIEW_BOUNDS_INVALID')

@@ -199,8 +199,9 @@ class BootstrapTests(unittest.TestCase):
     def test_large_complete_review_is_supervisor_bounded_and_never_silently_truncated(self):
         with self.assertRaisesRegex(ValueError,'REVIEW_BOUNDS_INVALID'):
             FlueReview(max_prompt_bytes=MAX_COMPLETE_REVIEW_BYTES + 1)
+        FlueReview(cost_limit='5.00')
         with self.assertRaisesRegex(ValueError,'REVIEW_BOUNDS_INVALID'):
-            FlueReview(cost_limit='1.01')
+            FlueReview(cost_limit='5.01')
         with self.assertRaisesRegex(ValueError,'REVIEW_BOUNDS_INVALID'):
             FlueReview(deepseek_effort='off')
         for cost in ('NaN','Infinity','invalid'):

@@ -181,5 +181,122 @@ class WorkLimitTests(unittest.TestCase):
             frozen=SimpleNamespace(base_sha='b'*40,spec_digest='s'*64,write_scopes=['demo/forum-app/src/'])
             self.assertEqual(prior_candidate(current,frozen,'001'),{path:'class A { int v=1; }\n'})
 
+            # A gate-passed held/cancelled build blocked only by reviewer_failed takes priority over earlier failed builds.
+            from factory.flue_builder import previous_failure_text
+            hint=previous_failure_text(None,{path:'class A {}'},['demo/forum-app/src/'])
+            self.assertIn('PREVIOUS CANDIDATE',hint)
+
+            conn=sqlite3.connect(state/'factory.db')
+            good_repo=work/('4'*32)/'repo';(good_repo/path).parent.mkdir(parents=True);(good_repo/path).write_text('class A { int v=9; }\n')
+            good_receipt={
+                'base_sha':'b'*40,'spec_digest':'s'*64,
+                'artifact_digest':content_digest({path:'class A { int v=9; }\n'}),
+                'gate':{'status':'passed'},
+                'circuit':{'reason':'reviewer_failed','coverage':{'files':[path]}},
+            }
+            conn.execute('INSERT INTO builds VALUES (?,?,?,?,?)',('4'*32,'001','cancelled',json.dumps(good_receipt),99))
+            rej_repo=work/('5'*32)/'repo';(rej_repo/path).parent.mkdir(parents=True);(rej_repo/path).write_text('class A { int v=99; }\n')
+            rej_receipt={
+                'base_sha':'b'*40,'spec_digest':'s'*64,
+                'artifact_digest':content_digest({path:'class A { int v=99; }\n'}),
+                'gate':{'status':'passed'},
+                'circuit':{'reason':'reviewer_rejected','coverage':{'files':[path]}},
+            }
+            conn.execute('INSERT INTO builds VALUES (?,?,?,?,?)',('5'*32,'001','cancelled',json.dumps(rej_receipt),100))
+            conn.commit();conn.close()
+            from factory.flue_builder import _prior_candidate_entry
+            self.assertEqual(prior_candidate(current,frozen,'001'),{path:'class A { int v=9; }\n'})
+            self.assertEqual(_prior_candidate_entry(current,frozen,'001'),({path:'class A { int v=9; }\n'},True))
+
+    def test_gate_passed_prior_candidate_suppresses_stale_previous_failure_prompt(self):
+        import json, sqlite3
+        from factory.review import content_digest
+        path='demo/forum-app/src/main/java/A.java'
+        with tempfile.TemporaryDirectory() as directory:
+            state=Path(directory);work=state/'work';work.mkdir()
+            current=work/('f'*32)/'repo';(current/path).parent.mkdir(parents=True);(current/path).write_text('class A {}\n')
+            brief=work/('f'*32)/'BRIEF.md';brief.write_text('# Public fixture\n')
+            contract=state/'acceptance.mjs';contract.write_text('// Frozen public fixture\n')
+            frozen=SimpleNamespace(base_sha='b'*40,spec_digest='s'*64,write_scopes=['demo/forum-app/'],
+                context_limit=250000,step_cap=200,deadline_ns=900000000000,cost_reservation_usd='0.50')
+            target=SimpleNamespace(seed_files=(),protected_check=SimpleNamespace(id='prepared_product',
+                contract_destination='EXTERNAL.mjs',contract_test=contract))
+            good_repo=work/('4'*32)/'repo';(good_repo/path).parent.mkdir(parents=True);(good_repo/path).write_text('class A { int v=9; }\n')
+            good_receipt={'base_sha':'b'*40,'spec_digest':'s'*64,
+                'artifact_digest':content_digest({path:'class A { int v=9; }\n'}),
+                'gate':{'status':'passed'},'circuit':{'reason':'reviewer_failed','coverage':{'files':[path]}}}
+            conn=sqlite3.connect(state/'factory.db')
+            conn.execute('CREATE TABLE builds (build_id TEXT, feature_id TEXT, status TEXT, receipt TEXT, updated_ns INTEGER)')
+            conn.execute('INSERT INTO builds VALUES (?,?,?,?,?)',('4'*32,'001','cancelled',json.dumps(good_receipt),99))
+            conn.commit();conn.close()
+            captured=[]
+            runtime=Mock()
+            def stop_on_live(*_a,**kw):
+                captured.append(kw.get('prompt',''))
+                raise RuntimeError('captured_prompt')
+            runtime.live.side_effect=stop_on_live
+            with patch('factory.flue_builder.public_files',return_value={path:b'class A {}\n'}), \
+                    patch('factory.flue_builder.FactorySession',return_value=runtime), \
+                    patch('factory.flue_builder.Sandbox',return_value=Mock()), \
+                    patch('factory.flue_builder.DockerCheckRunner',return_value=Mock(instructions=lambda _t: '')), \
+                    patch('factory.flue_builder.usage',return_value={'complete':True,'cost_usd':'0'}):
+                builder=FlueBuilder(state,{});builder.authorization_check=lambda:True
+                with self.assertRaisesRegex(RuntimeError,'captured_prompt'):
+                    builder.run_build(repo=current,frozen=frozen,feature={'id':'001','tier':3,'title':'Test'},
+                        brief=brief,target=target,build={'build_id':'f'*32},
+                        previous_failure={'reason':'product_unit_tests_failed','failed_tests':['Stale > old() FAILED']})
+            self.assertEqual(len(captured),1)
+            self.assertIn('PREVIOUS CANDIDATE',captured[0])
+            self.assertNotIn('Stale > old() FAILED',captured[0])
+            self.assertNotIn('PREVIOUS PROTECTED CHECK FAILURE',captured[0])
+
+    def test_cleared_or_empty_previous_failure_never_seeds_failed_candidate_as_gate_passed(self):
+        import json, sqlite3
+        from factory.review import content_digest
+        from factory.flue_builder import _prior_candidate_entry
+        path='demo/forum-app/src/main/java/A.java'
+        with tempfile.TemporaryDirectory() as directory:
+            state=Path(directory);work=state/'work';work.mkdir()
+            current=work/('f'*32)/'repo';(current/path).parent.mkdir(parents=True);(current/path).write_text('class A {}\n')
+            brief=work/('f'*32)/'BRIEF.md';brief.write_text('# Public fixture\n')
+            contract=state/'acceptance.mjs';contract.write_text('// Frozen public fixture\n')
+            frozen=SimpleNamespace(base_sha='b'*40,spec_digest='s'*64,write_scopes=['demo/forum-app/'],
+                context_limit=250000,step_cap=200,deadline_ns=900000000000,cost_reservation_usd='0.50')
+            target=SimpleNamespace(seed_files=(),protected_check=SimpleNamespace(id='prepared_product',
+                contract_destination='EXTERNAL.mjs',contract_test=contract))
+            failed_repo=work/('1'*32)/'repo';(failed_repo/path).parent.mkdir(parents=True);(failed_repo/path).write_text('class A { int bad=1; }\n')
+            failed_receipt={'base_sha':'b'*40,'spec_digest':'s'*64,
+                'correction':{'candidate_files':[path],'candidate_digest':content_digest({path:'class A { int bad=1; }\n'})}}
+            stale_revfail={'base_sha':'b'*40,'spec_digest':'s'*64,'artifact_digest':'a'*64,
+                'gate':{'status':'passed'},'circuit':{'reason':'reviewer_failed','coverage':{'files':[path]}}}
+            conn=sqlite3.connect(state/'factory.db')
+            conn.execute('CREATE TABLE builds (build_id TEXT, feature_id TEXT, status TEXT, receipt TEXT, updated_ns INTEGER)')
+            conn.execute('INSERT INTO builds VALUES (?,?,?,?,?)',('1'*32,'001','failed',json.dumps(failed_receipt),50))
+            conn.execute('INSERT INTO builds VALUES (?,?,?,?,?)',('2'*32,'001','cancelled',json.dumps(stale_revfail),60))
+            conn.commit();conn.close()
+            self.assertEqual(_prior_candidate_entry(current,frozen,'001',include_failed=False),(None,False))
+            self.assertEqual(_prior_candidate_entry(current,frozen,'001',include_failed=True),({path:'class A { int bad=1; }\n'},False))
+            for prev in (None,{'failed_tests':['x']}):
+                with self.subTest(prev=prev):
+                    seen=[]
+                    runtime=Mock()
+                    def stop_on_live(run,*_a,**kw):
+                        seen.append((kw.get('prompt',''),dict(run)))
+                        raise RuntimeError('captured_prompt')
+                    runtime.live.side_effect=stop_on_live
+                    with patch('factory.flue_builder.public_files',return_value={path:b'class A {}\n'}), \
+                            patch('factory.flue_builder.FactorySession',return_value=runtime), \
+                            patch('factory.flue_builder.Sandbox',return_value=Mock()), \
+                            patch('factory.flue_builder.DockerCheckRunner',return_value=Mock(instructions=lambda _t: '')), \
+                            patch('factory.flue_builder.usage',return_value={'complete':True,'cost_usd':'0'}):
+                        builder=FlueBuilder(state,{});builder.authorization_check=lambda:True
+                        with self.assertRaisesRegex(RuntimeError,'captured_prompt'):
+                            builder.run_build(repo=current,frozen=frozen,feature={'id':'001','tier':3,'title':'Test'},
+                                brief=brief,target=target,build={'build_id':'f'*32},previous_failure=prev)
+                    self.assertEqual(len(seen),1)
+                    self.assertNotIn('PREVIOUS CANDIDATE',seen[0][0])
+                    self.assertNotIn('whose protected gate passed',seen[0][0])
+                    self.assertNotIn('seeded_check_digest',seen[0][1])
+
 
 if __name__=='__main__':unittest.main()

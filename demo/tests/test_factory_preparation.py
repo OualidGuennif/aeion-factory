@@ -1017,6 +1017,43 @@ class PreparationTests(unittest.TestCase):
             }},
         }))
 
+    def test_prepare_emits_protected_check_started_before_baseline_verification(self):
+        events = []
+        contract = "import test from 'node:test';\nimport assert from 'node:assert/strict';\ntest('delta', () => { assert.equal(1, 2); });\n"
+
+        class ProgressRole:
+            paid = False
+            last_execution = None
+            last_usage = None
+            progress = staticmethod(lambda phase, detail=None: events.append((phase, detail)))
+
+            def __call__(self, model, prompt, build_id):
+                self.last_usage = {'complete': True, 'cost_usd': '0'}
+                events.append(('process.retired', {'model': model}))
+                return {'status': 'ready', 'contract': contract, 'reason': 'Synthetic progress fixture'}
+
+        class RecordingChecker:
+            def check_target(self, target, repo, frozen):
+                events.append(('checker.invoked', {'feature_id': target.feature_id}))
+                return False, {'reason': 'acceptance_failed', 'contract_assertion_failures': 1}
+
+        preparer = TaskPreparer(
+            self.root, self.source, role=ProgressRole(), checker=RecordingChecker(),
+            base_ref='HEAD', product=True,
+        )
+        _, evidence = preparer.prepare(
+            build={'feature_id': '007', 'build_id': 'c' * 32, 'attempt_id': 'd' * 32},
+            catalog=self.catalog,
+            spec_dir=self.specs,
+            destination=self.root / 'prepared-progress',
+            budget=self.budget,
+            router=Router(),
+            authorized=lambda: True,
+        )
+        phases = [phase for phase, _ in events]
+        self.assertEqual(phases, ['process.retired', 'protected_check.started', 'checker.invoked'])
+        self.assertEqual(events[1][1], {'model': evidence['preparer_model'], 'status': 'running'})
+
 
 def _sha(text):
     return hashlib.sha256(text.encode('utf-8')).hexdigest()

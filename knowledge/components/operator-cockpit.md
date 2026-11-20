@@ -5,7 +5,7 @@ description: "One administrator workspace for truthful feature availability, bui
 status: draft
 verified:
   - at: 2026-11-20
-    what: "node test_cockpit_client (31 pass) and test_factory_store (21 OK): Store.record_progress preserves enclosing stage across reviewer sub-events so buildStage stays on Review and hides agentClock"
+    what: "test_factory_contract_identity (13 OK), test_factory_preparation (30 OK), test_cockpit_client (31 pass): FactoryApp live catalog refresh and stage preservation"
   - at: 2026-11-18
     what: "node test_cockpit_client (31 pass) and demo/tests (896 OK): Architecture card aligned to Flue 2.3.1 + Pi 1.5.2 without changing controls or layout"
   - at: 2026-11-17
@@ -129,7 +129,7 @@ requires sign-in after a controller restart; synthetic browser/API verification 
 Simulation and offline notices explicitly distinguish scripted work from live implementation,
 paid inference and main publication. Queued and actively running counts are separate; a queued
 request cannot be mistaken for a missing request (test_cockpit_client, browser fixture acceptance).
-Completion locks match the current canonical feature contract. Historical proof remains visible
+Completion locks match the current canonical feature contract; `FactoryApp` refreshes `self.catalog` and `self.worker.catalog` from disk on catalog reads, queue admission, and worker ticks while failing closed (retaining the last valid catalog so `contract_current` blocks the feature as `catalog_changed`) if the manifest or specification file becomes invalid or a symlink. Historical proof remains visible
 without certifying rewritten MDs; only an explicitly new admission retires an obsolete request
 that has never started (test_factory_contract_identity).
 

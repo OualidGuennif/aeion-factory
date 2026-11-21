@@ -288,6 +288,8 @@ class ContextRelay:
                     usage = ReportedUsage()
                     attempt = 0
                     while True:
+                        if relay.closed:
+                            raise _ForwardStopped('RELAY_CLOSED')
                         try:
                             opened = opener.open(request, timeout=UPSTREAM_IDLE_SECONDS)
                             break

@@ -190,6 +190,23 @@ class SettlementTests(unittest.TestCase):
         self.assertEqual((self.posts, relay.last_error_code), (1, 'ATTEMPT_REVOKED'))
         self.assertTrue(relay.closed)
 
+    def test_shutdown_during_preflight_refuses_before_dns(self):
+        import socket
+
+        relay = self.relay()
+
+        def close_during_count(_payload):
+            with relay.dispatch_lock:
+                relay.closed = True
+            return 2000
+
+        relay.counter.count = close_during_count
+        with patch.object(socket, 'getaddrinfo', wraps=socket.getaddrinfo) as resolve:
+            self.assertEqual(self.send(relay, 0), 409)
+        self.assertFalse(any(call.args[1] == self.server.server_port for call in resolve.call_args_list))
+        self.assertEqual((self.posts, relay.forwarded_count), (0, 0))
+        self.assertTrue(relay.accounting_complete)
+
     def test_revocation_before_the_first_post_has_no_transport_claim(self):
         relay = self.relay(forward_authority=lambda: 'ATTEMPT_REVOKED')
         self.assertEqual(self.send(relay, 0), 409)

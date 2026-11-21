@@ -4,6 +4,7 @@ import hmac
 import http.client
 import json
 import secrets
+import socket
 import ssl
 import threading
 from decimal import Decimal
@@ -56,11 +57,15 @@ def retry_delay(error, fallback):
     return fallback
 
 
+class _ForwardStopped(Exception):
+    """The connection opened, but the supervisor no longer permits sending the request."""
+
+
 class ContextRelay:
     def __init__(self, model, api_key, limit, checkpoint, event, *, upstream=None, counter=None, bind=None, admission=None,
                  api='openai-completions', prices=None, cost_limit=None, required_effort=None,max_output_tokens=4096,
                  required_reasoning_effort=None, max_requests=12, reasoning_thinking_object=True,
-                 budget_multiplier='1', retry_authority=None):
+                 budget_multiplier='1', forward_authority=None):
         if type(max_requests) is not int or not 1<=max_requests<=200:
             raise ValueError('STEP_LIMIT_INVALID')
         self.max_requests=max_requests
@@ -98,6 +103,7 @@ class ContextRelay:
         self.closed = False
         self.active = threading.Lock()
         self.dispatch_lock = threading.Lock()
+        self.upstream_socket = None
         self.responses = []
         self.last_count = None
         self.forwarded_count = 0
@@ -114,7 +120,7 @@ class ContextRelay:
         self.last_body_sha256 = None
         # Called before every forward; returns a stop code once the supervisor has accounted
         # the previous response and found the budget or native context gate reached.
-        self.admission, self.retry_authority = admission, retry_authority
+        self.admission, self.forward_authority = admission, forward_authority
         relay = self
 
         class Handler(BaseHTTPRequestHandler):
@@ -277,12 +283,7 @@ class ContextRelay:
                         "Authorization": "Bearer " + relay.key, "Content-Type": "application/json",
                         "Accept-Encoding": "identity",
                     })
-                    # No retries, redirects, environment proxy or raw request/response logging.
-                    class NoRedirect(urllib.request.HTTPRedirectHandler):
-                        def redirect_request(self, *_args, **_kwargs):
-                            return None
-                    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirect(),
-                                                         urllib.request.HTTPSHandler(context=_tls_context()))
+                    opener = relay._upstream_opener()
                     if not relay.claim_forward(counted):
                         self.deny(409,'RELAY_CLOSED')
                         return
@@ -304,15 +305,6 @@ class ContextRelay:
                             relay.provider_retries += 1
                             relay.event("provider.retry", **{"aeion.http.status": busy.code})
                             if relay.stopping.wait(delay) or relay.closed:
-                                relay.last_error_code = relay.last_error_code or 'RELAY_CLOSED'
-                                return self.deny(409, 'RELAY_CLOSED')
-                            stop = relay.retry_authority() if relay.retry_authority else None
-                            if stop:
-                                relay.closed = True
-                                relay.last_error_code = stop
-                                relay.event("context.refused", **{"aeion.failure.code": stop})
-                                return self.deny(409, stop)
-                            if not relay.claim_forward():
                                 relay.last_error_code = relay.last_error_code or 'RELAY_CLOSED'
                                 return self.deny(409, 'RELAY_CLOSED')
                     stage = 'stream'
@@ -361,6 +353,12 @@ class ContextRelay:
                                     (input_cost+Decimal(summary['output_tokens'])*
                                      Decimal(str(relay.prices['output'])))*relay.budget_multiplier/1000000)
                             relay.projected_cost+=spent_bound-projected
+                except _ForwardStopped as error:
+                    relay.closed = True
+                    code = str(error)
+                    relay.last_error_code = relay.last_error_code or code
+                    relay.event("context.refused", **{"aeion.failure.code": code})
+                    self.deny(409, code)
                 except urllib.error.HTTPError as error:
                     relay.closed = True
                     relay.event("provider.rejected", **{"aeion.http.status": error.code})
@@ -455,21 +453,61 @@ class ContextRelay:
                 or type(inputs) is not int or inputs < 1
                 or type(outputs) is not int or outputs < 0)
 
-    def claim_forward(self, counted=None):
-        # Order both new forwards and wire retries against shutdown. A wire retry
-        # uses the accounting claim already created for the unchanged provider request.
+    def _upstream_opener(self):
+        relay, tls = self, _tls_context()
+
+        class GuardedConnection:
+            def connect(self):
+                super().connect()
+                stop = relay.forward_authority() if relay.forward_authority else None
+                with relay.dispatch_lock:
+                    if relay.closed:
+                        raise _ForwardStopped('RELAY_CLOSED')
+                    if stop:
+                        raise _ForwardStopped(stop)
+                    relay.upstream_socket = self.sock
+
+        class HttpConnection(GuardedConnection, http.client.HTTPConnection):
+            pass
+
+        class HttpsConnection(GuardedConnection, http.client.HTTPSConnection):
+            pass
+
+        class HttpHandler(urllib.request.HTTPHandler):
+            def http_open(self, request):
+                return self.do_open(HttpConnection, request)
+
+        class HttpsHandler(urllib.request.HTTPSHandler):
+            def https_open(self, request):
+                return self.do_open(HttpsConnection, request, context=tls)
+
+        class NoRedirect(urllib.request.HTTPRedirectHandler):
+            def redirect_request(self, *_args, **_kwargs):
+                return None
+
+        return urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirect(), HttpHandler(), HttpsHandler())
+
+    def claim_forward(self, counted):
+        # First count the logical claim. Each wire connection separately checks
+        # authority and shutdown after DNS/TLS and before sending HTTP bytes.
         with self.dispatch_lock:
             if self.closed:
                 return False
-            if counted is not None:
-                self.forwarded_count += 1
-                self.forwarded_counts.append(counted)
+            self.forwarded_count += 1
+            self.forwarded_counts.append(counted)
             return True
 
     def close(self):
         with self.dispatch_lock:
             self.closed = True
+            upstream, self.upstream_socket = self.upstream_socket, None
         self.stopping.set()
+        if upstream is not None:
+            try:
+                upstream.shutdown(socket.SHUT_RDWR)
+            except OSError:
+                pass
+            upstream.close()
         for response in self.responses[:]:
             response.close()
         self.server.shutdown()

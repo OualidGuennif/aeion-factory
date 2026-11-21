@@ -2,6 +2,9 @@
 
 - A provider retry rechecks live Factory authority after backoff. A loopback
   regression revokes the claim during the wait and observes exactly one POST.
+  A second loopback test pauses DNS on the retry, closes the relay, resumes DNS,
+  and confirms that no second POST reaches the server. Open sockets are shut
+  down at relay close and new connections check authority before HTTP bytes.
 - A native Flue replay preserves a typed verdict across either the relay or the
   native context stop. Seven scripted requests exercised three paths with no
   real provider calls.

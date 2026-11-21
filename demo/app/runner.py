@@ -509,7 +509,7 @@ class Runner:
         if kind != 'lab':
             relay_options.update(prices=metadata, cost_limit=cost_limit - Decimal(run.get('projected_cost_usd', '0')),
                 max_requests=run.get('step_cap',12), budget_multiplier=budget_multiplier(key),
-                retry_authority=factory_authority)
+                forward_authority=factory_authority)
         relay = ContextRelay(run["model"], os.environ["OPENCODE_API_KEY"], run["limit"], relay_checkpoint,
                              lambda name, **attrs: self.event(run, name, **attrs), admission=admission, **relay_options)
         runtime = run.get("runtime", "flue-openshell")

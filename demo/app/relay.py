@@ -283,10 +283,7 @@ class ContextRelay:
                         "Authorization": "Bearer " + relay.key, "Content-Type": "application/json",
                         "Accept-Encoding": "identity",
                     })
-                    opener = relay._upstream_opener()
-                    if not relay.claim_forward(counted):
-                        self.deny(409,'RELAY_CLOSED')
-                        return
+                    opener = relay._upstream_opener(counted)
                     stage = 'forward'
                     usage = ReportedUsage()
                     attempt = 0
@@ -307,6 +304,9 @@ class ContextRelay:
                             if relay.stopping.wait(delay) or relay.closed:
                                 relay.last_error_code = relay.last_error_code or 'RELAY_CLOSED'
                                 return self.deny(409, 'RELAY_CLOSED')
+                            stop = relay.forward_authority() if relay.forward_authority else None
+                            if stop:
+                                raise _ForwardStopped(stop)
                     stage = 'stream'
                     with opened as response:
                         relay.responses.append(response)
@@ -453,11 +453,13 @@ class ContextRelay:
                 or type(inputs) is not int or inputs < 1
                 or type(outputs) is not int or outputs < 0)
 
-    def _upstream_opener(self):
+    def _upstream_opener(self, counted):
         relay, tls = self, _tls_context()
+        claimed = False
 
         class GuardedConnection:
             def connect(self):
+                nonlocal claimed
                 super().connect()
                 stop = relay.forward_authority() if relay.forward_authority else None
                 with relay.dispatch_lock:
@@ -466,6 +468,11 @@ class ContextRelay:
                     if stop:
                         raise _ForwardStopped(stop)
                     relay.upstream_socket = self.sock
+                    if not claimed:
+                        # Claim one paid request before its first HTTP write. Busy retries share it.
+                        relay.forwarded_count += 1
+                        relay.forwarded_counts.append(counted)
+                        claimed = True
 
         class HttpConnection(GuardedConnection, http.client.HTTPConnection):
             pass
@@ -487,16 +494,6 @@ class ContextRelay:
 
         return urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirect(), HttpHandler(), HttpsHandler())
 
-    def claim_forward(self, counted):
-        # First count the logical claim. Each wire connection separately checks
-        # authority and shutdown after DNS/TLS and before sending HTTP bytes.
-        with self.dispatch_lock:
-            if self.closed:
-                return False
-            self.forwarded_count += 1
-            self.forwarded_counts.append(counted)
-            return True
-
     def close(self):
         with self.dispatch_lock:
             self.closed = True
@@ -504,7 +501,8 @@ class ContextRelay:
         self.stopping.set()
         if upstream is not None:
             try:
-                upstream.shutdown(socket.SHUT_RDWR)
+                # Shut down TCP before touching TLS state in any concurrent sender.
+                socket.socket.shutdown(upstream, socket.SHUT_RDWR)
             except OSError:
                 pass
             upstream.close()

@@ -180,11 +180,22 @@ class SettlementTests(unittest.TestCase):
             authorized = False
             return False
 
+        import socket
         relay.stopping.wait = revoke_during_wait
         self.busy = [(503, None)]
-        self.assertEqual(self.send(relay, 0), 409)
+        with patch.object(socket, 'getaddrinfo', wraps=socket.getaddrinfo) as resolve:
+            self.assertEqual(self.send(relay, 0), 409)
+        upstream_resolutions = [call for call in resolve.call_args_list if call.args[1] == self.server.server_port]
+        self.assertEqual(len(upstream_resolutions), 1)
         self.assertEqual((self.posts, relay.last_error_code), (1, 'ATTEMPT_REVOKED'))
         self.assertTrue(relay.closed)
+
+    def test_revocation_before_the_first_post_has_no_transport_claim(self):
+        relay = self.relay(forward_authority=lambda: 'ATTEMPT_REVOKED')
+        self.assertEqual(self.send(relay, 0), 409)
+        self.assertEqual((self.posts, relay.forwarded_count, relay.reported_usage), (0, 0, []))
+        self.assertEqual(relay.last_error_code, 'ATTEMPT_REVOKED')
+        self.assertTrue(relay.accounting_complete)
 
     def test_shutdown_during_authority_check_prevents_a_busy_retry(self):
         def close_during_authority():
@@ -227,6 +238,31 @@ class SettlementTests(unittest.TestCase):
             self.assertEqual(pending.result(timeout=3), 409)
         self.assertEqual((self.posts, relay.last_error_code), (1, 'RELAY_ACCOUNTING_INCOMPLETE'))
         self.assertFalse(relay.accounting_complete)
+
+    def test_relay_closes_tcp_before_releasing_tls_state(self):
+        import socket
+        import ssl
+
+        relay = self.relay()
+        local, peer = socket.socketpair()
+        self.addCleanup(peer.close)
+        client = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        tls_socket = client.wrap_socket(local, server_hostname='localhost', do_handshake_on_connect=False)
+        self.addCleanup(tls_socket.close)
+        with relay.dispatch_lock:
+            relay.upstream_socket = tls_socket
+        shutdown = socket.socket.shutdown
+        tls_states = []
+
+        def observe_shutdown(sock, how):
+            if sock is tls_socket:
+                tls_states.append(sock._sslobj is not None)
+            return shutdown(sock, how)
+
+        with patch.object(socket.socket, 'shutdown', observe_shutdown):
+            relay.close()
+        self.assertEqual(tls_states, [True])
+        self.assertEqual(peer.recv(1), b'')
 
     def test_lab_default_and_invalid_factory_step_bounds_remain_closed(self):
         relay=self.relay()

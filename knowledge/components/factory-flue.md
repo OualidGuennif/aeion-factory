@@ -360,9 +360,10 @@ reasoning reviewer can think for minutes before its first byte; role deadlines s
 session. A stall is reported as `PROVIDER_TIMEOUT`, other socket failures as `TRANSPORT_ERROR`.
 A busy provider (HTTP 408, 425, 429, 500, 502, 503, 504 or 529 before any byte) is retried
 twice on the same claimed request, after 5s then 20s or an integer `Retry-After` capped at 30s;
-closing the relay ends the wait. After DNS and TLS, every provider connection rechecks
-the Factory claim against the current attempt, lease and catalog before any HTTP send.
-Shutdown closes the registered connection and refuses one that resolves later.
+closing the relay ends the wait. Retries recheck the Factory claim before DNS. Every
+provider connection rechecks the attempt, lease and catalog after DNS and TLS and before
+its first HTTP write. Only then is the logical request counted. Shutdown cuts off the
+registered TCP connection before releasing its TLS state and refuses connections that resolve later.
 Other statuses, timeouts
 and socket failures are never retried.
 A remaining 429 is `PROVIDER_RATE_LIMITED` and other busy statuses `PROVIDER_UNAVAILABLE`; the

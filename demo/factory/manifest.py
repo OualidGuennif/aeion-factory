@@ -64,9 +64,9 @@ class Catalog:
         architecture = self._file_digest(self.architecture_path)
         if self.raw.get('architecture_digest') != architecture:
             raise ManifestError('contract_architecture_changed')
-        self.contracts = {fid: self._current_contract(fid) for fid in self.by_id}
+        self.contracts = {fid: self._current_contract(fid, architecture) for fid in self.by_id}
 
-    def _current_contract(self, fid):
+    def _current_contract(self, fid, architecture=None):
         feature = self.by_id[fid]
         if self.spec_dir is None:
             return self._contract(feature)
@@ -74,7 +74,8 @@ class Catalog:
         if (not isinstance(name, str) or Path(name).name != name or '\\' in name
                 or not name.endswith('.md')):
             raise ManifestError('contract_spec_path_invalid')
-        architecture = self._file_digest(self.architecture_path)
+        if architecture is None:
+            architecture = self._file_digest(self.architecture_path)
         if feature.get('architecture_digest') != architecture:
             raise ManifestError('contract_architecture_changed')
         return self._contract(feature, self._file_digest(self.spec_dir / name), architecture)
@@ -102,17 +103,23 @@ class Catalog:
         ).hexdigest()
 
     def _validate(self):
-        if self.schema_version != SUPPORTED_SCHEMA:
+        if type(self.schema_version) is not int or self.schema_version != SUPPORTED_SCHEMA:
             raise ManifestError(f"unsupported_schema_version:{self.schema_version!r}")
-        if not isinstance(self.features, list) or len(self.features) != int(self.raw.get("count", -1)):
+        count = self.raw.get("count")
+        if not isinstance(self.features, list) or type(count) is not int or len(self.features) != count:
             raise ManifestError("feature_count_mismatch")
         for feature in self.features:
-            if not isinstance(feature, dict) or set(_REQUIRED) - set(feature):
+            if not isinstance(feature, dict):
+                raise ManifestError("invalid_feature")
+            if set(_REQUIRED) - set(feature):
                 raise ManifestError(f"feature_missing_fields:{feature.get('id', '?')}")
             fid = feature["id"]
             if not isinstance(fid, str) or not fid or fid in self.by_id:
                 raise ManifestError(f"duplicate_or_invalid_id:{fid!r}")
-            if feature.get("tier") != 3:
+            if any(not isinstance(feature[key], str) or not feature[key]
+                   for key in ("title", "area", "size", "file")):
+                raise ManifestError(f"invalid_feature_text:{fid}")
+            if type(feature["tier"]) is not int or feature["tier"] != 3:
                 raise ManifestError(f"invalid_tier:{fid}")
             if feature.get("phase") not in PHASES:
                 raise ManifestError(f"invalid_phase:{fid}")
@@ -126,7 +133,7 @@ class Catalog:
             self.by_id[fid] = feature
         for feature in self.features:
             for dep in feature["depends_on"]:
-                if dep not in self.by_id:
+                if not isinstance(dep, str) or dep not in self.by_id:
                     raise ManifestError(f"unknown_dependency:{feature['id']}->{dep}")
                 if PHASES.index(self.by_id[dep]["phase"]) > PHASES.index(feature["phase"]):
                     raise ManifestError(f"later_phase_dependency:{feature['id']}->{dep}")
@@ -175,7 +182,9 @@ def load_manifest(path, spec_dir=None):
     """Load a manifest file from disk and validate it."""
     data = json.loads(Path(path).read_text())
     catalog = Catalog(data, source=path)
-    if data.get('architecture'):
+    if 'architecture' in data or 'architecture_digest' in data:
+        if not isinstance(data.get('architecture'), str) or not data['architecture']:
+            raise ManifestError('contract_architecture_missing')
         folder = Path(spec_dir) if spec_dir is not None else Path(path).parent
         catalog.bind_contracts(folder, folder.parent / 'ARCHITECTURE.md')
     return catalog

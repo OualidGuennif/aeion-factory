@@ -484,6 +484,7 @@ class Store:
             try:
                 with conn:
                     conn.execute("BEGIN IMMEDIATE")
+                    self._reconcile_expired(conn, self._now())
                     waiting = conn.execute('SELECT * FROM builds WHERE status=? OR '
                         '(status=? AND hold_reason=? AND attempt_id IS NULL)',
                         (QUEUED, HELD, 'dependency_missing')).fetchall()
@@ -814,14 +815,18 @@ class Store:
             finally:
                 conn.close()
 
-    def claim_review_context(self, build_id, catalog, expected_receipt_digest, lease_ns, retry_failed_review=False):
-        """One explicit v1→v2 context reassessment, with no previous remote publication.
+    def claim_review_context(self, build_id, catalog, expected_receipt_digest, lease_ns,
+                             retry_failed_review=False, *, recover_review_handover=False):
+        """Atomically claim an eligible review-only recheck with no prior publication.
 
-        The caller revalidates the exact base/spec/artifact before claiming. This transaction
-        preserves the original rejection and fences old callbacks; it grants no approval.
+        The caller revalidates the base/spec/artifact; this transaction archives the old
+        receipt and fences its callbacks.
         """
         from decimal import Decimal, InvalidOperation
         from .models import known
+        from .review_circuit import is_accounted_review_handover
+        if recover_review_handover and not retry_failed_review:
+            return None
         def measured(execution):
             usage=execution.get('usage') or {}
             try:cost=Decimal(str(usage.get('cost_usd')))
@@ -829,7 +834,9 @@ class Store:
             return (execution.get('engine')=='flue-pi' and usage.get('complete') is True
                 and cost.is_finite() and cost>=0 and type(execution.get('forwarded_count')) is int
                 and execution['forwarded_count']>0)
-        if type(lease_ns) is not int or not 0<lease_ns<=7200*1_000_000_000:return None
+        # The live review circuit can use nine 900-second windows plus checks and teardown.
+        if type(lease_ns) is not int or not 0 < lease_ns <= 3 * 3600 * 1_000_000_000:
+            return None
         with self._lock:
             conn=self._connect()
             try:
@@ -847,18 +854,29 @@ class Store:
                     receipt=json.loads(row['receipt']);circuit=receipt.get('circuit') or {}
                     execution=receipt.get('execution') or {};votes=circuit.get('votes') or []
                     context=receipt.get('review_context') or {}
+                    already_retried = context.get('retry_failed_review') is True
+                    budget_recovery = (retry_failed_review and not recover_review_handover
+                        and circuit.get('reason') == 'review_budget_unavailable')
                     eligible_circuit = (circuit.get('reason') in ('reviewer_failed', 'review_input_too_large')
-                        and circuit.get('review_input_version') == 2 and not context.get('retry_failed_review')
+                        and circuit.get('review_input_version') == 2 and already_retried == recover_review_handover
                         and ((circuit.get('reason') == 'review_input_too_large' and not votes)
                              or (any(v.get('verdict') == 'error' for v in votes) and all(v.get('verdict') in ('approve', 'error') for v in votes)))
                     ) if retry_failed_review else (
                         not context and circuit.get('reason') == 'reviewer_rejected' and circuit.get('review_input_version', 1) == 1
                         and any(v.get('verdict') == 'reject' for v in votes))
+                    if recover_review_handover:
+                        errors = [v for v in votes if v.get('verdict') == 'error']
+                        eligible_circuit = (eligible_circuit and not context.get('handover_recovery') and bool(errors)
+                            and all(is_accounted_review_handover(v.get('execution')) for v in errors))
+                    if budget_recovery:
+                        eligible_circuit = (circuit.get('review_input_version') == 2 and not context.get('budget_recovery')
+                            and len(votes) <= 1 and all(v.get('verdict') == 'approve' for v in votes))
                     if (receipt.get('simulated') is not False or not eligible_circuit
                             or not known(receipt.get('author_model'))
                             or (receipt.get('gate') or {}).get('status')!='passed'
                             or (receipt.get('review') or {}).get('status')!='approved'
-                            or circuit.get('status')!='held' or (not votes and circuit.get('reason') != 'review_input_too_large')
+                            or circuit.get('status')!='held'
+                            or (not votes and not budget_recovery and circuit.get('reason') != 'review_input_too_large')
                             or not measured(execution) or execution.get('role')!='author'
                             or execution.get('build_id')!=build_id
                             or execution.get('failure') and not (
@@ -874,6 +892,10 @@ class Store:
                     receipt['review_context']={'from_version':2 if retry_failed_review else 1,'to_version':2,
                         'previous_receipt_digest':expected_receipt_digest,'author_reused':True,
                         'retry_failed_review':bool(retry_failed_review)}
+                    if recover_review_handover or context.get('handover_recovery') is True:
+                        receipt['review_context']['handover_recovery'] = True
+                    if budget_recovery or context.get('budget_recovery') is True:
+                        receipt['review_context']['budget_recovery'] = True
                     for key in ('gate','review','circuit','reason','telemetry'):
                         receipt.pop(key,None)  # Archived above; these are not results of the new pass.
                     conn.execute('UPDATE builds SET status=?,hold_reason=NULL,attempt_generation=?,cancellation_generation=?, '
@@ -940,7 +962,8 @@ class Store:
                     conn.execute('BEGIN IMMEDIATE')
                     row=conn.execute('SELECT * FROM builds WHERE attempt_id=?',(attempt_id,)).fetchone()
                     if (row is None or row['status'] != DISPATCHED
-                            or row['attempt_generation'] != generation or row['cancellation_generation'] != generation):
+                            or row['attempt_generation'] != generation or row['cancellation_generation'] != generation
+                            or row['lease_until_ns'] is None or row['lease_until_ns'] <= self._now()):
                         return False
                     if evidence.get('feature_id') != row['feature_id'] or evidence.get('catalog_digest') != row['catalog_digest']:
                         raise StoreError('preparation_identity_mismatch')
@@ -991,7 +1014,8 @@ class Store:
                     conn.execute('BEGIN IMMEDIATE')
                     row = conn.execute('SELECT * FROM builds WHERE attempt_id=?', (attempt_id,)).fetchone()
                     if (row is None or row['status'] != DISPATCHED or row['attempt_generation'] != generation
-                            or row['cancellation_generation'] != generation):
+                            or row['cancellation_generation'] != generation
+                            or row['lease_until_ns'] is None or row['lease_until_ns'] <= self._now()):
                         return False
                     receipt = json.loads(row['receipt']) if row['receipt'] else {}
                     previous = receipt.get('progress', {})
@@ -1048,8 +1072,9 @@ class Store:
                 conn.close()
 
     # ------------------------------------------------------------------ cancellation
-    def hold_dispatched(self, build_id, reason, actor="supervisor", receipt=None):
-        """Hold the attempt without losing its identity or trusted bounded evidence."""
+    def hold_dispatched(self, build, reason, actor="supervisor", receipt=None):
+        """Hold only the attempt that owns the live lease."""
+        build_id = build["build_id"]
         if reason not in HOLD_REASONS:
             raise StoreError(f"invalid_hold_reason:{reason}")
         with self._lock:
@@ -1062,7 +1087,13 @@ class Store:
                         return {"status": "not_found"}
                     if row["status"] != DISPATCHED:
                         return {"status": "not_dispatched"}
+                    if (row["attempt_id"] != build["attempt_id"]
+                            or row["attempt_generation"] != build["attempt_generation"]
+                            or row["cancellation_generation"] != build["cancellation_generation"]):
+                        return {"status": "stale_attempt"}
                     now = self._now()
+                    if row["lease_until_ns"] is None or row["lease_until_ns"] <= now:
+                        return {"status": "expired_attempt"}
                     conn.execute(
                         "UPDATE builds SET status=?, hold_reason=?, receipt=COALESCE(?,receipt), lease_until_ns=NULL, updated_ns=? WHERE build_id=?",
                         (HELD, reason, json.dumps(receipt) if receipt is not None else None, now, build_id),
@@ -1097,7 +1128,7 @@ class Store:
 
     # ------------------------------------------------------------------ recovery
     def work_event_count(self, build_id):
-        """How many tool or model progress events this build already recorded."""
+        """Count tool and model progress during the current attempt's author stage."""
         from .connectivity import TOOL_PHASES
         if not isinstance(build_id, str):
             return 0
@@ -1105,7 +1136,9 @@ class Store:
             conn = self._connect()
             try:
                 rows = conn.execute(
-                    "SELECT detail FROM events WHERE build_id=? AND event='progress'", (build_id,)).fetchall()
+                    "SELECT detail FROM events WHERE build_id=:build AND event='progress' AND seq > "
+                    "(SELECT COALESCE(MAX(seq), 0) FROM events WHERE build_id=:build AND event=:dispatched)",
+                    {"build": build_id, "dispatched": DISPATCHED}).fetchall()
             finally:
                 conn.close()
         count = 0
@@ -1114,7 +1147,7 @@ class Store:
                 body = json.loads(event['detail']) if event['detail'] else {}
             except ValueError:
                 continue
-            if isinstance(body, dict) and body.get('phase') in TOOL_PHASES:
+            if isinstance(body, dict) and body.get('stage') == 'building' and body.get('phase') in TOOL_PHASES:
                 count += 1
         return count
 
@@ -1139,6 +1172,8 @@ class Store:
                     if row['attempt_generation'] != generation or row['cancellation_generation'] != generation:
                         return {'status': 'stale_attempt'}
                     receipt = self._receipt_dict(row)
+                    if row['lease_until_ns'] is None or row['lease_until_ns'] <= self._now():
+                        return {'status': 'expired_attempt'}
                     if self._remote_attempt(conn, row, receipt, REMOTE_PHASES):
                         return {'status': 'remote'}
                     previous = receipt.get('continued') if isinstance(receipt.get('continued'), dict) else {}
@@ -1242,65 +1277,27 @@ class Store:
                     row['cancellation_generation'])
 
     def reconcile(self):
-        """Recover an expired attempt.
-
-        Tool or model progress and no publication job means the agent was still working, so
-        the same build is queued again. An attempt with no such evidence, or one that had
-        reached publication, stays reconciliation_needed: its paid or forge effects are unknown.
-        """
-        from .connectivity import MAX_SAME_MODEL_RESUMES, REMOTE_PHASES, TOOL_PHASES, WORKING_FLOOR
+        """Hold expired attempts until any paid or remote effects are known."""
         with self._lock:
             conn = self._connect()
             try:
                 with conn:
                     conn.execute("BEGIN IMMEDIATE")
-                    now = self._now()
-                    rows = conn.execute("SELECT * FROM builds WHERE status=? AND lease_until_ns < ?", (DISPATCHED, now)).fetchall()
-                    for row in rows:
-                        if self._queue_expired_resume(conn, row, now, REMOTE_PHASES, TOOL_PHASES,
-                                                      WORKING_FLOOR, MAX_SAME_MODEL_RESUMES):
-                            continue
-                        conn.execute(
-                            "UPDATE builds SET status=?, hold_reason=?, lease_until_ns=NULL, updated_ns=? WHERE build_id=?",
-                            (HELD, "reconciliation_needed", now, row["build_id"]),
-                        )
-                        self._event(conn, row["build_id"], now, "supervisor", "reconciled",
-                                    json.dumps({"attempt_id": row["attempt_id"]}), row["cancellation_generation"])
-                    return len(rows)
+                    return self._reconcile_expired(conn, self._now())
             finally:
                 conn.close()
 
-    def _queue_expired_resume(self, conn, row, now, remote_phases, tool_phases, floor, cap):
-        receipt = self._receipt_dict(row)
-        if self._remote_attempt(conn, row, receipt, remote_phases):
-            return False
-        work, model = 0, None
-        for event in conn.execute(
-                "SELECT detail FROM events WHERE build_id=? AND event='progress'", (row['build_id'],)):
-            try:
-                body = json.loads(event['detail']) if event['detail'] else {}
-            except ValueError:
-                continue
-            if not isinstance(body, dict) or body.get('phase') not in tool_phases:
-                continue
-            work += 1
-            detail = body.get('detail') if isinstance(body.get('detail'), dict) else {}
-            if isinstance(detail.get('model'), str):
-                model = detail['model']
-        if work < floor:
-            return False
-        previous = receipt.get('continued') if isinstance(receipt.get('continued'), dict) else {}
-        resumes = previous.get('resumes') if type(previous.get('resumes')) is int else 0
-        if resumes >= cap:
-            return False
-        marker = {'failure': 'LEASE_EXPIRED', 'trigger': 'lease_expired', 'resumes': resumes + 1}
-        if not isinstance(model, str):
-            model = previous.get('model') if isinstance(previous.get('model'), str) else None
-        from .connectivity import MODEL_NAME
-        if isinstance(model, str) and MODEL_NAME.fullmatch(model):
-            marker['model'] = model
-        self._write_continued(conn, row, receipt, marker)
-        return True
+    def _reconcile_expired(self, conn, now):
+        rows = conn.execute(
+            "SELECT * FROM builds WHERE status=? AND lease_until_ns <= ?", (DISPATCHED, now)).fetchall()
+        for row in rows:
+            conn.execute(
+                "UPDATE builds SET status=?, hold_reason=?, lease_until_ns=NULL, updated_ns=? WHERE build_id=?",
+                (HELD, "reconciliation_needed", now, row["build_id"]),
+            )
+            self._event(conn, row["build_id"], now, "supervisor", "reconciled",
+                        json.dumps({"attempt_id": row["attempt_id"]}), row["cancellation_generation"])
+        return len(rows)
 
     # ------------------------------------------------------------------ reads / fixtures
     def meta_get(self, key, default=None):

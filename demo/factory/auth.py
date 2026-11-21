@@ -48,8 +48,8 @@ class AdminSessions:
             self._sessions[session_id] = {"csrf": csrf, "created_ns": now, "last_seen_ns": now}
         return {"session_id": session_id, "csrf": csrf}
 
-    def authenticate(self, session_id, now_ns=None):
-        """Return the live session for a valid, unexpired session id, else None."""
+    def authenticate(self, session_id, now_ns=None, *, touch=True):
+        """Return a live session, optionally without extending its idle deadline."""
         now = now_ns if now_ns is not None else time.time_ns()
         with self._lock:
             session = self._sessions.get(session_id)
@@ -58,7 +58,8 @@ class AdminSessions:
             if now - session["last_seen_ns"] > self.idle_ns or now - session["created_ns"] > self.absolute_ns:
                 del self._sessions[session_id]
                 return None
-            session["last_seen_ns"] = now
+            if touch:
+                session["last_seen_ns"] = now
             return session
 
     def check_csrf(self, session, csrf):

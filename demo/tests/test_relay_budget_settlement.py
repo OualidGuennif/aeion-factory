@@ -52,13 +52,13 @@ class SettlementTests(unittest.TestCase):
             max_output_tokens=32768,prices={'input':0.15,'output':1.2},cost_limit='0.08',**bounds)
         relay.start();self.addCleanup(relay.close);return relay
 
-    def send(self,relay,index):
+    def send(self,relay,index, timeout=4):
         body=json.dumps({'model':'model','messages':[{'role':'user','content':str(index)}],
             'max_tokens':32768,'stream':True}).encode()
         request=urllib.request.Request(relay.url+'/chat/completions',data=body,
             headers={'Authorization':'Bearer '+relay.token,'Content-Type':'application/json'})
         try:
-            with urllib.request.urlopen(request,timeout=4) as response:response.read();return response.status
+            with urllib.request.urlopen(request,timeout=timeout) as response:response.read();return response.status
         except urllib.error.HTTPError as error:
             with error:error.read();return error.code
 
@@ -170,6 +170,63 @@ class SettlementTests(unittest.TestCase):
         self.busy=[(503,None),(503,None)]
         self.assertEqual(self.send(relay,0),409)
         self.assertEqual((self.posts,relay.last_error_code),(1,'RELAY_CLOSED'))
+
+    def test_a_busy_retry_rechecks_authority_after_backoff(self):
+        authorized = True
+        relay = self.relay(forward_authority=lambda: None if authorized else 'ATTEMPT_REVOKED')
+
+        def revoke_during_wait(_delay):
+            nonlocal authorized
+            authorized = False
+            return False
+
+        relay.stopping.wait = revoke_during_wait
+        self.busy = [(503, None)]
+        self.assertEqual(self.send(relay, 0), 409)
+        self.assertEqual((self.posts, relay.last_error_code), (1, 'ATTEMPT_REVOKED'))
+        self.assertTrue(relay.closed)
+
+    def test_shutdown_during_authority_check_prevents_a_busy_retry(self):
+        def close_during_authority():
+            if self.posts:
+                with relay.dispatch_lock:
+                    relay.closed = True
+            return None
+
+        relay = self.relay(forward_authority=close_during_authority)
+        relay.stopping.wait = lambda _delay: False
+        self.busy = [(503, None)]
+        self.assertEqual(self.send(relay, 0), 409)
+        self.assertEqual((self.posts, relay.forwarded_count, relay.last_error_code), (1, 1, 'RELAY_CLOSED'))
+
+    def test_upstream_resolution_cannot_send_after_relay_shutdown(self):
+        from concurrent.futures import ThreadPoolExecutor
+        import socket
+
+        relay = self.relay()
+        relay.stopping.wait = lambda _delay: False
+        self.busy = [(503, None)]
+        resolving = threading.Event()
+        resume = threading.Event()
+        original = socket.getaddrinfo
+
+        def pause_retry(host, port, *args, **kwargs):
+            if port == self.server.server_port and self.posts:
+                resolving.set()
+                resume.wait(12)
+            return original(host, port, *args, **kwargs)
+
+        with patch.object(socket, 'getaddrinfo', side_effect=pause_retry), ThreadPoolExecutor() as pool:
+            pending = pool.submit(self.send, relay, 0, 15)
+            try:
+                self.assertTrue(resolving.wait(3))
+                relay.close()
+                self.assertEqual(self.posts, 1)
+            finally:
+                resume.set()
+            self.assertEqual(pending.result(timeout=3), 409)
+        self.assertEqual((self.posts, relay.last_error_code), (1, 'RELAY_ACCOUNTING_INCOMPLETE'))
+        self.assertFalse(relay.accounting_complete)
 
     def test_lab_default_and_invalid_factory_step_bounds_remain_closed(self):
         relay=self.relay()

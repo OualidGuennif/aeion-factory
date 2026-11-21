@@ -2,6 +2,7 @@
 
 The sandbox and telemetry are fakes: no OpenShell workload, model or network is used.
 """
+import io
 import sys
 import tempfile
 import unittest
@@ -13,6 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "app"))
 from app import runner as runner_module
 from app.runner import Runner, usage_is_complete
+from factory.flue_session import new_run, usage
 
 
 class FakeSpan:
@@ -174,6 +176,62 @@ class RunnerSettlementTests(unittest.TestCase):
         self.runner._settle(self.run, self.reservation)
         self.assertEqual(self.runner.budget.settled,
                          [("reservation-fixture", Decimal("0"))])
+
+    def test_author_context_boundary_defers_checkpoint_until_teardown(self):
+        run = new_run("claude-haiku-5.5", "fixture-build", "author", "5.00")
+        run.update(trace_id="trace-fixture", root_span_id="span-fixture")
+        reported = {"complete": True, "input_tokens": 214962, "output_tokens": 629, "cost_usd": "0.20"}
+        with (
+            tempfile.TemporaryDirectory() as folder,
+            mock.patch.dict(runner_module.os.environ, {"OPENCODE_API_KEY": "fixture"}),
+            mock.patch.object(runner_module, "HARNESS", Path(folder)),
+            mock.patch.object(runner_module, "SandboxBridge") as bridge_factory,
+            mock.patch.object(runner_module, "ContextRelay") as relay_factory,
+            mock.patch.object(runner_module.subprocess, "Popen") as popen,
+            mock.patch.object(self.runner, "prepare_handover") as checkpoint,
+        ):
+            relay = relay_factory.return_value
+            relay.url = "http://localhost:1/v1"
+            relay.token = "fixture"
+            relay.context_basis = "provider_usage"
+            relay.forwarded_count = 1
+            relay.reported_usage = [reported]
+            relay.accounting_complete = True
+            relay.projected_cost = Decimal("0.20")
+            relay.provider_retries = 0
+            relay.last_http_status = None
+            relay.last_error_code = "AEION_HANDOVER"
+            process = mock.Mock(pid=1, returncode=1, stderr=io.BytesIO())
+            process.poll.return_value = 1
+
+            def halt_before_forward(*_args, **_kwargs):
+                relay_factory.call_args.args[3](214962, True)
+                return process
+
+            popen.side_effect = halt_before_forward
+            self.assertEqual(self.runner.live(run, Path(folder), None,
+                prompt="fixture", kind="factory-build"), "handover")
+            relay.close.assert_called_once()
+            bridge_factory.return_value.close.assert_called_once()
+            checkpoint.assert_not_called()
+        self.assertEqual(run["pending_author_handover"], (214962, "provider_usage"))
+        self.assertTrue(usage(run)["complete"])
+
+    def test_relay_close_failure_cannot_report_zero_transport(self):
+        run = new_run("glm-5.3-flash", "fixture-build", "review", "0.05")
+        with tempfile.TemporaryDirectory() as folder, \
+                mock.patch.dict(runner_module.os.environ, {"OPENCODE_API_KEY": "fixture"}), \
+                mock.patch.object(runner_module, "HARNESS", Path(folder)), \
+                mock.patch.object(runner_module, "ContextRelay") as relay_factory, \
+                mock.patch.object(runner_module.subprocess, "Popen", side_effect=ValueError("CLI_FAILED")):
+            relay = relay_factory.return_value
+            relay.forwarded_count = 1
+            relay.close.side_effect = RuntimeError("relay teardown failed")
+            with self.assertRaisesRegex(RuntimeError, "relay teardown failed"):
+                self.runner.live(run, Path(folder), None, prompt="fixture", kind="factory-review")
+
+        self.assertFalse(usage(run)["complete"])
+        self.assertIsNone(usage(run)["cost_usd"])
 
 
 if __name__ == "__main__":

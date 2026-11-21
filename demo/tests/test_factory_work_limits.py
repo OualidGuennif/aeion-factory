@@ -66,6 +66,51 @@ class WorkLimitTests(unittest.TestCase):
                 self.assertEqual(seen[0].get('candidate_recovered',False),recover)
                 box.close.assert_called_once()
 
+    def test_context_handover_exports_once_and_reuses_the_verified_document(self):
+        from factory.flue_session import FactorySession
+
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            repo = root / 'repo'
+            name = 'demo/forum-app/src/main/java/Fixture.java'
+            (repo / name).parent.mkdir(parents=True)
+            original, changed = b'class Fixture {}\n', b'class Fixture { int n; }\n'
+            (repo / name).write_bytes(original)
+            brief, contract = root / 'BRIEF.md', root / 'acceptance.mjs'
+            brief.write_text('# Fixture\n')
+            contract.write_text('// fixture\n')
+            target = SimpleNamespace(seed_files=(), protected_check=SimpleNamespace(
+                id='prepared_product', contract_destination='external.mjs', contract_test=contract))
+            frozen = SimpleNamespace(write_scopes=['demo/forum-app/src/main/java/'], step_cap=200,
+                context_limit=250000, deadline_ns=900_000_000_000, cost_reservation_usd='0.50')
+            runtime = Mock()
+            runtime.last_check = {'status': 'not_run'}
+            runtime.prepare_handover.side_effect = lambda *a, **kw: FactorySession.prepare_handover(runtime, *a, **kw)
+            box = Mock()
+            box.collect.return_value = {f'workspace/{name}': base64.b64encode(changed).decode(),
+                'workspace/FROZEN_ACCEPTANCE.mjs': base64.b64encode(contract.read_bytes()).decode()}
+
+            def live(run, _repo, handover, **_kwargs):
+                if handover is None:
+                    run['pending_author_handover'] = (214962, 'provider_usage')
+                    return 'handover'
+                self.assertEqual(handover['basis'], 'provider_usage')
+                self.assertTrue((root / 'HANDOVER.md').is_file())
+                self.assertEqual((repo / name).read_bytes(), changed)
+                return 'complete'
+
+            runtime.live.side_effect = live
+            with patch('factory.flue_builder.public_files', return_value={name: original}), \
+                    patch('factory.flue_builder.FactorySession', return_value=runtime), \
+                    patch('factory.flue_builder.Sandbox', return_value=box), \
+                    patch('factory.flue_builder.usage', return_value={'complete': True, 'cost_usd': '0.20'}), \
+                    patch('factory.flue_builder.subprocess.run', return_value=SimpleNamespace(returncode=1)):
+                result = FlueBuilder(root, {}).run_build(repo=repo, frozen=frozen,
+                    feature={'id': '007', 'tier': 3}, brief=brief, target=target, build={'build_id': 'a'*32})
+            self.assertEqual(result, [name])
+            self.assertEqual(runtime.live.call_count, 2)
+            self.assertEqual(box.collect.call_count, 2)
+
     def test_previous_check_failure_reaches_the_author_as_bounded_data(self):
         from factory.flue_builder import previous_failure_text
         self.assertEqual(previous_failure_text(None),'')

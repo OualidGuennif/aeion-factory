@@ -6,10 +6,10 @@ status: draft
 verified:
   - at: 2026-11-20
     what: "test_factory_contract_identity (13 OK), test_factory_preparation (30 OK), test_cockpit_client (31 pass): FactoryApp live catalog refresh and stage preservation"
-  - at: 2026-11-18
-    what: "node test_cockpit_client (31 pass) and demo/tests (896 OK): Architecture card aligned to Flue 2.3.1 + Pi 1.5.2 without changing controls or layout"
-  - at: 2026-11-17
-    what: "impeccable detect on demo/app and live / and /lab (0 anti-patterns); node test_cockpit_client (31 pass); browser checks at 1440px and 375px light/dark (0 overflow/console/CSP errors); 10/5 pagination"
+  - at: 2026-11-21
+    what: "test_cockpit_client (32 passed): preparation cap and daily refusal have distinct hold text and the final model and measured spend appear in evidence"
+  - at: 2026-11-21
+    what: "test_cockpit_client (33 passed) checks event cursor reset and duplicate suppression"
 sources:
   - resource: ../../demo/app/factory.html
     title: "Cockpit markup"
@@ -31,6 +31,10 @@ sources:
     title: "Authenticated presentation"
   - resource: ../../demo/factory/store.py
     title: "Persistent admission guard"
+  - resource: ../../demo/factory/sse.py
+    title: "Bounded event replay"
+  - resource: ../../demo/factory/auth.py
+    title: "Idle and absolute session expiry"
   - resource: ../../demo/factory/target.py
     title: "Pinned source context"
   - resource: ../../demo/factory/agent_files.py
@@ -76,6 +80,10 @@ The initial view shows all specifications in prerequisite sequence. A global fac
 separate from missing feature dependencies, task preparation and review. No per-feature manual
 setup is requested. Old dependency holds with no currently missing IDs are described as earlier
 requests requiring reconciliation; an empty list never renders a broken prerequisite sentence.
+An unreadable or invalid catalog keeps the last valid snapshot for display and pauses new
+admissions and worker dispatch. The API returns `409 catalog_invalid` on a new request.
+An unchanged queued request resumes when the validated catalog returns
+(`test_factory_contract_identity`).
 Progress SSE updates display only fixed phases and bounded evidence, with measured routing
 basis shown separately from an unmeasured cold-start default (client/progress/routing tests).
 
@@ -96,14 +104,26 @@ manual target JSON per feature. Native capability admission qualifies Flue/OpenS
 external verifier, PostgreSQL fixtures, Chromium, preparation/publication and routing mechanisms;
 it explicitly does not claim that the product is already built. Every candidate still needs
 its own external acceptance, two independent approvals and confirmed protected main.
+A stopped author can have a passing protected check on its draft. Its author execution
+receipt labels that result as a draft check until a separate gate result exists
+(test_cockpit_client).
+
 Activity refreshes retain expanded build evidence and keyboard focus. An unchanged list is
 not replaced, so reading evidence does not race the ten-second poll or SSE progress events.
+The event stream replays after the browser's last event ID. A cursor outside the retained
+window triggers a board refresh and resets the cursor; duplicate frames are ignored. An open
+stream stops when its session expires or is revoked. Stream checks leave the idle deadline
+intact (test_factory_api, test_factory_worker, test_factory_auth, test_cockpit_client).
 The exact registered001/002/014 contracts prepare deterministically without model requests or cost;
 changed MD bytes require fresh independent preparation. Missing acceptance format, explicit model
 refusal, budget exhaustion, an invalid `demo/budget.conf` (`budget_config_invalid`) and unknown
 usage have distinct bounded messages. A review vote that failed keeps its failure code (for example
 `REVIEW_RESULT_MISSING` or `PROVIDER_TIMEOUT`) in the build evidence instead of a generic label. Private proposal
 artifacts remain outside default telemetry. PostgreSQL/React helpers are not product delivery.
+A preparation budget hold identifies either a per-model request bound or a refused reservation
+in the daily forum purse. Build evidence shows the final preparer, its measured cost or unresolved
+usage, and forwarded requests when available. It also identifies a submitted contract retained
+after a budget stop for independent baseline validation (test_cockpit_client).
 The transition baseline explains an absent registered migration operator or browser source.
 A stopped author proposal can continue only with validated files, confirmed removal, complete
 bounded cost and current authorization; the independent acceptance and two reviews still decide.
@@ -134,7 +154,7 @@ without certifying rewritten MDs; only an explicitly new admission retires an ob
 that has never started (test_factory_contract_identity).
 
 The root and /factory serve the same cockpit; /lab serves the existing advanced lab. Catalog entries add availability (state, selectable, reason, missing dependencies). Board responses add the two purse summaries, or an unavailable budget state. A repeated completed feature is refused as feature_already_completed:<id>; an active duplicate is feature_in_progress:<id>. The API returns HTTP 409 for those admission conflicts. Idempotent replay retains the existing response.
-A network hold says no new author was started and that the same request resumes when the provider answers again (test_cockpit_client). A stale OpenShell security proof says the same: wait, the factory resumes that request when the proof is fresh. A reviewer that returns no verdict says the controller reruns the votes once without rerunning the author, and that a second failure stays on hold. The budget block shows settled spend as the burned amount, then reserved capacity and what remains of the purse. Admission still counts open reservations. The copy names the owner ceilings of $150 per day, $50 per author execution and $5 per review vote.
+A network hold says no new author was started and that the same request resumes when the provider answers again (test_cockpit_client). A stale OpenShell security proof says the same: wait, the factory resumes that request when the proof is fresh. A reviewer that returns no verdict says the controller reruns the votes once without rerunning the author, and that a second failure stays on hold. The budget block shows settled spend as the burned amount, then reserved capacity and what remains of the purse. Reserved capacity includes roles with unresolved usage. It survives worker restart and still counts against the original day for admission (test_factory_dispatch). The copy names the owner ceilings of $150 per day, $50 per author execution and $5 per review vote.
 While no build lease is active, the live controller removes an OpenShell sandbox pair only after it is 30 minutes old. A younger pair stays, including one still used by qualification. A dispatched build keeps its sandbox (test_openshell_reap, test_factory_connectivity). The reaper is loaded by file path, because the installed OpenShell package owns that import name.
 `python3 -m factory.live_status` from `demo/` reads the listener and the factory database without opening the store. It prints status names, progress phases and, with `--feedback`, only the supervisor CI lines. Reviewer prose, receipts and credentials stay out. `--protection` prints the release token's branch-protection HTTP status and the required check names. `Store.record_progress` preserves the enclosing stage (`preparing`, `building`, `checking`, `reviewing`) across model and tool sub-events (and only resets `author_started_ns` during `building`), so a sub-phase during review stays on `Review` with the author clock hidden while a sub-phase during author execution stays on `Build`; the stage sentence still names the step, for example Agent working (`test_factory_live_status`, `test_cockpit_client`, `test_factory_store`). While `protected_check.started` is the current phase, ten minutes of silence is not a stall: the clock says the protected check is running (test_cockpit_client). The catalog execution payload carries `admission_expires_ns`, and the notice says how many hours remain. Nothing renews that proof from the page. A failed draft check keeps at most eight pattern-checked test names on the progress receipt, so the Failed tests row can show them.
 
@@ -157,7 +177,14 @@ While no build lease is active, the live controller removes an OpenShell sandbox
    another progress event and does not move the silence clock. Ten silent minutes or three failed drafts raise a visible
    warning; the window and author budget remain the only stops (test_cockpit_client).
    A passed gate is not replayed to the next author as a failed self-check, and it hides an older failure of that same spec.
-9. Claim, completion, cancellation, hold and recovery preconditions are serialized across Store instances. The worker lease covers configured preparation, author, protected-check and two-review deadlines plus teardown. An expired attempt with no evidence the agent was still working holds as reconciliation_needed, preserves attempt identity, and does not start another paid action (test_factory_recovery). An expired attempt whose tool or model progress shows it was still working, and that has no publication job, is queued again for the same model at most three times (test_factory_connectivity). A live paid controller that cannot reach the provider twice holds the build as network_unavailable and starts no author; the cockpit says to wait rather than relaunch (test_cockpit_client).
+9. Store transactions serialize claim, completion, cancellation, hold and recovery. The
+   lease covers preparation retries and baseline checks, the author, the final protected
+   check, both reviewer votes with bounded retries and substitution, and teardown. Lease
+   expiry holds as reconciliation_needed and preserves attempt identity. Hold, preparation
+   and progress writes require the current attempt and cancellation generation and a live
+   lease (test_factory_recovery, test_factory_connectivity). A live paid controller that
+   cannot reach the provider twice holds as network_unavailable before opening an author
+   (test_cockpit_client).
 10. Compiler failures expose bounded filenames, line numbers and identifiers, never source lines,
     values or complete compiler output (test_factory_target_check and test_cockpit_client).
 11. Independent review receives all changed files within the bounded complete-review envelope, plus bounded read-only unchanged committed base files (`baseline_context`, e.g. HTTP filters and auth guards) when they fit inside remaining envelope headroom; larger candidate input still holds before any vote and no excerpt can approve an artifact (`test_factory_modelfarm`, `test_factory_review_circuit`).

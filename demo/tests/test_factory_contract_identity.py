@@ -16,6 +16,50 @@ from factory.preparation import freeze_task, PreparationError
 
 
 class ContractIdentityTests(unittest.TestCase):
+    def test_invalid_manifest_pauses_admission_and_preserves_the_queue(self):
+        from factory.api import ApiError, FactoryApp
+
+        app = FactoryApp(self.manifest, self.root / 'app-state', bootstrap_token='fixture-only')
+        session = app.auth.login('fixture-only')
+
+        def queue(fid, key):
+            return app.queue('127.0.0.1:8088', 'http://127.0.0.1:8088',
+                             session, session['csrf'], {'ids': [fid], 'idempotency_key': key})
+
+        queue('001', 'before')
+        for invalid in ('{', json.dumps({**self.raw, 'count': None}),
+                        json.dumps({**self.raw, 'architecture': None}),
+                        json.dumps({k: v for k, v in self.raw.items() if not k.startswith('architecture')}),
+                        json.dumps({**self.raw, 'count': 1, 'features': [None]}),
+                        json.dumps({**self.raw, 'features': [
+                            self.raw['features'][0], {**self.raw['features'][1], 'depends_on': [[]]}]})):
+            with self.subTest(invalid=invalid):
+                self.manifest.write_text(invalid)
+                view = app.catalog_view(session)[1]
+                self.assertEqual(view['execution']['hold_reason'], 'catalog_invalid')
+                self.assertEqual(view['count'], 2)
+                with self.assertRaises(ApiError) as caught:
+                    queue('002', 'during')
+                self.assertEqual((caught.exception.status, caught.exception.code), (409, 'catalog_invalid'))
+                self.assertIsNone(app.tick())
+                self.assertEqual(app.store.board()[0]['status'], 'queued')
+        self.manifest.write_text(json.dumps(self.raw))
+        self.assertEqual(app.tick()['result']['status'], 'completed')
+        self.assertEqual(len(app.store.board()), 1)
+
+    def test_authorization_reloads_manifest_without_a_cockpit_refresh(self):
+        from factory.api import FactoryApp
+
+        app = FactoryApp(self.manifest, self.root / 'app-state', bootstrap_token='fixture-only')
+        app.store.admit(['001'], 'before', app.catalog)
+        build = app.store.claim_next(app.catalog)
+        self.assertTrue(app.worker._attempt_authorized(build))
+        self.manifest.write_text('{')
+        self.assertFalse(app.worker._attempt_authorized(build))
+        raw = copy.deepcopy(self.raw)
+        raw['features'][0]['title'] = 'Changed admitted contract'
+        self.manifest.write_text(json.dumps(raw))
+        self.assertFalse(app.worker._attempt_authorized(build))
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
@@ -93,7 +137,7 @@ class ContractIdentityTests(unittest.TestCase):
     def test_uncertain_old_attempt_still_blocks_new_contract(self):
         self.store.admit(['001'], 'old', self.catalog)
         attempt = self.store.claim_next(self.catalog)
-        self.store.hold_dispatched(attempt['build_id'], 'worker_error')
+        self.store.hold_dispatched(attempt, 'worker_error')
         changed = self.rewrite('001')
         with self.assertRaisesRegex(StoreError, 'feature_in_progress'):
             self.store.admit(['001'], 'new', changed)
@@ -177,7 +221,7 @@ class ContractIdentityTests(unittest.TestCase):
         self.assertEqual(by_id['001']['state'], 'ready')
         self.assertTrue(by_id['001']['selectable'])
         self.assertNotEqual(app.catalog.contracts['001'], old_contract)
-        self.assertEqual(app.worker.catalog.contracts['001'], app.catalog.contracts['001'])
+        self.assertEqual(app.worker.catalog.contracts['001'], old_contract)
         status, body, _ = app.queue(
             '127.0.0.1:8088', 'http://127.0.0.1:8088', session, session['csrf'],
             {'ids': ['001'], 'idempotency_key': 'live-reload-001'},

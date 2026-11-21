@@ -7,6 +7,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from factory.budget import BudgetError
 from factory.models import Router, Telemetry
 from factory.review_circuit import two_vote_review, MAX_PROMPT_CHARS
 
@@ -15,6 +16,20 @@ FILES = {"demo/forum/product/x.py": "print('ok')\n"}
 
 
 class CircuitTelemetryTests(unittest.TestCase):
+    def test_purse_refusal_retains_earlier_vote_without_model_failure(self):
+        telemetry = Telemetry()
+        calls = []
+        def complete(model, _prompt):
+            calls.append(model)
+            if len(calls) == 2:
+                raise BudgetError("budget_unavailable")
+            return {"verdict": "approve", "reason": "fixture"}
+
+        result = two_vote_review('glm-5.3-flash', '001', FILES, Router(telemetry), complete)
+        self.assertEqual(result['reason'], 'review_budget_unavailable')
+        self.assertEqual([vote['verdict'] for vote in result['votes']], ['approve'])
+        self.assertEqual(len(calls), 2)
+
     def test_failed_vote_keeps_its_actual_typed_channel_diagnostics(self):
         execution={'engine':'flue-pi','failure':'REVIEW_RESULT_MISSING','trace_id':'a'*32,
                    'forwarded_count':1,'usage':{'complete':True,'cost_usd':'0.01'}}
@@ -199,6 +214,71 @@ class CircuitTelemetryTests(unittest.TestCase):
                                  lambda m, p: {'verdict': 'approve', 'reason': 'ok'},
                                  preparer_model='qwen-3.8-flash', exclude_models=('claude-haiku-5.5',))
         self.assertEqual([v['model'] for v in ex_res['votes']], ['deepseek-4.1-flash', 'gpt-6-luna'])
+    def test_review_handover_substitutes_only_with_closed_usage(self):
+        from factory.publisher import independent_circuit
+        for complete_usage, cost, expected in (
+            (True, '0.89', 'approved'), (False, None, 'held'), (True, 'NaN', 'held'),
+        ):
+            with self.subTest(complete_usage=complete_usage, cost=cost):
+                calls = []
+                handover = {'engine': 'flue-pi', 'role': 'review', 'failure': 'AEION_HANDOVER',
+                            'forwarded_count': 2, 'usage': {'complete': complete_usage,
+                                                          'cost_usd': cost, 'output_tokens': 66787}}
+
+                def vote(model, prompt):
+                    calls.append((model, prompt))
+                    if model == 'claude-haiku-5.5':
+                        raise ValueError('AEION_HANDOVER')
+                    return {'verdict': 'approve', 'reason': 'fixture'}
+
+                result = two_vote_review('glm-5.3-flash', '007', FILES, Router(Telemetry()), vote,
+                    preparer_model='qwen-3.8-flash', first_reviewer='claude-haiku-5.5',
+                    execution_for_vote=lambda: handover if calls[-1][0] == 'claude-haiku-5.5' else None)
+                self.assertEqual(result['status'], expected)
+                if expected == 'approved':
+                    self.assertTrue(independent_circuit(result))
+                    self.assertEqual(len(calls), 3)
+                    self.assertEqual(len({prompt for _, prompt in calls}), 1)
+                    self.assertEqual(result['unavailable_reviewers'][0]['execution'], handover)
+                else:
+                    self.assertEqual(len(calls), 1)
+                    self.assertEqual(result['votes'][0]['reason'], 'AEION_HANDOVER')
+
+    def test_exhausting_replacements_keeps_the_accounted_context_stop(self):
+        handover = {'engine': 'flue-pi', 'role': 'review', 'failure': 'AEION_HANDOVER',
+                    'forwarded_count': 1, 'usage': {'complete': True, 'cost_usd': '0.12'}}
+        calls = []
+
+        def stop(model, _prompt):
+            calls.append(model)
+            raise ValueError('AEION_HANDOVER')
+
+        result = two_vote_review('glm-5.3-flash', '007', FILES, Router(Telemetry()), stop,
+            preparer_model='qwen-3.8-flash', execution_for_vote=lambda: handover,
+            exclude_models=('deepseek-4.1-flash', 'gpt-6-luna', 'minimax-m3.1-flash'))
+        self.assertEqual(calls, ['claude-haiku-5.5'])
+        self.assertEqual((result['status'], result['reason']), ('held', 'reviewer_failed'))
+        self.assertEqual(result['votes'][0]['execution'], handover)
+
+    def test_next_vote_exhaustion_preserves_the_prior_substituted_approval(self):
+        handover = {'engine': 'flue-pi', 'role': 'review', 'failure': 'AEION_HANDOVER',
+                    'forwarded_count': 1, 'usage': {'complete': True, 'cost_usd': '0.12'}}
+        calls = []
+
+        def submit(model, _prompt):
+            calls.append(model)
+            if model == 'claude-haiku-5.5':
+                raise ValueError('AEION_HANDOVER')
+            return {'verdict': 'approve', 'reason': 'fixture'}
+
+        result = two_vote_review('glm-5.3-flash', '007', FILES, Router(Telemetry()), submit,
+            preparer_model='qwen-3.8-flash', exclude_models=('deepseek-4.1-flash', 'minimax-m3.1-flash'),
+            execution_for_vote=lambda: handover if calls[-1] == 'claude-haiku-5.5' else None)
+        self.assertEqual(calls, ['claude-haiku-5.5', 'gpt-6-luna'])
+        self.assertEqual((result['status'], result['reason']), ('held', 'no_independent_reviewer'))
+        self.assertEqual([(v['vote'], v['verdict']) for v in result['votes']], [(1, 'approve')])
+        self.assertEqual(result['unavailable_reviewers'][0]['execution'], handover)
+
     def test_budget_or_local_preflight_rejection_does_not_become_a_model_failure(self):
         telemetry=Telemetry()
         def fail_before_transport(*_):raise ValueError('budget unavailable')

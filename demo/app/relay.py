@@ -4,6 +4,7 @@ import hmac
 import http.client
 import json
 import secrets
+import socket
 import ssl
 import threading
 from decimal import Decimal
@@ -56,11 +57,15 @@ def retry_delay(error, fallback):
     return fallback
 
 
+class _ForwardStopped(Exception):
+    """The connection opened, but the supervisor no longer permits sending the request."""
+
+
 class ContextRelay:
     def __init__(self, model, api_key, limit, checkpoint, event, *, upstream=None, counter=None, bind=None, admission=None,
                  api='openai-completions', prices=None, cost_limit=None, required_effort=None,max_output_tokens=4096,
                  required_reasoning_effort=None, max_requests=12, reasoning_thinking_object=True,
-                 budget_multiplier='1'):
+                 budget_multiplier='1', forward_authority=None):
         if type(max_requests) is not int or not 1<=max_requests<=200:
             raise ValueError('STEP_LIMIT_INVALID')
         self.max_requests=max_requests
@@ -98,6 +103,7 @@ class ContextRelay:
         self.closed = False
         self.active = threading.Lock()
         self.dispatch_lock = threading.Lock()
+        self.upstream_socket = None
         self.responses = []
         self.last_count = None
         self.forwarded_count = 0
@@ -114,7 +120,7 @@ class ContextRelay:
         self.last_body_sha256 = None
         # Called before every forward; returns a stop code once the supervisor has accounted
         # the previous response and found the budget or native context gate reached.
-        self.admission = admission
+        self.admission, self.forward_authority = admission, forward_authority
         relay = self
 
         class Handler(BaseHTTPRequestHandler):
@@ -220,6 +226,7 @@ class ContextRelay:
                         return self.deny(409, stop)
                     context_count = counted
                     input_bound = counted
+                    stage = 'context_usage'
                     messages = _without_cache_markers(payload.get('messages'))
                     frame = _without_cache_markers({k: v for k, v in payload.items()
                                                     if k not in ('messages', 'max_tokens', 'max_completion_tokens')})
@@ -252,10 +259,13 @@ class ContextRelay:
                             return self.deny(409, 'USAGE_UNKNOWN')
                         relay.closed = True
                         relay.last_error_code = 'AEION_HANDOVER'
+                        stage = 'checkpoint'
                         relay.checkpoint(context_count, True)
                         return self.deny(409, "AEION_HANDOVER")
                     if context_count is not None and context_count >= max(1, relay.limit - 20000):
+                        stage = 'checkpoint'
                         relay.checkpoint(context_count, False)
+                    stage = 'budget'
                     if relay.prices is not None and relay.cost_limit is not None:
                         input_rate = max(Decimal(str(relay.prices['input'])), Decimal(str(relay.prices.get('cacheWrite', 0))))
                         projected = ((Decimal(input_bound) * input_rate + Decimal(maximum) * Decimal(str(relay.prices['output'])))
@@ -266,18 +276,14 @@ class ContextRelay:
                             return self.deny(409, 'BUDGET_STOP')
                         relay.projected_cost += projected
                     relay.previous_frame, relay.previous_messages = frame, messages
+                    stage = 'forward_setup'
                     headers = {name: value for name, value in self.headers.items()
                                if name.lower() in {'user-agent', 'anthropic-version', 'anthropic-beta'} or name.lower().startswith("x-opencode-")}
                     request = urllib.request.Request(relay.upstream, data=body, headers={**headers,
                         "Authorization": "Bearer " + relay.key, "Content-Type": "application/json",
                         "Accept-Encoding": "identity",
                     })
-                    # No retries, redirects, environment proxy or raw request/response logging.
-                    class NoRedirect(urllib.request.HTTPRedirectHandler):
-                        def redirect_request(self, *_args, **_kwargs):
-                            return None
-                    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirect(),
-                                                         urllib.request.HTTPSHandler(context=_tls_context()))
+                    opener = relay._upstream_opener()
                     if not relay.claim_forward(counted):
                         self.deny(409,'RELAY_CLOSED')
                         return
@@ -347,6 +353,12 @@ class ContextRelay:
                                     (input_cost+Decimal(summary['output_tokens'])*
                                      Decimal(str(relay.prices['output'])))*relay.budget_multiplier/1000000)
                             relay.projected_cost+=spent_bound-projected
+                except _ForwardStopped as error:
+                    relay.closed = True
+                    code = str(error)
+                    relay.last_error_code = relay.last_error_code or code
+                    relay.event("context.refused", **{"aeion.failure.code": code})
+                    self.deny(409, code)
                 except urllib.error.HTTPError as error:
                     relay.closed = True
                     relay.event("provider.rejected", **{"aeion.http.status": error.code})
@@ -436,13 +448,48 @@ class ContextRelay:
         if not self.forwarded_count:
             return False
         previous = self.reported_usage[-1] if len(self.reported_usage) == self.forwarded_count else {}
+        inputs, outputs = previous.get('input_tokens'), previous.get('output_tokens')
         return (previous.get('complete') is not True
-                or any(type(previous.get(key)) is not int or previous[key] < 0
-                       for key in ('input_tokens', 'output_tokens')))
+                or type(inputs) is not int or inputs < 1
+                or type(outputs) is not int or outputs < 0)
+
+    def _upstream_opener(self):
+        relay, tls = self, _tls_context()
+
+        class GuardedConnection:
+            def connect(self):
+                super().connect()
+                stop = relay.forward_authority() if relay.forward_authority else None
+                with relay.dispatch_lock:
+                    if relay.closed:
+                        raise _ForwardStopped('RELAY_CLOSED')
+                    if stop:
+                        raise _ForwardStopped(stop)
+                    relay.upstream_socket = self.sock
+
+        class HttpConnection(GuardedConnection, http.client.HTTPConnection):
+            pass
+
+        class HttpsConnection(GuardedConnection, http.client.HTTPSConnection):
+            pass
+
+        class HttpHandler(urllib.request.HTTPHandler):
+            def http_open(self, request):
+                return self.do_open(HttpConnection, request)
+
+        class HttpsHandler(urllib.request.HTTPSHandler):
+            def https_open(self, request):
+                return self.do_open(HttpsConnection, request, context=tls)
+
+        class NoRedirect(urllib.request.HTTPRedirectHandler):
+            def redirect_request(self, *_args, **_kwargs):
+                return None
+
+        return urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirect(), HttpHandler(), HttpsHandler())
 
     def claim_forward(self, counted):
-        # Shutdown and the liability counter share one ordering point. Once closed, local
-        # preflight cannot later start an uncounted provider request after a zero settlement.
+        # First count the logical claim. Each wire connection separately checks
+        # authority and shutdown after DNS/TLS and before sending HTTP bytes.
         with self.dispatch_lock:
             if self.closed:
                 return False
@@ -453,7 +500,14 @@ class ContextRelay:
     def close(self):
         with self.dispatch_lock:
             self.closed = True
+            upstream, self.upstream_socket = self.upstream_socket, None
         self.stopping.set()
+        if upstream is not None:
+            try:
+                upstream.shutdown(socket.SHUT_RDWR)
+            except OSError:
+                pass
+            upstream.close()
         for response in self.responses[:]:
             response.close()
         self.server.shutdown()

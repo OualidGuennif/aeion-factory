@@ -1,4 +1,4 @@
-"""Explicit, one-time repair of a held legacy review envelope; no HTTP/worker authority.
+"""Operator entry point for a bounded review-only recheck of a held artifact.
 
 From the repository: PYTHONPATH=demo demo/.local/venv/bin/python -m factory.review_context BUILD_ID
 Spec: knowledge/components/factory-flue.md. Existing daily budget and live admission still apply.
@@ -13,8 +13,11 @@ import sys
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('build_id')
-    parser.add_argument('--retry-failed-review',action='store_true',
-        help='Once only after a failed v2 review, never after a v2 code rejection. All votes are rerun.')
+    mode=parser.add_mutually_exclusive_group()
+    mode.add_argument('--retry-failed-review',action='store_true',
+        help='Retry a failed v2 review, including one explicit recovery after a budget hold. All votes are rerun.')
+    mode.add_argument('--recover-review-handover',action='store_true',
+        help='Once after the automatic retry ended at an accounted reviewer context stop. All votes are rerun.')
     args=parser.parse_args()
     if not re.fullmatch('[0-9a-f]{32}',args.build_id):parser.error('Invalid build identity')
     root=Path(__file__).resolve().parents[2]
@@ -27,7 +30,8 @@ def main():
         spec_dir=root/'demo/forum/features',bootstrap_token='unused-local-cli-no-server',
         budget=DailyBudget(root/'demo/.local/budget/ledger.jsonl'),execution=resolve(root,'live'))
     try:
-        result=app.worker.reassess_review_context(args.build_id,retry_failed_review=args.retry_failed_review)['result']
+        result=app.worker.reassess_review_context(args.build_id,retry_failed_review=args.retry_failed_review,
+            recover_review_handover=args.recover_review_handover)['result']
     except CircuitError as error:
         print(json.dumps({'build_id':args.build_id,'status':'held','reason':str(error)}))
         return 1

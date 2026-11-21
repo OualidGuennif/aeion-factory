@@ -11,7 +11,9 @@ import json
 import difflib
 import re
 import time
+from decimal import Decimal, InvalidOperation
 
+from .budget import BudgetError
 from .models import Router, RoutingError, family, known
 from .review import content_digest, SECRET_PATTERNS, MAX_FILE_BYTES, MAX_TOTAL_BYTES
 from .target import _git, SHA_RE
@@ -222,11 +224,27 @@ def is_zero_forward_preflight(execution):
     return execution.get('forwarded_count') == 0 and cost_zero and no_output
 
 
+def is_accounted_review_handover(execution):
+    """A context stop in the reviewer with every forwarded request accounted for."""
+    if (not isinstance(execution, dict) or execution.get('failure') != 'AEION_HANDOVER'
+            or execution.get('engine') != 'flue-pi' or execution.get('role') != 'review'
+            or type(execution.get('forwarded_count')) is not int or execution['forwarded_count'] <= 0):
+        return False
+    usage = execution.get('usage')
+    if not isinstance(usage, dict) or usage.get('complete') is not True:
+        return False
+    try:
+        cost = Decimal(str(usage.get('cost_usd')))
+    except InvalidOperation:
+        return False
+    return cost.is_finite() and cost >= 0
+
+
 def _unavailable(execution):
-    """True for an infrastructure, provider, CLI, timeout or zero-forward preflight refusal with no verdict."""
+    """True for a reviewer failure eligible for bounded substitution before a verdict."""
     if not isinstance(execution, dict):
         return False
-    if is_zero_forward_preflight(execution):
+    if is_zero_forward_preflight(execution) or is_accounted_review_handover(execution):
         return True
     failure = execution.get('failure')
     usage = execution.get('usage')
@@ -287,13 +305,21 @@ def two_vote_review(author_model, feature_id, files, router, complete, telemetry
                 excluded=[*used_models,*(model for model in MODELS if model!=first_reviewer)]
             model = router.select("review", exclude_models=excluded, exclude_families=used_families)
         except RoutingError:
-            return {"status": "held", "reason": "no_independent_reviewer", "votes": votes,
+            reason = "no_independent_reviewer"
+            if (unavailable and unavailable[-1]['vote'] == index
+                    and is_accounted_review_handover(unavailable[-1].get('execution'))):
+                votes.append(unavailable.pop())
+                reason = "reviewer_failed"
+            return {"status": "held", "reason": reason, "votes": votes,
                     **({'unavailable_reviewers': unavailable} if unavailable else {}),**context}
         if family(model) in used_families:
             return {"status": "held", "reason": "same_family_reviewer", "votes": votes,**context}
         started = time.monotonic()
         try:
             answer = _normalise(complete(model, prompt))
+        except BudgetError:
+            return {"status": "held", "reason": "review_budget_unavailable", "votes": votes,
+                    **({"unavailable_reviewers": unavailable} if unavailable else {}), **context}
         except Exception:  # noqa: BLE001 - a failed vote is a hold, never an approval
             answer = None
         latency_ms = int((time.monotonic() - started) * 1000)

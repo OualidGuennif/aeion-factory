@@ -147,6 +147,29 @@ class TargetDispatchTests(unittest.TestCase):
         self.assertIn("BRIEF.md", task)
         self.assertIn("demo/forum-app/src/main/java/local/aeion/forum/", task)
 
+    def test_catalog_revoked_during_the_last_vote_cannot_stage_publication(self):
+        from unittest.mock import Mock
+
+        self.store.admit(["013"], "catalog-revoked", self.catalog)
+        worker = self.worker(self.builder)
+        worker.publication = Mock()
+        worker.publication.run_once.return_value = None
+        worker.catalog_loader = lambda: self.catalog
+        votes = []
+
+        def review(model, prompt):
+            votes.append(model)
+            if len(votes) == 2:
+                worker.catalog_loader = lambda: None
+            return approve(model, prompt)
+
+        worker.review_complete = review
+        result = worker.run_once()["result"]
+        self.assertEqual(len(votes), 2)
+        self.assertEqual(result, {"status": "held", "reason": "reconciliation_needed"})
+        worker.publication.stage.assert_not_called()
+        self.assertEqual(self.store.board()[0]["hold_reason"], "reconciliation_needed")
+
     def test_a_same_build_retry_replaces_only_its_own_workspace(self):
         self.store.admit(["013"], "k-ws", self.catalog)
         build_id = self.store.board()[0]["build_id"]
@@ -228,6 +251,27 @@ class TargetDispatchTests(unittest.TestCase):
         entries = [json.loads(line) for line in (self.root / "ledger.jsonl").read_text().splitlines()]
         self.assertEqual([entry["kind"] for entry in entries], ["reserve"])
         self.assertEqual(budget.spent("aeion-autonomous-forum"), Decimal("5.00"))
+
+    def test_author_preflight_cannot_settle_usage_from_a_previous_build(self):
+        from unittest.mock import patch
+        budget = DailyBudget(self.root / "ledger.jsonl")
+        self.store.admit(["013"], "failing-preflight", self.catalog)
+
+        class Builder:
+            paid = True
+            last_usage = {"complete": True, "cost_usd": "0.15"}
+            last_execution = {"build_id": "previous-build", "forwarded_count": 1}
+
+            def run_build(self, **kwargs):
+                raise AssertionError("preflight must stop before the author")
+
+        worker = self.worker(Builder(), budget=budget, require_circuit=False)
+        worker.config["cost_reservation_usd"] = "5.00"
+        with patch.object(worker, "_correction_input", side_effect=OSError("preflight failed")):
+            worker.run_once()
+
+        self.assertEqual(self.store.board()[0]["status"], FAILED)
+        self.assertEqual(budget.spent("aeion-autonomous-forum"), Decimal("0.00"))
 
     def test_a_refused_review_retry_is_not_fetched_on_the_next_tick(self):
         calls = []
@@ -364,6 +408,57 @@ class TargetDispatchTests(unittest.TestCase):
         self.assertEqual([entry["kind"] for entry in entries],
                          ["reserve", "reserve", "reserve"])
         self.assertEqual(budget.spent("aeion-autonomous-forum"), Decimal("0.10"))
+
+    def test_complete_author_usage_makes_capacity_available_before_independent_votes(self):
+        scope = "aeion-autonomous-forum"
+        budget = DailyBudget(self.root / "ledger.jsonl", limits={scope: "10.00"})
+
+        def author(**kwargs):
+            self.builder(**kwargs)
+            author.last_usage = {"complete": True, "cost_usd": "0.50"}
+
+        author.paid = True
+
+        class Reviewer:
+            cost_limit = "5.00"
+            last_usage = None
+            calls = 0
+
+            def __call__(self, model, prompt):
+                self.calls += 1
+                self.last_usage = {"complete": True, "cost_usd": "0.10"}
+                return approve(model, prompt)
+
+        worker = self.worker(author, budget=budget)
+        worker.review_complete = Reviewer()
+        worker.config["cost_reservation_usd"] = "8.00"
+        self.store.admit(["013"], "tight-purse", self.catalog)
+        result = worker.run_once()["result"]
+        self.assertEqual(result, {"status": "held", "reason": "publication_unavailable"})
+        receipt = json.loads(self.store.board()[0]["receipt"])
+        self.assertEqual(receipt["circuit"]["status"], "approved")
+        self.assertEqual(worker.review_complete.calls, 2)
+        self.assertEqual(budget.remaining(scope), Decimal("9.30"))
+        entries = [json.loads(line) for line in (self.root / "ledger.jsonl").read_text().splitlines()]
+        self.assertEqual([entry["kind"] for entry in entries], ["reserve", "settle"] * 3)
+
+    def test_review_reservation_refusal_calls_no_reviewer(self):
+        scope = "aeion-autonomous-forum"
+        budget = DailyBudget(self.root / "ledger.jsonl", limits={scope: "4.50"})
+        worker = self.worker(self.builder, budget=budget)
+        calls = []
+
+        def reviewer(model, prompt):
+            calls.append(model)
+            return approve(model, prompt)
+
+        reviewer.cost_limit = "5.00"
+        worker.review_complete = reviewer
+        self.store.admit(["013"], "unaffordable-review", self.catalog)
+        result = worker.run_once()["result"]
+        self.assertEqual(result["reason"], "review_budget_unavailable")
+        self.assertEqual(result["circuit"]["votes"], [])
+        self.assertEqual(calls, [])
 
     def test_a_worker_without_a_purse_holds_before_any_work(self):
         self.store.admit(["013"], "k6a", self.catalog)

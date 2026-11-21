@@ -19,7 +19,7 @@ Parallel work also requires disjoint declared write scopes and separate worktree
 | 004 | 004 | [Accounts and password hashing](004-accounts-and-password-hashing.md) | foundation | P0 | M | no | 002 |
 | 005 | 005 | [Sessions with signed cookies](005-sessions-with-signed-cookies.md) | foundation | P0 | M | no | 004 |
 | 006 | 006 | [CSRF protection on every mutation](006-csrf-protection-on-every-mutation.md) | foundation | P0 | S | no | 005 |
-| 007 | 007 | [Content sanitization for user text](007-content-sanitization-for-user-text.md) | foundation | P0 | M | no | 001 |
+| 007 | 007 | [Content sanitization for user text](007-content-sanitization-for-user-text.md) | foundation | P0 | M | no | 006 |
 | 008 | 008 | [Rate limiting per identity](008-rate-limiting-per-identity.md) | foundation | P0 | M | no | 002, 005 |
 | 009 | 009 | [Append-only audit log](009-append-only-audit-log.md) | foundation | P0 | M | no | 002 |
 | 010 | 010 | [Uniform error answers](010-uniform-error-answers.md) | foundation | P0 | S | no | 001, 009 |

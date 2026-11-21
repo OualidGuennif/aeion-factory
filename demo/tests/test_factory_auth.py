@@ -78,6 +78,12 @@ class AdminSessionTests(unittest.TestCase):
         # Jump past the idle window.
         self.assertIsNone(self.auth.authenticate(first["session_id"], now_ns=self.auth.idle_ns + 1))
 
+    def test_stream_authentication_does_not_extend_idle_deadline(self):
+        auth = AdminSessions(bootstrap_token="fixture", idle_ns=10, absolute_ns=100)
+        session = auth.login("fixture", now_ns=0)["session_id"]
+        self.assertIsNotNone(auth.authenticate(session, now_ns=8, touch=False))
+        self.assertIsNone(auth.authenticate(session, now_ns=11, touch=False))
+
     def test_absolute_expiry(self):
         first = self.auth.login("bootstrap-secret", now_ns=0)
         self.assertIsNone(self.auth.authenticate(first["session_id"], now_ns=self.auth.absolute_ns + 1))

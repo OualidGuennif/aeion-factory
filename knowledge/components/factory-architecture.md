@@ -233,6 +233,9 @@ enforcement claim.
 
 Bounded subprocess timeouts terminate an invocation; no background service or retry queue
 continues it.
+Factory spend reservations remain binding for their original Paris budget day until
+settled with trusted usage. Restart and new admissions preserve unresolved reservations
+(test_factory_dispatch).
 
 ### Delivery and rollback
 
@@ -246,6 +249,9 @@ force-push `main`. No production migration, rollback command or availability/SLO
 template itself.
 
 ## Invariants
+
+Invalid catalog input pauses new admission and preserves the last valid read-only view and
+durable build history (`test_factory_contract_identity`).
 
 1. Owner/repository instructions and canonical Knowledge remain authoritative (review and
    existing Knowledge/link checks).

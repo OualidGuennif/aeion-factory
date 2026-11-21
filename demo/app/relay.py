@@ -60,7 +60,7 @@ class ContextRelay:
     def __init__(self, model, api_key, limit, checkpoint, event, *, upstream=None, counter=None, bind=None, admission=None,
                  api='openai-completions', prices=None, cost_limit=None, required_effort=None,max_output_tokens=4096,
                  required_reasoning_effort=None, max_requests=12, reasoning_thinking_object=True,
-                 budget_multiplier='1'):
+                 budget_multiplier='1', retry_authority=None):
         if type(max_requests) is not int or not 1<=max_requests<=200:
             raise ValueError('STEP_LIMIT_INVALID')
         self.max_requests=max_requests
@@ -114,7 +114,7 @@ class ContextRelay:
         self.last_body_sha256 = None
         # Called before every forward; returns a stop code once the supervisor has accounted
         # the previous response and found the budget or native context gate reached.
-        self.admission = admission
+        self.admission, self.retry_authority = admission, retry_authority
         relay = self
 
         class Handler(BaseHTTPRequestHandler):
@@ -306,6 +306,12 @@ class ContextRelay:
                             if relay.stopping.wait(delay) or relay.closed:
                                 relay.last_error_code = relay.last_error_code or 'RELAY_CLOSED'
                                 return self.deny(409, 'RELAY_CLOSED')
+                            stop = relay.retry_authority() if relay.retry_authority else None
+                            if stop:
+                                relay.closed = True
+                                relay.last_error_code = stop
+                                relay.event("context.refused", **{"aeion.failure.code": stop})
+                                return self.deny(409, stop)
                     stage = 'stream'
                     with opened as response:
                         relay.responses.append(response)

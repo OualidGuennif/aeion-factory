@@ -244,6 +244,22 @@ class CircuitTelemetryTests(unittest.TestCase):
                     self.assertEqual(len(calls), 1)
                     self.assertEqual(result['votes'][0]['reason'], 'AEION_HANDOVER')
 
+    def test_exhausting_replacements_keeps_the_accounted_context_stop(self):
+        handover = {'engine': 'flue-pi', 'role': 'review', 'failure': 'AEION_HANDOVER',
+                    'forwarded_count': 1, 'usage': {'complete': True, 'cost_usd': '0.12'}}
+        calls = []
+
+        def stop(model, _prompt):
+            calls.append(model)
+            raise ValueError('AEION_HANDOVER')
+
+        result = two_vote_review('glm-5.3-flash', '007', FILES, Router(Telemetry()), stop,
+            preparer_model='qwen-3.8-flash', execution_for_vote=lambda: handover,
+            exclude_models=('deepseek-4.1-flash', 'gpt-6-luna', 'minimax-m3.1-flash'))
+        self.assertEqual(calls, ['claude-haiku-5.5'])
+        self.assertEqual((result['status'], result['reason']), ('held', 'reviewer_failed'))
+        self.assertEqual(result['votes'][0]['execution'], handover)
+
     def test_budget_or_local_preflight_rejection_does_not_become_a_model_failure(self):
         telemetry=Telemetry()
         def fail_before_transport(*_):raise ValueError('budget unavailable')

@@ -305,7 +305,11 @@ def two_vote_review(author_model, feature_id, files, router, complete, telemetry
                 excluded=[*used_models,*(model for model in MODELS if model!=first_reviewer)]
             model = router.select("review", exclude_models=excluded, exclude_families=used_families)
         except RoutingError:
-            return {"status": "held", "reason": "no_independent_reviewer", "votes": votes,
+            reason = "no_independent_reviewer"
+            if unavailable and is_accounted_review_handover(unavailable[-1].get('execution')):
+                votes.append(unavailable.pop())
+                reason = "reviewer_failed"
+            return {"status": "held", "reason": reason, "votes": votes,
                     **({'unavailable_reviewers': unavailable} if unavailable else {}),**context}
         if family(model) in used_families:
             return {"status": "held", "reason": "same_family_reviewer", "votes": votes,**context}

@@ -1,3 +1,15 @@
+## Factory PR #59 review follow-up — 2026-11-21
+
+- A provider retry rechecks live Factory authority after backoff. A loopback
+  regression revokes the claim during the wait and observes exactly one POST.
+- A native Flue replay preserves a typed verdict across either the relay or the
+  native context stop. Seven scripted requests exercised three paths with no
+  real provider calls.
+- Review recovery retains a settled context stop when no substitute is eligible.
+  The operator may recover an exhausted review budget once on the same artifact.
+  The author is reused, archived votes are preserved, and new approvals require
+  their own reservations.
+
 ## Feature 007 reviewer context stop — 2026-11-21
 
 - Build `67c106304edd4b0b89ecd9a740340add` passed the protected gate with nine

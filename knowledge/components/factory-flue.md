@@ -324,8 +324,8 @@ reruns external gates and two fresh votes, including the original rejecting revi
 the author/preparer. It never reruns or bills the author, imports a vote or repeats a v2 rejection.
 Unknown usage, changed contracts, cancellation and prior remote work refuse this repair.
 A reviewer must deliver its verdict through the typed `submit_review` tool. If the relay
-stops the next turn with `AEION_HANDOVER`, the supervisor can read the immutable submission
-after teardown. The role still requires valid typed output, complete provider usage and an
+or the native context gate stops the next turn with `AEION_HANDOVER`, the supervisor can read
+the immutable submission after teardown. The role still requires valid typed output, complete provider usage and an
 authorized attempt. The receipt records the context stop and the preserved verdict, including
 a rejection. If a session ends without a verdict, the reviewer's Flue 2.3 `useAgentFinish`
 hook appends one result-required signal,
@@ -334,7 +334,9 @@ guarded by `usePersistentState` so it fires at most once; a second miss still fa
 After a v2 hold caused only by such failures (no rejection), the controller reruns the
 external gate and both votes once on the same unchanged artifact, without an operator and
 without rerunning the author. `review_context --retry-failed-review` uses that same path.
-The archived votes are never reused. A second failure stays held. The operator may request
+The operator may also invoke it once after a review budget hold, including a budget stop
+during the automatic retry. Both votes get new reservations. The author stays idle and the
+archived votes are never reused. A second failure stays held. The operator may request
 `review_context --recover-review-handover` once when the latest v2 review ended with an
 accounted `AEION_HANDOVER` before a typed vote and the normal retry is spent. The controller
 archives the receipt, rechecks the exact frozen artifact, excludes the context-stopped reviewer
@@ -358,7 +360,9 @@ reasoning reviewer can think for minutes before its first byte; role deadlines s
 session. A stall is reported as `PROVIDER_TIMEOUT`, other socket failures as `TRANSPORT_ERROR`.
 A busy provider (HTTP 408, 425, 429, 500, 502, 503, 504 or 529 before any byte) is retried
 twice on the same claimed request, after 5s then 20s or an integer `Retry-After` capped at 30s;
-closing the relay ends the wait. Other statuses, timeouts and socket failures are never retried.
+closing the relay ends the wait. After backoff the relay rechecks the Factory claim
+against the current attempt, lease and catalog before it resends. Other statuses, timeouts
+and socket failures are never retried.
 A remaining 429 is `PROVIDER_RATE_LIMITED` and other busy statuses `PROVIDER_UNAVAILABLE`; the
 last refusing HTTP status and the retry count stay in the role's execution metadata. A review
 vote that ends with one of those two codes and zero output tokens produced no verdict, so its
@@ -367,7 +371,8 @@ and earlier families; the busy attempt is kept as `unavailable_reviewers`, never
 publication still needs exactly two independent approvals. A Flue review that reaches
 `AEION_HANDOVER` before a typed vote shares this same substitution slot if its forwarded
 requests and their cost are fully accounted for. Review-only retries exclude that reviewer,
-including when the context stop appears among the unavailable attempts. An unaccounted
+including when the context stop appears among the unavailable attempts. If no replacement
+is eligible, the context-stopped reviewer remains the failed vote. An unaccounted
 context stop and a typed rejection remain held. Measured 2026-11-05: DeepSeek answered 429
 twice on build ac5b5ce1 after its gate passed (test_factory_review_circuit,
 test_factory_review_reassessment, test_relay_budget_settlement).

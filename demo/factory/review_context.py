@@ -15,7 +15,7 @@ def main():
     parser.add_argument('build_id')
     mode=parser.add_mutually_exclusive_group()
     mode.add_argument('--retry-failed-review',action='store_true',
-        help='Once after a failed v2 review. All votes are rerun.')
+        help='Retry a failed v2 review, including one explicit recovery after a budget hold. All votes are rerun.')
     mode.add_argument('--recover-review-handover',action='store_true',
         help='Once after the automatic retry ended at an accounted reviewer context stop. All votes are rerun.')
     args=parser.parse_args()

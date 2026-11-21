@@ -171,6 +171,21 @@ class SettlementTests(unittest.TestCase):
         self.assertEqual(self.send(relay,0),409)
         self.assertEqual((self.posts,relay.last_error_code),(1,'RELAY_CLOSED'))
 
+    def test_a_busy_retry_rechecks_authority_after_backoff(self):
+        authorized = True
+        relay = self.relay(retry_authority=lambda: None if authorized else 'ATTEMPT_REVOKED')
+
+        def revoke_during_wait(_delay):
+            nonlocal authorized
+            authorized = False
+            return False
+
+        relay.stopping.wait = revoke_during_wait
+        self.busy = [(503, None)]
+        self.assertEqual(self.send(relay, 0), 409)
+        self.assertEqual((self.posts, relay.last_error_code), (1, 'ATTEMPT_REVOKED'))
+        self.assertTrue(relay.closed)
+
     def test_lab_default_and_invalid_factory_step_bounds_remain_closed(self):
         relay=self.relay()
         self.assertEqual([self.send(relay,i) for i in range(13)],[200]*12+[409])

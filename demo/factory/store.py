@@ -855,6 +855,8 @@ class Store:
                     execution=receipt.get('execution') or {};votes=circuit.get('votes') or []
                     context=receipt.get('review_context') or {}
                     already_retried = context.get('retry_failed_review') is True
+                    budget_recovery = (retry_failed_review and not recover_review_handover
+                        and circuit.get('reason') == 'review_budget_unavailable')
                     eligible_circuit = (circuit.get('reason') in ('reviewer_failed', 'review_input_too_large')
                         and circuit.get('review_input_version') == 2 and already_retried == recover_review_handover
                         and ((circuit.get('reason') == 'review_input_too_large' and not votes)
@@ -866,11 +868,15 @@ class Store:
                         errors = [v for v in votes if v.get('verdict') == 'error']
                         eligible_circuit = (eligible_circuit and not context.get('handover_recovery') and bool(errors)
                             and all(is_accounted_review_handover(v.get('execution')) for v in errors))
+                    if budget_recovery:
+                        eligible_circuit = (circuit.get('review_input_version') == 2 and not context.get('budget_recovery')
+                            and len(votes) <= 1 and all(v.get('verdict') == 'approve' for v in votes))
                     if (receipt.get('simulated') is not False or not eligible_circuit
                             or not known(receipt.get('author_model'))
                             or (receipt.get('gate') or {}).get('status')!='passed'
                             or (receipt.get('review') or {}).get('status')!='approved'
-                            or circuit.get('status')!='held' or (not votes and circuit.get('reason') != 'review_input_too_large')
+                            or circuit.get('status')!='held'
+                            or (not votes and not budget_recovery and circuit.get('reason') != 'review_input_too_large')
                             or not measured(execution) or execution.get('role')!='author'
                             or execution.get('build_id')!=build_id
                             or execution.get('failure') and not (
@@ -886,8 +892,10 @@ class Store:
                     receipt['review_context']={'from_version':2 if retry_failed_review else 1,'to_version':2,
                         'previous_receipt_digest':expected_receipt_digest,'author_reused':True,
                         'retry_failed_review':bool(retry_failed_review)}
-                    if recover_review_handover:
+                    if recover_review_handover or context.get('handover_recovery') is True:
                         receipt['review_context']['handover_recovery'] = True
+                    if budget_recovery or context.get('budget_recovery') is True:
+                        receipt['review_context']['budget_recovery'] = True
                     for key in ('gate','review','circuit','reason','telemetry'):
                         receipt.pop(key,None)  # Archived above; these are not results of the new pass.
                     conn.execute('UPDATE builds SET status=?,hold_reason=NULL,attempt_generation=?,cancellation_generation=?, '

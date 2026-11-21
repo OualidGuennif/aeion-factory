@@ -257,6 +257,36 @@ class ReviewContextDispatchTests(unittest.TestCase):
             self.worker.reassess_review_context(build_id, recover_review_handover=True)
         self.assertEqual(len(self.votes), 1)
 
+    def test_operator_retries_a_budget_hold_once_on_the_same_artifact(self):
+        from decimal import Decimal
+        from factory.dispatch import review_retry_eligible
+
+        scope = self.worker.budget_scope
+        build_id = self.build['build_id']
+        self.budget.limits[scope] = Decimal('0.10')
+        self.worker.reassess_review_context(build_id)
+        held = json.loads(self.store.board()[0]['receipt'])
+        self.assertEqual(held['circuit']['reason'], 'review_budget_unavailable')
+        self.assertEqual(len(held['circuit']['votes']), 1)
+        self.assertFalse(review_retry_eligible(held))
+        self.assertEqual(self.requests, [])
+
+        self.budget.limits[scope] = Decimal('1')
+        result = self.worker.reassess_review_context(build_id, retry_failed_review=True)
+        self.assertEqual(result['result']['status'], 'publication_queued')
+        self.assertEqual(len(self.votes), 3)
+        _, receipt = self.requests[0]
+        self.assertTrue(receipt['review_context']['budget_recovery'])
+        self.assertEqual(receipt['artifact_digest'], self.prior['artifact_digest'])
+        self.assertEqual(receipt['execution'], self.prior['execution'])
+        self.assertEqual(len(receipt['circuit']['votes']), 2)
+        claimed = self.store.board()[0]
+        self.store.hold_dispatched(claimed, 'owner_review_required',
+            receipt={**held, 'review_context': receipt['review_context']})
+        with self.assertRaisesRegex(CircuitError, 'not_eligible'):
+            self.worker.reassess_review_context(build_id, retry_failed_review=True)
+        self.assertEqual(len(self.votes), 3)
+
     def test_retry_does_not_free_an_old_unknown_review_reservation(self):
         self.failure_model='deepseek-4.1-flash';self.unknown_failure_usage=True
         self.worker.reassess_review_context(self.build['build_id'])

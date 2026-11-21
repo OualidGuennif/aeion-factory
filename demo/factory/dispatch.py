@@ -798,7 +798,7 @@ class DispatchWorker:
         previous_votes=circuit.get('votes') or []
         rejecting=next((v.get('model') for v in previous_votes
             if v.get('verdict')==('error' if retry_failed_review else 'reject')),None)
-        if rejecting is None and circuit.get('reason') != 'review_input_too_large':
+        if rejecting is None and circuit.get('reason') not in ('review_input_too_large', 'review_budget_unavailable'):
             raise CircuitError('review_context_not_eligible')
         excluded_reviewers=()
         if retry_failed_review:
@@ -1251,7 +1251,8 @@ class DispatchWorker:
     def _judge_and_publish(self,build,session,repo,frozen,feature,target,base_sha,checks,required_checks,
                            first_reviewer=None,exclude_reviewers=()):
         """One shared gate/review/publication path for fresh work and the bounded context repair."""
-        handover_recovery = (self.review_context or {}).get('handover_recovery') is True
+        review_only = any((self.review_context or {}).get(key) is True
+                          for key in ('handover_recovery', 'budget_recovery'))
         progress=lambda phase,detail=None:self._progress(build,phase,detail)
         target_repo=target.target_repo if target is not None else self.target_repo
         verdict = validate_artifact(repo, frozen.write_scopes)
@@ -1303,7 +1304,7 @@ class DispatchWorker:
                 build, feature, frozen, base_sha, verdict, gate, None)
             receipt = {**self._identity(build, feature, frozen, base_sha, verdict),
                        "gate": gate, "telemetry": evidence}
-            if handover_recovery:
+            if review_only:
                 self.store.hold_dispatched(build, "owner_review_required", receipt=receipt)
                 return {"build_id": build["build_id"], "result": {"status": "held", "reason": "gate_failed"}}
             return self._fail_or_correct(build, feature, receipt, files, 'gate_failed')
@@ -1358,7 +1359,7 @@ class DispatchWorker:
                     "telemetry": self._telemetry_evidence(build, feature, frozen, base_sha, verdict, gate, None)}
                 link = self.store.correction_of(build['build_id'])
                 attempt, current = (link['attempt'], link['round']) if link else (1, 0)
-                if (circuit.get('reason') == 'reviewer_rejected' and not handover_recovery
+                if (circuit.get('reason') == 'reviewer_rejected' and not review_only
                         and first_reviewer is None and next_step(attempt, current) is not None):
                     return self._fail_or_correct(build, feature, held, files, 'reviewer_rejected')
                 self.store.hold_dispatched(build, "owner_review_required", receipt={

@@ -31,6 +31,7 @@ from factory.api import FactoryApp, ApiError, COOKIE
 from factory.auth import host_origin_ok
 from factory.budget import DailyBudget
 from factory.execution import resolve as resolve_execution
+from factory.sse import serve_events
 
 REPO = Path(__file__).resolve().parents[2]
 EXECUTION = resolve_execution(REPO, os.environ.get("AEION_FACTORY_EXECUTION") or "simulator")
@@ -462,51 +463,9 @@ class Handler(BaseHTTPRequestHandler):
                 return
             self.respond(status, body, headers=headers)
         elif urlparse(self.path).path == "/api/factory/events":
-            self.factory_sse()
+            serve_events(self, factory)
         else:
             self.respond(404, {"error": "not_found"})
-
-    def factory_sse(self):
-        if not host_origin_ok(self.headers.get("Host", "")):
-            self.respond(403, {"error": "origin_denied"})
-            return
-        session = factory.authenticate(self.headers.get("Cookie"))
-        if session is None:
-            self.respond(401, {"error": "unauthorized"})
-            return
-        query = parse_qs(urlparse(self.path).query)
-        try:
-            since = int(query.get("since", ["0"])[0])
-        except (ValueError, TypeError):
-            self.respond(400, {"error": "invalid_since"})
-            return
-        self.send_response(200)
-        self.send_header("Content-Type", "text/event-stream")
-        self.send_header("Cache-Control", "no-cache")
-        self.send_header("Connection", "keep-alive")
-        self.send_header("X-Accel-Buffering", "no")
-        self.send_header("Content-Security-Policy", "default-src 'none'")
-        self.end_headers()
-        try:
-            def write(frame):
-                data = json.dumps(frame.get("data"), separators=(",", ":")) if frame.get("data") is not None else ""
-                self.wfile.write(f"id: {frame['seq']}\nevent: {frame['event']}\ndata: {data}\n\n".encode())
-                self.wfile.flush()
-            earliest = factory.hub.earliest_seq()
-            if since > 0 and since < earliest:
-                self.wfile.write(f"event: reload\ndata: {{\"earliest\":{earliest}}}\n\n".encode())
-                self.wfile.flush()
-                return
-            for frame in factory.events_since(since):
-                write(frame)
-                since = frame["seq"]
-            while True:
-                time.sleep(0.4)
-                for frame in factory.events_since(since):
-                    write(frame)
-                    since = frame["seq"]
-        except (BrokenPipeError, ConnectionResetError, OSError):
-            pass
 
     def handle_factory_post(self, path):
         host = self.headers.get("Host", "")

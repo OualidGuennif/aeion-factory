@@ -193,6 +193,7 @@ class ReviewBudgetTests(unittest.TestCase):
     def test_an_unknown_vote_keeps_its_reservation_open(self):
         class Review:
             last_usage = None
+            last_execution = None
 
             def __call__(inner, model, prompt):
                 inner.last_usage = {"complete": False}
@@ -203,6 +204,20 @@ class ReviewBudgetTests(unittest.TestCase):
             self.worker._review_vote("qwen-3.8-flash", "prompt")
         self.assertEqual([entry["kind"] for entry in self.entries()], ["reserve"])
         self.assertEqual(self.budget.spent("aeion-autonomous-forum"), Decimal("0.05"))
+
+    def test_explicit_zero_transport_review_releases_reservation(self):
+        class Review:
+            last_usage = None
+
+            def __call__(self, model, prompt):
+                self.last_usage = {"complete": True, "cost_usd": "0", "basis": "proven_no_transport"}
+                raise ValueError("REVIEW_NOT_ADMITTED")
+
+        self.worker.review_complete = Review()
+        with self.assertRaisesRegex(ValueError, "REVIEW_NOT_ADMITTED"):
+            self.worker._review_vote("qwen-3.8-flash", "prompt")
+        self.assertEqual([entry["kind"] for entry in self.entries()], ["reserve", "settle"])
+        self.assertEqual(self.budget.spent("aeion-autonomous-forum"), Decimal("0.00"))
 
     def test_review_reservation_matches_the_supervisor_role_limit(self):
         budget=self.budget

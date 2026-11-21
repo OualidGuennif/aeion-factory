@@ -167,7 +167,7 @@ class StoreTests(unittest.TestCase):
             terminal=CANCELLED)
         self.assertEqual(store.previous_check_failure('f1', 'f' * 64)['failed_tests'], ['OldFail > old() FAILED'])
         store.admit(['f1'], 'held-pass', self.catalog); build = store.claim_next(self.catalog)
-        store.hold_dispatched(build['build_id'], 'owner_review_required',
+        store.hold_dispatched(build, 'owner_review_required',
             receipt={'spec_digest': 'f' * 64, 'gate': {'status': 'passed', 'results': {}}})
         self.assertEqual(store.build(build['build_id'])['status'], HELD)
         self.assertIsNone(store.previous_check_failure('f1', 'f' * 64))

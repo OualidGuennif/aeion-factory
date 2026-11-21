@@ -220,6 +220,7 @@ class ContextRelay:
                         return self.deny(409, stop)
                     context_count = counted
                     input_bound = counted
+                    stage = 'context_usage'
                     messages = _without_cache_markers(payload.get('messages'))
                     frame = _without_cache_markers({k: v for k, v in payload.items()
                                                     if k not in ('messages', 'max_tokens', 'max_completion_tokens')})
@@ -252,10 +253,13 @@ class ContextRelay:
                             return self.deny(409, 'USAGE_UNKNOWN')
                         relay.closed = True
                         relay.last_error_code = 'AEION_HANDOVER'
+                        stage = 'checkpoint'
                         relay.checkpoint(context_count, True)
                         return self.deny(409, "AEION_HANDOVER")
                     if context_count is not None and context_count >= max(1, relay.limit - 20000):
+                        stage = 'checkpoint'
                         relay.checkpoint(context_count, False)
+                    stage = 'budget'
                     if relay.prices is not None and relay.cost_limit is not None:
                         input_rate = max(Decimal(str(relay.prices['input'])), Decimal(str(relay.prices.get('cacheWrite', 0))))
                         projected = ((Decimal(input_bound) * input_rate + Decimal(maximum) * Decimal(str(relay.prices['output'])))
@@ -266,6 +270,7 @@ class ContextRelay:
                             return self.deny(409, 'BUDGET_STOP')
                         relay.projected_cost += projected
                     relay.previous_frame, relay.previous_messages = frame, messages
+                    stage = 'forward_setup'
                     headers = {name: value for name, value in self.headers.items()
                                if name.lower() in {'user-agent', 'anthropic-version', 'anthropic-beta'} or name.lower().startswith("x-opencode-")}
                     request = urllib.request.Request(relay.upstream, data=body, headers={**headers,
@@ -436,9 +441,10 @@ class ContextRelay:
         if not self.forwarded_count:
             return False
         previous = self.reported_usage[-1] if len(self.reported_usage) == self.forwarded_count else {}
+        inputs, outputs = previous.get('input_tokens'), previous.get('output_tokens')
         return (previous.get('complete') is not True
-                or any(type(previous.get(key)) is not int or previous[key] < 0
-                       for key in ('input_tokens', 'output_tokens')))
+                or type(inputs) is not int or inputs < 1
+                or type(outputs) is not int or outputs < 0)
 
     def claim_forward(self, counted):
         # Shutdown and the liability counter share one ordering point. Once closed, local

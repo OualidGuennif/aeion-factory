@@ -70,6 +70,10 @@ class SseHubTests(unittest.TestCase):
             hub.publish("e", i)
         self.assertEqual(hub.earliest_seq(), 3)
         self.assertEqual([f["seq"] for f in hub.replay(0)], [3, 4, 5])
+        self.assertEqual([f["seq"] for f in hub.replay(2)], [3, 4, 5])
+        self.assertIsNone(hub.replay(1))
+        self.assertIsNone(hub.replay(6))
+        self.assertIsNone(SseHub().replay(5))
 
 
 if __name__ == "__main__":

@@ -218,7 +218,7 @@ SPECS = [
         'tier': 3,
         'phase': 'P0',
         'write_paths': ['demo/forum-app/', 'knowledge/components/agora-product.md', 'knowledge/components/factory-architecture.md'],
-        "deps": [1],
+        "deps": [6],
         "goal": "Turn any submitted thread body into normalized plain Markdown and a small, attribute-free safe HTML subset with strict codepoint and byte caps, so a post never carries script, remote embeds or an oversized payload.",
         "scope": [
             'Add public `local.aeion.forum.ContentSanitizer` with static `sanitize(String raw)` returning a public record (`markdown()`, `html()`) and nested public static `ContentTooLargeException extends RuntimeException` (message `"content_too_large"`). Null input normalizes to empty text (preserving the existing `400 {"error": "invalid_body"}` refusal on blank bodies).',

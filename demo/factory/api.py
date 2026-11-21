@@ -15,7 +15,7 @@ from pathlib import Path
 
 from .auth import AdminSessions, host_origin_ok
 from .budget import DailyBudget, BudgetError
-from .manifest import load_manifest, ManifestError
+from .manifest import load_manifest
 from .observer import Observer
 from .store import Store, StoreError
 from .sse import SseHub
@@ -50,6 +50,7 @@ class FactoryApp:
         self.state_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
         self.manifest_path = Path(manifest_path)
         self.catalog = load_manifest(self.manifest_path, spec_dir=spec_dir)
+        self._catalog_lock = threading.Lock()
         self.store = Store(self.state_dir / "factory.db", active_concurrency=active_concurrency)
         self.hub = SseHub()
         spec_dir = Path(spec_dir) if spec_dir else Path(manifest_path).resolve().parent
@@ -75,6 +76,7 @@ class FactoryApp:
         self.worker.progress = lambda build_id, phase: self.hub.publish(
             'build_progress', {'build_id': build_id, 'phase': phase})
         self.worker.admission_check = lambda: self._execution_blocker() is None
+        self.worker.catalog_loader = self._refresh_catalog
         prune = None
         if self.execution.get('publication'):
             from .publication import PublicationCoordinator, prune_branch
@@ -149,11 +151,11 @@ class FactoryApp:
                 return part[len(name) + 1:]
         return None
 
-    def authenticate(self, cookie_header):
+    def authenticate(self, cookie_header, *, touch=True):
         session_id = self._cookie_value(cookie_header, COOKIE)
         if not session_id:
             return None
-        return self.auth.authenticate(session_id)
+        return self.auth.authenticate(session_id, touch=touch)
 
     def _require_csrf(self, session, csrf_header):
         if not self.auth.check_csrf(session, csrf_header):
@@ -161,11 +163,15 @@ class FactoryApp:
 
     # ------------------------------------------------------------- endpoints
     def _refresh_catalog(self):
-        try:
-            self.catalog = load_manifest(self.manifest_path, spec_dir=self.spec_dir)
-            self.worker.catalog = self.catalog
-        except (ManifestError, OSError, ValueError):
-            pass
+        with self._catalog_lock:
+            try:
+                current = load_manifest(self.manifest_path, spec_dir=self.spec_dir)
+            except (OSError, ValueError):
+                return None
+            if self.catalog.spec_dir is not None and current.spec_dir is None:
+                return None
+            self.catalog = current
+            return current
 
     def _execution_blocker(self):
         check=self.execution.get('admission_check')
@@ -191,19 +197,20 @@ class FactoryApp:
         return 200, {"csrf": session["csrf"]}, {"Set-Cookie": self._set_cookie(session["session_id"])}
 
     def catalog_view(self, session):
-        self._refresh_catalog()
+        current = self._refresh_catalog()
+        catalog = current if current is not None else self.catalog
         target = self.execution.get('target')
-        blocker=self._execution_blocker()
+        blocker = 'catalog_invalid' if current is None else self._execution_blocker()
         availability = self.store.feature_availability(
-            self.catalog, target_feature=target.feature_id if target else None,
+            catalog, target_feature=target.feature_id if target else None,
             execution_hold=blocker, target_required=self.execution_mode != 'simulator'
                 and self.execution.get('preparer') is None,
             target_features=list(self.execution['targets']) if 'targets' in self.execution else None)
         return 200, {
-            "schema_version": self.catalog.schema_version,
-            "count": len(self.catalog.features),
+            "schema_version": catalog.schema_version,
+            "count": len(catalog.features),
             "features": [{**feature, 'availability': availability[feature['id']]}
-                         for feature in self.catalog.features],
+                         for feature in catalog.features],
             "execution": {
                 "mode": self.execution_mode,
                 "hold_reason": blocker,
@@ -269,9 +276,11 @@ class FactoryApp:
         if (not isinstance(ids, list) or any(not isinstance(fid, str) for fid in ids)
                 or not isinstance(key, str) or not key):
             raise ApiError(400, "invalid_request")
-        self._refresh_catalog()
+        catalog = self._refresh_catalog()
+        if catalog is None:
+            raise ApiError(409, "catalog_invalid")
         try:
-            result = self.store.admit(ids, key, self.catalog, actor="owner")
+            result = self.store.admit(ids, key, catalog, actor="owner")
         except StoreError as exc:
             code = str(exc)
             conflict = code.startswith(('catalog_changed', 'feature_already_completed:', 'feature_in_progress:',
@@ -304,11 +313,13 @@ class FactoryApp:
 
     def tick(self):
         """Recheck freshness without consuming an unstarted queued attempt."""
-        self._refresh_catalog()
+        catalog = self._refresh_catalog()
+        if catalog is not None:
+            self.worker.catalog = catalog
         self.worker.startup_hold=self._execution_blocker()
         # Freshness is temporary and must preserve an unstarted queued attempt.
         # Other explicit configuration holds retain their durable held receipt.
-        paused = self.worker.startup_hold == 'flue_factory_unqualified'
+        paused = catalog is None or self.worker.startup_hold == 'flue_factory_unqualified'
         result = None if paused else self.worker.run_once()
         if result is not None:
             self.hub.publish("build_updated", result)

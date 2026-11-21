@@ -161,7 +161,8 @@ Keep code and SQLite state decoupled. To roll back a broken release, stop the co
 | Held `ci_failed` (`correction.exhausted`) | Required CI stayed red across rounds | Read failing check names in evidence, then cancel |
 | Held `reviewer_rejected` / `correction_unchanged` | Reviewers rejected diff or retry changed nothing | Read reviewer feedback, cancel, and adjust spec |
 | Held `reviewer_rejected` (legacy v1) | Older envelope lacked base diff | Run `python -m factory.review_context BUILD_ID` once from `demo/` |
-| Held `reviewer_failed` (`REVIEW_RESULT_MISSING`) | Reviewer timed out or returned untyped reply | Retry failed votes once (`--retry-failed-review`) |
+| Held `reviewer_failed` (`REVIEW_RESULT_MISSING`) | Reviewer timed out or returned an untyped reply | Allow the automatic review-only retry to finish |
+| Held `reviewer_failed` (`AEION_HANDOVER`), retry used | Reviewer reached its context limit and usage was settled | On operator approval, run `python -m factory.review_context BUILD_ID --recover-review-handover` once from `demo/`. The frozen candidate is checked again; successful votes use normal protected publication. |
 
 ## 12. Limits of this local runbook
 

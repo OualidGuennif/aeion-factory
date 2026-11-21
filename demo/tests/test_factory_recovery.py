@@ -23,6 +23,33 @@ class RecoveryTests(unittest.TestCase):
     def test_expired_attempt_cannot_authorize_another_model_request(self):
         build=self.first.claim_next(self.catalog,lease_ns=0)
         self.assertFalse(self.first.attempt_authorized(build['attempt_id'],build['attempt_generation']))
+        self.assertFalse(self.first.record_progress(
+            build['attempt_id'],build['attempt_generation'],'tool.finished',{}))
+
+    def test_preparation_progress_does_not_count_as_author_work_or_resume_on_expiry(self):
+        build = self.first.claim_next(self.catalog, lease_ns=100)
+        self.first._now = lambda: build['lease_until_ns'] - 1
+        for step, phase in enumerate(('preparing', 'model.step.started', 'tool.finished', 'gen_ai.request')):
+            self.assertTrue(self.first.record_progress(
+                build['attempt_id'], build['attempt_generation'], phase,
+                {'model': 'glm-5.3-flash', 'step': step}))
+        self.assertEqual(self.first.work_event_count(build['build_id']), 0)
+        self.first._now = lambda: build['lease_until_ns']
+        self.assertIsNone(self.first.claim_next(self.catalog))
+        self.assertEqual(self.first.build(build['build_id'])['hold_reason'], 'reconciliation_needed')
+
+    def test_old_hold_cannot_overwrite_a_reclaimed_attempt(self):
+        old = self.first.claim_next(self.catalog)
+        for phase in ('building', 'tool.finished'):
+            self.assertTrue(self.first.record_progress(old['attempt_id'], old['attempt_generation'], phase, {}))
+        self.assertEqual(self.first.work_event_count(old['build_id']), 1)
+        self.assertEqual(self.first.resume_interrupted(old['attempt_id'], old['attempt_generation'],
+            {'failure': 'CLI_FAILED', 'trigger': 'cli_interrupted'})['status'], 'queued')
+        current = self.second.claim_next(self.catalog)
+        self.assertNotEqual(old['attempt_id'], current['attempt_id'])
+        self.assertEqual(self.first.work_event_count(current['build_id']), 0)
+        self.assertEqual(self.first.hold_dispatched(old, 'worker_error')['status'], 'stale_attempt')
+        self.assertEqual(self.second.by_attempt(current['attempt_id'])['status'], 'dispatched')
 
     def test_expired_worker_cannot_report_completion_before_a_restart_reconciles_it(self):
         build=self.first.claim_next(self.catalog,lease_ns=0)
@@ -96,7 +123,7 @@ class RecoveryTests(unittest.TestCase):
 
     def test_a_hold_blocks_another_launch_until_explicitly_cancelled(self):
         build = self.first.claim_next(self.catalog)
-        self.first.hold_dispatched(build['build_id'], 'owner_review_required')
+        self.first.hold_dispatched(build, 'owner_review_required')
         with self.assertRaisesRegex(StoreError, 'feature_in_progress:017'):
             self.second.admit(['017'], 'second-key', self.catalog)
         info = self.first.feature_availability(self.catalog)['017']
@@ -108,7 +135,7 @@ class RecoveryTests(unittest.TestCase):
     def test_a_hold_keeps_the_attempt_and_bounded_evidence(self):
         build = self.first.claim_next(self.catalog)
         evidence = {'build_id': build['build_id'], 'reason': 'review_input_too_large'}
-        self.first.hold_dispatched(build['build_id'], 'owner_review_required', receipt=evidence)
+        self.first.hold_dispatched(build, 'owner_review_required', receipt=evidence)
         row = self.second.board()[0]
         self.assertEqual(row['attempt_id'], build['attempt_id'])
         self.assertIn('review_input_too_large', row['receipt'])

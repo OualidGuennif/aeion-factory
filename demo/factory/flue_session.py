@@ -76,9 +76,10 @@ def new_run(model, build_id, role, cost_limit, synthetic=False):
 def usage(run):
     reports = run.get('provider_usages', [])
     forwarded = run.get('forwarded_count', 0)
-    complete = (run.get('provider_accounting_complete', True) and forwarded > 0 and len(reports) == forwarded
+    accounted = run.get('provider_accounting_complete', True) and not run.get('relay_accounting_pending')
+    complete = (accounted and forwarded > 0 and len(reports) == forwarded
                 and all(item.get('complete') is True for item in reports))
-    no_transport = forwarded == 0
+    no_transport = accounted and forwarded == 0
     return {'complete': complete or no_transport,
             'cost_usd': (str(sum((Decimal(str(item['cost_usd'])) for item in reports), Decimal(0)))
                          if complete else '0' if no_transport else None),
@@ -133,6 +134,7 @@ class FactorySession(Runner):
         except Exception:
             run['memory_checkpoint'] = 'unavailable'
         self.event(run, 'handover.prepared', **{'aeion.context.observed': observed})
+        return files
 
     def finish(self, run, error=None):
         run.update(ended_ns=time.time_ns(), status='failed' if error else 'passed')
@@ -170,7 +172,8 @@ class FactorySession(Runner):
                 'started_ns':run['started_ns'], 'ended_ns':run['ended_ns'],
                 'usage':measured, 'check':run['check'], 'artifact_digest':run.get('artifact_sha256'),
                 'sessions': len(run['sessions']), 'trace_id': run.get('trace_id'),
-                'session_id': run['langfuse_session_id'], 'forwarded_count': run.get('forwarded_count', 0),
+                'session_id': run['langfuse_session_id'],
+                'forwarded_count': None if run.get('relay_accounting_pending') else run.get('forwarded_count', 0),
                 'failure': run.get('failure'), 'finish_reason':run.get('last_finish_reason'),
                 'provider_http_status':run.get('provider_http_status'),
                 'provider_retries':run.get('provider_retries',0),

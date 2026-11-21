@@ -1,11 +1,16 @@
+from http.client import HTTPConnection
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import tempfile
+import threading
 from pathlib import Path
 import sys
 import unittest
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from factory.api import FactoryApp, ApiError
+from factory.sse import serve_events, SseHub
 
 LOOP_HOST = "127.0.0.1:8088"
 LOOP_ORIGIN = "http://127.0.0.1:8088"
@@ -113,6 +118,57 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(result["result"], {"status": "held", "reason": "budget_unavailable"})
         build = self.app.store.board()[0]
         self.assertEqual(build["hold_reason"], "budget_unavailable")
+
+    def test_event_stream_replays_and_closes_without_extending_the_session(self):
+        app = self.app
+
+        class Handler(BaseHTTPRequestHandler):
+            def do_GET(self):
+                serve_events(self, app)
+
+            def respond(self, status, body):
+                self.send_error(status, body["error"])
+
+            def log_message(self, *_):
+                pass
+
+        with ThreadingHTTPServer(("127.0.0.1", 0), Handler) as server:
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            try:
+                now = [0]
+                with patch("factory.auth.time.time_ns", side_effect=lambda: now[0]):
+                    _, headers = self.login()
+                    app.hub = SseHub(max_events=3)
+                    for _ in range(5):
+                        app.hub.publish("build_progress")
+                    cookie = headers["Set-Cookie"].split(";", 1)[0]
+
+                    def request(since, last=None):
+                        conn = HTTPConnection("127.0.0.1", server.server_port, timeout=3)
+                        self.addCleanup(conn.close)
+                        request_headers = {"Cookie": cookie}
+                        if last is not None:
+                            request_headers["Last-Event-ID"] = last
+                        conn.request("GET", f"/api/factory/events?since={since}", headers=request_headers)
+                        return conn.getresponse()
+
+                    for cursor in (1, 6):
+                        with self.subTest(cursor=cursor), request(cursor) as response:
+                            self.assertEqual(response.status, 200)
+                            self.assertEqual(response.read(), b"event: reload\ndata: {}\n\n")
+                    now[0] = app.auth.idle_ns - 1
+                    with request(1, "4") as response:
+                        self.assertEqual(response.status, 200)
+                        self.assertEqual([response.readline() for _ in range(4)],
+                                         [b"id: 5\n", b"event: build_progress\n", b"data: \n", b"\n"])
+                        now[0] += 2
+                        self.assertEqual(response.read(), b"")
+                    with request(0) as response:
+                        self.assertEqual(response.status, 401)
+            finally:
+                server.shutdown()
+                thread.join()
 
     def test_tick_publishes_events(self):
         body, headers = self.login()

@@ -4,6 +4,7 @@ from decimal import Decimal
 from pathlib import Path
 import sys
 import unittest
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from factory.manifest import Catalog
@@ -82,24 +83,50 @@ class DispatchWorkerTests(unittest.TestCase):
         self.assertEqual(len(receipt['frozen_digest']),64)
         self.assertEqual(len(receipt['base_sha']),40)
 
-    def test_settle_releases_reservation_on_incomplete_usage(self):
+    def test_settle_keeps_reservation_on_incomplete_usage(self):
         from factory.budget import DailyBudget
         b = DailyBudget(Path(self.tmp.name) / "ledger.jsonl")
         self.worker.budget, self.worker.budget_scope = b, "aeion-autonomous-forum"
         res = b.admit("aeion-autonomous-forum", "50.00", note="test-build:001")
         self.assertEqual(b.remaining("aeion-autonomous-forum"), Decimal("100.00"))
         self.worker.last_usage = {"complete": False, "cost_usd": None, "estimated_cost_usd": "0.15"}
+        self.worker._author_started = True
         self.worker._settle(res, {"build_id": "test-build"})
-        self.assertEqual(b.remaining("aeion-autonomous-forum"), Decimal("149.85"))
-
-    def test_orphan_reservations_are_reconciled(self):
-        from factory.budget import DailyBudget
-        b = DailyBudget(Path(self.tmp.name) / "ledger.jsonl")
-        self.worker.budget, self.worker.budget_scope = b, "aeion-autonomous-forum"
-        b.admit("aeion-autonomous-forum", "50.00", note="dead-build:001")
         self.assertEqual(b.remaining("aeion-autonomous-forum"), Decimal("100.00"))
-        self.worker._reconcile_orphan_reservations()
-        self.assertEqual(b.remaining("aeion-autonomous-forum"), Decimal("150.00"))
+
+    def test_restart_and_later_admission_preserve_unresolved_role_reservations(self):
+        from factory.budget import BudgetError, DailyBudget
+        scope = "aeion-autonomous-forum"
+        path = Path(self.tmp.name) / "ledger.jsonl"
+        limits = {scope: Decimal("60.00")}
+        today = lambda: "2026-11-21"
+        original = DailyBudget(path, limits=limits, today=today)
+        with patch("factory.budget.time.time_ns", return_value=0):
+            original.admit(scope, "0.50", note="prepare:earlier-attempt:1")
+            original.admit(scope, "5.00", note="review:glm-5.3-flash")
+            original.admit(scope, "50.00", note="missing-build:001")
+
+        budget = DailyBudget(path, limits=limits, today=today)
+        worker = DispatchWorker(self.store, self.cat, self.spec_dir, self.worker.work_root,
+                                {**config(), "cost_reservation_usd": "5.00"}, budget=budget)
+        self.assertEqual(budget.remaining(scope), Decimal("4.50"))
+        with self.assertRaisesRegex(BudgetError, "budget_unavailable"):
+            worker._reserve({"build_id": "next-build", "feature_id": "001"})
+        self.assertEqual(budget.summary()[scope]["settled_usd"], "0.00")
+        self.assertEqual(len(budget.open_reservations(scope)), 3)
+
+    def test_failed_settlement_does_not_release_the_reservation(self):
+        from factory.budget import DailyBudget
+        scope = "aeion-autonomous-forum"
+        budget = DailyBudget(Path(self.tmp.name) / "ledger.jsonl", limits={scope: "10.00"})
+        self.worker.budget = budget
+        reservation = budget.admit(scope, "5.00")
+        self.worker.last_usage = {"complete": True, "cost_usd": "0.12"}
+
+        with patch.object(budget, "settle", side_effect=OSError("write failed")):
+            self.worker._settle(reservation)
+
+        self.assertEqual(budget.summary()[scope]["reserved_usd"], "5.00")
 
 
 class DispatchSessionTests(unittest.TestCase):

@@ -345,7 +345,7 @@ def retain_closed_review(source,destination):
     old_store=Store(source/'factory.db');row=old_store.by_attempt(prior['attempt_id'])
     if (budget_repair and row and row['status']=='dispatched'
             and old_store.publication_request(prior['attempt_id']) is None and not (source/'remote.json').exists()):
-        old_store.hold_dispatched(row['build_id'],'reconciliation_needed',actor='known_closed_budget_repair')
+        old_store.hold_dispatched(row,'reconciliation_needed',actor='known_closed_budget_repair')
         row=old_store.by_attempt(prior['attempt_id'])
     if (not row or row.get('status')!='held' or row.get('hold_reason')!='reconciliation_needed'
             or old_store.publication_request(prior['attempt_id']) is not None or (source/'remote.json').exists()):

@@ -130,6 +130,10 @@ class CatalogTests(unittest.TestCase):
                         <= prerequisites(63))
         self.assertNotIn(63, prerequisites(21))
 
+    def test_sanitizer_acceptance_waits_for_the_csrf_feature(self):
+        features = {feature["id"]: feature for feature in catalog.manifest()["features"]}
+        self.assertIn("006", features["007"]["depends_on"])
+
     def test_generated_contract_has_eight_spec_sections(self):
         expected = ["Intent", "Data sources", "Inputs", "Outputs", "Invariants",
                     "Determinism", "Acceptance checks", "Out of scope"]

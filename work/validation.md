@@ -1,3 +1,161 @@
+## Factory PR #59 review follow-up — 2026-11-21
+
+- A provider retry rechecks live Factory authority after backoff. A loopback
+  regression revokes the claim during the wait and observes exactly one POST.
+  A second loopback test pauses DNS on the retry, closes the relay, resumes DNS,
+  and confirms that no second POST reaches the server. Before a logical send is
+  counted, the connected socket passes the authorization and shutdown checks.
+  The TLS fixture confirms TCP shutdown comes first. Other fixtures verify that
+  a revoked retry skips DNS and that a refusal before the first POST counts zero.
+- A native Flue replay preserves a typed verdict across either the relay or the
+  native context stop. Seven scripted requests exercised three paths with no
+  real provider calls.
+- Review recovery retains a settled context stop when no substitute is eligible.
+  The operator may recover an exhausted review budget once on the same artifact.
+  The author is reused, archived votes are preserved, and new approvals require
+  their own reservations.
+
+## Feature 007 reviewer context stop — 2026-11-21
+
+- Build `67c106304edd4b0b89ecd9a740340add` passed the protected gate with nine
+  retained files. Its last two review passes stopped before two typed approvals.
+  The first recorded a DeepSeek timeout and a Haiku context stop. The automatic
+  review-only retry ended with Haiku `AEION_HANDOVER` after two forwards and
+  $0.8938762 of fully accounted usage. The same Cockpit process remained ready.
+- A read-only check matched the catalog contract, retained Git base, artifact digest
+  and acceptance digest to the receipt. The hold had no publication job.
+- The privacy-filtered collector shows `submit_review` completed in both Haiku runs.
+  Their next turn requested a 65,536-token continuation after 220,526 and 220,527
+  reported input tokens. With the 20,000-token framing reserve, both exceeded the
+  300,000-token allocation. The supervisor previously discarded the typed output
+  when Flue reported the refusal. The metadata contains no verdict payload.
+- Regression tests cover a bounded substitution on the same full packet, continued
+  refusal on incomplete usage, exclusion of a context-stopped reviewer, archived
+  evidence, and a rejection and duplicate attempt after operator recovery. The
+  focused Python suites ran 32 tests successfully. The regressions failed before
+  the change. The full demo suite ran 936 tests with 930 passing and 6 optional
+  skips. Knowledge, doc links, repo health and whitespace checks passed.
+- Native qualification in the isolated checkout passed all six capabilities and
+  supplemental checks with scripted inference. Activated the exact protocol
+  `b6433fb512350ad251d120e543129465a06ca2f7d23e696214f95cbc0f2e1784` with no
+  active build or publication. The restarted Cockpit reported live and sandbox
+  readiness. The operator recovery claimed the same build and artifact at
+  generation 2 with `author_reused: true` and began the protected recheck.
+- The full recheck passed on the original nine-file artifact. DeepSeek reached
+  the review deadline, so GPT-6 Luna replaced it. GPT-6 Luna and MiniMax approved
+  with typed votes and accounted usage. The controller opened product PR #23.
+- The exact post-submission refusal reproduced on native Flue with a scripted
+  relay and returned the typed verdict after the fix. The regression also covers
+  keeping a rejection, incomplete usage, revoked authorization, malformed output,
+  and no output. The full suite ran 937 tests with 933 passing and 4 optional skips.
+  The isolated final protocol `9cab3350684f195916f3548a73c6a935726239895dbfff87a3c5a3ca6b4abe0f`
+  passed all six native capabilities and the supplemental checks.
+- Product PR #23 passed required CI and merged at 16:11:53 CET with main confirmed at
+  `87a6ee32f485c55e97af80a172b26cc1d17a7435`. The integration record matches the current
+  007 catalog contract. The final protocol was then activated with the Factory idle.
+  The Cockpit reported live and sandbox readiness on PID 94492, and its protected
+  catalog returned 401 without authentication.
+
+## Factory rollout and Feature 007 readiness — 2026-11-21
+
+- Applied the consolidated local patch during an idle window. Native admission completed
+  at 12:10 CET with all six capabilities and their supplemental checks passing on scripted
+  inference. The installed proof binds protocol
+  80b82f1bce3b6bbf090219fe315ae92abcbf7d9cd0bee116765b1f4f4c50eaf2.
+- The Cockpit restarted on 127.0.0.1:8088 as PID 71905 with live and sandbox readiness.
+  Its served JavaScript matched the installed client, and unauthenticated catalog access
+  returned 401. The telemetry collector itself kept running on its loaded configuration.
+- The read-only catalog check reports 007 ready and selectable, with 006 implemented
+  and no missing dependencies or active builds. The prior failed attempt is still the
+  newest 007 row. Qualification made no paid model calls.
+
+## Feature 007 author context stop — 2026-11-21
+
+- Build 7db27db0195f4dda96104dac111696fe, attempt cdc747f2866c44c5a123461a47c1fb85,
+  stopped before forwarding request 32. The local receipt has 31 complete provider usage
+  rows and $1.86762052 measured author spend. The collector retained 32 preflight events,
+  31 model responses and the final CONTEXT_UNKNOWN refusal.
+- The last observed input was 214962 tokens. With the requested 65536 output tokens and
+  20000 framing reserve, that would reserve 300498 tokens against a 300000-token allocation.
+  The original collector filters discarded the relay stage and exception class. The exact
+  historical exception remains undetermined. A scripted provider reproduces the boundary.
+- The author invoked a protected check that passed. The eight validated paths on the host
+  match its artifact digest, 45bc77d2dbddcc8569046da849c66a9e44056e16f4de5da6b7f37962adb22cd5.
+  The exported patch reproduces that digest on base c8e5a372dcd1ca08bc623fc72900d59060fa277b.
+  The durable receipt contains no final gate or review votes and has no publication job.
+- An isolated change defers author snapshot creation until CLI, relay and bridge retirement
+  and closed usage, preserves relay stage metadata, and distinguishes stopped draft checks
+  in the Cockpit. A zero provider input count now refuses continuation as USAGE_UNKNOWN.
+  The controller, the queue and the accounting ledger were unchanged by this investigation.
+- Combined isolated verification ran 934 Python tests with 923 passing and 11 optional
+  skips. All 33 Cockpit tests and the knowledge, doc-link and repository gates passed.
+
+## Factory audit implementation in isolation — 2026-11-21
+
+- A real-catalog simulator fixture refuses 007 when 006 is missing, admits it after
+  the prerequisite chain is integrated, refuses a duplicate and leaves no spend ledger.
+- Catalog reload tests cover malformed shapes and removed architecture metadata, preserve
+  the queued request across a temporary failure, and fence staged publication after a
+  catalog revocation during the last vote. Exact proof fixtures bind both additional Flue
+  inputs and preserve the hash for unrelated notes.
+- Protected preparation reuse checks the supervisor correction link, current product base
+  and retained evidence. Fixtures cover stale base, forged request identity, tampered
+  acceptance, reviewer rejection and unrelated catalog edits. Expired leases hold for
+  reconciliation, with active author-only progress and attempt-bound durable writes.
+- The synthetic $10 purse admitted both $5 review reservations after settling the author's
+  measured $0.50 against its $8 reservation. The journal closed one reservation per action.
+  A refusal invokes no reviewer and records 'review_budget_unavailable'.
+- The Cockpit regression covers expired and ahead-of-window cursors, Last-Event-ID, duplicate
+  and late frames, and stream teardown at session expiry without extending the idle deadline.
+- The original tracked diff matched the isolated baseline by hash and the original Cockpit
+  listener retained its PID and qualified protocol. The first 007 attempt passed its gate,
+  received a reviewer rejection and the active controller dispatched a linked correction.
+  The correction moved from preparation into the author build by the final readback.
+- The isolated Python suite ran 930 tests, with 919 passing and 11 skipped. The skips
+  require the canonical product checkout (six), pinned tokenizers (four) and installed
+  Flue Node dependencies (one). The new HTTP event-stream test passed on a temporary
+  port with fixture state. Cockpit JavaScript (33), root Python (33), catalog tests (22),
+  catalog regeneration, syntax checks, knowledge, doc-links and repository health passed.
+  The Æion Template suite passed with two reported skips.
+- Native admission of this revision is pending an idle rollout window. These checks did not
+  start paid authoring, requalify the active controller, or alter its ledger or queue.
+
+## Factory and Agora follow-up audit — 2026-11-21
+
+- Re-screened the transitive prerequisites, phases, declared scopes and acceptance ownership of all 100 generated contracts. Current integration identities match 001–006. At 09:05 CET the already authorized 007 request was still preparing with a third model family and had neither a prepared receipt nor a staged publication job. This audit initiated no additional provider call or state transition.
+- Isolated Factory replays reproduced four catalog reload failures (stale admission on truncated JSON and unstructured exceptions on three malformed shapes), a stale worker hold applied to a different attempt after preparer-only expiry, and an unchanged admission proof after separate shared-Flue-input edits. A $10 purse replay held after passing the gate with zero review calls and had $9.50 left after the author settled.
+- The current complete Factory suite ran 919 tests and failed one old 007 admission assertion. The isolated rerun reproduced it. The fixture seeded 001, 013 and 017 and expected 007 to be ready. An independent fixture proved 007 blocked on 006, ready after the full chain, duplicate admission refused, and no ledger spend.
+- Checks passed for the catalog generator (100 specs), 22 catalog tests, 32 Cockpit tests, 31 Flue tests and 33 root tests.
+
+## Feature 007 relaunch — 2026-11-21
+
+- Changed the canonical 007 dependency to 006 and regenerated the catalog. Admission requires 006 with only 001 integrated and finds no missing dependency on the current ledger. The existing 006 integration binds main at `c8e5a372dcd1ca08bc623fc72900d59060fa277b`.
+- The new prerequisite test failed on the old manifest. The catalog generator and catalog tests (22 passed), contract identity tests (13 passed), Cockpit client (32 passed), knowledge, doc-links and repository health passed after the fix.
+- Native admission passed with scripted inference and activated protocol `80aa2db53828beed3330487848478f1230594db025f226b999f7165d7b94f3e0`. The idle Cockpit restarted on loopback with both live and sandbox readiness verified.
+- The owner unlocked the Cockpit. The old request `3f819cd5094c475faa084cf29cc1abbc` was cancelled through its normal action. One new request `c7c77e937f7d4ae4b7a19dea381ea792` was admitted and dispatched with attempt `d8a861a6492949d4bb311e07bcaa5293` on the current contract. Preparation started. No 006 request was created.
+
+## Factory audit F1 accounting review — 2026-11-21
+
+- The implementation review removed speculative reservation cleanup from the first batch. The existing budget journal and Cockpit totals represent both proven charges and unresolved reservations.
+- Red regressions reproduced four failure paths: a restart released $55.50 without usage; an incomplete author estimate and an unknown reviewer callback each closed their reservation; and a relay teardown failure was reported as zero transport. A separate preflight fixture showed a new author reservation being settled with $0.15 from a previous build after failing before the actual author call.
+- The fix keeps all three unresolved role reservations across restart, refuses an unaffordable later reservation, preserves incomplete usage and settlement-write failures, and still settles measured usage and proven zero transport. Provider accounting spans every relay in the session. An interrupted teardown retains an unresolved marker.
+- Final local checks: `demo/.local/venv/bin/python -W ignore -m unittest discover -s demo/tests -q` (919 passed), Cockpit client (32 passed), root Python (33 passed), `tools/template-tests`, knowledge check, diff doc-links, repository health and `git diff --check`. All 38 distinct local link targets in the audit plan resolve.
+- Native check: the isolated `demo/tests/qualify_factory_preparation.py` fixture passed with Docker, OpenShell and scripted loopback inference, including the preparation budget stop, independent baseline check, author handover and two scripted reviews. This run preceded the final author preflight guard, which is exercised separately through the dispatch tests. It did not install a new admission proof.
+- Local assessment only. The installed admission proof failed the working-tree readiness check after the protocol change. The controller and the historical journal were left intact. No remote release CI or paid Feature 007 run was started.
+
+## Factory and Agora audit — 2026-11-21
+
+- Reproduced five Factory defects with isolated fixtures and screened the 100 canonical feature briefs for dependency, scope and evaluator mismatches. The local pinned product ref and current contract integrations agree on 001–006. The 007 ledger now shows a later zero settlement for the earlier unresolved preparation reservation.
+- Re-ran 915 Factory Python tests, 32 Cockpit tests, 31 Flue tests, 33 root Python tests, 21 catalog tests, and the catalog generator, synthetic fixture, knowledge, link and repository health checks.
+
+## Feature 007 preparation budget hold — 2026-11-21
+
+- Read-only evidence for build `3f819cd5094c475faa084cf29cc1abbc`, attempt `0308bdb69c3d4ebcabfb64579f17772f`: `preparation_budget_stop` after one forwarded GPT-6 Luna request with complete usage at `$0.1101687`; ledger settlement `$0.12`. The forum purse showed `$149.19` remaining, including the deduction for `$0.50` still reserved from an earlier model attempt. The old transient submission could not be verified from the retained receipt.
+- Regression tests reproduced the lost submission, lack of bounded family fallback and generic Cockpit hold on the old code. The fix takes a valid ready submission through the existing negative baseline check after a budget stop if the forwarded usage is known and within the cap and the attempt is authorized. A stop without a usable submission can switch families with a fresh reservation within the three-attempt limit when cost is known. The daily purse refusal has a distinct reason.
+- Verification: `python3 -m unittest discover -s demo/tests -p 'test_factory_preparation.py' -v` (35 passed); `node --test demo/tests/test_cockpit_client.mjs` (32 passed); root Python suite (33 passed). The native preparation fixture used one scripted request, recovered the submission after a real relay `BUDGET_STOP`, passed the independent baseline requirement and reached `simulated_complete`.
+- Full checks: controller Python suite (915 passed), template tests (pass, 2 skipped), knowledge check (0 problems), diff doc-links (163 links), repository health and `git diff --check` (pass).
+- Local activation: `demo/.local/venv/bin/python -m demo.factory.admission --activate` passed all six capabilities and installed proof for protocol `54bf899f50f2a4768b7dab335fbb92ad1d9290d05671bbabd60cce4605bef5fe`. Restarted the idle Cockpit on `127.0.0.1:8088`; health was OK, live and sandbox readiness were true, and the served client matched the updated file. The historical Feature `007` hold and receipt stayed intact, with no frozen contract in that attempt's workspace. No paid execution was started.
+
 ## Cockpit catalog live refresh & preparation baseline progress — 2026-11-20
 
 - Root causes:

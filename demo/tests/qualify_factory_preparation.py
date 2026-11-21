@@ -50,14 +50,25 @@ def main():
     role = FixturePreparation()
     preparer = TaskPreparer(ROOT, target.base_source, role=role, checker=checker, base_ref=target.base_sha)
     builder, review = fixture.FixtureBuilder(ROOT, {}), fixture.FixtureReview()
+
     class Counter:
         revision = 'synthetic-admission-bound'
+
+        def __init__(self, preparation):
+            self.preparation = preparation
+            self.context_basis = 'provider_usage' if preparation else 'local_tokenizer'
+
         def count(self, _payload):
+            if self.preparation and fixture.calls['prepare'] == 1:
+                # Make the post-submission turn hit the actual relay's per-attempt cap.
+                return 5_000_000
             return 245000 if fixture.calls['author'] == 3 else 4000
+
     def local_relay(model, key, limit, checkpoint, event, **kwargs):
         route = '/v1/messages' if kwargs.get('api') == 'anthropic-messages' else '/v1/chat/completions'
+        preparation = kwargs.get('max_output_tokens') == 65536
         return ContextRelay(model, key, limit, checkpoint, event, **kwargs,
-            upstream=f'http://127.0.0.1:{server.server_port}' + route, counter=Counter())
+            upstream=f'http://127.0.0.1:{server.server_port}' + route, counter=Counter(preparation))
     try:
         with patch.dict(os.environ, {'OPENCODE_API_KEY':'synthetic'}), patch.object(runner,'ContextRelay',side_effect=local_relay):
             app = FactoryApp(folder / 'MANIFEST.json', folder / 'state', bootstrap_token='synthetic-only',
@@ -76,6 +87,9 @@ def main():
             assert row['status']=='simulated_complete'
             assert receipt['preparation']['negative_control']=='failed_contract_assertion'
             assert receipt['preparation']['synthetic'] is True
+            assert role.last_execution['submission_recovered'] is True
+            assert role.last_execution['failure'] == 'BUDGET_STOP'
+            assert fixture.calls['prepare'] == 1
             assert receipt['circuit']['status']=='approved'
             for execution in (role.last_execution,builder.last_execution,
                               *(vote['execution'] for vote in receipt['circuit']['votes'])):

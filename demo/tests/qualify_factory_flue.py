@@ -24,6 +24,7 @@ calls = {'author': 0, 'review': 0, 'haiku': 0, 'prepare': 0}
 checks = []
 preparation_contract = ''
 review_without_tool_first = False
+review_input_at_submission = 4000
 
 
 def last_tool(payload):
@@ -96,6 +97,8 @@ class Inference(BaseHTTPRequestHandler):
             elif (number % 2) == 1:
                 call = ('submit_review', {'verdict': 'approve', 'reason': 'Synthetic harness qualification'})
         count = 250000 if role == 'author' and number == 4 else 4000
+        if role == 'review' and review_without_tool_first and number == 2:
+            count = review_input_at_submission
         if anthropic:
             events = [('message_start', {'type': 'message_start', 'message': {
                 'id': 'fixture', 'type': 'message', 'role': 'assistant', 'content': [],

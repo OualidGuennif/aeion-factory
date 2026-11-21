@@ -29,7 +29,8 @@ from .routing import OutcomeTelemetry, cohort_for
 from .agent_files import BuilderError
 from .publish import FakeForge, Publisher
 from .review import SECRET_PATTERNS, content_digest, review
-from .review_circuit import two_vote_review, baseline_diff, baseline_context, CircuitError, MAX_SUBSTITUTIONS, is_zero_forward_preflight
+from .review_circuit import (CircuitError, MAX_SUBSTITUTIONS, MAX_TRANSPORT_RETRIES, baseline_context,
+                             baseline_diff, is_accounted_review_handover, is_zero_forward_preflight, two_vote_review)
 from .store import (FAILED, HELD, LIVE_COMPLETE, MAX_ATTEMPTS, MAX_CORRECTION_ROUNDS, QUEUED,
                     SIMULATED_COMPLETE, StoreError, continuation_step)
 from .target import TargetError
@@ -288,6 +289,7 @@ class DispatchWorker:
         self.allow_unbudgeted = bool(allow_unbudgeted)
         self.startup_hold = startup_hold
         self.admission_check = None
+        self.catalog_loader = None
         self.connectivity = None
         self._network_checked = False
         self._network_ok = None
@@ -326,7 +328,6 @@ class DispatchWorker:
         self.agent_id = agent_id
         self.require_circuit = (self.paid or bool(defer_to) or isinstance(self.forge, GitHubForge)
                                 if require_circuit is None else bool(require_circuit))
-        self._reconcile_orphan_reservations()
 
     def _make_repo(self, build_id):
         repo = self.work_root / build_id / "repo"
@@ -403,12 +404,13 @@ class DispatchWorker:
             try:
                 if self.admission_check() is not True:return False
             except Exception:return False
-        return self.catalog.matches_contract(build) and self.store.attempt_authorized(
+        catalog = self.catalog_loader() if self.catalog_loader is not None else self.catalog
+        return catalog is not None and catalog.matches_contract(build) and self.store.attempt_authorized(
             build['attempt_id'],build['attempt_generation'])
 
     def _record_author(self, build):
         """Quality here means the bound artifact checks/reviews, not deployment success."""
-        if not self.paid or getattr(self.builder, 'engine', None) != 'flue-pi':
+        if not self._author_started or not self.paid or getattr(self.builder, 'engine', None) != 'flue-pi':
             return
         execution = getattr(self.builder, 'last_execution', None)
         if (not isinstance(execution, dict) or execution.get('build_id') != build['build_id']
@@ -468,78 +470,31 @@ class DispatchWorker:
             raise BudgetError("invalid_estimate")
         return estimate
 
-    def _reconcile_orphan_reservations(self):
-        """Auto-heal open reservations from terminated/orphaned builds or dead sessions."""
-        if self.budget is None or not hasattr(self.budget, "open_reservations"):
-            return
-        try:
-            for item in self.budget.open_reservations(self.budget_scope):
-                res, note = item["reservation"], item.get("note", "")
-                parts = note.split(":")
-                settle_it = False
-                if len(parts) >= 2 and parts[0] != "review":
-                    if self.store is not None:
-                        row = self.store.build(parts[0])
-                        if row is None or row.get("status") in {FAILED, HELD, "pr_open", "merged", "cancelled"}:
-                            settle_it = True
-                elif parts[0] == "review" and (time.time_ns() - item.get("ts_ns", 0)) > 900_000_000_000:
-                    settle_it = True
-                if settle_it:
-                    try:
-                        self.budget.settle(res, Decimal("0"))
-                    except Exception:
-                        pass
-        except Exception:
-            pass
-
     def _reserve(self, build):
         """Journal the attempt's spending cap before any model or tool can spend."""
         if self.budget is None:
             if self.allow_unbudgeted:
                 return None
             raise BudgetError("budget_unavailable")
-        self._reconcile_orphan_reservations()
         return self.budget.admit(
             self.budget_scope, self._budget_estimate(),
             note=f"{build['build_id']}:{build['feature_id']}",
         )
 
     def _settle(self, reservation, build=None):
-        if reservation is None or self.budget is None:
-            return
         usage = self.last_usage
-        cost = None
-        if isinstance(usage, dict):
-            cost = usage.get("cost_usd") if usage.get("cost_usd") is not None else usage.get("estimated_cost_usd")
-        if cost is None and build is not None and self._author_never_forwarded(build):
-            cost = "0"
-        if cost is not None:
-            try:
-                self.budget.settle(reservation, Decimal(str(cost)))
-            except (BudgetError, InvalidOperation, ValueError):
-                return
+        if usage is None and build is not None and not self._author_started:
+            usage = {"complete": True, "cost_usd": "0"}
+        self._settle_usage(reservation, usage)
 
-    def _author_never_forwarded(self, build):
-        execution = getattr(self.builder, "last_execution", None) if self.builder is not None else None
-        if getattr(self, "_author_started", False):
-            if not isinstance(execution, dict) or execution.get("build_id") != build.get("build_id"):
-                return False
-            count = execution.get("forwarded_count")
-            return not (type(count) is int and count > 0)
-        if isinstance(execution, dict) and execution.get("build_id") == build.get("build_id"):
-            count = execution.get("forwarded_count")
-            return not (type(count) is int and count > 0)
-        return True
-
-    def _review_never_forwarded(self):
-        reviewer = self.review_complete
-        if reviewer is None or not hasattr(reviewer, "last_execution"):
-            return False
-        execution = reviewer.last_execution
-        if not isinstance(execution, dict):
-            return True
-        count = execution.get("forwarded_count")
-        return not (type(count) is int and count > 0)
+    def _settle_usage(self, reservation, usage):
+        if (reservation is None or self.budget is None or not isinstance(usage, dict)
+                or usage.get("complete") is not True or usage.get("cost_usd") is None):
+            return
+        try:
+            self.budget.settle(reservation, Decimal(str(usage["cost_usd"])))
+        except (BudgetError, InvalidOperation, OSError):
+            pass  # A missing settlement leaves the reservation in the journal.
 
     def run_once(self):
         """Claim one build, give its agent a session, run it, and end the session whatever happens."""
@@ -589,9 +544,9 @@ class DispatchWorker:
         review_seconds = getattr(self.review_complete, 'timeout_seconds', 0)
         preparation_seconds = getattr(self.preparer,'timeout_seconds',0)
         if self.preparer is not None:check_seconds=max(check_seconds,900)
-        # Two votes plus the bounded substitute for a busy reviewer (review_circuit.MAX_SUBSTITUTIONS).
+        review_slots = (2 + MAX_SUBSTITUTIONS) * MAX_TRANSPORT_RETRIES
         lease_ns = (preparation_seconds + check_seconds + author_seconds
-                    + (2 + MAX_SUBSTITUTIONS) * review_seconds + 60) * 1_000_000_000
+                    + review_slots * review_seconds + 60) * 1_000_000_000
         build = self.store.claim_next(self.catalog, lease_ns=lease_ns)
         if build is None:
             return None
@@ -619,18 +574,18 @@ class DispatchWorker:
             synthetic=not (self.paid and getattr(self.builder, 'engine', None) == 'flue-pi')))
         if self.startup_hold:
             # The configured execution is unavailable (or unknown): hold before any spend.
-            self.store.hold_dispatched(build["build_id"], self.startup_hold)
+            self.store.hold_dispatched(build, self.startup_hold)
             return {"build_id": build["build_id"],
                     "result": {"status": "held", "reason": self.startup_hold}}
         if self.targets is not None and build['feature_id'] not in self.targets and self.preparer is None:
-            self.store.hold_dispatched(build['build_id'], 'target_unavailable')
+            self.store.hold_dispatched(build, 'target_unavailable')
             return {'build_id': build['build_id'],
                     'result': {'status': 'held', 'reason': 'target_unavailable'}}
         if not self._security_ready(build):
             return {'build_id': build['build_id'],
                     'result': {'status': 'held', 'reason': 'sandbox_qualification_stale'}}
         if self.paid and self._network_checked and not self._network_ok:
-            self.store.hold_dispatched(build['build_id'], 'network_unavailable')
+            self.store.hold_dispatched(build, 'network_unavailable')
             return {'build_id': build['build_id'],
                     'result': {'status': 'held', 'reason': 'network_unavailable'}}
         prepared_target = None
@@ -658,13 +613,13 @@ class DispatchWorker:
                 if not self.store.record_preparation(build['attempt_id'],build['attempt_generation'],self.preparation_evidence):
                     return {'build_id':build['build_id'],'result':{'status':'stale_attempt'}}
             except (PreparationError,TargetError,BudgetError) as error:
-                self.store.hold_dispatched(build['build_id'],'preparation_unavailable',receipt={
+                self.store.hold_dispatched(build,'preparation_unavailable',receipt={
                     'build_id':build['build_id'],'attempt_id':build['attempt_id'],
                     'reason':str(error) if isinstance(error,PreparationError) else 'preparation_infrastructure_unavailable',
                     'preparation_execution':getattr(self.preparer.role,'last_execution',None)})
                 return {'build_id':build['build_id'],'result':{'status':'held','reason':'preparation_unavailable'}}
             except Exception as error:
-                self.store.hold_dispatched(build['build_id'],'preparation_unavailable',receipt={
+                self.store.hold_dispatched(build,'preparation_unavailable',receipt={
                     'build_id':build['build_id'],'attempt_id':build['attempt_id'],
                     'reason':'preparation_failed','error_type':type(error).__name__,
                     'preparation_execution':getattr(self.preparer.role,'last_execution',None)})
@@ -684,7 +639,7 @@ class DispatchWorker:
         try:
             reservation = self._reserve(build)
         except BudgetError:
-            self.store.hold_dispatched(build["build_id"], "budget_unavailable")
+            self.store.hold_dispatched(build, "budget_unavailable")
             return {"build_id": build["build_id"],
                     "result": {"status": "held", "reason": "budget_unavailable"}}
         try:
@@ -695,10 +650,10 @@ class DispatchWorker:
                         "result": {"status": "held", "reason": "credential_unavailable",
                                    "detail": str(error)}}
             try:
-                return self._run(build, session, target_override=prepared_target)
+                return self._run(build, session, target_override=prepared_target, reservation=reservation)
             except Exception as error:
                 # Persist an observable hold; never retry a possibly paid call blindly.
-                self.store.hold_dispatched(build['build_id'], 'worker_error')
+                self.store.hold_dispatched(build, 'worker_error')
                 return {'build_id': build['build_id'], 'result': {
                     'status': 'held', 'reason': 'worker_error', 'error_type': type(error).__name__}}
             finally:
@@ -718,7 +673,7 @@ class DispatchWorker:
             return self.gateway.issue(agent_id=agent, build_id=build["build_id"],
                                       feature_id=build["feature_id"])
         except SessionError:
-            self.store.hold_dispatched(build["build_id"], "credential_unavailable")
+            self.store.hold_dispatched(build, "credential_unavailable")
             raise
 
     def _close_session(self, session):
@@ -744,7 +699,7 @@ class DispatchWorker:
         The author is refreshed even when the call failed, so an error receipt never
         attributes the attempt to the worker's default model.
         """
-        if self.builder is None:
+        if not self._author_started:
             return
         self.author_model = getattr(self.builder, "model", self.author_model)
         self.author_routing = getattr(self.builder, 'last_routing', None)
@@ -786,24 +741,14 @@ class DispatchWorker:
             return answer
         finally:
             usage = getattr(self.review_complete, "last_usage", None)
-            if reservation is not None:
-                cost = None
-                if isinstance(usage, dict) and usage.get("complete") is True:
-                    cost = usage.get("cost_usd") if usage.get("cost_usd") is not None else usage.get("estimated_cost_usd")
-                if cost is None and self._review_never_forwarded():
-                    cost = "0"
-                if cost is not None:
-                    try:
-                        self.budget.settle(reservation, Decimal(str(cost)))
-                    except (BudgetError, InvalidOperation, ValueError):
-                        pass
+            self._settle_usage(reservation, usage)
 
     def _zero_transport_proven(self):
         """Only a build with no paid builder and no model review can prove zero spend."""
         return not self.paid and self.review_complete is None
 
-    def reassess_review_context(self,build_id,retry_failed_review=False):
-        """Explicit operator repair for the old full-files-only review envelope.
+    def reassess_review_context(self,build_id,retry_failed_review=False,*,recover_review_handover=False):
+        """Recheck the frozen artifact and obtain fresh votes on an eligible review hold.
 
         No author is rerun or charged twice. A stale base, changed artifact/contract, unknown
         usage, prior publication or second request refuses the repair. Genuine v2 rejections
@@ -814,6 +759,7 @@ class DispatchWorker:
         from .product_checks import prepared_target
         from .target import _git
         assert_worker_isolated()
+        retry_failed_review = retry_failed_review or recover_review_handover
         if (not self.paid or self.preparer is None or not self.preparer.product
                 or self.review_complete is None or self.admission_check is None
                 or self.admission_check() is not True):
@@ -852,20 +798,23 @@ class DispatchWorker:
         previous_votes=circuit.get('votes') or []
         rejecting=next((v.get('model') for v in previous_votes
             if v.get('verdict')==('error' if retry_failed_review else 'reject')),None)
-        if rejecting is None and circuit.get('reason') != 'review_input_too_large':
+        if rejecting is None and circuit.get('reason') not in ('review_input_too_large', 'review_budget_unavailable'):
             raise CircuitError('review_context_not_eligible')
         excluded_reviewers=()
         if retry_failed_review:
             entries=[*previous_votes, *(circuit.get('unavailable_reviewers') or [])]
             excluded_reviewers=tuple(dict.fromkeys(
-                e['model'] for e in entries if isinstance(e.get('model'),str) and is_zero_forward_preflight(e.get('execution'))
+                e['model'] for e in entries if isinstance(e.get('model'),str)
+                and (is_zero_forward_preflight(e.get('execution')) or is_accounted_review_handover(e.get('execution')))
             ))
             if rejecting in excluded_reviewers:
                 rejecting=None
-        lease_ns=(target.protected_check.timeout_seconds
-            +(2+MAX_SUBSTITUTIONS)*getattr(self.review_complete,'timeout_seconds',900)+60)*10**9
+        review_slots = (2 + MAX_SUBSTITUTIONS) * MAX_TRANSPORT_RETRIES
+        lease_ns = (target.protected_check.timeout_seconds
+                    + review_slots * getattr(self.review_complete, 'timeout_seconds', 900) + 60) * 10**9
         build=self.store.claim_review_context(build_id,self.catalog,
-            hashlib.sha256(row['receipt'].encode()).hexdigest(),lease_ns,retry_failed_review=retry_failed_review)
+            hashlib.sha256(row['receipt'].encode()).hexdigest(),lease_ns,
+            retry_failed_review=retry_failed_review,recover_review_handover=recover_review_handover)
         if build is None:raise CircuitError('review_context_not_eligible')
         self.review_context=json.loads(build['receipt'])['review_context']
         self.correction=None
@@ -884,7 +833,7 @@ class DispatchWorker:
                 target,base,ProtectedChecks(registered),[*DEFAULT_REQUIRED_CHECKS,target.protected_check.id],
                 first_reviewer=rejecting,exclude_reviewers=excluded_reviewers)
         except Exception as error:
-            self.store.hold_dispatched(build_id,'worker_error')
+            self.store.hold_dispatched(build,'worker_error')
             return {'build_id':build_id,'result':{'status':'held','reason':'worker_error','error_type':type(error).__name__}}
 
     def _provider_needed(self):
@@ -930,7 +879,7 @@ class DispatchWorker:
             fresh = False
         if fresh:
             return True
-        self.store.hold_dispatched(build['build_id'], 'sandbox_qualification_stale')
+        self.store.hold_dispatched(build, 'sandbox_qualification_stale')
         return False
 
     def _network_ready(self, build):
@@ -942,7 +891,7 @@ class DispatchWorker:
             self._network_checked = True
         if self._network_ok:
             return True
-        self.store.hold_dispatched(build['build_id'], 'network_unavailable')
+        self.store.hold_dispatched(build, 'network_unavailable')
         return False
 
     def _reap_ghosts(self):
@@ -953,7 +902,7 @@ class DispatchWorker:
         except Exception:  # noqa: BLE001 - a reap failure must not lose the queued resume
             return
 
-    def _run(self, build, session, target_override=None):
+    def _run(self, build, session, target_override=None, reservation=None):
         feature = self.catalog.by_id[build["feature_id"]]
         if not self._network_ready(build):
             return {'build_id': build['build_id'],
@@ -972,7 +921,7 @@ class DispatchWorker:
                 required_checks = [*DEFAULT_REQUIRED_CHECKS, target.protected_check.id]
         if target is not None and feature["id"] != target.feature_id:
             # A pinned profile belongs to one feature; it must never freeze another one.
-            self.store.hold_dispatched(build["build_id"], "target_feature_mismatch")
+            self.store.hold_dispatched(build, "target_feature_mismatch")
             return {"build_id": build["build_id"],
                     "result": {"status": "held", "reason": "target_feature_mismatch"}}
         try:
@@ -997,12 +946,12 @@ class DispatchWorker:
                 acceptance_path=target.protected_check.contract_test if target is not None else None,
             )
         except TargetError as exc:
-            self.store.hold_dispatched(build["build_id"], "base_unavailable")
+            self.store.hold_dispatched(build, "base_unavailable")
             return {"build_id": build["build_id"],
                     "result": {"status": "held", "reason": "base_unavailable",
                                "detail": str(exc)}}
         except FreezeError as exc:
-            self.store.hold_dispatched(build["build_id"], "qualification_missing")
+            self.store.hold_dispatched(build, "qualification_missing")
             return {"build_id": build["build_id"], "result": {"status": "held", "reason": str(exc)}}
 
         # The build brief lives outside the clone: the agent reads where it stops, the artifact
@@ -1026,23 +975,24 @@ class DispatchWorker:
             if self.builder is None:
                 self._write_simulated_impl(repo, frozen, feature)
             else:
-                self._author_started = True
                 if hasattr(self.builder, 'run_build'):
                     self.correction = (self._resume_correction(build, frozen, repo)
                                        or self._correction_input(build, frozen))
                     previous = (None if self.correction is not None
                                 else self.store.previous_check_failure(feature['id'], frozen.spec_digest))
+                    self._author_started = True
                     self.builder.run_build(repo=repo, frozen=frozen, feature=feature,
                         brief=repo.parent / 'BRIEF.md', target=target, build=build,
                         progress=progress, router=self.router, previous_failure=previous,
                         **({'correction': self.correction} if self.correction is not None else {}))
                 else:
+                    self._author_started = True
                     self.builder(repo=repo, frozen=frozen, feature=feature,
                                  brief=repo.parent / "BRIEF.md")
                 self._take_builder_state()
         except Exception as exc:  # noqa: BLE001 - a failed builder never publishes
             self._take_builder_state()
-            execution = getattr(self.builder, 'last_execution', None) or {}
+            execution = (getattr(self.builder, 'last_execution', None) or {}) if self._author_started else {}
             stop_code = _token(str(exc)) or type(exc).__name__
             receipt = {**self._identity(build,feature,frozen,base_sha,{}),
                  "reason": "builder_error", "detail": type(exc).__name__,
@@ -1064,6 +1014,8 @@ class DispatchWorker:
             return {"build_id": build["build_id"], "result": result}
         finally:
             self.author_ms = int((time.monotonic() - started_author) * 1000)
+        # The author is done. Known cost must release unused capacity before the first vote.
+        self._settle(reservation, build)
         return self._judge_and_publish(build,session,repo,frozen,feature,target,base_sha,checks,required_checks)
 
     def _continue_held_ci(self):
@@ -1178,7 +1130,7 @@ class DispatchWorker:
             return {'build_id': build['build_id'], 'result': result}
         if result.get('status') == 'remote':
             # Publication was already in flight. Do not start another model over an open effect.
-            self.store.hold_dispatched(build['build_id'], 'reconciliation_needed')
+            self.store.hold_dispatched(build, 'reconciliation_needed')
             return {'build_id': build['build_id'],
                     'result': {'status': 'held', 'reason': 'reconciliation_needed'}}
         return None
@@ -1299,6 +1251,8 @@ class DispatchWorker:
     def _judge_and_publish(self,build,session,repo,frozen,feature,target,base_sha,checks,required_checks,
                            first_reviewer=None,exclude_reviewers=()):
         """One shared gate/review/publication path for fresh work and the bounded context repair."""
+        review_only = any((self.review_context or {}).get(key) is True
+                          for key in ('handover_recovery', 'budget_recovery'))
         progress=lambda phase,detail=None:self._progress(build,phase,detail)
         target_repo=target.target_repo if target is not None else self.target_repo
         verdict = validate_artifact(repo, frozen.write_scopes)
@@ -1321,7 +1275,7 @@ class DispatchWorker:
             # Candidate and contract unchanged; hold and mark reprepare_needed for next attempt.
             try:(self.work_root / build['build_id'] / 'prepared' / 'reprepare_needed').touch(mode=0o600, exist_ok=True)
             except OSError:pass
-            self.store.hold_dispatched(build['build_id'], 'owner_review_required', receipt={
+            self.store.hold_dispatched(build, 'owner_review_required', receipt={
                 **self._identity(build, feature, frozen, base_sha, verdict), 'reason': 'correction_unchanged'})
             return {'build_id': build['build_id'], 'result': {'status': 'held', 'reason': 'correction_unchanged'}}
 
@@ -1338,19 +1292,22 @@ class DispatchWorker:
         verdict.pop("repo", None)
         if any(_isolation_unqualified(result)
                for result in gate["results"].values()):
-            self.store.hold_dispatched(build["build_id"], "sandbox_unqualified")
+            self.store.hold_dispatched(build, "sandbox_unqualified")
             return {"build_id": build["build_id"], "result": {
                 "status": "held", "reason": "sandbox_unqualified", "gate": gate}}
         if gate["status"] == "qualification_missing":
-            self.store.hold_dispatched(build["build_id"], "qualification_missing")
+            self.store.hold_dispatched(build, "qualification_missing")
             return {"build_id": build["build_id"], "result": {"status": "held",
                     "reason": "qualification_missing", "gate": gate}}
         if gate["status"] == "failed":
             evidence = self._telemetry_evidence(
                 build, feature, frozen, base_sha, verdict, gate, None)
-            return self._fail_or_correct(build, feature,
-                {**self._identity(build, feature, frozen, base_sha, verdict),
-                 "gate": gate, "telemetry": evidence}, files, 'gate_failed')
+            receipt = {**self._identity(build, feature, frozen, base_sha, verdict),
+                       "gate": gate, "telemetry": evidence}
+            if review_only:
+                self.store.hold_dispatched(build, "owner_review_required", receipt=receipt)
+                return {"build_id": build["build_id"], "result": {"status": "held", "reason": "gate_failed"}}
+            return self._fail_or_correct(build, feature, receipt, files, 'gate_failed')
 
         # Independent deterministic review: the publisher never sees an unreviewed diff.
         review_verdict = review(frozen, verdict, files)
@@ -1364,7 +1321,7 @@ class DispatchWorker:
             )
             return {"build_id": build["build_id"], "result": result}
         if review_verdict["status"] == "held":
-            self.store.hold_dispatched(build["build_id"], "owner_review_required", receipt={
+            self.store.hold_dispatched(build, "owner_review_required", receipt={
                 **self._identity(build, feature, frozen, base_sha, verdict),
                 'gate': gate, 'review': review_verdict})
             return {"build_id": build["build_id"], "result": {"status": "held",
@@ -1378,13 +1335,13 @@ class DispatchWorker:
                 self.review_complete.build_id = build['build_id']
                 self.review_complete.progress = progress
             if self.review_complete is None:
-                self.store.hold_dispatched(build["build_id"], "owner_review_required")
+                self.store.hold_dispatched(build, "owner_review_required")
                 return {"build_id": build["build_id"], "result": {
                     "status": "held", "reason": "review_circuit_unconfigured"}}
             try:
                 diff, base_ctx = baseline_diff(repo, frozen.base_sha, files), baseline_context(repo, frozen.base_sha, files)
             except CircuitError as error:
-                self.store.hold_dispatched(build['build_id'],'owner_review_required',receipt={
+                self.store.hold_dispatched(build,'owner_review_required',receipt={
                     **self._identity(build,feature,frozen,base_sha,verdict),'gate':gate,'review':review_verdict,
                     'reason':str(error),'circuit':{'status':'held','reason':str(error),'votes':[],'review_input_version':2}})
                 return {'build_id':build['build_id'],'result':{'status':'held','reason':str(error)}}
@@ -1402,12 +1359,17 @@ class DispatchWorker:
                     "telemetry": self._telemetry_evidence(build, feature, frozen, base_sha, verdict, gate, None)}
                 link = self.store.correction_of(build['build_id'])
                 attempt, current = (link['attempt'], link['round']) if link else (1, 0)
-                if (circuit.get('reason') == 'reviewer_rejected' and first_reviewer is None and next_step(attempt, current) is not None):
+                if (circuit.get('reason') == 'reviewer_rejected' and not review_only
+                        and first_reviewer is None and next_step(attempt, current) is not None):
                     return self._fail_or_correct(build, feature, held, files, 'reviewer_rejected')
-                self.store.hold_dispatched(build["build_id"], "owner_review_required", receipt={
+                self.store.hold_dispatched(build, "owner_review_required", receipt={
                     **held, **({'correction': {'attempt': attempt, 'round': current, 'exhausted': True}} if link else {})})
                 return {"build_id": build["build_id"], "result": {"status": "held", "reason": circuit.get("reason", "review_circuit_held"), "circuit": circuit}}
 
+        if not self._attempt_authorized(build):
+            self.store.hold_dispatched(build, "reconciliation_needed")
+            return {"build_id": build["build_id"],
+                    "result": {"status": "held", "reason": "reconciliation_needed"}}
         request = {
             "attempt_id": build["attempt_id"], "build_id": build["build_id"],
             "attempt_generation": build['attempt_generation'], "frozen_digest": frozen.digest(),
@@ -1431,7 +1393,7 @@ class DispatchWorker:
             staged=self.publication.stage(build,request,receipt)
             return {'build_id':build['build_id'],'result':{'status':'publication_queued' if staged else 'stale_attempt'}}
         if self.paid:
-            self.store.hold_dispatched(build['build_id'], 'publication_blocked', receipt={
+            self.store.hold_dispatched(build, 'publication_blocked', receipt={
                 **self._identity(build,feature,frozen,base_sha,verdict),
                 'allowed':verdict['allowed'],'gate':gate,'review':review_verdict,'circuit':circuit,
                 'publisher':{'status':'held','reason':'publication_unavailable'}})
@@ -1474,7 +1436,7 @@ class DispatchWorker:
             return {"build_id": build["build_id"], "result": result}
         if decision["decision"] == "hold":
             reason = HOLD_REASON_MAP.get(decision["reason"], "reconciliation_needed")
-            self.store.hold_dispatched(build["build_id"], reason)
+            self.store.hold_dispatched(build, reason)
             return {"build_id": build["build_id"], "result": {"status": "held",
                     "reason": reason, "publisher": decision}}
 

@@ -9,12 +9,13 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from factory.budget import DailyBudget
 from factory.manifest import Catalog
 from factory.models import Router
-from factory.preparation import TaskPreparer, PreparationError, freeze_task
+from factory.preparation import FluePreparation, TaskPreparer, PreparationError, freeze_task
 
 CONTRACT = '''package local.aeion.forum;
 class FactoryAcceptance007Test {
@@ -192,6 +193,90 @@ class PreparationTests(unittest.TestCase):
         with self.assertRaisesRegex(PreparationError,'preparation_usage_unknown'):
             self.prepare()
         self.assertEqual(str(self.budget.spent('aeion-autonomous-forum')), '0.50')
+
+    def test_budget_stop_after_submission_keeps_contract_for_baseline_check(self):
+        self.role = FluePreparation()
+        calls = []
+
+        def live(run, _workspace, _sandbox, *, prompt, kind, preparation_result):
+            calls.append((kind, run['session_cost_limit']))
+            preparation_result.write_text(json.dumps(
+                {'status': 'ready', 'contract': CONTRACT, 'reason': 'Synthetic fixture'}))
+            run.update(forwarded_count=1, provider_usages=[{'complete': True, 'cost_usd': '0.1101687'}])
+            raise ValueError('BUDGET_STOP')
+
+        with patch('factory.flue_session.FactorySession') as session:
+            runtime = session.return_value
+            runtime.live.side_effect = live
+            runtime.finish.side_effect = lambda _run, error: {'failure': str(error)}
+            _, evidence = self.prepare()
+
+        self.assertEqual(calls, [('factory-prepare', '0.50')])
+        self.assertEqual(evidence['negative_control'], 'failed_contract_assertion')
+        self.assertEqual(self.role.last_execution, {
+            'failure': 'BUDGET_STOP', 'submission_recovered': True})
+        self.assertEqual(self.budget.summary()['aeion-autonomous-forum']['settled_usd'], '0.12')
+
+    def test_budget_stop_retains_only_valid_authorized_submissions_within_cap(self):
+        valid = json.dumps({'status': 'ready', 'contract': CONTRACT, 'reason': ''})
+        cases = (
+            ('missing result', None, 1, '0.11', True, 'preparation_budget_stop'),
+            ('invalid result', '{', 1, '0.11', True, 'preparation_budget_stop'),
+            ('no forward', valid, 0, '0', True, 'preparation_budget_stop'),
+            ('unknown cost', valid, 1, None, True, 'preparation_budget_stop'),
+            ('over cap', valid, 1, '0.51', True, 'preparation_budget_stop'),
+            ('revoked', valid, 1, '0.11', False, 'preparation_revoked'),
+        )
+        for name, result, forwarded, cost, authorized, reason in cases:
+            with self.subTest(name=name), patch('factory.flue_session.FactorySession') as session:
+                def live(run, _workspace, _sandbox, *, prompt, kind, preparation_result):
+                    if result is not None:
+                        preparation_result.write_text(result)
+                    run.update(forwarded_count=forwarded,
+                               provider_usages=[{'complete': cost is not None, 'cost_usd': cost}])
+                    raise ValueError('BUDGET_STOP')
+
+                session.return_value.live.side_effect = live
+                session.return_value.finish.return_value = {}
+                role = FluePreparation()
+                role.authorization_check = lambda: authorized
+                with self.assertRaisesRegex(PreparationError, '^' + reason + '$'):
+                    role('gpt-6-luna', 'Fixture', 'a' * 32)
+                self.assertNotIn('submission_recovered', role.last_execution)
+
+    def test_known_budget_stop_without_submission_switches_families(self):
+        class BudgetStoppedRole(ScriptedRole):
+            def __call__(role, model, prompt, build_id):
+                result = super().__call__(model, prompt, build_id)
+                if len(role.calls) == 1:
+                    role.last_usage = {'complete': True, 'cost_usd': '0.11'}
+                    raise PreparationError('preparation_budget_stop')
+                return result
+
+        self.role = BudgetStoppedRole()
+        _, evidence = self.prepare()
+        from factory.models import family
+        self.assertEqual(len(self.role.calls), 2)
+        self.assertNotEqual(family(self.role.calls[0][0]), family(evidence['preparer_model']))
+        self.assertEqual(self.budget.summary()['aeion-autonomous-forum']['settled_usd'], '0.11')
+
+    def test_budget_stop_with_unknown_cost_does_not_retry(self):
+        class BudgetStoppedRole(ScriptedRole):
+            def __call__(role, model, prompt, build_id):
+                super().__call__(model, prompt, build_id)
+                raise PreparationError('preparation_budget_stop')
+
+        self.role = BudgetStoppedRole(cost=None, complete=False)
+        with self.assertRaisesRegex(PreparationError, 'preparation_budget_stop'):
+            self.prepare()
+        self.assertEqual(len(self.role.calls), 1)
+        self.assertEqual(self.budget.summary()['aeion-autonomous-forum']['reserved_usd'], '0.50')
+
+    def test_daily_purse_refusal_is_distinct_and_starts_no_model(self):
+        self.budget.admit('aeion-autonomous-forum', '149.75')
+        with self.assertRaisesRegex(PreparationError, 'preparation_daily_budget_unavailable'):
+            self.prepare()
+        self.assertEqual(self.role.calls, [])
 
     def _contract(self, feature='007', spec='# 007\n', acceptance='export function ready() {}\n',
                   paths=None):
@@ -653,68 +738,60 @@ class PreparationTests(unittest.TestCase):
         self.assertIn('12', prompt)
         self.assertIn('***', prompt)
 
-    def test_correction_after_gate_failure_reprepares_only_on_frozen_contract_conflict(self):
-        import sqlite3
-        node_contract = "import test from 'node:test';\nimport assert from 'node:assert/strict';\ntest('x', () => { assert.equal(1, 2); });\n"
-        new_contract = "import test from 'node:test';\nimport assert from 'node:assert/strict';\ntest('new', () => { assert.equal(2, 3); });\n"
-        calls = []
+    def test_correction_reuses_only_trusted_current_preparation(self):
+        from factory.store import FAILED, Store
 
-        class RecordingRole:
-            paid = False
-            last_execution = None
-            last_usage = None
+        template = "import test from 'node:test';\nimport assert from 'node:assert/strict';\ntest('x', () => { assert.equal(1, 2); });\n"
 
-            def __call__(_, model, prompt, build_id):
-                calls.append(prompt)
-                _.last_usage = {'complete': True, 'cost_usd': '0'}
-                return {'status': 'ready', 'contract': new_contract, 'reason': 'Reprepared'}
+        class Role(ScriptedRole):
+            def __call__(self, model, prompt, build_id):
+                result = super().__call__(model, prompt, build_id)
+                return {**result, 'contract': template.replace("'x'", "'new'")}
 
         class FailingChecker:
             def check_target(self, target, repo, frozen):
                 return False, {'reason': 'acceptance_failed', 'contract_assertion_failures': 1}
 
         task = freeze_task(self.catalog, '007', self.specs, self.architecture, self.base, product=True)
-        evidence = {**task.identity(), 'task_digest': task.digest(), 'acceptance_digest': _sha(node_contract),
+        evidence = {**task.identity(), 'task_digest': task.digest(), 'acceptance_digest': _sha(template),
                     'preparer_model': 'glm-5.3-flash', 'negative_control': 'failed_contract_assertion', 'synthetic': True}
-
-        db_dir = self.root / 'demo/.local/factory'
-        db_dir.mkdir(parents=True, exist_ok=True)
-        conn = sqlite3.connect(str(db_dir / 'factory.db'))
-        conn.execute('CREATE TABLE builds (build_id TEXT, feature_id TEXT, status TEXT, receipt TEXT, updated_ns INTEGER)')
-
-        def setup_prev(build_id, author_note):
-            prev_dir = self.root / 'work' / build_id / 'prepared'
-            prev_dir.mkdir(parents=True, exist_ok=True)
-            (prev_dir / 'task.json').write_text(json.dumps(evidence), encoding='utf-8')
-            (prev_dir / 'BRIEF.md').write_text(task.specification, encoding='utf-8')
-            (prev_dir / 'acceptance.mjs').write_text(node_contract, encoding='utf-8')
-            receipt = json.dumps({'gate': {'status': 'failed'}, 'feedback': {'author': author_note}})
-            conn.execute('INSERT INTO builds VALUES (?, ?, ?, ?, ?)', (build_id, '007', 'failed', receipt, 100))
-
-        setup_prev('prev_ordinary_fail', 'Fixed typo in Java handler; check failed on assertion.')
-        setup_prev('prev_policy_conflict', 'Still blocked: read-only acceptance password violates 12-character password policy.')
-        conn.commit()
-        conn.close()
-
-        preparer = TaskPreparer(self.root, self.source, role=RecordingRole(), checker=FailingChecker(),
-                                base_ref='HEAD', product=True)
-        _, reused_ev = preparer.prepare(
-            build={'feature_id': '007', 'build_id': 'c1' * 16, 'attempt_id': 'd1' * 16,
-                   'idempotency_key': 'factory-correction:prev_ordinary_fail'},
-            catalog=self.catalog, spec_dir=self.specs, destination=self.root / 'work/c1/prepared',
-            budget=self.budget, router=Router(), authorized=lambda: True,
-        )
-        self.assertEqual(len(calls), 0)
-        self.assertEqual(reused_ev['acceptance_digest'], _sha(node_contract))
-
-        _, rep_ev = preparer.prepare(
-            build={'feature_id': '007', 'build_id': 'c2' * 16, 'attempt_id': 'd2' * 16,
-                   'idempotency_key': 'factory-correction:prev_policy_conflict'},
-            catalog=self.catalog, spec_dir=self.specs, destination=self.root / 'work/c2/prepared',
-            budget=self.budget, router=Router(), authorized=lambda: True,
-        )
-        self.assertEqual(len(calls), 1)
-        self.assertEqual(rep_ev['acceptance_digest'], _sha(new_contract))
+        for case in ('same', 'unrelated', 'new_base', 'fake_key', 'tampered', 'conflict'):
+            with self.subTest(case=case):
+                folder = self.root / case
+                store = Store(folder / 'factory.db')
+                store.admit(['007'], 'initial', self.catalog)
+                previous = store.claim_next(self.catalog)
+                prepared = folder / previous['build_id'] / 'prepared'
+                prepared.mkdir(parents=True)
+                (prepared / 'task.json').write_text(json.dumps(evidence))
+                (prepared / 'BRIEF.md').write_text(task.specification)
+                (prepared / 'acceptance.mjs').write_text(template + ('// changed' if case == 'tampered' else ''))
+                receipt = {'preparation': evidence, 'gate': {'status': 'failed'}}
+                if case == 'conflict':
+                    receipt['feedback'] = {'author': 'Read-only acceptance violates the password policy'}
+                store.complete_attempt(previous['attempt_id'], previous['attempt_generation'], receipt, terminal=FAILED)
+                trusted = {'previous_build_id': previous['build_id'], 'attempt': 1, 'round': 1}
+                catalog = self.catalog
+                if case == 'unrelated':
+                    raw = {**catalog.raw, 'count': 2, 'features': [*catalog.features,
+                           {**catalog.features[0], 'id': '008', 'file': '008.md'}]}
+                    catalog = Catalog(raw)
+                store.admit(['007'], 'factory-correction:' + previous['build_id'], catalog,
+                            correction=None if case == 'fake_key' else trusted)
+                current = store.claim_next(catalog)
+                if case == 'new_base':
+                    self.git('commit', '--allow-empty', '-qm', 'new product base')
+                role = Role()
+                preparer = TaskPreparer(self.root, self.source, role=role,
+                                        checker=FailingChecker(), base_ref='HEAD', product=True)
+                target, result = preparer.prepare(build=current, catalog=catalog, spec_dir=self.specs,
+                    destination=folder / current['build_id'] / 'prepared',
+                    budget=self.budget, router=Router(), authorized=lambda: True, store=store)
+                self.assertEqual(len(role.calls), int(case not in ('same', 'unrelated')))
+                self.assertEqual(result['catalog_digest'], catalog.digest)
+                self.assertEqual(target.base_sha, self.git('rev-parse', 'HEAD').stdout.strip())
+                if case == 'new_base':
+                    self.git('checkout', '--detach', self.base)
 
     def test_correction_reprepare_with_failed_first_author_pins_round_author_in_dispatch(self):
         from factory.models import RoutingError, family

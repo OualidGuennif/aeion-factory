@@ -148,7 +148,7 @@
         "knowledge/components/factory-architecture.md"
       ],
       "depends_on": [
-        "001"
+        "006"
       ],
       "file": "007-content-sanitization-for-user-text.md",
       "architecture": "quarkus-postgresql-react-web-v1",

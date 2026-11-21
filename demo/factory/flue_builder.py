@@ -615,7 +615,18 @@ class FlueBuilder:
                         outcome = runtime.live(run, repo, handover, prompt=prompt, kind='factory-build')
                     finally:
                         self.last_feedback = getattr(runtime, 'agent_feedback', None) or self.last_feedback
-                    changed = snapshot()
+                    if outcome == 'handover':
+                        pending = run.pop('pending_author_handover', None)
+                        if pending is None:
+                            raise BuilderError('HANDOVER_NOT_READY')
+                        if usage(run)['complete'] is not True:
+                            raise BuilderError('USAGE_UNKNOWN')
+                        observed, basis = pending
+                        # The process, bridge and relay are retired. Export a stable snapshot
+                        # once and bind it to the next session's handover.
+                        changed = runtime.prepare_handover(run, repo, observed, basis=basis)
+                    else:
+                        changed = snapshot()
                     if changed:
                         retained = changed
                         run['retained_files_count'] = len(retained)

@@ -49,8 +49,8 @@ class ContextAdmissionTests(unittest.TestCase):
             prices={'input':0.15,'output':0.47},cost_limit='1.00',**options)
         box.start();self.addCleanup(box.close);return box
 
-    def send(self,box,index=0):
-        payload={'model':'qwen3.8-flash','stream':True,'max_tokens':4096,
+    def send(self,box,index=0,maximum=4096):
+        payload={'model':'qwen3.8-flash','stream':True,'max_tokens':maximum,
                  'messages':[{'role':'user','content':'x'*170000+str(index)}]}
         request=urllib.request.Request(box.url+'/messages',data=json.dumps(payload).encode(),
             headers={'x-api-key':box.token,'Content-Type':'application/json'})
@@ -171,6 +171,24 @@ class ContextAdmissionTests(unittest.TestCase):
         self.assertEqual(self.send(box,1),409)
         self.assertEqual(box.last_error_code,'PROVIDER_CONTEXT_VIOLATION')
         self.assertEqual(len(self.calls),1)
+
+    def test_measured_context_and_output_window_trigger_handover_before_forwarding(self):
+        self.usage.update(input_tokens=214962, output_tokens=629)
+        box = self.relay(max_output_tokens=65536)
+        self.assertEqual(self.send(box), 200)
+        self.assertEqual(self.send(box, 1, maximum=65536), 409)
+        self.assertEqual(box.last_error_code, 'AEION_HANDOVER')
+        self.assertEqual(self.checkpoints, [(214962, True)])
+        self.assertEqual(len(self.calls), 1)
+
+    def test_zero_input_usage_cannot_authorize_a_follow_up(self):
+        self.usage['input_tokens'] = 0
+        box = self.relay()
+        self.assertEqual(self.send(box), 200)
+        self.assertEqual(self.send(box, 1), 409)
+        self.assertEqual(box.last_error_code, 'USAGE_UNKNOWN')
+        self.assertEqual(self.checkpoints, [])
+        self.assertEqual(len(self.calls), 1)
 
     def post_messages(self, box, count):
         payload={'model':'qwen3.8-flash','stream':True,'max_tokens':16,

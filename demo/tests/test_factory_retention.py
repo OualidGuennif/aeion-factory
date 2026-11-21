@@ -132,6 +132,41 @@ class FeedbackAndDiagnosticsTests(unittest.TestCase):
         self.assertIsNone(error_class(io.BytesIO(b'Error: plain text only\nEXPECTED words\n')))
         self.assertEqual(error_class(io.BytesIO(b'x ERR_STREAM_PREMATURE_CLOSE y\n')), 'ERR_STREAM_PREMATURE_CLOSE')
 
+    def test_context_stop_preserves_a_typed_rejection_only_if_authorized_and_accounted(self):
+        from types import SimpleNamespace
+        from unittest.mock import Mock, patch
+
+        cases = (
+            ({'verdict': 'reject', 'reason': 'scope'}, True, True, None),
+            ({'verdict': 'reject', 'reason': 'scope'}, True, False, 'USAGE_UNKNOWN'),
+            ({'verdict': 'reject', 'reason': 'scope'}, False, True, 'REVIEW_NOT_AUTHORIZED'),
+            ({'verdict': 'unknown', 'reason': 'scope'}, True, True, 'REVIEW_RESULT_INVALID'),
+            (None, True, True, 'AEION_HANDOVER'),
+        )
+        for answer, authorized, complete, failure in cases:
+            with self.subTest(answer=answer, authorized=authorized, complete=complete):
+                review = FlueReview()
+                review.authorization_check = lambda: authorized
+                session = SimpleNamespace(telemetry=Mock(), finish=Mock(return_value={}), end_span=Mock())
+
+                def stop(run, *_args, review_result, **_kwargs):
+                    if answer is not None:
+                        review_result.write_text(json.dumps(answer))
+                    run['forwarded_count'] = 2
+                    raise ValueError('AEION_HANDOVER')
+
+                session.live = stop
+                with patch('factory.flue_review.FactorySession', return_value=session), \
+                        patch('factory.flue_review.usage', return_value={'complete': complete}):
+                    if failure is None:
+                        self.assertEqual(review('glm-5.3-flash', 'packet'), answer)
+                        self.assertTrue(review.last_execution['submission_recovered'])
+                        self.assertEqual(str(session.finish.call_args.args[1]), 'AEION_HANDOVER')
+                    else:
+                        with self.assertRaisesRegex(ValueError, failure):
+                            review('glm-5.3-flash', 'packet')
+                        self.assertNotIn('submission_recovered', review.last_execution)
+
     def test_a_reviewer_note_never_reaches_the_vote(self):
         review = FlueReview()
 

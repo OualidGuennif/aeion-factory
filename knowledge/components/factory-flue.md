@@ -377,7 +377,8 @@ publication still needs exactly two independent approvals. A Flue review that re
 requests and their cost are fully accounted for. Review-only retries exclude that reviewer,
 including when the context stop appears among the unavailable attempts. If no replacement
 is eligible for that vote, the context stop remains its failure. An unaccounted
-context stop and a typed rejection remain held. Measured 2026-11-05: DeepSeek answered 429
+review context stop blocks both automatic and operator review retries before any new reservation.
+A typed rejection remains held. Measured 2026-11-05: DeepSeek answered 429
 twice on build ac5b5ce1 after its gate passed (test_factory_review_circuit,
 test_factory_review_reassessment, test_relay_budget_settlement).
 All100MDs declare their two owning product documentation files. Their shared scopes require

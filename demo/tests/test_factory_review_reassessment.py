@@ -133,12 +133,13 @@ class ReviewContextDispatchTests(unittest.TestCase):
                 self.last_execution={'role':'review','engine':'flue-pi','forwarded_count':1,'usage':self.last_usage}
                 outer.votes.append((model,prompt))
                 if model==outer.failure_model:
-                    self.last_execution['failure']='REVIEW_RESULT_MISSING'
+                    self.last_execution['failure']=outer.failure_reason
                     if outer.unknown_failure_usage:self.last_usage['complete']=False
-                    raise ValueError('REVIEW_RESULT_MISSING')
+                    raise ValueError(outer.failure_reason)
                 return {'verdict':outer.verdict,'reason':'Synthetic fixture'}
         self.verdict='approve'
         self.failure_model=None
+        self.failure_reason='REVIEW_RESULT_MISSING'
         self.unknown_failure_usage=False
         self.budget=DailyBudget(self.root/'ledger.jsonl')
         self.worker=DispatchWorker(self.store,self.catalog,specs,self.root/'work',self.config,
@@ -294,6 +295,28 @@ class ReviewContextDispatchTests(unittest.TestCase):
         self.failure_model=None
         self.worker.reassess_review_context(self.build['build_id'],retry_failed_review=True)
         self.assertEqual(str(self.budget.spent('aeion-autonomous-forum')),'0.13')
+
+    def test_unaccounted_review_handover_cannot_start_a_retry(self):
+        build_id = self.build['build_id']
+        self.failure_model = 'deepseek-4.1-flash'
+        self.failure_reason = 'AEION_HANDOVER'
+        self.unknown_failure_usage = True
+        self.worker.reassess_review_context(build_id)
+        held = self.store.build(build_id)
+        circuit = json.loads(held['receipt'])['circuit']
+        self.assertEqual(circuit['votes'][-1]['reason'], 'AEION_HANDOVER')
+        self.assertEqual(str(self.budget.spent('aeion-autonomous-forum')), '0.11')
+
+        self.failure_model = None
+        self.assertIsNone(self.worker._continue_held_review())
+        with self.assertRaisesRegex(CircuitError, 'not_eligible'):
+            self.worker.reassess_review_context(build_id, retry_failed_review=True)
+
+        self.assertEqual(self.store.build(build_id)['receipt'], held['receipt'])
+        self.assertEqual(len(self.checks), 1)
+        self.assertEqual(len(self.votes), 2)
+        self.assertEqual(self.requests, [])
+        self.assertEqual(str(self.budget.spent('aeion-autonomous-forum')), '0.11')
 
     def test_retry_failed_review_excludes_zero_forward_budget_stop_model(self):
         receipt=json.loads(self.store.board()[0]['receipt'])

@@ -15,6 +15,7 @@ Operational Go and verified deployment remain pending.
 
 - Owner decision: activate the tested fix while idle and resume reviews on the retained artifact.
 - State: the retained artifact passed its recheck and two independent reviews, and the publisher confirmed it on main.
+- Factory delivery: the review recovery is on develop. The main promotion includes the follow-up that holds unaccounted reviewer context stops.
 - Next: continue the Factory and Agora audit from the first entry (who: agent).
 - Blocker: none. The final verdict-preservation fix is active in the local Cockpit.
 - Evidence: [validation](validation.md) and [execution contract](../knowledge/components/factory-flue.md).

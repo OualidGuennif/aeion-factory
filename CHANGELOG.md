@@ -5,7 +5,8 @@
 - Preserve a typed review verdict when the relay refuses the next turn at its context limit.
   If no verdict was submitted and usage is settled, allow bounded substitution and one operator
   recovery of an already retried artifact on that specific hold. Support one explicit review
-  recovery after a budget hold, and recheck claim authority before provider retries.
+  recovery after a budget hold, block review retries with unaccounted context stops, and
+  recheck claim authority before provider retries.
 
 - Finish relay accounting and retire the author harness before exporting a context
   handover. Preserve the relay failure stage and label checks on stopped drafts in the Cockpit.

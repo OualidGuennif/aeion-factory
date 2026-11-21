@@ -240,6 +240,23 @@ def is_accounted_review_handover(execution):
     return cost.is_finite() and cost >= 0
 
 
+def has_unaccounted_review_handover(circuit):
+    """Find context-stopped votes that cannot authorize another paid review."""
+    for group in ('votes', 'unavailable_reviewers'):
+        entries = circuit.get(group)
+        if not isinstance(entries, list):
+            continue
+        for entry in entries:
+            if not isinstance(entry, dict) or entry.get('verdict') != 'error':
+                continue
+            execution = entry.get('execution')
+            handover = (entry.get('reason') == 'AEION_HANDOVER'
+                        or isinstance(execution, dict) and execution.get('failure') == 'AEION_HANDOVER')
+            if handover and not is_accounted_review_handover(execution):
+                return True
+    return False
+
+
 def _unavailable(execution):
     """True for a reviewer failure eligible for bounded substitution before a verdict."""
     if not isinstance(execution, dict):

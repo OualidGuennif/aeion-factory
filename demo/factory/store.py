@@ -824,7 +824,7 @@ class Store:
         """
         from decimal import Decimal, InvalidOperation
         from .models import known
-        from .review_circuit import is_accounted_review_handover
+        from .review_circuit import has_unaccounted_review_handover, is_accounted_review_handover
         if recover_review_handover and not retry_failed_review:
             return None
         def measured(execution):
@@ -852,6 +852,8 @@ class Store:
                             or self._rows(conn,f"WHERE status IN ({','.join('?' for _ in ACTIVE)})",tuple(ACTIVE))):
                         return None
                     receipt=json.loads(row['receipt']);circuit=receipt.get('circuit') or {}
+                    if retry_failed_review and has_unaccounted_review_handover(circuit):
+                        return None
                     execution=receipt.get('execution') or {};votes=circuit.get('votes') or []
                     context=receipt.get('review_context') or {}
                     already_retried = context.get('retry_failed_review') is True

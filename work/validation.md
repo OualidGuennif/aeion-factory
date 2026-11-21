@@ -1,3 +1,10 @@
+## Factory promotion review — 2026-11-21
+
+- A scripted live review with an unaccounted `AEION_HANDOVER` reproduced a second
+  paid review and a staged publication before the fix. The regression now checks
+  that both automatic and explicit retries leave the receipt, reservation and
+  publication state intact. All 53 review tests passed.
+
 ## Factory PR #59 review follow-up — 2026-11-21
 
 - A provider retry rechecks live Factory authority after backoff. A loopback

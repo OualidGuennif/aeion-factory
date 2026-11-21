@@ -361,7 +361,8 @@ session. A stall is reported as `PROVIDER_TIMEOUT`, other socket failures as `TR
 A busy provider (HTTP 408, 425, 429, 500, 502, 503, 504 or 529 before any byte) is retried
 twice on the same claimed request, after 5s then 20s or an integer `Retry-After` capped at 30s;
 closing the relay ends the wait. After backoff the relay rechecks the Factory claim
-against the current attempt, lease and catalog before it resends. Other statuses, timeouts
+against the current attempt, lease and catalog, then orders the resend against relay shutdown.
+Other statuses, timeouts
 and socket failures are never retried.
 A remaining 429 is `PROVIDER_RATE_LIMITED` and other busy statuses `PROVIDER_UNAVAILABLE`; the
 last refusing HTTP status and the retry count stay in the role's execution metadata. A review
@@ -372,7 +373,7 @@ publication still needs exactly two independent approvals. A Flue review that re
 `AEION_HANDOVER` before a typed vote shares this same substitution slot if its forwarded
 requests and their cost are fully accounted for. Review-only retries exclude that reviewer,
 including when the context stop appears among the unavailable attempts. If no replacement
-is eligible, the context-stopped reviewer remains the failed vote. An unaccounted
+is eligible for that vote, the context stop remains its failure. An unaccounted
 context stop and a typed rejection remain held. Measured 2026-11-05: DeepSeek answered 429
 twice on build ac5b5ce1 after its gate passed (test_factory_review_circuit,
 test_factory_review_reassessment, test_relay_budget_settlement).

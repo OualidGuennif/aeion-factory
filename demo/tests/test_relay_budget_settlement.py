@@ -186,6 +186,18 @@ class SettlementTests(unittest.TestCase):
         self.assertEqual((self.posts, relay.last_error_code), (1, 'ATTEMPT_REVOKED'))
         self.assertTrue(relay.closed)
 
+    def test_shutdown_during_authority_check_prevents_a_busy_retry(self):
+        def close_during_authority():
+            with relay.dispatch_lock:
+                relay.closed = True
+            return None
+
+        relay = self.relay(retry_authority=close_during_authority)
+        relay.stopping.wait = lambda _delay: False
+        self.busy = [(503, None)]
+        self.assertEqual(self.send(relay, 0), 409)
+        self.assertEqual((self.posts, relay.forwarded_count, relay.last_error_code), (1, 1, 'RELAY_CLOSED'))
+
     def test_lab_default_and_invalid_factory_step_bounds_remain_closed(self):
         relay=self.relay()
         self.assertEqual([self.send(relay,i) for i in range(13)],[200]*12+[409])

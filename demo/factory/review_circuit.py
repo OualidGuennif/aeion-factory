@@ -306,7 +306,8 @@ def two_vote_review(author_model, feature_id, files, router, complete, telemetry
             model = router.select("review", exclude_models=excluded, exclude_families=used_families)
         except RoutingError:
             reason = "no_independent_reviewer"
-            if unavailable and is_accounted_review_handover(unavailable[-1].get('execution')):
+            if (unavailable and unavailable[-1]['vote'] == index
+                    and is_accounted_review_handover(unavailable[-1].get('execution'))):
                 votes.append(unavailable.pop())
                 reason = "reviewer_failed"
             return {"status": "held", "reason": reason, "votes": votes,

@@ -312,6 +312,9 @@ class ContextRelay:
                                 relay.last_error_code = stop
                                 relay.event("context.refused", **{"aeion.failure.code": stop})
                                 return self.deny(409, stop)
+                            if not relay.claim_forward():
+                                relay.last_error_code = relay.last_error_code or 'RELAY_CLOSED'
+                                return self.deny(409, 'RELAY_CLOSED')
                     stage = 'stream'
                     with opened as response:
                         relay.responses.append(response)
@@ -452,14 +455,15 @@ class ContextRelay:
                 or type(inputs) is not int or inputs < 1
                 or type(outputs) is not int or outputs < 0)
 
-    def claim_forward(self, counted):
-        # Shutdown and the liability counter share one ordering point. Once closed, local
-        # preflight cannot later start an uncounted provider request after a zero settlement.
+    def claim_forward(self, counted=None):
+        # Order both new forwards and wire retries against shutdown. A wire retry
+        # uses the accounting claim already created for the unchanged provider request.
         with self.dispatch_lock:
             if self.closed:
                 return False
-            self.forwarded_count += 1
-            self.forwarded_counts.append(counted)
+            if counted is not None:
+                self.forwarded_count += 1
+                self.forwarded_counts.append(counted)
             return True
 
     def close(self):

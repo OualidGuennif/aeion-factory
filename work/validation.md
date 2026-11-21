@@ -3,7 +3,9 @@
 - A scripted live review with an unaccounted `AEION_HANDOVER` reproduced a second
   paid review and a staged publication before the fix. The regression now checks
   that both automatic and explicit retries leave the receipt, reservation and
-  publication state intact. All 53 review tests passed.
+  publication state intact. A second pass reproduced the same retry after
+  `USAGE_UNKNOWN` and verified that a proven zero-transport context stop can
+  still use a substitute. All 55 review and 33 Cockpit tests passed.
 
 ## Factory PR #59 review follow-up — 2026-11-21
 

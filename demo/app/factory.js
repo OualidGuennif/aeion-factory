@@ -101,7 +101,7 @@ function reasonText(info) {
 }
 const OWNER_ACTIONS = {
   review_budget_unavailable: "Check today’s spend and open reservations before reconciling this request.",
-  reviewer_failed: "The controller reruns the votes once without rerunning the author. A second failure stays on hold.",
+  reviewer_failed: "For eligible failures, the controller reruns the votes once without rerunning the author. A second failure or a reviewer usage error stays on hold.",
   reviewer_rejected: "The factory already ran its automatic attempts and correction rounds. Read the reviewer reasons in Build evidence, then cancel this request; a relaunch unchanged will likely be rejected again.",
   worker_error: "Cancel this request, then launch the feature again.",
   catalog_changed: "Cancel this request, then launch the feature again with the current MD.",

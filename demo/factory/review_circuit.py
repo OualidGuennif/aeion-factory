@@ -228,7 +228,7 @@ def is_accounted_review_handover(execution):
     """A context stop in the reviewer with every forwarded request accounted for."""
     if (not isinstance(execution, dict) or execution.get('failure') != 'AEION_HANDOVER'
             or execution.get('engine') != 'flue-pi' or execution.get('role') != 'review'
-            or type(execution.get('forwarded_count')) is not int or execution['forwarded_count'] <= 0):
+            or type(execution.get('forwarded_count')) is not int or execution['forwarded_count'] < 0):
         return False
     usage = execution.get('usage')
     if not isinstance(usage, dict) or usage.get('complete') is not True:
@@ -237,11 +237,12 @@ def is_accounted_review_handover(execution):
         cost = Decimal(str(usage.get('cost_usd')))
     except InvalidOperation:
         return False
-    return cost.is_finite() and cost >= 0
+    return (cost.is_finite() and cost >= 0 and (execution['forwarded_count'] > 0
+            or (usage.get('basis') == 'proven_no_transport' and cost == 0)))
 
 
-def has_unaccounted_review_handover(circuit):
-    """Find context-stopped votes that cannot authorize another paid review."""
+def has_review_usage_gap(circuit):
+    """Find explicit accounting failures in review receipts, including historical holds."""
     for group in ('votes', 'unavailable_reviewers'):
         entries = circuit.get(group)
         if not isinstance(entries, list):
@@ -250,9 +251,9 @@ def has_unaccounted_review_handover(circuit):
             if not isinstance(entry, dict) or entry.get('verdict') != 'error':
                 continue
             execution = entry.get('execution')
-            handover = (entry.get('reason') == 'AEION_HANDOVER'
-                        or isinstance(execution, dict) and execution.get('failure') == 'AEION_HANDOVER')
-            if handover and not is_accounted_review_handover(execution):
+            failures = (entry.get('reason'), execution.get('failure') if isinstance(execution, dict) else None)
+            if ('USAGE_UNKNOWN' in failures
+                    or ('AEION_HANDOVER' in failures and not is_accounted_review_handover(execution))):
                 return True
     return False
 

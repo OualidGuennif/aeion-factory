@@ -274,7 +274,7 @@ test('the next step names one plain owner action and never presents a simulation
   assert.match(step.title, /Feature 001 is on hold/);
   assert.match(step.detail, /could not finish its vote/);
   assert.match(step.detail, /reruns the votes once without rerunning the author/);
-  assert.match(step.detail, /second failure stays on hold/);
+  assert.match(step.detail, /second failure or a reviewer usage error stays on hold/);
   context.rejected = { ...held, receipt: JSON.stringify({ circuit: { reason: 'reviewer_rejected' } }) };
   assert.match(run('nextStep({mode:"live"}, fixture, [rejected]).detail'), /automatic attempts and correction rounds[^]*relaunch unchanged will likely be rejected again/);
   assert.match(run('failedText({correction:{attempt:1, round:0, trigger:"ci_failed"}})'), /Required CI failed on the open pull request[^]*correction round 1 of 2[^]*was not merged/);

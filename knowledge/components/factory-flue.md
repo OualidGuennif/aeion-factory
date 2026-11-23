@@ -4,12 +4,12 @@ title: "Flue factory execution"
 description: "Deterministic supervision of untrusted Flue/Pi workers, isolated tools and protected publication."
 status: draft
 verified:
-  - at: 2026-11-18
-    what: "full suite (896/896 demo, 33/33 repo, 30/30 flue, 21/21 catalog, 31/31 cockpit, template-tests): @Provider/@ApplicationScoped + >=12-char pass + pinned correction family exclusion; priority/UTF-8-safe baseline_context; conflict reprepare"
   - at: 2026-11-19
     what: "full suite (902/902 demo, 33/33 repo, 31/31 flue, 31/31 cockpit, 21/21 forum, template-tests): masked literal + node --check validation, zero-test_error baseline gate, check_evidence locs, runtime-crash reprepare, contract-aware correction_unchanged"
   - at: 2026-11-20
     what: "full suite (910/910 demo, 33/33 repo, 31/31 flue, 31/31 cockpit, 21/21 forum): REVIEW_MAX_USD 5.00, 0-forward preflight, prior_candidate reuse, prepare check progress"
+  - at: 2026-11-21
+    what: "Factory Python suite (919 passed): preparation budget and authorization checks, unresolved reservations across restart, stale author usage and interrupted relay teardown"
 sources:
   - resource: ../../demo/factory/review_context.py
     title: "One-time operator repair of the old review envelope"
@@ -225,7 +225,13 @@ starts the next attempt directly; scope, secret, revocation, sandbox, unknown co
 accounting, funds and credential stops end the launch (`test_factory_correction_rounds`). A follow-up
 whose message list exceeds 256, or whose body exceeds 2000000 bytes after a forwarded request,
 closes that session as `AEION_HANDOVER` and the same attempt continues in a fresh session. A first
-request past either cap stays `CONTEXT_UNKNOWN` (`test_context_admission`). The next
+request past either cap stays `CONTEXT_UNKNOWN` (`test_context_admission`). For an author,
+the relay signals the boundary without exporting sandbox state. The builder waits for CLI
+and bridge retirement and closed accounting, then exports one scoped snapshot and binds
+it to the verified handover. A missing or zero provider input count refuses the next
+request as `USAGE_UNKNOWN`. Relay refusal telemetry keeps the stage and exception class
+without request or response content (test_context_admission, test_runner_teardown,
+test_factory_work_limits). The next
 author starts from the previous candidate only when its bytes still match the digest the failed
 receipt recorded and the base is unchanged: a refused candidate, or after a crash the scoped files
 the crashed author left, revalidated by `validate_artifact`. It receives the votes and check results
@@ -279,7 +285,24 @@ removing `/__release` and moving the default port.
 Explicit operator bounds remain. `demo/budget.conf` sets the daily purse (at most $150, owner
 decision 2026-11-07), one author execution (at most $50, reserved and relay-enforced) and one
 review vote (at most $5, owner decision 2026-11-20);
-an invalid file holds builds as `budget_config_invalid` and admits no spending. A soft stop can retain a proposed candidate
+an invalid file holds builds as `budget_config_invalid` and admits no spending. Paid acceptance
+preparation reserves $0.50 per model attempt against the forum purse and applies that same cap
+to inference. A budget refusal can mean that the full bound of the next request did not fit,
+even when measured spend was well below $0.50. If inference already forwarded a request and
+wrote a valid, ready submission, a subsequent `BUDGET_STOP` can retain the submission only
+after the harness returns, usage is complete and within the cap, and the attempt is still
+authorized. The stop remains in the execution evidence and the submission still requires the
+independent baseline check. Without a usable submission, a budget stop with known cost within
+the cap can switch families within the existing three-attempt limit. A fresh reservation is
+required each time. Unknown or over-cap cost prevents this budget retry. A daily reservation
+refusal surfaces separately (test_factory_preparation).
+An author or review reservation settles from complete measured usage or a proven
+zero-transport path. Missing or incomplete accounting, including an interrupted relay
+teardown, leaves the full role reservation counted against its original Paris budget day.
+Restart, a terminal build state and the age of a reservation do not establish its cost.
+Subsequent admissions count these reservations against the remaining daily capacity
+(test_factory_dispatch, test_factory_live, test_runner_teardown).
+A soft stop can retain a proposed candidate
 only after validated export, confirmed sandbox removal, complete known usage within the frozen
 reservation and a current authorization check. Its stopped-role failure remains visible. No check
 or vote is inferred: the final external gate and both independent reviews still run; unknown usage,
@@ -300,14 +323,25 @@ started. A transaction archives the original rejection and increments the genera
 reruns external gates and two fresh votes, including the original rejecting reviewer, excluding
 the author/preparer. It never reruns or bills the author, imports a vote or repeats a v2 rejection.
 Unknown usage, changed contracts, cancellation and prior remote work refuse this repair.
-A reviewer must deliver its verdict through the typed `submit_review` tool. If a session ends
-without it, the reviewer's Flue 2.3 `useAgentFinish` hook appends one result-required signal,
+A reviewer must deliver its verdict through the typed `submit_review` tool. If the relay
+or the native context gate stops the next turn with `AEION_HANDOVER`, the supervisor can read
+the immutable submission after teardown. The role still requires valid typed output, complete provider usage and an
+authorized attempt. The receipt records the context stop and the preserved verdict, including
+a rejection. If a session ends without a verdict, the reviewer's Flue 2.3 `useAgentFinish`
+hook appends one result-required signal,
 guarded by `usePersistentState` so it fires at most once; a second miss still fails closed with
 `REVIEW_RESULT_MISSING`. The failed vote keeps its trusted execution metadata and failure code.
 After a v2 hold caused only by such failures (no rejection), the controller reruns the
 external gate and both votes once on the same unchanged artifact, without an operator and
-without rerunning the author. `review_context --retry-failed-review` remains that same repair.
-The archived votes are never reused. A second failure stays held. A same-build retry replaces
+without rerunning the author. `review_context --retry-failed-review` uses that same path.
+The operator may also invoke it once after a review budget hold, including a budget stop
+during the automatic retry. Both votes get new reservations. The author stays idle and the
+archived votes are never reused. A second failure stays held. The operator may request
+`review_context --recover-review-handover` once when the latest v2 review ended with an
+accounted `AEION_HANDOVER` before a typed vote and the normal retry is spent. The controller
+archives the receipt, rechecks the exact frozen artifact, excludes the context-stopped reviewer
+and requests fresh votes within the existing budget. A failed recheck or a rejection leaves
+this recovery held for the operator. The author is not called. A same-build retry replaces
 only that build's prepared folder and repo, and keeps a same-model resume clone. That resume
 reuses the prepared contract already on disk and does not call the preparer again. A resumed
 correction still carries the failed check name and the reviewer lines from the build it
@@ -326,15 +360,28 @@ reasoning reviewer can think for minutes before its first byte; role deadlines s
 session. A stall is reported as `PROVIDER_TIMEOUT`, other socket failures as `TRANSPORT_ERROR`.
 A busy provider (HTTP 408, 425, 429, 500, 502, 503, 504 or 529 before any byte) is retried
 twice on the same claimed request, after 5s then 20s or an integer `Retry-After` capped at 30s;
-closing the relay ends the wait. Other statuses, timeouts and socket failures are never retried.
+closing the relay ends the wait and prevents a request still in preflight from dialing.
+Retries recheck the Factory claim before DNS. Every
+provider connection rechecks the attempt, lease and catalog after DNS and TLS and before
+its first HTTP write. Only then is the logical request counted. Shutdown cuts off the
+registered TCP connection before releasing its TLS state and refuses connections that resolve later.
+Other statuses, timeouts
+and socket failures are never retried.
 A remaining 429 is `PROVIDER_RATE_LIMITED` and other busy statuses `PROVIDER_UNAVAILABLE`; the
 last refusing HTTP status and the retry count stay in the role's execution metadata. A review
 vote that ends with one of those two codes and zero output tokens produced no verdict, so its
 slot goes once (`MAX_SUBSTITUTIONS`) to the next eligible reviewer outside the author, preparer
 and earlier families; the busy attempt is kept as `unavailable_reviewers`, never as a vote, and
-publication still needs exactly two independent approvals. A refusal, timeout or billed answer
-still holds (test_factory_review_circuit, test_relay_budget_settlement). Measured 2026-11-05:
-DeepSeek answered 429 twice on build ac5b5ce1 after its gate passed.
+publication still needs exactly two independent approvals. A Flue review that reaches
+`AEION_HANDOVER` before a typed vote shares this same substitution slot if its forwarded
+requests and their cost are fully accounted for, including proven zero transport. Review-only retries exclude that reviewer,
+including when the context stop appears among the unavailable attempts. If no replacement
+is eligible for that vote, the context stop remains its failure. An unaccounted
+review context stop or an explicit `USAGE_UNKNOWN` stops automatic and operator review
+retries before any new reservation.
+A typed rejection remains held. Measured 2026-11-05: DeepSeek answered 429
+twice on build ac5b5ce1 after its gate passed (test_factory_review_circuit,
+test_factory_review_reassessment, test_relay_budget_settlement).
 All100MDs declare their two owning product documentation files. Their shared scopes require
 serial builds; completion still depends on the current contract and confirmed publication.
 Preparation, the builder's repair feedback and the final gate share the same supervisor-selected
@@ -476,9 +523,14 @@ evidence, and `CLI_STARTUP_FAILED`, still starts the next attempt on another mod
 validated files. A provider error does too. A network stop resumes the same model even with
 fewer steps. Before preparation or a paid call the live controller connects to the provider
 host twice; if either connect fails the build holds as `network_unavailable` before preparation
-spends, and no model is called, then resumes when both succeed. An expired lease with that working evidence and no publication job
-is queued the same way. Publishing, waiting for CI, or merging stays `reconciliation_needed`.
-A reviewer `TRANSPORT_ERROR` retries that same model up to three times before `reviewer_failed`
+spends, and no model is called, then resumes when both succeed. Author tool-event counts
+cover only the author stage of the current attempt. An expired lease stays `reconciliation_needed`
+until its accounting and external effects can be established.
+Complete author usage settles the author reservation before the protected gate and the
+review votes. Unknown usage retains the full reservation. Each reviewer reserves its own
+capacity. A refusal before transport records `review_budget_unavailable` and keeps any prior votes
+(test_factory_target_dispatch, test_factory_review_circuit).
+A reviewer `TRANSPORT_ERROR` permits up to three attempts on that same model before `reviewer_failed`
 (test_factory_correction_rounds, test_factory_connectivity, test_factory_review_circuit).
 While no build lease is active, an OpenShell sandbox pair older than 30 minutes is removed.
 A younger pair stays, so a qualification sandbox is not deleted while its owner is still
@@ -492,6 +544,11 @@ build again when the proof is fresh, without another author attempt. A proof tha
 expired still allows the open (test_openshell_security_window, test_factory_correction_rounds).
 
 ## Invariants
+
+Catalog identity is checked from the current validated manifest before the next model forward
+or before staging a new publication. Existing build history and durable jobs survive catalog
+refusal. The protocol digest covers the shared context and feedback tool imported by the role
+entrypoints (`test_factory_contract_identity`, `test_factory_execution`).
 
 1. Live authoring invokes Flue/Pi with tier-3 bridge tools; no direct-model or host-tool fallback.
 2. OpenShell agent sandboxes expose no host mount, Docker socket, network or inference key.
@@ -509,6 +566,10 @@ expired still allows the open (test_openshell_security_window, test_factory_corr
 6. Two approving eligible models from different families, excluding the author and each other,
    must bind the complete identical artifact; missing/reject/error never means approval.
    A correction round or attempt is a new author build with two new votes, never a retried vote.
+   Reusing protected preparation requires a supervisor-recorded correction link, unchanged
+   base, spec, architecture and scopes, and matching durable and workspace digests.
+   An unrelated catalog change rebinds only the catalog identity; conflicts trigger fresh
+   preparation (test_factory_preparation).
 7. The publisher/merger has no inference role. It verifies stored evidence, required CI and
    exact PR head/base before a protected merge. A concurrent change invalidates approval.
 8. Real data/history/budget liabilities survive restart. Synthetic qualification never marks
@@ -560,10 +621,9 @@ expired still allows the open (test_openshell_security_window, test_factory_corr
 18. Gradle build files, wrappers, settings, properties and version catalogs receive the same
     dependency-policy hold in the deterministic review and publisher. A model approval never
     authorizes a build-policy transition (test_factory_review, test_factory_publish).
-19. A CLI stop while the agent was still working resumes the same build and the same model,
-    at most three times, and does not admit another attempt. Fewer than three steps, a startup
-    failure, or a provider error still starts the next attempt. An expired lease without that
-    evidence, or one that reached publication, stays reconciliation_needed
+19. A reported CLI interruption with enough current author progress can resume the same
+    build and model at most three times. An expired lease holds for reconciliation even
+    when progress events exist. A late worker cannot replace a newer attempt's state
     (test_factory_correction_rounds, test_factory_connectivity, test_factory_recovery).
 20. A paid sandbox opens only when the OpenShell security proof has an hour or more left,
     or the host probe has just published a replacement. The previous proof is not removed

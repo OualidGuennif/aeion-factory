@@ -45,14 +45,27 @@ class FlueReview:
         runtime.authorization_check = self.authorization_check
         span = runtime.telemetry.begin(run)
         error = None
+        submission_recovered = False
         try:
             with tempfile.TemporaryDirectory(prefix='aeion-review-') as directory:
                 output = Path(directory) / 'result.json'
                 self.last_usage=None
-                outcome = runtime.live(run, Path(directory), None, prompt=prompt, kind='factory-review', review_result=output)
-                if outcome != 'complete' or not output.is_file() or output.stat().st_size > 4096:
-                    raise ValueError('REVIEW_RESULT_MISSING')
-                if usage(run)['complete'] is not True:
+                try:
+                    outcome = runtime.live(run, Path(directory), None, prompt=prompt,
+                                           kind='factory-review', review_result=output)
+                except ValueError as stopped:
+                    # The immutable typed tool result survives a refused acknowledgement.
+                    if str(stopped) != 'AEION_HANDOVER' or not output.is_file():
+                        raise
+                    if not callable(self.authorization_check) or self.authorization_check() is not True:
+                        raise ValueError('REVIEW_NOT_AUTHORIZED') from None
+                    error = stopped
+                else:
+                    if outcome != 'complete':
+                        raise ValueError('REVIEW_RESULT_MISSING')
+                if not output.is_file() or output.stat().st_size > 4096:
+                    raise ValueError('REVIEW_RESULT_INVALID' if error else 'REVIEW_RESULT_MISSING')
+                if usage(run)['complete'] is not True or (error and not run.get('forwarded_count')):
                     raise ValueError('USAGE_UNKNOWN')
                 result = json.loads(output.read_text())
                 if (not isinstance(result, dict) or set(result) - {'feedback'} != {'verdict', 'reason'}
@@ -62,6 +75,7 @@ class FlueReview:
                     raise ValueError('REVIEW_RESULT_INVALID')
                 # Owner-only: the vote that other agents may see carries the verdict and reason alone.
                 self.last_feedback = result.pop('feedback', None) or None
+                submission_recovered = error is not None
                 return result
         except Exception as caught:
             error = caught
@@ -70,5 +84,7 @@ class FlueReview:
             self.last_usage = usage(run)
             try:
                 self.last_execution = runtime.finish(run, error)
+                if submission_recovered:
+                    self.last_execution['submission_recovered'] = True
             finally:
                 runtime.end_span(span,run,error)

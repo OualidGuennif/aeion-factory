@@ -66,6 +66,25 @@ test('unknown availability fails closed', () => {
   assert.equal(run('availability({id:"999"}).selectable'), false);
 });
 
+test('preparation evidence distinguishes the daily purse from a request that exceeds its model cap', () => {
+  const { context, run } = client();
+  context.build = { hold_reason: 'preparation_unavailable', receipt: JSON.stringify({
+    reason: 'preparation_budget_stop', preparation_execution: {
+      model: 'opencode-go/gpt-6-luna', forwarded_count: 1, usage: { complete: true, cost_usd: '0.1101687' },
+    },
+  }) };
+  assert.equal(run('holdReason(build)'), 'preparation_budget_stop');
+  assert.match(run('reasonText({reason: holdReason(build)})'), /\$0\.50.*per model attempt/);
+  const evidence = run('receiptSummary(build.receipt)');
+  assert.match(evidence, /opencode-go\/gpt-6-luna/);
+  assert.match(evidence, /\$0\.1101687/);
+  assert.match(evidence, /<dt>Last preparation model requests<\/dt><dd>1<\/dd>/);
+
+  context.build.receipt = JSON.stringify({ reason: 'preparation_daily_budget_unavailable' });
+  assert.equal(run('holdReason(build)'), 'preparation_daily_budget_unavailable');
+  assert.match(run('reasonText({reason: holdReason(build)})'), /daily forum budget/);
+});
+
 test('trace links validate identity and escape receipt fields', () => {
   const { context, run } = client();
   context.receipt = JSON.stringify({ build_id: '<img src=x>', telemetry: { trace_id: 'a'.repeat(32), status: 'confirmed' } });
@@ -255,7 +274,7 @@ test('the next step names one plain owner action and never presents a simulation
   assert.match(step.title, /Feature 001 is on hold/);
   assert.match(step.detail, /could not finish its vote/);
   assert.match(step.detail, /reruns the votes once without rerunning the author/);
-  assert.match(step.detail, /second failure stays on hold/);
+  assert.match(step.detail, /second failure or a reviewer usage error stays on hold/);
   context.rejected = { ...held, receipt: JSON.stringify({ circuit: { reason: 'reviewer_rejected' } }) };
   assert.match(run('nextStep({mode:"live"}, fixture, [rejected]).detail'), /automatic attempts and correction rounds[^]*relaunch unchanged will likely be rejected again/);
   assert.match(run('failedText({correction:{attempt:1, round:0, trigger:"ci_failed"}})'), /Required CI failed on the open pull request[^]*correction round 1 of 2[^]*was not merged/);
@@ -292,6 +311,9 @@ test('an agent self-test on its draft is never labelled as the final check', () 
   assert.match(draft, /Agent self-test \(draft\)/);
   assert.match(draft, /not the final verdict/);
   assert.ok(!draft.includes('<dt>Check</dt>'));
+  const stopped = run(`receiptSummary(JSON.stringify({error:"CONTEXT_UNKNOWN",execution:{check:{status:"passed"}}}))`);
+  assert.match(stopped, /<dt>Agent self-test \(draft\)<\/dt><dd>passed<\/dd>/);
+  assert.ok(!stopped.includes('<dt>Check</dt>'));
   const gate = run(`receiptSummary(JSON.stringify({gate:{status:"failed"},draft_check:{status:"failed",reason:"x_y"}}))`);
   assert.match(gate, /<dt>Check<\/dt><dd>failed<\/dd>/);
 });
@@ -393,4 +415,25 @@ test('dependency reasons stay visible in All features and lab/cockpit HTML shell
   assert.match(factoryHtml, /<nav\b[^>]*\bid="workspace-tabs"[^>]*\bhidden\b/);
   const indexHtml = readFileSync(new URL('../app/index.html', import.meta.url), 'utf8');
   assert.ok(indexHtml.indexOf('id="message"') < indexHtml.indexOf('data-lab-panel="sessions"'));
+});
+
+test('SSE reload resets the obsolete cursor and drops duplicate or late frames', () => {
+  const { context, run } = client();
+  const streams = [];
+  context.EventSource = class {
+    constructor(url) { this.url = url; this.handlers = {}; streams.push(this); }
+    addEventListener(name, handler) { this.handlers[name] = handler; }
+    close() { this.closed = true; }
+    send(name, id) { this.handlers[name]({ type: name, lastEventId: id }); }
+  };
+  run('state.lastSeq = 10; refresh = () => { if (!state.stream) connectSSE(); }; connectSSE()');
+  assert.equal(streams[0].url, '/api/factory/events?since=10');
+  streams[0].send('reload');
+  assert.equal(streams[0].closed, true);
+  assert.equal(streams[1].url, '/api/factory/events?since=0');
+  streams[1].send('build_progress', '3');
+  streams[1].send('build_progress', '3');
+  streams[0].send('build_progress', '20');
+  assert.equal(run('state.lastSeq'), 3);
+  assert.equal(run('state.events.length'), 1);
 });

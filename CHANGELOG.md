@@ -2,6 +2,28 @@
 
 ## Unreleased
 
+- Preserve a typed review verdict when the relay refuses the next turn at its context limit.
+  If no verdict was submitted and usage is settled, allow bounded substitution and one operator
+  recovery of an already retried artifact on that specific hold. Support one explicit review
+  recovery after a budget hold, block review retries with unresolved context-stop usage, and
+  recheck claim authority before provider retries.
+
+- Finish relay accounting and retire the author harness before exporting a context
+  handover. Preserve the relay failure stage and label checks on stopped drafts in the Cockpit.
+
+- Pause Factory admission on an invalid catalog and check its current contract before
+  publication staging. Include the shared Flue context and feedback tool in qualification.
+- Bind preparation reuse to a verified correction and the same product base. Fence expired
+  or superseded attempts, and settle measured author usage before reserving review capacity.
+- Recover Cockpit event replay after rollover or restart and close streams when their
+  administrator session expires.
+
+- Declare integrated Feature 006 as the prerequisite for Feature 007 so its authenticated acceptance checks can rely on the session and CSRF contract.
+
+- Preserve unresolved Factory spend reservations across worker restart and new admissions. Author and review settlements require complete measured usage or proven zero transport.
+
+- Retain a valid acceptance submission when a subsequent model request hits the preparation cap, provided usage and authorization are confirmed. The Cockpit distinguishes this per-model cap from a daily forum budget refusal and shows preparation spend.
+
 - Fixed two Cockpit/preparation status bugs exposed while launching Feature `007`:
   - `FactoryApp` (`demo/factory/api.py`) now refreshes `self.catalog` and `self.worker.catalog` from disk (`_refresh_catalog`) on `catalog_view`, `queue`, and `tick` while failing closed (retaining the last valid catalog so `contract_current` marks corrupted or symlinked specs `blocked / catalog_changed`), allowing updated `.md` contracts on disk to become immediately `ready` (`selectable: true`) without a server restart (`test_factory_contract_identity`).
   - `TaskPreparer._prepare_and_check` (`demo/factory/preparation.py`) emits `protected_check.started` (`status: running`) before running the untouched-baseline negative-control check so the Cockpit displays `Running protected checks` instead of `Agent stopped` during the ~2-minute baseline verification (`test_factory_preparation`).

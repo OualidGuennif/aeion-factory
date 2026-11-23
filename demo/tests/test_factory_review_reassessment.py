@@ -40,7 +40,7 @@ class ReviewContextClaimTests(unittest.TestCase):
                     'usage':{'complete':True,'cost_usd':'0.01'}}}]}}
 
     def hold(self,receipt):
-        self.store.hold_dispatched(self.build['build_id'],'owner_review_required',receipt=receipt)
+        self.store.hold_dispatched(self.build,'owner_review_required',receipt=receipt)
         row=self.store.board()[0]
         return hashlib.sha256(row['receipt'].encode()).hexdigest()
 
@@ -56,7 +56,7 @@ class ReviewContextClaimTests(unittest.TestCase):
         events=self.store.events(self.build['build_id'])
         event=next(x for x in events if x['event']=='review_context_reassessment')
         self.assertEqual(json.loads(event['detail'])['previous_receipt'],self.receipt)
-        self.store.hold_dispatched(claimed['build_id'],'owner_review_required',receipt=json.loads(claimed['receipt']))
+        self.store.hold_dispatched(claimed,'owner_review_required',receipt=json.loads(claimed['receipt']))
         digest=hashlib.sha256(self.store.board()[0]['receipt'].encode()).hexdigest()
         self.assertIsNone(self.store.claim_review_context(claimed['build_id'],self.catalog,digest,10**12))
 
@@ -121,7 +121,7 @@ class ReviewContextDispatchTests(unittest.TestCase):
             'gate':{'status':'passed'},'review':{'status':'approved'},
             'circuit':{'status':'held','reason':'reviewer_rejected','votes':[{
                 'model':'qwen-3.8-flash','verdict':'reject','execution':{**execution,'role':'review'}}]}}
-        self.store.hold_dispatched(self.build['build_id'],'owner_review_required',receipt=self.prior)
+        self.store.hold_dispatched(self.build,'owner_review_required',receipt=self.prior)
         self.checks=[];self.votes=[];self.requests=[]
         checker=SimpleNamespace(check_target=lambda target,repo,frozen:
             (self.checks.append(str(repo)) or True,{'reason':'passed'}))
@@ -133,13 +133,18 @@ class ReviewContextDispatchTests(unittest.TestCase):
                 self.last_execution={'role':'review','engine':'flue-pi','forwarded_count':1,'usage':self.last_usage}
                 outer.votes.append((model,prompt))
                 if model==outer.failure_model:
-                    self.last_execution['failure']='REVIEW_RESULT_MISSING'
+                    self.last_execution['failure']=outer.failure_reason
                     if outer.unknown_failure_usage:self.last_usage['complete']=False
-                    raise ValueError('REVIEW_RESULT_MISSING')
+                    if outer.zero_forward_failure:
+                        self.last_execution['forwarded_count'] = 0
+                        self.last_usage.update(cost_usd='0', basis='proven_no_transport', output_tokens=0)
+                    raise ValueError(outer.failure_reason)
                 return {'verdict':outer.verdict,'reason':'Synthetic fixture'}
         self.verdict='approve'
         self.failure_model=None
+        self.failure_reason='REVIEW_RESULT_MISSING'
         self.unknown_failure_usage=False
+        self.zero_forward_failure=False
         self.budget=DailyBudget(self.root/'ledger.jsonl')
         self.worker=DispatchWorker(self.store,self.catalog,specs,self.root/'work',self.config,
             builder=SimpleNamespace(paid=True,engine='flue-pi',last_execution=None),
@@ -205,6 +210,88 @@ class ReviewContextDispatchTests(unittest.TestCase):
             self.worker.reassess_review_context(self.build['build_id'],retry_failed_review=True)
         self.assertEqual(len(self.votes),3)
 
+    def test_operator_recovers_one_review_handover_after_the_normal_retry(self):
+        import sqlite3
+        receipt = {**self.prior, 'review_context': {'retry_failed_review': True, 'author_reused': True}}
+        execution = {'role': 'review', 'engine': 'flue-pi', 'failure': 'AEION_HANDOVER',
+                     'forwarded_count': 2, 'usage': {'complete': True, 'cost_usd': '0.8938762'}}
+        failure = {'model': 'claude-haiku-5.5', 'verdict': 'error', 'reason': 'AEION_HANDOVER',
+                   'execution': execution}
+        receipt['circuit'] = {'status': 'held', 'reason': 'reviewer_failed', 'review_input_version': 2,
+                              'votes': [failure]}
+
+        def save_receipt():
+            with sqlite3.connect(self.store.path) as conn:
+                conn.execute('UPDATE builds SET receipt=? WHERE build_id=?',
+                             (json.dumps(receipt), self.build['build_id']))
+
+        build_id = self.build['build_id']
+        save_receipt()
+        with self.assertRaisesRegex(CircuitError, 'not_eligible'):
+            self.worker.reassess_review_context(build_id, retry_failed_review=True)
+
+        for reason, complete in (('REVIEW_RESULT_MISSING', True), ('AEION_HANDOVER', False)):
+            execution.update(failure=reason, usage={'complete': complete, 'cost_usd': '0.8938762'})
+            failure['reason'] = reason
+            save_receipt()
+            with self.assertRaisesRegex(CircuitError, 'not_eligible'):
+                self.worker.reassess_review_context(build_id, recover_review_handover=True)
+        self.assertEqual(self.votes, [])
+        self.assertEqual(self.checks, [])
+
+        execution.update(failure='AEION_HANDOVER', usage={'complete': True, 'cost_usd': '0.8938762'})
+        save_receipt()
+        self.failure_model = 'claude-haiku-5.5'
+        self.verdict = 'reject'
+        self.worker.reassess_review_context(build_id, recover_review_handover=True)
+        self.assertEqual([(row['build_id'], row['status']) for row in self.store.board()], [(build_id, 'held')])
+        self.assertEqual(len(self.checks), 1)
+        self.assertEqual([model for model, _ in self.votes], ['qwen-3.8-flash'])
+        self.assertEqual(self.requests, [])
+        reviewed = json.loads(self.store.board()[0]['receipt'])
+        self.assertEqual(reviewed['artifact_digest'], self.prior['artifact_digest'])
+        self.assertEqual(reviewed['execution'], self.prior['execution'])
+        self.assertTrue(reviewed['review_context']['handover_recovery'])
+        events = self.store.events(build_id)
+        archived = next(e for e in events if e['event'] == 'review_context_reassessment')
+        self.assertEqual(json.loads(archived['detail'])['previous_receipt'], receipt)
+
+        receipt['review_context'] = reviewed['review_context']
+        save_receipt()
+        with self.assertRaisesRegex(CircuitError, 'not_eligible'):
+            self.worker.reassess_review_context(build_id, recover_review_handover=True)
+        self.assertEqual(len(self.votes), 1)
+
+    def test_operator_retries_a_budget_hold_once_on_the_same_artifact(self):
+        from decimal import Decimal
+        from factory.dispatch import review_retry_eligible
+
+        scope = self.worker.budget_scope
+        build_id = self.build['build_id']
+        self.budget.limits[scope] = Decimal('0.10')
+        self.worker.reassess_review_context(build_id)
+        held = json.loads(self.store.board()[0]['receipt'])
+        self.assertEqual(held['circuit']['reason'], 'review_budget_unavailable')
+        self.assertEqual(len(held['circuit']['votes']), 1)
+        self.assertFalse(review_retry_eligible(held))
+        self.assertEqual(self.requests, [])
+
+        self.budget.limits[scope] = Decimal('1')
+        result = self.worker.reassess_review_context(build_id, retry_failed_review=True)
+        self.assertEqual(result['result']['status'], 'publication_queued')
+        self.assertEqual(len(self.votes), 3)
+        _, receipt = self.requests[0]
+        self.assertTrue(receipt['review_context']['budget_recovery'])
+        self.assertEqual(receipt['artifact_digest'], self.prior['artifact_digest'])
+        self.assertEqual(receipt['execution'], self.prior['execution'])
+        self.assertEqual(len(receipt['circuit']['votes']), 2)
+        claimed = self.store.board()[0]
+        self.store.hold_dispatched(claimed, 'owner_review_required',
+            receipt={**held, 'review_context': receipt['review_context']})
+        with self.assertRaisesRegex(CircuitError, 'not_eligible'):
+            self.worker.reassess_review_context(build_id, retry_failed_review=True)
+        self.assertEqual(len(self.votes), 3)
+
     def test_retry_does_not_free_an_old_unknown_review_reservation(self):
         self.failure_model='deepseek-4.1-flash';self.unknown_failure_usage=True
         self.worker.reassess_review_context(self.build['build_id'])
@@ -212,6 +299,48 @@ class ReviewContextDispatchTests(unittest.TestCase):
         self.failure_model=None
         self.worker.reassess_review_context(self.build['build_id'],retry_failed_review=True)
         self.assertEqual(str(self.budget.spent('aeion-autonomous-forum')),'0.13')
+
+    def test_unaccounted_review_handover_cannot_start_a_retry(self):
+        self._assert_review_usage_gap_blocks_retry('AEION_HANDOVER')
+
+    def test_explicit_review_usage_unknown_cannot_start_a_retry(self):
+        self._assert_review_usage_gap_blocks_retry('USAGE_UNKNOWN')
+
+    def _assert_review_usage_gap_blocks_retry(self, reason):
+        build_id = self.build['build_id']
+        self.failure_model = 'deepseek-4.1-flash'
+        self.failure_reason = reason
+        self.unknown_failure_usage = True
+        self.worker.reassess_review_context(build_id)
+        held = self.store.build(build_id)
+        circuit = json.loads(held['receipt'])['circuit']
+        self.assertEqual(circuit['votes'][-1]['reason'], reason)
+        self.assertEqual(str(self.budget.spent('aeion-autonomous-forum')), '0.11')
+
+        self.failure_model = None
+        self.assertIsNone(self.worker._continue_held_review())
+        with self.assertRaisesRegex(CircuitError, 'not_eligible'):
+            self.worker.reassess_review_context(build_id, retry_failed_review=True)
+
+        self.assertEqual(self.store.build(build_id)['receipt'], held['receipt'])
+        self.assertEqual(len(self.checks), 1)
+        self.assertEqual(len(self.votes), 2)
+        self.assertEqual(self.requests, [])
+        self.assertEqual(str(self.budget.spent('aeion-autonomous-forum')), '0.11')
+
+    def test_proven_zero_forward_review_handover_can_use_a_substitute(self):
+        self.failure_model = 'deepseek-4.1-flash'
+        self.failure_reason = 'AEION_HANDOVER'
+        self.zero_forward_failure = True
+
+        result = self.worker.reassess_review_context(self.build['build_id'])
+
+        self.assertEqual(result['result']['status'], 'publication_queued')
+        self.assertEqual(len(self.votes), 3)
+        self.assertEqual(str(self.budget.spent('aeion-autonomous-forum')), '0.02')
+        circuit = self.requests[0][1]['circuit']
+        self.assertEqual(len(circuit['votes']), 2)
+        self.assertEqual(circuit['unavailable_reviewers'][0]['reason'], 'AEION_HANDOVER')
 
     def test_retry_failed_review_excludes_zero_forward_budget_stop_model(self):
         receipt=json.loads(self.store.board()[0]['receipt'])
@@ -244,6 +373,10 @@ class RetryUnavailableReviewerTests(unittest.TestCase):
         cases = (
             ('votes_zero_forward_budget_stop',
              {'failure': 'BUDGET_STOP', 'forwarded_count': 0, 'usage': {'cost_usd': '0', 'output_tokens': 0}},
+             None),
+            ('accounted_context_stop_excludes_reviewer',
+             {'engine': 'flue-pi', 'role': 'review', 'failure': 'AEION_HANDOVER', 'forwarded_count': 2,
+              'usage': {'complete': True, 'cost_usd': '0.8938762'}},
              None),
             ('votes_forwarded_timeout_keeps_first_reviewer',
              {'failure': 'CLI_TIMEOUT', 'forwarded_count': 1, 'usage': {'cost_usd': '0.02', 'output_tokens': 5}},
@@ -308,7 +441,7 @@ class RetryUnavailableReviewerTests(unittest.TestCase):
                         ],
                     },
                 }
-                store.hold_dispatched(build['build_id'], 'owner_review_required', receipt=receipt)
+                store.hold_dispatched(build, 'owner_review_required', receipt=receipt)
                 seen = {}
                 def fake_two_vote(*_a, **kw):
                     seen['first_reviewer'] = kw.get('first_reviewer')

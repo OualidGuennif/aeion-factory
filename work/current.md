@@ -1,17 +1,34 @@
 # Current work
 
-Updated 2026-11-20. Current facts only; historical evidence is in HANDOVER.md and validation.md.
-No final operational Go or actual product feature merge is claimed.
+Updated 2026-11-21. Current facts only; historical evidence is in HANDOVER.md and validation.md.
+Operational Go and verified deployment remain pending.
 
-## Cockpit catalog live refresh, preparation baseline progress & Feature 007 — READY
+## Factory and Agora audit — ACTIVE LOCALLY
+
+- Owner decision: activate the audited Factory changes and restart the idle Cockpit.
+- State: the combined local patch passed native admission and is active on localhost.
+- Next: continue the Agora contract, evaluator and staging decisions (who: agent).
+- Blocker: historical spend reconciliation requires trusted usage evidence.
+- Evidence: [validation](validation.md).
+
+## Feature 007 — MERGED (PR #23)
+
+- Owner decision: activate the tested fix while idle and resume reviews on the retained artifact.
+- State: the retained artifact passed its recheck and two independent reviews, and the publisher confirmed it on main.
+- Factory delivery: the review recovery is on develop. The main promotion includes the follow-up that holds unaccounted reviewer context stops.
+- Next: continue the Factory and Agora audit from the first entry (who: agent).
+- Blocker: none. The final verdict-preservation fix is active in the local Cockpit.
+- Evidence: [validation](validation.md) and [execution contract](../knowledge/components/factory-flue.md).
+
+## Cockpit catalog live refresh & preparation baseline progress — MERGED (PR #58)
 
 - Owner decision: fix `FactoryApp` holding updated `.md` specs as `catalog_changed` (*On hold*) until server restart, emit `protected_check.started` during `TaskPreparer` baseline negative-control verification so the Cockpit does not display `Agent stopped` for ~2 minutes, requalify live admission, and finish Feature `007` (`0e58124f1e624a5485990ebc55837a4d`).
 - State:
   - `FactoryApp._refresh_catalog` (`demo/factory/api.py`) reloads `self.catalog` and `self.worker.catalog` on `catalog_view`, `queue`, and `tick` while failing closed on `ManifestError` (symlink/corrupted file keeps the prior catalog so `contract_current` blocks the feature as `catalog_changed`), verified in `test_factory_contract_identity.py`.
   - `TaskPreparer._prepare_and_check` (`demo/factory/preparation.py`) emits `protected_check.started` (`status: running`) before running `target_check`, verified in `test_factory_preparation.py`.
-  - Feature `007` (`0e58124f1e624a5485990ebc55837a4d`, prepared by `qwen-3.8-flash`, authored by `deepseek-v4.1-flash`) passed all JUnit and external black-box acceptance checks (`gate: passed`, `artifact_digest: 1a9d6e9c0e755488b3904b8e69d23a5ed57182a6276b2c8a1f9038ceaecbc7c1`).
-- Next: merge to `main`, requalify `factory.admission --activate`, and run `--retry-failed-review` (or relaunch reusing the gate-passed `007` candidate) (who: agent, then owner).
-- Blocker: none.
+  - Merged in `d8184fa`. Feature `007` attempt `0e58124f1e624a5485990ebc55837a4d` passed JUnit and external acceptance, then was cancelled in `owner_review_required`. The latest hold is tracked above.
+- Next: tracked by the preparation budget fix above (who: agent).
+- Blocker: none for catalog refresh or baseline progress.
 - Evidence: [validation](validation.md); [cockpit contract](../knowledge/components/operator-cockpit.md); [execution contract](../knowledge/components/factory-flue.md).
 
 ## Feature 006 one-shot merge & Feature 007 spec alignment — MERGED (PR #57)

@@ -83,7 +83,7 @@ class PublicationStateTests(unittest.TestCase):
       {'name':'check','conclusion':'failure'}]},delay_ns=0)
   self.store.continue_after_ci_failure(self.build['build_id'],self.catalog,self.request['files'])
   claimed=self.store.claim_next(self.catalog)
-  self.store.hold_dispatched(claimed['build_id'],'owner_review_required',
+  self.store.hold_dispatched(claimed,'owner_review_required',
                              receipt={'reason':'correction_unchanged'})
   bad=repair_blind_ci(self.store,claimed['build_id'],[{'name':'bad\nname','conclusion':'failure'}])
   self.assertEqual(bad['status'],'unchanged')

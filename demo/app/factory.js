@@ -53,18 +53,23 @@ function reasonText(info) {
     budget_config_invalid: "demo/budget.conf is invalid or above its ceiling ($150/day, $50 per author execution, $5 per review vote). No paid work starts until it is fixed.",
     sandbox_qualification_stale: "The OpenShell security proof is missing or expired, and refreshing it failed. No new author was started. This same request resumes when the proof is fresh.",
     STEP_LIMIT: "The worker reached its allowed model-step limit. This attempt is preserved; the feature has not been implemented.",
+    CONTEXT_UNKNOWN: "The model relay could not validate the session's context. Open Build evidence for the failed stage.",
+    HANDOVER_NOT_READY: "The author reached a session boundary and the factory could not prepare the continuation.",
+    SANDBOX_SYNC_FAILED: "The factory could not export a stable snapshot from the author sandbox.",
     CLI_STARTUP_FAILED: "The agent CLI stopped before its first model request. The factory must repair its launcher; no implementation was started.",
     builder_error: "Implementation stopped. Open Build evidence for the exact agent failure and the full Langfuse session.",
     availability_unavailable: "Refresh after the controller update to load availability.",
     qualification_missing: "The independent acceptance check is missing or unqualified. The factory must prepare and verify it before implementation.",
     target_feature_mismatch: "This feature does not match the configured execution target.",
     owner_review_required: "Owner review is required before proceeding.",
+    review_budget_unavailable: "The daily purse cannot reserve this review vote. Build evidence preserves the checked artifact and any completed votes.",
     reviewer_failed: "A reviewer could not finish its vote (timeout, provider refusal or no typed verdict). Nothing was published; Review votes shows which one and why.",
     reviewer_rejected: "An independent reviewer rejected the change after the automatic attempts and correction rounds. Nothing was published; the reasons are in Build evidence.",
     correction_unchanged: "A correction round returned the refused candidate unchanged, so it was not checked or reviewed again. Nothing was published. If the check name could not be recorded, this same correction is queued once more with the real name.",
     worker_error: "The worker stopped unexpectedly. The request is held for review; no automatic paid retry.",
     reconciliation_needed: "An interrupted attempt or remote action needs reconciliation. Another launch stays locked while its effects are unknown.",
     catalog_changed: "The specification changed after this request. Refresh and read the current MD. A new selection replaces only an obsolete request that never started; uncertain attempts stay locked.",
+    catalog_invalid: "The catalog cannot be validated. The factory is paused until a valid catalog is restored.",
     publication_blocked: "Publication stopped safely. Open the publication evidence below for the precise blocker.",
     publication_unavailable: "The isolated publisher is not connected. The checked artifact is preserved; no PR or main merge is claimed.",
     preparation_unavailable: "Task preparation stopped before implementation. Open the evidence for the exact checker, repository or acceptance blocker.",
@@ -73,7 +78,8 @@ function reasonText(info) {
     preparation_acceptance_size_invalid: "The proposed acceptance is empty, too large or contains invalid data. No builder started.",
     preparation_acceptance_assertions_missing: "The proposed acceptance has no executable test assertions. No builder started.",
     preparation_acceptance_skips_forbidden: "The proposed acceptance skips or excludes tests; the protected checker refuses it.",
-    preparation_budget_stop: "Acceptance preparation reached its per-attempt budget. No builder or publication started; the measured cost and failed attempt are preserved.",
+    preparation_budget_stop: "The $0.50 budget per model attempt stopped acceptance preparation. See Build evidence for the last attempt's accounting.",
+    preparation_daily_budget_unavailable: "The daily forum budget could not reserve $0.50 for another acceptance preparation attempt.",
     preparation_agent_timeout: "Acceptance preparation exceeded its deadline. The attempt is preserved; no builder or publication started.",
     preparation_cli_failed: "The preparation harness stopped without a completed submission. No implementation or publication was started.",
     preparation_profile_unavailable: "This specification requires the shared React/web checker, which has not been qualified yet. This is factory infrastructure work.",
@@ -94,13 +100,15 @@ function reasonText(info) {
     profile_expired: "The model profile needs requalification." })[reason] || (reason ? `Waiting: ${reason}. Inspect the request evidence.` : "Ready for automatic preparation and build.");
 }
 const OWNER_ACTIONS = {
-  reviewer_failed: "The controller reruns the votes once without rerunning the author. A second failure stays on hold.",
+  review_budget_unavailable: "Check today’s spend and open reservations before reconciling this request.",
+  reviewer_failed: "For eligible failures, the controller reruns the votes once without rerunning the author. A second failure or a reviewer usage error stays on hold.",
   reviewer_rejected: "The factory already ran its automatic attempts and correction rounds. Read the reviewer reasons in Build evidence, then cancel this request; a relaunch unchanged will likely be rejected again.",
   worker_error: "Cancel this request, then launch the feature again.",
   catalog_changed: "Cancel this request, then launch the feature again with the current MD.",
   reconciliation_needed: "Do not relaunch. Ask the agent to reconcile this attempt first.",
   dependency_missing: "Nothing to do: it starts after its prerequisites reach main.",
   budget_unavailable: "Wait for tomorrow's budget or raise DAILY_LIMIT_USD in demo/budget.conf (max $150).",
+  preparation_daily_budget_unavailable: "Check the forum purse for current spend and open reservations.",
   sandbox_qualification_stale: "Wait. The factory refreshes the proof and resumes this same request. Do not relaunch; a relaunch starts a new author.",
   budget_config_invalid: "Fix demo/budget.conf, then restart the controller.",
   ci_failed: "Read the failing check names in Build evidence, then cancel this request to free the feature. A relaunch starts a new author; it does not resume these rounds.",
@@ -116,9 +124,11 @@ function publicationDetail(receipt) {
 function holdReason(build) {
   const receipt = parseReceipt(build.receipt);
   if (receipt.reason === "correction_unchanged") return receipt.reason;
+  if (build.hold_reason === "preparation_unavailable" &&
+      ["preparation_budget_stop", "preparation_daily_budget_unavailable"].includes(receipt.reason)) return receipt.reason;
   if ((receipt.publisher || {}).reason === "ci_failed" && receipt.correction?.exhausted === true) return "ci_failed";
   const circuit = receipt.circuit || {};
-  return ["reviewer_failed", "reviewer_rejected"].includes(circuit.reason) ? circuit.reason : build.hold_reason;
+  return ["reviewer_failed", "reviewer_rejected", "review_budget_unavailable"].includes(circuit.reason) ? circuit.reason : build.hold_reason;
 }
 function failedText(r) {
   const c = r.correction || {};
@@ -198,7 +208,7 @@ function setConnection(connected, label) {
 function showLogin() {
   $("login").hidden = false; $("app").hidden = true;
   if ($("workspace-tabs")) $("workspace-tabs").hidden = true;
-  state.csrf = null; state.selected.clear();
+  state.csrf = null; state.selected.clear(); state.lastSeq = 0;
   if (state.stream) { state.stream.close(); state.stream = null; }
   setConnection(false, "Sign in required");
   const dialog = $("spec-dialog");
@@ -355,7 +365,7 @@ function receiptSummary(raw) {
   const r = parseReceipt(raw);
   const check = r.gate?.results?.prepared_product?.detail || r.gate?.results?.prepared_gradle?.detail || r.gate?.results?.gradle_test?.detail || r.execution?.check || r.draft_check || r.check || {};
   // Before the protected gate runs, the only check is the agent's own self-test of its draft.
-  const draft = !r.gate?.status && check === r.draft_check;
+  const draft = !r.gate?.status && (check === r.draft_check || check === r.execution?.check);
   const telemetry = r.telemetry || {};
   const trace = telemetry.trace_id;
   const status = telemetry.status || "unknown";
@@ -365,6 +375,10 @@ function receiptSummary(raw) {
   const sessionLink = /^[a-f0-9]{32}$/.test(r.build_id || "")
     ? `<a href="${LANGFUSE_UI}/project/${LANGFUSE_PROJECT}/sessions/${encodeURIComponent("factory:" + r.build_id)}" target="_blank" rel="noreferrer">Full build session ↗</a>` : "";
   const publication = r.publisher || {};
+  const preparation = r.preparation_execution || {};
+  const prepSpend = preparation.usage?.complete === true && typeof preparation.usage.cost_usd === "string" &&
+    /^\d{1,6}(?:\.\d{1,12})?$/.test(preparation.usage.cost_usd) ? `$${preparation.usage.cost_usd}` :
+    preparation.usage?.complete === false ? "Unresolved · reservation retained" : "";
   const number = publication.pr?.pr_number;
   const prLink = Number.isSafeInteger(number) && number > 0
     ? `<a href="https://github.com/OualidGuennif/aeion-autonomous-forum/pull/${number}" target="_blank" rel="noreferrer">Pull request #${number} ↗</a>` : "";
@@ -388,7 +402,10 @@ function receiptSummary(raw) {
     ["Model requests", Number.isInteger(r.execution?.forwarded_count) && String(r.execution.forwarded_count)],
     ["Retained draft files", Number.isInteger(r.execution?.retained_files_count) && String(r.execution.retained_files_count)],
     ["Candidate recovery", r.execution?.candidate_recovered === true && "Agent bound reached; candidate sent to independent checks"],
-    ["Preparer", r.preparation?.preparation_kind === "registered_static_acceptance" ? "Registered contract · no model request" : r.preparation?.preparer_model && esc(r.preparation.preparer_model)],
+    ["Preparer", r.preparation?.preparation_kind === "registered_static_acceptance" ? "Registered contract · no model request" : esc(r.preparation?.preparer_model || preparation.model || "")],
+    ["Last preparation spend", esc(prepSpend)],
+    ["Last preparation model requests", Number.isInteger(preparation.forwarded_count) && String(preparation.forwarded_count)],
+    ["Preparation recovery", preparation.submission_recovered === true && "Submitted contract retained after the budget stop for independent baseline validation"],
     ["Acceptance baseline", r.preparation?.negative_control === "registered_foundation_startup_rejection" ? "Untouched baseline refused the registered startup contract" : r.preparation?.negative_control === "registered_transition_source_missing" ? "Untouched baseline lacks the registered migration operator or browser source" : r.preparation?.negative_control === "failed_contract_assertion" && "Independent contract failed on the untouched baseline"],
     ["Working memory", (r.execution?.memory?.checkpoint?.status || r.execution?.memory?.claude_mem?.status) && esc(r.execution?.memory?.checkpoint?.status || r.execution?.memory?.claude_mem?.status)],
     ["Hindsight", r.execution?.memory?.hindsight?.status && esc(r.execution.memory.hindsight.status)],
@@ -618,11 +635,17 @@ async function cancelBuild(buildId) {
 function connectSSE() {
   const es = new EventSource(`/api/factory/events?since=${state.lastSeq}`); state.stream = es;
   const onEvent = (event) => {
-    if (event.lastEventId) state.lastSeq = parseInt(event.lastEventId, 10) || state.lastSeq;
+    const seq = Number(event.lastEventId);
+    if (state.stream !== es || !Number.isSafeInteger(seq) || seq <= state.lastSeq) return;
+    state.lastSeq = seq;
     pushEvent(event.type); refresh();
   };
   ["build_updated", "build_progress", "admitted", "cancelled", "observed", "session_rotated"].forEach((name) => es.addEventListener(name, onEvent));
-  es.addEventListener("reload", () => { es.close(); state.stream = null; refresh(); });
+  es.addEventListener("reload", () => {
+    if (state.stream !== es) return;
+    es.close(); state.stream = null; state.lastSeq = 0;
+    refresh();
+  });
   es.onerror = () => setConnection(false, "Live updates reconnecting");
 }
 async function boot() {

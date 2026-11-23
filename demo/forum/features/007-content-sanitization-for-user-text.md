@@ -8,7 +8,7 @@ parallel: false
 phase: P0
 tier: 3
 write_paths: ["demo/forum-app/", "knowledge/components/agora-product.md", "knowledge/components/factory-architecture.md"]
-depends_on: [001]
+depends_on: [006]
 owner: builder
 status: proposed
 architecture: quarkus-postgresql-react-web-v1

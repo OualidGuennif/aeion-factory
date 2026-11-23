@@ -116,9 +116,10 @@ class ExpiredWorkTests(unittest.TestCase):
         connection.commit()
         connection.close()
 
-    def test_tool_progress_on_an_expired_lease_queues_the_same_build(self):
+    def test_author_progress_alone_on_an_expired_lease_does_not_replay(self):
         self.store.admit(['013'], 'lease-work', self.catalog)
         claimed = self.store.claim_next(self.catalog)
+        self.store.record_progress(claimed['attempt_id'], claimed['attempt_generation'], 'building', {})
         for step in (1, 2, 3):
             self.assertTrue(self.store.record_progress(
                 claimed['attempt_id'], claimed['attempt_generation'], 'tool.finished',
@@ -126,12 +127,9 @@ class ExpiredWorkTests(unittest.TestCase):
         self.expire(claimed['build_id'])
         reopened = Store(self.store.path)
         row = reopened.board()[0]
-        self.assertEqual(row['status'], QUEUED)
-        continued = json.loads(row['receipt'])['continued']
-        self.assertEqual(continued['trigger'], 'lease_expired')
-        self.assertEqual(continued['model'], 'deepseek-4.1-flash')
-        self.assertEqual(continued['resumes'], 1)
-        self.assertIsNone(row['hold_reason'])
+        self.assertEqual(row['status'], HELD)
+        self.assertEqual(row['hold_reason'], 'reconciliation_needed')
+        self.assertIsNone(reopened.claim_next(self.catalog))
 
     def test_publication_on_an_expired_lease_stays_reconciliation_needed(self):
         self.store.admit(['013'], 'lease-publish', self.catalog)

@@ -15,10 +15,30 @@ import settings  # noqa: F401
 from factory.api import FactoryApp
 from factory.budget import DailyBudget
 from factory.execution import offline_builder, resolve
+from factory.flue_qualification import PROTOCOL_FILES, protocol_hash
 
 
 def git(repo, *args):
     subprocess.run(["git", "-C", str(repo), *args], capture_output=True, text=True, check=True)
+
+
+class QualificationInputsTests(unittest.TestCase):
+    def test_shared_role_inputs_are_part_of_the_protocol_digest(self):
+        inputs = ('demo/flue/src/context.ts', 'demo/flue/src/tools/submit-feedback.ts')
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            for name in {*PROTOCOL_FILES, *inputs}:
+                path = root / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text('fixture')
+            original = protocol_hash(root)
+            for name in inputs:
+                with self.subTest(name=name):
+                    path = root / name
+                    path.write_text('changed')
+                    self.assertNotEqual(protocol_hash(root), original)
+                    path.write_text('fixture')
+            self.assertEqual(len(PROTOCOL_FILES), len(set(PROTOCOL_FILES)))
 
 
 def make_source(root):

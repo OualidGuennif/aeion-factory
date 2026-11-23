@@ -446,18 +446,20 @@ class Runner:
                  "counted_handover": None, "native_md": None, "stop": None}
         accounted = threading.Condition()
 
+        def factory_authority():
+            authorize = getattr(self, 'authorization_check', None)
+            try:
+                if not callable(authorize) or not authorize():
+                    return 'ATTEMPT_REVOKED'
+            except Exception:
+                return 'ATTEMPT_AUTHORITY_UNAVAILABLE'
+            return None
+
         def admission():
-            # Runs in the relay before each forward, so the native gate and budget act pre-dispatch.
             if kind != 'lab':
-                authorize = getattr(self, 'authorization_check', None)
-                try:
-                    if not callable(authorize) or not authorize():
-                        return 'ATTEMPT_REVOKED'
-                except Exception:
-                    return 'ATTEMPT_AUTHORITY_UNAVAILABLE'
-                limit = factory_work_limit(run, relay.forwarded_count)
-                if limit:
-                    return limit
+                stop = factory_authority() or factory_work_limit(run, relay.forwarded_count)
+                if stop:
+                    return stop
             with accounted:
                 if not accounted.wait_for(lambda: state["steps"] >= relay.forwarded_count or state["done"], timeout=10):
                     state["stop"] = "USAGE_UNKNOWN"
@@ -466,7 +468,7 @@ class Runner:
                     return state['stop']
                 last, threshold = state["last"], state["threshold"]
                 over_budget = Decimal(run["native_cost_usd"]) > cost_limit
-            if last >= max(1, run["limit"] - 20000) and state["native_md"] != last:
+            if kind == 'lab' and last >= max(1, run["limit"] - 20000) and state["native_md"] != last:
                 self.prepare_handover(run, workspace, last)
                 state["native_md"] = last
             if threshold:
@@ -481,7 +483,8 @@ class Runner:
                 # These roles have an immutable input and no author snapshot to checkpoint.
                 # Keep the relay's context refusal instead of masking it as an unknown error.
                 return
-            self.prepare_handover(run, workspace, counted, basis="local_tokenizer")
+            if kind != 'factory-build':
+                self.prepare_handover(run, workspace, counted, basis=relay.context_basis)
             if close:
                 state["counted_handover"] = counted
 
@@ -505,7 +508,8 @@ class Runner:
             relay_options['upstream']=PROFILES[key]['upstream']
         if kind != 'lab':
             relay_options.update(prices=metadata, cost_limit=cost_limit - Decimal(run.get('projected_cost_usd', '0')),
-                max_requests=run.get('step_cap',12), budget_multiplier=budget_multiplier(key))
+                max_requests=run.get('step_cap',12), budget_multiplier=budget_multiplier(key),
+                forward_authority=factory_authority)
         relay = ContextRelay(run["model"], os.environ["OPENCODE_API_KEY"], run["limit"], relay_checkpoint,
                              lambda name, **attrs: self.event(run, name, **attrs), admission=admission, **relay_options)
         runtime = run.get("runtime", "flue-openshell")
@@ -558,6 +562,7 @@ class Runner:
             if bridge:
                 bridge.start()
             # stdout carries the model reply and stderr streams conversation text: discard both.
+            run['relay_accounting_pending'] = True
             process = subprocess.Popen(argv, cwd=FLUE, env=env, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                                        stderr=subprocess.PIPE, start_new_session=True)
             # stderr is read in memory, line by line, and only one class token survives.
@@ -644,10 +649,22 @@ class Runner:
                 state["done"] = True
                 accounted.notify_all()
             if state["counted_handover"] is not None:
-                self.event(run, "gate.closed", **{"aeion.context.counted": state["counted_handover"]})
+                observed = state["counted_handover"]
+                if kind == 'factory-build':
+                    run['pending_author_handover'] = (observed, relay.context_basis)
+                field = "aeion.context.observed" if relay.context_basis == 'provider_usage' else "aeion.context.counted"
+                self.event(run, "gate.closed", **{field: observed})
                 return "handover"
             if state["threshold"]:
-                if state["native_md"] != state["peak"]:
+                if kind in {'factory-review', 'factory-prepare'}:
+                    self.event(run, "gate.closed", **{"aeion.context.observed": state["peak"]})
+                    stop = state["stop"]
+                    if Decimal(run["native_cost_usd"]) > cost_limit:
+                        stop = stop or "BUDGET_STOP"
+                    raise ValueError(stop or relay.last_error_code or "AEION_HANDOVER")
+                if kind == 'factory-build':
+                    run['pending_author_handover'] = (state["peak"], "native_report")
+                elif state["native_md"] != state["peak"]:
                     self.prepare_handover(run, workspace, state["peak"])
                 self.event(run, "gate.closed", **{"aeion.context.observed": state["peak"]})
                 return "handover"
@@ -693,8 +710,10 @@ class Runner:
             run["usage_complete"] = usage_is_complete(
                 state["steps"], relay.forwarded_count, relay.last_error_code)
             run.setdefault('provider_usages', []).extend(relay.reported_usage)
-            run['provider_accounting_complete'] = relay.accounting_complete
+            run['provider_accounting_complete'] = (run.get('provider_accounting_complete', True)
+                                                   and relay.accounting_complete)
             run['forwarded_count'] = run.get('forwarded_count', 0) + relay.forwarded_count
+            run.pop('relay_accounting_pending', None)
             run['provider_retries'] = run.get('provider_retries', 0) + relay.provider_retries
             if relay.last_http_status is not None:
                 run['provider_http_status'] = relay.last_http_status

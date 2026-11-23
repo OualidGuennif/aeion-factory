@@ -79,7 +79,9 @@ prior publication. The state transaction archives that rejection and increments 
 the shared judgment path reruns external gates and two fresh reviewer families, including the
 original rejecting reviewer. It grants no worker/HTTP retry authority, approval or author charge.
 A v2 hold caused only by reviewer failures (a missing typed verdict, never a rejection) allows
-one further operator retry flag with fresh gates and votes; a second failure stays held.
+one further review-only retry with fresh gates and votes. A second failure stays held.
+The [execution contract](factory-flue.md) defines the usage evidence that makes a
+context stop eligible for reuse of the artifact.
 
 Langfuse receives bounded role, request, tool and failure metadata via the privacy-filtering
 collector. The local ledger and verified artifacts retain authority independently of dashboard

@@ -374,10 +374,12 @@ slot goes once (`MAX_SUBSTITUTIONS`) to the next eligible reviewer outside the a
 and earlier families; the busy attempt is kept as `unavailable_reviewers`, never as a vote, and
 publication still needs exactly two independent approvals. A Flue review that reaches
 `AEION_HANDOVER` before a typed vote shares this same substitution slot if its forwarded
-requests and their cost are fully accounted for. Review-only retries exclude that reviewer,
+requests and their cost are fully accounted for, including proven zero transport. Review-only retries exclude that reviewer,
 including when the context stop appears among the unavailable attempts. If no replacement
 is eligible for that vote, the context stop remains its failure. An unaccounted
-context stop and a typed rejection remain held. Measured 2026-11-05: DeepSeek answered 429
+review context stop or an explicit `USAGE_UNKNOWN` stops automatic and operator review
+retries before any new reservation.
+A typed rejection remains held. Measured 2026-11-05: DeepSeek answered 429
 twice on build ac5b5ce1 after its gate passed (test_factory_review_circuit,
 test_factory_review_reassessment, test_relay_budget_settlement).
 All100MDs declare their two owning product documentation files. Their shared scopes require

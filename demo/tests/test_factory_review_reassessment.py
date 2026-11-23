@@ -133,13 +133,18 @@ class ReviewContextDispatchTests(unittest.TestCase):
                 self.last_execution={'role':'review','engine':'flue-pi','forwarded_count':1,'usage':self.last_usage}
                 outer.votes.append((model,prompt))
                 if model==outer.failure_model:
-                    self.last_execution['failure']='REVIEW_RESULT_MISSING'
+                    self.last_execution['failure']=outer.failure_reason
                     if outer.unknown_failure_usage:self.last_usage['complete']=False
-                    raise ValueError('REVIEW_RESULT_MISSING')
+                    if outer.zero_forward_failure:
+                        self.last_execution['forwarded_count'] = 0
+                        self.last_usage.update(cost_usd='0', basis='proven_no_transport', output_tokens=0)
+                    raise ValueError(outer.failure_reason)
                 return {'verdict':outer.verdict,'reason':'Synthetic fixture'}
         self.verdict='approve'
         self.failure_model=None
+        self.failure_reason='REVIEW_RESULT_MISSING'
         self.unknown_failure_usage=False
+        self.zero_forward_failure=False
         self.budget=DailyBudget(self.root/'ledger.jsonl')
         self.worker=DispatchWorker(self.store,self.catalog,specs,self.root/'work',self.config,
             builder=SimpleNamespace(paid=True,engine='flue-pi',last_execution=None),
@@ -294,6 +299,48 @@ class ReviewContextDispatchTests(unittest.TestCase):
         self.failure_model=None
         self.worker.reassess_review_context(self.build['build_id'],retry_failed_review=True)
         self.assertEqual(str(self.budget.spent('aeion-autonomous-forum')),'0.13')
+
+    def test_unaccounted_review_handover_cannot_start_a_retry(self):
+        self._assert_review_usage_gap_blocks_retry('AEION_HANDOVER')
+
+    def test_explicit_review_usage_unknown_cannot_start_a_retry(self):
+        self._assert_review_usage_gap_blocks_retry('USAGE_UNKNOWN')
+
+    def _assert_review_usage_gap_blocks_retry(self, reason):
+        build_id = self.build['build_id']
+        self.failure_model = 'deepseek-4.1-flash'
+        self.failure_reason = reason
+        self.unknown_failure_usage = True
+        self.worker.reassess_review_context(build_id)
+        held = self.store.build(build_id)
+        circuit = json.loads(held['receipt'])['circuit']
+        self.assertEqual(circuit['votes'][-1]['reason'], reason)
+        self.assertEqual(str(self.budget.spent('aeion-autonomous-forum')), '0.11')
+
+        self.failure_model = None
+        self.assertIsNone(self.worker._continue_held_review())
+        with self.assertRaisesRegex(CircuitError, 'not_eligible'):
+            self.worker.reassess_review_context(build_id, retry_failed_review=True)
+
+        self.assertEqual(self.store.build(build_id)['receipt'], held['receipt'])
+        self.assertEqual(len(self.checks), 1)
+        self.assertEqual(len(self.votes), 2)
+        self.assertEqual(self.requests, [])
+        self.assertEqual(str(self.budget.spent('aeion-autonomous-forum')), '0.11')
+
+    def test_proven_zero_forward_review_handover_can_use_a_substitute(self):
+        self.failure_model = 'deepseek-4.1-flash'
+        self.failure_reason = 'AEION_HANDOVER'
+        self.zero_forward_failure = True
+
+        result = self.worker.reassess_review_context(self.build['build_id'])
+
+        self.assertEqual(result['result']['status'], 'publication_queued')
+        self.assertEqual(len(self.votes), 3)
+        self.assertEqual(str(self.budget.spent('aeion-autonomous-forum')), '0.02')
+        circuit = self.requests[0][1]['circuit']
+        self.assertEqual(len(circuit['votes']), 2)
+        self.assertEqual(circuit['unavailable_reviewers'][0]['reason'], 'AEION_HANDOVER')
 
     def test_retry_failed_review_excludes_zero_forward_budget_stop_model(self):
         receipt=json.loads(self.store.board()[0]['receipt'])

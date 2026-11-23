@@ -30,7 +30,8 @@ from .agent_files import BuilderError
 from .publish import FakeForge, Publisher
 from .review import SECRET_PATTERNS, content_digest, review
 from .review_circuit import (CircuitError, MAX_SUBSTITUTIONS, MAX_TRANSPORT_RETRIES, baseline_context,
-                             baseline_diff, is_accounted_review_handover, is_zero_forward_preflight, two_vote_review)
+                             baseline_diff, has_review_usage_gap, is_accounted_review_handover,
+                             is_zero_forward_preflight, two_vote_review)
 from .store import (FAILED, HELD, LIVE_COMPLETE, MAX_ATTEMPTS, MAX_CORRECTION_ROUNDS, QUEUED,
                     SIMULATED_COMPLETE, StoreError, continuation_step)
 from .target import TargetError
@@ -90,7 +91,7 @@ def review_retry_eligible(receipt):
     gate = receipt.get('gate') if isinstance(receipt.get('gate'), dict) else {}
     return (circuit.get('reason') in ('reviewer_failed', 'review_input_too_large')
             and circuit.get('review_input_version') == 2 and context.get('retry_failed_review') is not True
-            and gate.get('status') == 'passed')
+            and gate.get('status') == 'passed' and not has_review_usage_gap(circuit))
 
 
 DEFAULT_TARGET_REPO = "agora/forum"
